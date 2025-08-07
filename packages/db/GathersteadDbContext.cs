@@ -1,0 +1,98 @@
+using Microsoft.EntityFrameworkCore;
+using Gatherstead.Db.Entities;
+using Gatherstead.Db.Encryption;
+
+namespace Gatherstead.Db;
+
+public class GathersteadDbContext : DbContext
+{
+    public GathersteadDbContext(DbContextOptions<GathersteadDbContext> options) : base(options) { }
+
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
+    public DbSet<Household> Households => Set<Household>();
+    public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
+    public DbSet<Property> Properties => Set<Property>();
+    public DbSet<Event> Events => Set<Event>();
+    public DbSet<Resource> Resources => Set<Resource>();
+    public DbSet<MealPlan> MealPlans => Set<MealPlan>();
+    public DbSet<MealIntent> MealIntents => Set<MealIntent>();
+    public DbSet<StayIntent> StayIntents => Set<StayIntent>();
+    public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
+    public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Composite keys
+        modelBuilder.Entity<TenantUser>().HasKey(tu => new { tu.TenantId, tu.UserId });
+
+        // Encryption conversions
+        modelBuilder.Entity<HouseholdMember>(b =>
+        {
+            b.Property(p => p.Name)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+            b.Property(p => p.BirthDate)
+                .HasConversion<EncryptedDateOnlyConverter>()
+                .HasColumnType("bytea");
+            b.Property(p => p.DietaryNotes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<Resource>(b =>
+        {
+            b.Property(p => p.Notes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<MealPlan>(b =>
+        {
+            b.Property(p => p.Notes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<MealIntent>(b =>
+        {
+            b.Property(p => p.Notes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<StayIntent>(b =>
+        {
+            b.Property(p => p.Notes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<ChoreTemplate>(b =>
+        {
+            b.Property(p => p.Notes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+
+        modelBuilder.Entity<ChoreTask>(b =>
+        {
+            b.Property(p => p.Notes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+            b.Property(p => p.AssigneeIds)
+                .HasColumnType("uuid[]");
+        });
+
+        modelBuilder.Entity<AuditLog>(b =>
+        {
+            b.Property(p => p.Changes)
+                .HasConversion<EncryptedStringConverter>()
+                .HasColumnType("bytea");
+        });
+    }
+}
