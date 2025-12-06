@@ -6,6 +6,16 @@
 - **Evolution over time**: Support family groupings that can change as children form their own households, while keeping history and relationships coherent.
 - **Extensibility**: Allow additional goals and modules to attach without disrupting existing domains.
 
+## Security, Privacy, and Safety Principles
+- **Privacy by design**: Treat personal data (PII, contact details, dietary notes) as sensitive by default. Favor minimization, avoid unnecessary replication across contexts, and prefer references over denormalized copies.
+- **Tenant isolation**: Enforce tenant boundaries in persistence and APIs; every query should filter by tenant, and indexes should include tenant keys to avoid cross-family data leakage.
+- **Data protection in transit and at rest**: Require TLS for all client/server and service/service traffic. Use encryption-at-rest for databases and explicitly encrypt high-sensitivity fields (e.g., contact methods, medical/dietary notes) within the application layer where appropriate.
+- **Role-aware access control**: Scope permissions to tenant and household contexts, supporting guardians/admins editing minors' data while preventing lateral access across households. Favor least privilege defaults and explicit elevation for admin tasks.
+- **Auditability and accountability**: Capture who created/updated sensitive records (members, contacts, intents, assignments) and when; surface audit trails in admin tooling to detect misuse.
+- **Secure defaults and hardening**: Apply input validation, rate limiting, CSRF protections, and strong authentication. Disable risky defaults (e.g., open CORS, overly broad tokens) and maintain secret rotation and key management practices.
+- **Data lifecycle and consent**: Track consent for sharing details, support export/delete workflows per tenant requests, and document retention policies for logs and backups.
+- **Operational readiness**: Establish monitoring for anomalous access patterns, failed logins, and data exfiltration signals. Include security reviews in change management and keep dependencies updated with vulnerability scanning.
+
 ## Domain-Driven Design Overview
 Gatherstead is organized around bounded contexts that align with the two core goals while sharing a multi-tenant foundation.
 
