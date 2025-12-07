@@ -1,20 +1,24 @@
-using Microsoft.EntityFrameworkCore;
 using Gatherstead.Db.Encryption;
 using Gatherstead.Db.Entities;
 using Gatherstead.Db.Interceptors;
+using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Gatherstead.Db;
 
 public class GathersteadDbContext : DbContext
 {
     private readonly AuditingSaveChangesInterceptor _auditingSaveChangesInterceptor;
+    private readonly Guid? _tenantId;
 
     public GathersteadDbContext(
         DbContextOptions<GathersteadDbContext> options,
-        AuditingSaveChangesInterceptor auditingSaveChangesInterceptor) : base(options)
+        AuditingSaveChangesInterceptor auditingSaveChangesInterceptor,
+        ICurrentTenantContext currentTenantContext) : base(options)
     {
         _auditingSaveChangesInterceptor = auditingSaveChangesInterceptor
             ?? throw new ArgumentNullException(nameof(auditingSaveChangesInterceptor));
+        _tenantId = currentTenantContext?.TenantId;
     }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -105,5 +109,42 @@ public class GathersteadDbContext : DbContext
         {
             modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
         }
+
+        ApplyGlobalFilters(modelBuilder);
+    }
+
+    private void ApplyGlobalFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(IAuditableEntity).IsAssignableFrom(entityType.ClrType))
+            {
+                var applyFilterMethod = typeof(GathersteadDbContext)
+                    .GetMethod(nameof(ApplyAuditableFilters), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+                var genericMethod = applyFilterMethod.MakeGenericMethod(entityType.ClrType);
+                genericMethod.Invoke(this, new object[] { modelBuilder });
+            }
+        }
+    }
+
+    private void ApplyAuditableFilters<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : class, IAuditableEntity
+    {
+        var entityBuilder = modelBuilder.Entity<TEntity>();
+
+        var parameter = Expression.Parameter(typeof(TEntity), "entity");
+        Expression filterBody = Expression.Not(Expression.Property(parameter, nameof(IAuditableEntity.IsDeleted)));
+
+        var tenantIdProperty = typeof(TEntity).GetProperty("TenantId");
+        if (tenantIdProperty?.PropertyType == typeof(Guid))
+        {
+            var tenantIdAccess = Expression.Property(parameter, tenantIdProperty);
+            var tenantIdAsNullable = Expression.Convert(tenantIdAccess, typeof(Guid?));
+            var tenantIdComparison = Expression.Equal(tenantIdAsNullable, Expression.Constant(_tenantId, typeof(Guid?)));
+            filterBody = Expression.AndAlso(filterBody, tenantIdComparison);
+        }
+
+        var lambda = Expression.Lambda<Func<TEntity, bool>>(filterBody, parameter);
+        entityBuilder.HasQueryFilter(lambda);
     }
 }
