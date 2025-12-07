@@ -1,14 +1,14 @@
 using System;
-using System.Collections.Generic;
 
 namespace Gatherstead.Db.Entities;
 
-public class User
+public class MemberAttribute
 {
     public Guid Id { get; set; }
-    public string ExternalId { get; set; } = string.Empty; // Entra ID subject
-
-    public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
+    public Guid HouseholdMemberId { get; set; }
+    public HouseholdMember? HouseholdMember { get; set; }
+    public string Key { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
 
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

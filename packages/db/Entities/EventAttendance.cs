@@ -1,20 +1,21 @@
 using System;
-using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class Resource
+public class EventAttendance
 {
     public Guid Id { get; set; }
     public Guid EventId { get; set; }
     public Event? Event { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public ResourceType Type { get; set; }
-    public int? CapacityAdults { get; set; }
-    public int? CapacityChildren { get; set; }
+    public Guid HouseholdMemberId { get; set; }
+    public HouseholdMember? HouseholdMember { get; set; }
+    public DateOnly Day { get; set; }
+    public AttendanceStatus Status { get; set; }
+    public DateTimeOffset? ArrivalWindowStart { get; set; }
+    public DateTimeOffset? ArrivalWindowEnd { get; set; }
+    public DateTimeOffset? DepartureWindowStart { get; set; }
+    public DateTimeOffset? DepartureWindowEnd { get; set; }
     public string? Notes { get; set; }
-
-    public ICollection<StayIntent> StayIntents { get; set; } = new List<StayIntent>();
 
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

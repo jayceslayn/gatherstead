@@ -1,18 +1,19 @@
 using System;
-using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class MealIntent
+public class Address
 {
     public Guid Id { get; set; }
-    public Guid MealPlanId { get; set; }
-    public MealPlan? MealPlan { get; set; }
     public Guid HouseholdMemberId { get; set; }
     public HouseholdMember? HouseholdMember { get; set; }
-    public MealIntentStatus Status { get; set; }
-    public bool BringOwnFood { get; set; }
-    public string? Notes { get; set; }
+    public string Line1 { get; set; } = string.Empty;
+    public string? Line2 { get; set; }
+    public string City { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string PostalCode { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
+    public bool IsPrimary { get; set; }
 
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

@@ -7,7 +7,14 @@ public class Tenant
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public Guid CreatedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public Guid? UpdatedByUserId { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; }
+    public Guid? DeletedByUserId { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
 
     public ICollection<TenantUser> Users { get; set; } = new List<TenantUser>();
     public ICollection<Household> Households { get; set; } = new List<Household>();

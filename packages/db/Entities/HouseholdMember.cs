@@ -20,5 +20,19 @@ public class HouseholdMember
 
     public string[] DietaryTags { get; set; } = Array.Empty<string>();
 
+    public ICollection<MemberRelationship> Relationships { get; set; } = new List<MemberRelationship>();
+    public ICollection<ContactMethod> ContactMethods { get; set; } = new List<ContactMethod>();
+    public ICollection<Address> Addresses { get; set; } = new List<Address>();
+    public ICollection<MemberAttribute> Attributes { get; set; } = new List<MemberAttribute>();
+    public DietaryProfile? DietaryProfile { get; set; }
+
+    public Guid CreatedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public Guid? UpdatedByUserId { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; }
+    public Guid? DeletedByUserId { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
+
     // conversion config is in DbContext using Encrypted converters
 }
