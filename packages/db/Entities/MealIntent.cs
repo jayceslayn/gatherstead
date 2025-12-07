@@ -3,7 +3,7 @@ using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class MealIntent
+public class MealIntent : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid MealPlanId { get; set; }
@@ -13,12 +13,4 @@ public class MealIntent
     public MealIntentStatus Status { get; set; }
     public bool BringOwnFood { get; set; }
     public string? Notes { get; set; }
-
-    public Guid CreatedByUserId { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public Guid? UpdatedByUserId { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-    public Guid? DeletedByUserId { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
 }

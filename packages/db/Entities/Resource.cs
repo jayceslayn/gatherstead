@@ -3,7 +3,7 @@ using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class Resource
+public class Resource : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid EventId { get; set; }
@@ -15,12 +15,4 @@ public class Resource
     public string? Notes { get; set; }
 
     public ICollection<StayIntent> StayIntents { get; set; } = new List<StayIntent>();
-
-    public Guid CreatedByUserId { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public Guid? UpdatedByUserId { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-    public Guid? DeletedByUserId { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
 }

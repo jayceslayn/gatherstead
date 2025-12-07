@@ -4,7 +4,7 @@ using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class ChoreTask
+public class ChoreTask : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid TemplateId { get; set; }
@@ -15,12 +15,4 @@ public class ChoreTask
     public string? Notes { get; set; }
 
     public ICollection<ChoreAssignment> Assignments { get; set; } = new List<ChoreAssignment>();
-
-    public Guid CreatedByUserId { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public Guid? UpdatedByUserId { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-    public Guid? DeletedByUserId { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
 }

@@ -2,7 +2,7 @@ using System;
 
 namespace Gatherstead.Db.Entities;
 
-public class EventAttendance
+public class EventAttendance : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid EventId { get; set; }
@@ -16,12 +16,4 @@ public class EventAttendance
     public DateTimeOffset? DepartureWindowStart { get; set; }
     public DateTimeOffset? DepartureWindowEnd { get; set; }
     public string? Notes { get; set; }
-
-    public Guid CreatedByUserId { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public Guid? UpdatedByUserId { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-    public Guid? DeletedByUserId { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
 }
