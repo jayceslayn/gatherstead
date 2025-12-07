@@ -2,6 +2,7 @@ using Gatherstead.Db.Encryption;
 using Gatherstead.Db.Entities;
 using Gatherstead.Db.Interceptors;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace Gatherstead.Db;
@@ -45,9 +46,6 @@ public class GathersteadDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // Composite keys
-        modelBuilder.Entity<TenantUser>().HasKey(tu => new { tu.TenantId, tu.UserId });
 
         // Encryption conversions
         modelBuilder.Entity<HouseholdMember>(b =>
@@ -108,6 +106,25 @@ public class GathersteadDbContext : DbContext
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
+        }
+
+        modelBuilder.Entity<ContactMethod>(b =>
+        {
+            b.HasIndex(p => new { p.TenantId, p.HouseholdMemberId })
+                .HasDatabaseName("IX_Contact_PrimaryPerMember")
+                .HasFilter("[IsPrimary] = 1");
+        });
+
+        modelBuilder.Entity<Address>(b =>
+        {
+            b.HasIndex(p => new { p.TenantId, p.HouseholdMemberId })
+                .HasDatabaseName("IX_Address_PrimaryPerMember")
+                .HasFilter("[IsPrimary] = 1");
+        });
+
+        foreach (var foreignKey in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
+        {
+            foreignKey.DeleteBehavior = DeleteBehavior.Restrict;
         }
 
         ApplyGlobalFilters(modelBuilder);

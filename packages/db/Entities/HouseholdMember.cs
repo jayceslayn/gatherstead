@@ -1,20 +1,31 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Gatherstead.Db.Encryption;
+using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Db.Entities;
 
-public class HouseholdMember : AuditableEntity
-{
-    public Guid Id { get; set; }
-    public Guid TenantId { get; set; }
-    public Guid HouseholdId { get; set; }
-    public Household? Household { get; set; }
+[Index(nameof(TenantId), nameof(HouseholdId))]
+    [Index(nameof(TenantId), nameof(HouseholdId), nameof(Name))]
+    public class HouseholdMember : AuditableEntity
+    {
+        public Guid Id { get; set; }
+        public Guid TenantId { get; set; }
+        [ForeignKey(nameof(TenantId))]
+        public Tenant? Tenant { get; set; }
+        public Guid HouseholdId { get; set; }
+        [ForeignKey(nameof(HouseholdId))]
+        public Household? Household { get; set; }
 
     public bool IsAdult { get; set; }
+    [MaxLength(64)]
     public string? AgeBand { get; set; }
 
     // Encrypted fields
+    [Required]
+    [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
     public DateOnly? BirthDate { get; set; }
     public string? DietaryNotes { get; set; }
