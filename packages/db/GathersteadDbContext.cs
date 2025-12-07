@@ -1,12 +1,21 @@
 using Microsoft.EntityFrameworkCore;
-using Gatherstead.Db.Entities;
 using Gatherstead.Db.Encryption;
+using Gatherstead.Db.Entities;
+using Gatherstead.Db.Interceptors;
 
 namespace Gatherstead.Db;
 
 public class GathersteadDbContext : DbContext
 {
-    public GathersteadDbContext(DbContextOptions<GathersteadDbContext> options) : base(options) { }
+    private readonly AuditingSaveChangesInterceptor _auditingSaveChangesInterceptor;
+
+    public GathersteadDbContext(
+        DbContextOptions<GathersteadDbContext> options,
+        AuditingSaveChangesInterceptor auditingSaveChangesInterceptor) : base(options)
+    {
+        _auditingSaveChangesInterceptor = auditingSaveChangesInterceptor
+            ?? throw new ArgumentNullException(nameof(auditingSaveChangesInterceptor));
+    }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
@@ -21,6 +30,13 @@ public class GathersteadDbContext : DbContext
     public DbSet<StayIntent> StayIntents => Set<StayIntent>();
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
     public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+
+        optionsBuilder.AddInterceptors(_auditingSaveChangesInterceptor);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -4,7 +4,7 @@ using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class HouseholdMember
+public class HouseholdMember : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid HouseholdId { get; set; }
@@ -25,14 +25,6 @@ public class HouseholdMember
     public ICollection<Address> Addresses { get; set; } = new List<Address>();
     public ICollection<MemberAttribute> Attributes { get; set; } = new List<MemberAttribute>();
     public DietaryProfile? DietaryProfile { get; set; }
-
-    public Guid CreatedByUserId { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-    public Guid? UpdatedByUserId { get; set; }
-    public DateTimeOffset UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
-    public Guid? DeletedByUserId { get; set; }
-    public DateTimeOffset? DeletedAt { get; set; }
 
     // conversion config is in DbContext using Encrypted converters
 }
