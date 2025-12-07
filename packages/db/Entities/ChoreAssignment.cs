@@ -1,14 +1,15 @@
 using System;
-using System.Collections.Generic;
 
 namespace Gatherstead.Db.Entities;
 
-public class User
+public class ChoreAssignment
 {
     public Guid Id { get; set; }
-    public string ExternalId { get; set; } = string.Empty; // Entra ID subject
-
-    public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
+    public Guid ChoreTaskId { get; set; }
+    public ChoreTask? ChoreTask { get; set; }
+    public Guid HouseholdMemberId { get; set; }
+    public HouseholdMember? HouseholdMember { get; set; }
+    public bool Volunteered { get; set; }
 
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

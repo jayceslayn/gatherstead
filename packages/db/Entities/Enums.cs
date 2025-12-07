@@ -38,10 +38,41 @@ public enum StayIntentStatus
     Confirmed
 }
 
+public enum StayIntentDecision
+{
+    Pending,
+    Approved,
+    Declined
+}
+
 public enum ChoreTimeSlot
 {
     Morning,
     Midday,
     Evening,
     Anytime
+}
+
+public enum RelationshipType
+{
+    Parent,
+    Child,
+    Sibling,
+    Spouse,
+    Guardian,
+    Other
+}
+
+public enum ContactMethodType
+{
+    Email,
+    Phone,
+    Other
+}
+
+public enum AttendanceStatus
+{
+    Going,
+    Maybe,
+    NotGoing
 }

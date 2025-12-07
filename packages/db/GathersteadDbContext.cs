@@ -21,7 +21,6 @@ public class GathersteadDbContext : DbContext
     public DbSet<StayIntent> StayIntents => Set<StayIntent>();
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
     public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
-    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,15 +83,11 @@ public class GathersteadDbContext : DbContext
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
                 .HasColumnType("bytea");
-            b.Property(p => p.AssigneeIds)
-                .HasColumnType("uuid[]");
         });
 
-        modelBuilder.Entity<AuditLog>(b =>
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            b.Property(p => p.Changes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
-        });
+            modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
+        }
     }
 }

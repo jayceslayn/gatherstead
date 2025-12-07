@@ -1,20 +1,16 @@
 using System;
-using Gatherstead.Db.Encryption;
 
 namespace Gatherstead.Db.Entities;
 
-public class Resource
+public class DietaryProfile
 {
     public Guid Id { get; set; }
-    public Guid EventId { get; set; }
-    public Event? Event { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public ResourceType Type { get; set; }
-    public int? CapacityAdults { get; set; }
-    public int? CapacityChildren { get; set; }
+    public Guid HouseholdMemberId { get; set; }
+    public HouseholdMember? HouseholdMember { get; set; }
+    public string PreferredDiet { get; set; } = string.Empty;
+    public string[] Allergies { get; set; } = Array.Empty<string>();
+    public string[] Restrictions { get; set; } = Array.Empty<string>();
     public string? Notes { get; set; }
-
-    public ICollection<StayIntent> StayIntents { get; set; } = new List<StayIntent>();
 
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
