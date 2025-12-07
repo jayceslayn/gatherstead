@@ -6,6 +6,7 @@ namespace Gatherstead.Db.Entities;
 public class Resource : AuditableEntity
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid EventId { get; set; }
     public Event? Event { get; set; }
     public string Name { get; set; } = string.Empty;

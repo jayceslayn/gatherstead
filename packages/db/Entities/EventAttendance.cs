@@ -5,6 +5,7 @@ namespace Gatherstead.Db.Entities;
 public class EventAttendance : AuditableEntity
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid EventId { get; set; }
     public Event? Event { get; set; }
     public Guid HouseholdMemberId { get; set; }
