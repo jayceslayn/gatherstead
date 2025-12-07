@@ -16,6 +16,7 @@ This repository uses Azure-first architecture with a C# .NET API and a Vue 3 / N
 - Default to private networking (VNet integration, private endpoints) for data stores; avoid exposing databases or storage publicly.
 - Assume multiple environments (dev/test/prod). Keep configuration in App Configuration/Key Vault and avoid environment-specific code.
 - For storage and databases, enforce tenant scoping and indexing that match the domain guidance in `STRATEGY.md`.
+- The current SQL implementation targets SQL Server; prefer SQL Server-friendly defaults and tooling when wiring up the data layer.
 
 ### Backend conventions
 - Use ASP.NET Core dependency injection, nullable reference types, and async APIs. Prefer minimal APIs or controllers consistent with existing style, and keep DTOs separate from EF entities.

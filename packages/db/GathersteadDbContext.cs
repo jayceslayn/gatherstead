@@ -50,55 +50,55 @@ public class GathersteadDbContext : DbContext
         {
             b.Property(p => p.Name)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
             b.Property(p => p.BirthDate)
                 .HasConversion<EncryptedDateOnlyConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
             b.Property(p => p.DietaryNotes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         modelBuilder.Entity<Resource>(b =>
         {
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         modelBuilder.Entity<MealPlan>(b =>
         {
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         modelBuilder.Entity<MealIntent>(b =>
         {
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         modelBuilder.Entity<StayIntent>(b =>
         {
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         modelBuilder.Entity<ChoreTemplate>(b =>
         {
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         modelBuilder.Entity<ChoreTask>(b =>
         {
             b.Property(p => p.Notes)
                 .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("bytea");
+                .HasColumnType("varbinary(max)");
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
