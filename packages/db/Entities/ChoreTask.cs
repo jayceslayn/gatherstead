@@ -7,6 +7,7 @@ namespace Gatherstead.Db.Entities;
 public class ChoreTask : AuditableEntity
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid TemplateId { get; set; }
     public ChoreTemplate? Template { get; set; }
     public DateOnly Day { get; set; }

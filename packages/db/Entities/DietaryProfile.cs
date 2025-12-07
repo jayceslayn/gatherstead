@@ -5,6 +5,7 @@ namespace Gatherstead.Db.Entities;
 public class DietaryProfile : AuditableEntity
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid HouseholdMemberId { get; set; }
     public HouseholdMember? HouseholdMember { get; set; }
     public string PreferredDiet { get; set; } = string.Empty;

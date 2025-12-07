@@ -6,6 +6,7 @@ namespace Gatherstead.Db.Entities;
 public class MealIntent : AuditableEntity
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid MealPlanId { get; set; }
     public MealPlan? MealPlan { get; set; }
     public Guid HouseholdMemberId { get; set; }

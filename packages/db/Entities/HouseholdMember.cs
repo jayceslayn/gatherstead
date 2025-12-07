@@ -7,6 +7,7 @@ namespace Gatherstead.Db.Entities;
 public class HouseholdMember : AuditableEntity
 {
     public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
     public Guid HouseholdId { get; set; }
     public Household? Household { get; set; }
 
