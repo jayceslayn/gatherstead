@@ -32,3 +32,8 @@ Gatherstead keeps sprawling families organized and together: one source of truth
 - **Family directory context**: Households group members; member records store names, birth dates, dietary notes/tags, and will expand with relationships, contact methods, and custom attributes.
 - **Gathering planning context**: Events tie to properties and manage meal plans, chores, lodging resources, and member intents for attendance, meals, stays, and chores.
 - **Planned enhancements**: Member relationship graphs, richer contact/address data, daily attendance summaries, chore sign-up flows, arbitration metadata for lodging, and audit trails across mutable entities.
+
+## Encryption configuration
+- **Azure Key Vault first**: Provide `Encryption:KeyVault:Uri` with a managed identity that can read the secret. By default, the API reads the `Encryption:KeyVault:SecretName` (`app-encryption-key`) and optional `SecretVersion`. Rotate keys by creating a new secret version and updating configuration to point to the desired version during rollout.
+- **Key material requirements**: Secrets must resolve to a 256-bit (32-byte) key. Use Base64-encoded bytes or a 32-character UTF-8 string; shorter or longer values are rejected.
+- **Local development**: When Key Vault isn’t available, set `Encryption:Key` to a 32-byte value in user secrets or environment variables. This path is only permitted when `ASPNETCORE_ENVIRONMENT` is `Development`; production runs must use Key Vault.
