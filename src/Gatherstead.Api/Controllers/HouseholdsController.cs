@@ -1,5 +1,5 @@
-using System.ComponentModel.DataAnnotations;
 using Gatherstead.Db;
+using Gatherstead.Api.Contracts.Households;
 using Gatherstead.Db.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,9 +22,13 @@ public class HouseholdsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<HouseholdResponse>>> GetHouseholds(Guid tenantId, CancellationToken cancellationToken)
     {
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("A valid tenant identifier is required.");
+        }
+
         var households = await _dbContext.Households
             .AsNoTracking()
-            .Where(h => h.TenantId == tenantId && !h.IsDeleted)
             .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name))
             .ToListAsync(cancellationToken);
 
@@ -34,9 +38,14 @@ public class HouseholdsController : ControllerBase
     [HttpGet("{householdId:guid}")]
     public async Task<ActionResult<HouseholdResponse>> GetHousehold(Guid tenantId, Guid householdId, CancellationToken cancellationToken)
     {
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("A valid tenant identifier is required.");
+        }
+
         var household = await _dbContext.Households
             .AsNoTracking()
-            .Where(h => h.TenantId == tenantId && h.Id == householdId && !h.IsDeleted)
+            .Where(h => h.Id == householdId)
             .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name))
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -51,8 +60,13 @@ public class HouseholdsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<HouseholdResponse>> CreateHousehold(Guid tenantId, [FromBody] CreateHouseholdRequest request, CancellationToken cancellationToken)
     {
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("A valid tenant identifier is required.");
+        }
+
         var normalizedName = request.Name.Trim();
-        if (string.IsNullOrEmpty(normalizedName))
+        if (string.IsNullOrWhiteSpace(normalizedName))
         {
             ModelState.AddModelError(nameof(request.Name), "Name is required.");
             return ValidationProblem(ModelState);
@@ -72,13 +86,4 @@ public class HouseholdsController : ControllerBase
 
         return CreatedAtAction(nameof(GetHousehold), new { tenantId, householdId = household.Id }, response);
     }
-}
-
-public record HouseholdResponse(Guid Id, Guid TenantId, string Name);
-
-public class CreateHouseholdRequest
-{
-    [Required]
-    [StringLength(200)]
-    public string Name { get; init; } = string.Empty;
 }

@@ -1,3 +1,4 @@
+using Gatherstead.Api.Contracts.Tenants;
 using Gatherstead.Db;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,5 +29,3 @@ public class TenantsController : ControllerBase
         return Ok(tenants);
     }
 }
-
-public record TenantSummary(Guid Id, string Name);
