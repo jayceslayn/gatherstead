@@ -1,10 +1,9 @@
-using System.Linq;
-using Gatherstead.Db;
 using Gatherstead.Api.Contracts.Households;
-using Gatherstead.Db.Entities;
+using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Households;
+using Gatherstead.Api.Services.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Api.Controllers;
 
@@ -13,112 +12,94 @@ namespace Gatherstead.Api.Controllers;
 [Route("api/tenants/{tenantId:guid}/households")]
 public class HouseholdsController : ControllerBase
 {
-    private readonly GathersteadDbContext _dbContext;
+    private readonly IHouseholdService _householdService;
 
-    public HouseholdsController(GathersteadDbContext dbContext)
+    public HouseholdsController(IHouseholdService householdService)
     {
-        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _householdService = householdService ?? throw new ArgumentNullException(nameof(householdService));
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<HouseholdResponse>>> GetHouseholds(Guid tenantId, CancellationToken cancellationToken)
+    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>>> GetHouseholds(Guid tenantId, CancellationToken cancellationToken)
     {
-        if (tenantId == Guid.Empty)
+        var response = await _householdService.ListAsync(tenantId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest("A valid tenant identifier is required.");
+            return BadRequest(response);
         }
 
-        var households = await _dbContext.Households
-            .AsNoTracking()
-            .Where(h => h.TenantId == tenantId)
-            .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name, h.CreatedAt, h.UpdatedAt, h.DeletedAt))
-            .ToListAsync(cancellationToken);
-
-        return Ok(households);
+        return Ok(response);
     }
 
     [HttpGet("{householdId:guid}")]
     public async Task<ActionResult<HouseholdResponse>> GetHousehold(Guid tenantId, Guid householdId, CancellationToken cancellationToken)
     {
-        if (tenantId == Guid.Empty)
+        var response = await _householdService.GetAsync(tenantId, householdId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest("A valid tenant identifier is required.");
+            return BadRequest(response);
         }
 
-        var household = await _dbContext.Households
-            .AsNoTracking()
-            .Where(h => h.Id == householdId && h.TenantId == tenantId)
-            .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name, h.CreatedAt, h.UpdatedAt, h.DeletedAt))
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (household is null)
+        if (response.Entity is null)
         {
-            return NotFound();
+            return NotFound(response);
         }
 
-        return Ok(household);
+        return Ok(response);
     }
 
     [HttpPost]
     public async Task<ActionResult<HouseholdResponse>> CreateHousehold(Guid tenantId, [FromBody] CreateHouseholdRequest request, CancellationToken cancellationToken)
     {
-        if (tenantId == Guid.Empty)
+        var response = await _householdService.CreateAsync(tenantId, request, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest("A valid tenant identifier is required.");
+            return BadRequest(response);
         }
 
-        var normalizedName = request.Name.Trim();
-        if (string.IsNullOrWhiteSpace(normalizedName))
-        {
-            ModelState.AddModelError(nameof(request.Name), "Name is required.");
-            return ValidationProblem(ModelState);
-        }
-
-        var household = new Household
-        {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            Name = normalizedName
-        };
-
-        _dbContext.Households.Add(household);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var response = new HouseholdResponse(household.Id, household.TenantId, household.Name, household.CreatedAt, household.UpdatedAt, household.DeletedAt);
-
-        return CreatedAtAction(nameof(GetHousehold), new { tenantId, householdId = household.Id }, response);
+        return CreatedAtAction(
+            nameof(GetHousehold),
+            new { tenantId, householdId = response.Entity?.Id },
+            response);
     }
 
     [HttpPut("{householdId:guid}")]
     public async Task<ActionResult<HouseholdResponse>> UpdateHousehold(Guid tenantId, Guid householdId, [FromBody] UpdateHouseholdRequest request, CancellationToken cancellationToken)
     {
-        if (tenantId == Guid.Empty)
+        var response = await _householdService.UpdateAsync(tenantId, householdId, request, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest("A valid tenant identifier is required.");
+            return BadRequest(response);
         }
 
-        var normalizedName = (request.Name ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(normalizedName))
+        if (response.Entity is null)
         {
-            ModelState.AddModelError(nameof(request.Name), "Name is required.");
-            return ValidationProblem(ModelState);
+            return NotFound(response);
         }
-
-        var household = await _dbContext.Households
-            .Where(h => h.Id == householdId && h.TenantId == tenantId)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (household is null)
-        {
-            return NotFound();
-        }
-
-        household.Name = normalizedName;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var response = new HouseholdResponse(household.Id, household.TenantId, household.Name, household.CreatedAt, household.UpdatedAt, household.DeletedAt);
 
         return Ok(response);
     }
+
+    [HttpDelete("{householdId:guid}")]
+    public async Task<ActionResult<HouseholdResponse>> DeleteHousehold(Guid tenantId, Guid householdId, CancellationToken cancellationToken)
+    {
+        var response = await _householdService.DeleteAsync(tenantId, householdId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+        {
+            return BadRequest(response);
+        }
+
+        if (response.Entity is null)
+        {
+            return NotFound(response);
+        }
+
+        return Ok(response);
+    }
+
 }
