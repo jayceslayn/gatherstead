@@ -1,4 +1,5 @@
 using Gatherstead.Api.Encryption;
+using Gatherstead.Api.Services.Households;
 using Gatherstead.Api.Security;
 using Gatherstead.Db;
 using Gatherstead.Db.Encryption;
@@ -16,6 +17,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>();
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<AuditingSaveChangesInterceptor>();
+builder.Services.AddScoped<IHouseholdService, HouseholdService>();
 
 builder.Services
     .AddAuthentication(PasetoAuthenticationDefaults.AuthenticationScheme)

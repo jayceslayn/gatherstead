@@ -1,9 +1,17 @@
+using Gatherstead.Api.Contracts.Responses;
+
 namespace Gatherstead.Api.Contracts.Households;
 
-public record HouseholdResponse(
+public class HouseholdResponse : BaseEntityResponse<HouseholdDto>
+{
+}
+
+public record HouseholdDto(
     Guid Id,
     Guid TenantId,
     string Name,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    DateTimeOffset? DeletedAt);
+    bool IsDeleted,
+    DateTimeOffset? DeletedAt,
+    Guid? DeletedByUserId);
