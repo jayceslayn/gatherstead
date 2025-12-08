@@ -1,3 +1,4 @@
+using System.Linq;
 using Gatherstead.Db;
 using Gatherstead.Api.Contracts.Households;
 using Gatherstead.Db.Entities;
@@ -29,7 +30,8 @@ public class HouseholdsController : ControllerBase
 
         var households = await _dbContext.Households
             .AsNoTracking()
-            .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name))
+            .Where(h => h.TenantId == tenantId)
+            .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name, h.CreatedAt, h.UpdatedAt, h.DeletedAt))
             .ToListAsync(cancellationToken);
 
         return Ok(households);
@@ -45,8 +47,8 @@ public class HouseholdsController : ControllerBase
 
         var household = await _dbContext.Households
             .AsNoTracking()
-            .Where(h => h.Id == householdId)
-            .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name))
+            .Where(h => h.Id == householdId && h.TenantId == tenantId)
+            .Select(h => new HouseholdResponse(h.Id, h.TenantId, h.Name, h.CreatedAt, h.UpdatedAt, h.DeletedAt))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (household is null)
@@ -82,8 +84,41 @@ public class HouseholdsController : ControllerBase
         _dbContext.Households.Add(household);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var response = new HouseholdResponse(household.Id, household.TenantId, household.Name);
+        var response = new HouseholdResponse(household.Id, household.TenantId, household.Name, household.CreatedAt, household.UpdatedAt, household.DeletedAt);
 
         return CreatedAtAction(nameof(GetHousehold), new { tenantId, householdId = household.Id }, response);
+    }
+
+    [HttpPut("{householdId:guid}")]
+    public async Task<ActionResult<HouseholdResponse>> UpdateHousehold(Guid tenantId, Guid householdId, [FromBody] UpdateHouseholdRequest request, CancellationToken cancellationToken)
+    {
+        if (tenantId == Guid.Empty)
+        {
+            return BadRequest("A valid tenant identifier is required.");
+        }
+
+        var normalizedName = (request.Name ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalizedName))
+        {
+            ModelState.AddModelError(nameof(request.Name), "Name is required.");
+            return ValidationProblem(ModelState);
+        }
+
+        var household = await _dbContext.Households
+            .Where(h => h.Id == householdId && h.TenantId == tenantId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (household is null)
+        {
+            return NotFound();
+        }
+
+        household.Name = normalizedName;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var response = new HouseholdResponse(household.Id, household.TenantId, household.Name, household.CreatedAt, household.UpdatedAt, household.DeletedAt);
+
+        return Ok(response);
     }
 }
