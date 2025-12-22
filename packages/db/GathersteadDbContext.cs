@@ -1,4 +1,3 @@
-using Gatherstead.Db.Encryption;
 using Gatherstead.Db.Entities;
 using Gatherstead.Db.Interceptors;
 using Microsoft.EntityFrameworkCore;
@@ -46,62 +45,6 @@ public class GathersteadDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // Encryption conversions
-        modelBuilder.Entity<HouseholdMember>(b =>
-        {
-            b.Property(p => p.Name)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-            b.Property(p => p.BirthDate)
-                .HasConversion<EncryptedDateOnlyConverter>()
-                .HasColumnType("varbinary(max)");
-            b.Property(p => p.DietaryNotes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
-
-        modelBuilder.Entity<Resource>(b =>
-        {
-            b.Property(p => p.Notes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
-
-        modelBuilder.Entity<MealPlan>(b =>
-        {
-            b.Property(p => p.Notes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
-
-        modelBuilder.Entity<MealIntent>(b =>
-        {
-            b.Property(p => p.Notes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
-
-        modelBuilder.Entity<StayIntent>(b =>
-        {
-            b.Property(p => p.Notes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
-
-        modelBuilder.Entity<ChoreTemplate>(b =>
-        {
-            b.Property(p => p.Notes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
-
-        modelBuilder.Entity<ChoreTask>(b =>
-        {
-            b.Property(p => p.Notes)
-                .HasConversion<EncryptedStringConverter>()
-                .HasColumnType("varbinary(max)");
-        });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
