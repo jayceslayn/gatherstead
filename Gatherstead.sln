@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Db", "packages/
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Api", "src/Gatherstead.Api/Gatherstead.Api.csproj", "{B9A540A5-71B1-45DD-8FBD-9F80BED23288}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Db.Setup", "packages/db.setup/Gatherstead.Db.Setup.csproj", "{458D5C48-F8CF-40F4-9D28-DF739281F747}"
+EndProject
 Global
     GlobalSection(SolutionConfigurationPlatforms) = preSolution
         Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
         {B9A540A5-71B1-45DD-8FBD-9F80BED23288}.Debug|Any CPU.Build.0 = Debug|Any CPU
         {B9A540A5-71B1-45DD-8FBD-9F80BED23288}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {B9A540A5-71B1-45DD-8FBD-9F80BED23288}.Release|Any CPU.Build.0 = Release|Any CPU
+        {458D5C48-F8CF-40F4-9D28-DF739281F747}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {458D5C48-F8CF-40F4-9D28-DF739281F747}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {458D5C48-F8CF-40F4-9D28-DF739281F747}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {458D5C48-F8CF-40F4-9D28-DF739281F747}.Release|Any CPU.Build.0 = Release|Any CPU
     EndGlobalSection
     GlobalSection(SolutionProperties) = preSolution
         HideSolutionNode = FALSE
