@@ -7,6 +7,12 @@
 - **Detailed Implementation**: Multi-tenant backbone with auditing, households and members (including dietary metadata), relationship graph, contact/addresses/attributes, dietary profiles, event scaffolding with meal planning, daily attendance, chore templates/tasks with assignments, lodging intents with arbitration metadata, and tenant identifiers on dependent tables to enforce tenant-aware filters across the graph.
 
 ## Planned Enhancements
+- **Azure Entra B2C Integration**:
+  - Set up and configure the Azure B2C tenant.
+  - Define user flows for sign-up, sign-in, password reset, and profile editing.
+  - Integrate the Vue 3 / Nuxt 3 frontend with B2C using a library like MSAL.js.
+  - Validate B2C-issued JWTs in the C# .NET API to secure endpoints.
+  - Map claims from the B2C token (e.g., name, email) to the application's internal user model.
 - Member relationship graphs
 - Richer contact/address data
 - Daily attendance summaries

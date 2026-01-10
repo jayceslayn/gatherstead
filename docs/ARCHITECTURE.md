@@ -3,6 +3,9 @@
 ## Technology Stack
 This repository uses an Azure-first architecture with a C# .NET API and a Vue 3 / Nuxt 3 web UI. Keep changes aligned with these directions.
 
+### Authentication
+User authentication is managed by Azure Entra B2C, providing a secure, scalable, and customizable identity platform. To mitigate vendor lock-in, the application will integrate with B2C using standard protocols like OpenID Connect (OIDC) and rely on JSON Web Tokens (JWTs) for session management. This approach delegates complex identity operations to a dedicated provider while allowing for future flexibility.
+
 ## Domain-Driven Design Overview
 Gatherstead is organized around bounded contexts that align with the two core goals while sharing a multi-tenant foundation.
 
