@@ -32,7 +32,7 @@ Gatherstead is organized around bounded contexts that align with the two core go
 - Plan observability from the start: include App Insights/Log Analytics hooks, structured logs, and dashboards/alerts for auth failures, data-access anomalies, and PII access patterns.
 - Default to private networking (VNet integration, private endpoints) for data stores; avoid exposing databases or storage publicly.
 - Assume multiple environments (dev/test/prod). Keep configuration in App Configuration/Key Vault and avoid environment-specific code.
-- For storage and databases, enforce tenant scoping and indexing that match the domain guidance in STRATEGY.md.
+- For storage and databases, enforce tenant scoping and indexing that match the domain guidance in [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md).
 - The current SQL implementation targets SQL Server; prefer SQL Server-friendly defaults and tooling when wiring up the data layer.
 
 ### Backend
