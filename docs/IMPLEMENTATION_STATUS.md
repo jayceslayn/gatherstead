@@ -20,6 +20,8 @@ The current model now spans tenants, households/members, relationships, contact 
 
 - **Indexing and constraints for frequent lookups**: Add composite indexes on `(TenantId, ForeignKey)` for high-churn tables (members, events, chores) and uniqueness constraints where applicable (primary contact per member, single dietary profile per member) to keep tenant-specific queries predictable.
 - **API and workflow alignment**: Now that lineage, contact data, attendance, and assignment structures exist, expose them through DTOs/services with validation and authorization hooks so guardianship and arbitration rules become enforceable behaviors rather than schema-only constructs.
+- **Authorization refinement**: Implement granular authorization checks by tenant, household, and role with proper HTTP status codes (401 for authentication failures, 403 for insufficient permissions).
+- **Token security**: Improve PASETO token implementation following best practices from the [paseto-dotnet library](https://github.com/daviddesmet/paseto-dotnet) to strengthen authentication token handling and validation.
 
 ## Architecture Direction
 Treat households and events as separate aggregates linked through member IDs, enabling independent evolution of directory data and event participation while maintaining traceability.
