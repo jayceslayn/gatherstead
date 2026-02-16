@@ -1,9 +1,8 @@
 using Gatherstead.Api.Encryption;
 using Gatherstead.Api.Services.Households;
 using Gatherstead.Api.Security;
-using Gatherstead.Db;
-using Gatherstead.Db.Encryption;
-using Gatherstead.Db.Interceptors;
+using Gatherstead.Data;
+using Gatherstead.Data.Interceptors;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 

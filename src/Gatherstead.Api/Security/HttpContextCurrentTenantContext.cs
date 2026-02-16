@@ -1,4 +1,4 @@
-using Gatherstead.Db;
+using Gatherstead.Data;
 using Microsoft.AspNetCore.Routing;
 
 namespace Gatherstead.Api.Security;

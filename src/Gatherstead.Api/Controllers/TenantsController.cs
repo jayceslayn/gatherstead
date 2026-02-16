@@ -1,5 +1,5 @@
 using Gatherstead.Api.Contracts.Tenants;
-using Gatherstead.Db;
+using Gatherstead.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

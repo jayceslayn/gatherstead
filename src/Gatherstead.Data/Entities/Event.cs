@@ -1,0 +1,31 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
+
+namespace Gatherstead.Data.Entities;
+
+[Index(nameof(TenantId))]
+[Index(nameof(TenantId), nameof(PropertyId))]
+[Index(nameof(TenantId), nameof(PropertyId), nameof(Name), IsUnique = true)]
+public class Event : AuditableEntity
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    [ForeignKey(nameof(TenantId))]
+    public Tenant? Tenant { get; set; }
+    public Guid PropertyId { get; set; }
+    [ForeignKey(nameof(PropertyId))]
+    public Property? Property { get; set; }
+    [Required]
+    [MaxLength(200)]
+    public string Name { get; set; } = string.Empty;
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+
+    public ICollection<Resource> Resources { get; set; } = new List<Resource>();
+    public ICollection<MealPlan> MealPlans { get; set; } = new List<MealPlan>();
+    public ICollection<ChoreTemplate> ChoreTemplates { get; set; } = new List<ChoreTemplate>();
+    public ICollection<EventAttendance> Attendances { get; set; } = new List<EventAttendance>();
+}

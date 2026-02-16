@@ -1,4 +1,4 @@
-using Gatherstead.Db;
+using Gatherstead.Data;
 using System.Security.Claims;
 
 namespace Gatherstead.Api.Security;

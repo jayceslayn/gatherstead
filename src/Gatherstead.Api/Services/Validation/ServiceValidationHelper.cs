@@ -1,6 +1,6 @@
 using System.Linq;
 using Gatherstead.Api.Contracts.Responses;
-using Gatherstead.Db;
+using Gatherstead.Data;
 
 namespace Gatherstead.Api.Services.Validation;
 

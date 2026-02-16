@@ -1,4 +1,3 @@
-using Gatherstead.Db.Encryption;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Gatherstead.Api.Encryption;

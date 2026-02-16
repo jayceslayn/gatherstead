@@ -2,11 +2,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Db", "packages/db/Gatherstead.Db.csproj", "{B1A710BA-7EDE-4B6E-B3DB-628123B17CC6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Data", "src/Gatherstead.Data/Gatherstead.Data.csproj", "{B1A710BA-7EDE-4B6E-B3DB-628123B17CC6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Api", "src/Gatherstead.Api/Gatherstead.Api.csproj", "{B9A540A5-71B1-45DD-8FBD-9F80BED23288}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Db.Setup", "packages/db.setup/Gatherstead.Db.Setup.csproj", "{458D5C48-F8CF-40F4-9D28-DF739281F747}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gatherstead.Data.Setup", "src/Gatherstead.Data.Setup/Gatherstead.Data.Setup.csproj", "{458D5C48-F8CF-40F4-9D28-DF739281F747}"
 EndProject
 Global
     GlobalSection(SolutionConfigurationPlatforms) = preSolution

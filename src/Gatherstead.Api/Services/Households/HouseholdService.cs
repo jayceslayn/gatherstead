@@ -1,8 +1,8 @@
 using Gatherstead.Api.Contracts.Households;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Validation;
-using Gatherstead.Db;
-using Gatherstead.Db.Entities;
+using Gatherstead.Data;
+using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
@@ -57,6 +57,8 @@ public class HouseholdService : IHouseholdService
         CancellationToken cancellationToken = default)
     {
         var response = new HouseholdResponse();
+
+        // Validate request
         ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
         if (ServiceValidationHelper.HasErrors(response))
@@ -64,6 +66,7 @@ public class HouseholdService : IHouseholdService
             return response;
         }
 
+        // Get entity
         var household = await _dbContext.Households
             .AsNoTracking()
             .Where(h => h.TenantId == tenantId && h.Id == householdId)
@@ -85,31 +88,23 @@ public class HouseholdService : IHouseholdService
         CancellationToken cancellationToken = default)
     {
         var response = new HouseholdResponse();
+
+        // Validate request
         ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        string? normalizedName = null;
-
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A create household request is required.");
-        }
-
-        if (request is not null &&
-            !ServiceValidationHelper.TryNormalizeString(request.Name, "Household name", response, out normalizedName))
-        {
-            return response;
-        }
+        ValidateHousehold(request, response);
 
         if (ServiceValidationHelper.HasErrors(response))
         {
             return response;
         }
 
+        // Create entity
         var household = new Household
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
-            Name = normalizedName!
+            Name = normalizedName,
         };
 
         _dbContext.Households.Add(household);
@@ -126,26 +121,24 @@ public class HouseholdService : IHouseholdService
         CancellationToken cancellationToken = default)
     {
         var response = new HouseholdResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        string? normalizedName = null;
+        // Validate request
+        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
         if (request is null)
         {
             response.AddResponseMessage(MessageType.ERROR, "An update household request is required.");
-        }
-
-        if (request is not null &&
-            !ServiceValidationHelper.TryNormalizeString(request.Name, "Household name", response, out normalizedName))
-        {
             return response;
         }
+
+        ServiceValidationHelper.TryNormalizeString(request.Name, "Household name", response, out string normalizedName);
 
         if (ServiceValidationHelper.HasErrors(response))
         {
             return response;
         }
 
+        // Update entity
         var household = await _dbContext.Households
             .Where(h => h.TenantId == tenantId && h.Id == householdId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -170,6 +163,8 @@ public class HouseholdService : IHouseholdService
         CancellationToken cancellationToken = default)
     {
         var response = new HouseholdResponse();
+
+        // Validate request
         ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
         if (ServiceValidationHelper.HasErrors(response))
@@ -177,6 +172,7 @@ public class HouseholdService : IHouseholdService
             return response;
         }
 
+        // Delete entity
         var household = await _dbContext.Households
             .Where(h => h.TenantId == tenantId && h.Id == householdId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -187,15 +183,30 @@ public class HouseholdService : IHouseholdService
             return response;
         }
 
-        if (!household.IsDeleted)
+        if (household.IsDeleted)
         {
-            household.IsDeleted = true;
+            response.AddResponseMessage(MessageType.WARNING, "Household already deleted.");
+            return response;
         }
+
+        household.IsDeleted = true;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SuccessfulResponse(MapToDto(household));
         return response;
+    }
+
+    private static void ValidateHousehold(Household household, HouseholdResponse response)
+    {
+        if (household is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "A household entity is required.");
+            return;
+        }
+
+        ServiceValidationHelper.TryNormalizeString(household.Name, "household.name", response, out string normalizedName);
+        household.Name = normalizedName;
     }
 
     private static HouseholdDto MapToDto(Household household) => new(

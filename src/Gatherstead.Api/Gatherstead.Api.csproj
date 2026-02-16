@@ -13,6 +13,6 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\packages\db\Gatherstead.Db.csproj" />
+    <ProjectReference Include="..\Gatherstead.Data\Gatherstead.Data.csproj" />
   </ItemGroup>
 </Project>
