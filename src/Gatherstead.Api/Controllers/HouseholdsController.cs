@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Households;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Households;
 using Gatherstead.Api.Services.Validation;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +10,7 @@ namespace Gatherstead.Api.Controllers;
 
 [ApiController]
 [Authorize]
+[RequireTenantAccess]
 [Route("api/tenants/{tenantId:guid}/households")]
 public class HouseholdsController : ControllerBase
 {
