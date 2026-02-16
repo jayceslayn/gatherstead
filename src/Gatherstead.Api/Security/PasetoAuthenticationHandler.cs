@@ -1,9 +1,9 @@
 using System.Linq;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Paseto;
-using Paseto.Cryptography.Key;
 
 namespace Gatherstead.Api.Security;
 

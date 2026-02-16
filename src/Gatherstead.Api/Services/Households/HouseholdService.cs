@@ -78,7 +78,7 @@ public class HouseholdService : IHouseholdService
             return response;
         }
 
-        response.SuccessfulResponse(MapToDto(household));
+        response.SetSuccess(MapToDto(household));
         return response;
     }
 
@@ -92,7 +92,13 @@ public class HouseholdService : IHouseholdService
         // Validate request
         ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        ValidateHousehold(request, response);
+        if (request is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "A create household request is required.");
+            return response;
+        }
+
+        ServiceValidationHelper.TryNormalizeString(request.Name, "Household name", response, out string normalizedName);
 
         if (ServiceValidationHelper.HasErrors(response))
         {
@@ -110,7 +116,7 @@ public class HouseholdService : IHouseholdService
         _dbContext.Households.Add(household);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SuccessfulResponse(MapToDto(household));
+        response.SetSuccess(MapToDto(household));
         return response;
     }
 
@@ -153,7 +159,7 @@ public class HouseholdService : IHouseholdService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SuccessfulResponse(MapToDto(household));
+        response.SetSuccess(MapToDto(household));
         return response;
     }
 
@@ -193,20 +199,8 @@ public class HouseholdService : IHouseholdService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SuccessfulResponse(MapToDto(household));
+        response.SetSuccess(MapToDto(household));
         return response;
-    }
-
-    private static void ValidateHousehold(Household household, HouseholdResponse response)
-    {
-        if (household is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A household entity is required.");
-            return;
-        }
-
-        ServiceValidationHelper.TryNormalizeString(household.Name, "household.name", response, out string normalizedName);
-        household.Name = normalizedName;
     }
 
     private static HouseholdDto MapToDto(Household household) => new(

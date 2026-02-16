@@ -19,11 +19,10 @@ public class BaseEntityResponse<T>
         return this;
     }
 
-    public BaseEntityResponse<T> SuccessfulResponse(T entity)
+    public BaseEntityResponse<T> SetSuccess(T entity)
     {
         Entity = entity;
         Successful = true;
-
         return this;
     }
 
