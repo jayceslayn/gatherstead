@@ -34,6 +34,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<StayIntent> StayIntents => Set<StayIntent>();
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
     public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
+    public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -63,6 +64,35 @@ public class GathersteadDbContext : DbContext
             b.HasIndex(p => new { p.TenantId, p.HouseholdMemberId })
                 .HasDatabaseName("IX_Address_PrimaryPerMember")
                 .HasFilter("[IsPrimary] = 1");
+        });
+
+        modelBuilder.Entity<RevokedToken>(b =>
+        {
+            // Index on Jti for fast revocation lookups
+            b.HasIndex(p => p.Jti)
+                .HasDatabaseName("IX_RevokedToken_Jti");
+
+            // Index on ExpiresAt for efficient cleanup queries
+            b.HasIndex(p => p.ExpiresAt)
+                .HasDatabaseName("IX_RevokedToken_ExpiresAt");
+
+            // Composite index for tenant-specific queries
+            b.HasIndex(p => new { p.TenantId, p.UserId })
+                .HasDatabaseName("IX_RevokedToken_TenantUser");
+        });
+
+        // Configure MemberRelationship to HouseholdMember relationship
+        modelBuilder.Entity<MemberRelationship>(b =>
+        {
+            b.HasOne(mr => mr.HouseholdMember)
+                .WithMany(hm => hm.Relationships)
+                .HasForeignKey(mr => mr.HouseholdMemberId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            b.HasOne(mr => mr.RelatedMember)
+                .WithMany()
+                .HasForeignKey(mr => mr.RelatedMemberId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         foreach (var foreignKey in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))

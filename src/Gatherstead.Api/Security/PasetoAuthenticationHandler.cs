@@ -1,9 +1,10 @@
-using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using Paseto;
+using Paseto.Builder;
+using Gatherstead.Api.Services;
 
 namespace Gatherstead.Api.Security;
 
@@ -12,8 +13,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
     public PasetoAuthenticationHandler(
         IOptionsMonitor<PasetoAuthenticationOptions> options,
         ILoggerFactory logger,
-        UrlEncoder encoder,
-        ISystemClock clock) : base(options, logger, encoder, clock)
+        UrlEncoder encoder) : base(options, logger, encoder)
     {
     }
 
@@ -50,117 +50,229 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
         try
         {
             var principal = ValidatePasetoToken(token);
+
+            // Extract user context for logging
+            var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? principal.FindFirst("sub")?.Value;
+            var ipAddress = Request.HttpContext.Connection.RemoteIpAddress?.ToString();
+
+            Logger.LogInformation(
+                "PASETO authentication succeeded. UserId: {UserId}, IP: {IpAddress}, UserAgent: {UserAgent}",
+                userId,
+                ipAddress,
+                Request.Headers.UserAgent.ToString()
+            );
+
             var ticket = new AuthenticationTicket(principal, PasetoAuthenticationDefaults.AuthenticationScheme);
             return Task.FromResult(AuthenticateResult.Success(ticket));
         }
+        catch (SecurityTokenExpiredException ex)
+        {
+            Logger.LogWarning(
+                "PASETO authentication failed: Token expired. IP: {IpAddress}, Message: {Message}",
+                Request.HttpContext.Connection.RemoteIpAddress,
+                ex.Message
+            );
+            return Task.FromResult(AuthenticateResult.Fail(ex.Message));
+        }
+        catch (SecurityTokenException ex)
+        {
+            Logger.LogWarning(ex,
+                "PASETO authentication failed: {Reason}, IP: {IpAddress}, UserAgent: {UserAgent}",
+                ex.Message,
+                Request.HttpContext.Connection.RemoteIpAddress,
+                Request.Headers.UserAgent.ToString()
+            );
+            return Task.FromResult(AuthenticateResult.Fail(ex.Message));
+        }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "PASETO authentication failed");
-            return Task.FromResult(AuthenticateResult.Fail(ex));
+            Logger.LogError(ex,
+                "PASETO authentication error (unexpected): IP: {IpAddress}",
+                Request.HttpContext.Connection.RemoteIpAddress
+            );
+            return Task.FromResult(AuthenticateResult.Fail("Authentication failed due to an unexpected error."));
         }
     }
 
     private ClaimsPrincipal ValidatePasetoToken(string token)
     {
-        var builderType = Type.GetType("Paseto.Builder.PasetoBuilder, Paseto.Core")
-            ?? Type.GetType("Paseto.PasetoBuilder, Paseto.Core");
-
-        if (builderType is null)
+        try
         {
-            throw new SecurityTokenException("Paseto.Core builder type was not found.");
-        }
+            // Use library's native fluent API - no reflection needed
+            var publicKeyBytes = Base64UrlDecode(Options.PublicKeyBase64!).ToArray();
 
-        var publicKeyType = Type.GetType("Paseto.Cryptography.Key.Ed25519PublicKey, Paseto.Core");
-        if (publicKeyType is null)
+            // Configure validation parameters - library handles standard validations
+            var validationParams = new PasetoTokenValidationParameters
+            {
+                ValidateLifetime = Options.RequireExpirationTime,
+                ValidateAudience = Options.ValidateAudience,
+                ValidAudience = Options.Audience,
+                ValidateIssuer = Options.ValidateIssuer,
+                ValidIssuer = Options.Issuer
+            };
+
+            // Build and configure the decoder using fluent API
+            var builder = new PasetoBuilder()
+                .Use(ProtocolVersion.V4, Purpose.Public)
+                .WithPublicKey(publicKeyBytes);
+
+            // Add implicit assertion if configured
+            if (!string.IsNullOrWhiteSpace(Options.ImplicitAssertion))
+            {
+                builder = builder.AddImplicitAssertion(Options.ImplicitAssertion!);
+            }
+
+            // Decode and validate the token - library handles exp, nbf, aud, iss automatically
+            var result = builder.Decode(token, validationParams);
+
+            // Check if validation succeeded
+            if (!result.IsValid)
+            {
+                var errorMessage = result.Exception?.Message ?? "Token validation failed";
+                if (result.Exception != null)
+                {
+                    throw new SecurityTokenException(errorMessage, result.Exception);
+                }
+                throw new SecurityTokenException(errorMessage);
+            }
+
+            // Extract claims from the validated token
+            var claims = ExtractClaims(result.Paseto);
+
+            // Perform additional custom validations
+            ValidateTokenClaims(claims);
+
+            // Check for token revocation (application-specific)
+            CheckTokenRevocation(claims);
+
+            return BuildPrincipal(claims);
+        }
+        catch (SecurityTokenException)
         {
-            throw new SecurityTokenException("Paseto.Core public key type was not found.");
+            throw;
         }
-
-        var builderInstance = Activator.CreateInstance(builderType)
-            ?? throw new InvalidOperationException("Unable to construct PASETO builder.");
-
-        var publicKey = Activator.CreateInstance(publicKeyType, Base64UrlDecode(Options.PublicKeyBase64!).ToArray());
-        if (publicKey is null)
+        catch (Exception ex) when (ex.InnerException != null)
         {
-            throw new SecurityTokenException("Unable to construct PASETO public key instance.");
+            // Check if inner exception indicates token expiration or validation failure
+            var innerMsg = ex.InnerException.Message.ToLowerInvariant();
+            if (innerMsg.Contains("expired") || innerMsg.Contains("exp"))
+            {
+                throw new SecurityTokenExpiredException($"Token expired: {ex.InnerException.Message}", ex.InnerException);
+            }
+            throw new SecurityTokenException($"PASETO validation error: {ex.InnerException.Message}", ex.InnerException);
         }
-
-        var configuredBuilder = InvokeIfExists(builderInstance, "UseV4Public", publicKey) ?? builderInstance;
-        configuredBuilder = InvokeIfExists(configuredBuilder, "WithAudience", Options.Audience) ?? configuredBuilder;
-        configuredBuilder = InvokeIfExists(configuredBuilder, "WithIssuer", Options.Issuer) ?? configuredBuilder;
-
-        if (!string.IsNullOrWhiteSpace(Options.ImplicitAssertion))
+        catch (Exception ex)
         {
-            configuredBuilder = InvokeIfExists(configuredBuilder, "WithImplicitAssertion", Options.ImplicitAssertion!) ?? configuredBuilder;
+            throw new SecurityTokenException($"PASETO validation error: {ex.Message}", ex);
         }
-
-        var decodeMethod = configuredBuilder
-            .GetType()
-            .GetMethods()
-            .FirstOrDefault(m => m.Name == "Decode" && m.GetParameters().Length is 1 or 2);
-
-        if (decodeMethod is null)
-        {
-            throw new SecurityTokenException("Paseto.Core decode method could not be located.");
-        }
-
-        var parameters = decodeMethod.GetParameters().Length == 1
-            ? new object?[] { token }
-            : new object?[] { token, Options.ImplicitAssertion };
-
-        var pasetoToken = decodeMethod.Invoke(configuredBuilder, parameters)
-            ?? throw new SecurityTokenException("PASETO token could not be decoded.");
-
-        var payload = TryGetPayload(pasetoToken);
-        if (payload is null)
-        {
-            throw new SecurityTokenException("Paseto.Core returned an empty payload.");
-        }
-
-        return BuildPrincipal(payload);
     }
 
-    private static IReadOnlyCollection<Claim>? TryGetPayload(object pasetoToken)
+    private static List<Claim> ExtractClaims(PasetoToken pasetoToken)
     {
-        var payloadProperty = pasetoToken.GetType().GetProperty("Payload")
-            ?? pasetoToken.GetType().GetProperty("Claims");
-
-        if (payloadProperty?.GetValue(pasetoToken) is not System.Collections.IEnumerable entries)
-        {
-            return null;
-        }
-
         var claims = new List<Claim>();
 
-        foreach (var entry in entries)
+        // PasetoPayload inherits from Dictionary<string, object>, so we can iterate directly
+        foreach (var claim in pasetoToken.Payload)
         {
-            var kvpType = entry.GetType();
-            var keyProperty = kvpType.GetProperty("Key");
-            var valueProperty = kvpType.GetProperty("Value");
-
-            if (keyProperty?.GetValue(entry) is not string name)
-            {
-                continue;
-            }
-
-            var value = valueProperty?.GetValue(entry)?.ToString();
+            var value = claim.Value?.ToString();
             if (!string.IsNullOrWhiteSpace(value))
             {
-                claims.Add(new Claim(name, value));
+                // Map standard PASETO claims to ClaimTypes
+                var claimType = claim.Key switch
+                {
+                    "sub" => ClaimTypes.NameIdentifier,
+                    "email" => ClaimTypes.Email,
+                    "name" => ClaimTypes.Name,
+                    _ => claim.Key
+                };
+
+                claims.Add(new Claim(claimType, value));
             }
         }
 
-        return claims.Count == 0 ? null : claims;
+        return claims;
     }
 
-    private static object? InvokeIfExists(object instance, string methodName, params object?[] parameters)
+    private void ValidateTokenClaims(List<Claim> claims)
     {
-        var method = instance
-            .GetType()
-            .GetMethods()
-            .FirstOrDefault(m => m.Name == methodName && m.GetParameters().Length == parameters.Length);
+        // Note: Library's ValidateLifetime handles exp, nbf validations automatically
+        // Only perform custom validations not handled by the library
 
-        return method?.Invoke(instance, parameters);
+        var now = DateTimeOffset.UtcNow;
+
+        // Custom validation: Maximum token age (application-specific requirement)
+        if (Options.MaxTokenAge > TimeSpan.Zero)
+        {
+            var iatClaim = claims.FirstOrDefault(c => c.Type == "iat");
+            if (iatClaim != null && TryParseDateTimeOffset(iatClaim.Value, out var iat))
+            {
+                // Check if token was issued in the future (with clock skew tolerance)
+                if (iat.Subtract(Options.ClockSkew) > now)
+                {
+                    throw new SecurityTokenException($"Token issued in the future: {iat}. Current time: {now}");
+                }
+
+                // Validate maximum token age
+                var age = now - iat;
+                if (age > Options.MaxTokenAge)
+                {
+                    throw new SecurityTokenExpiredException($"Token age ({age}) exceeds maximum allowed age ({Options.MaxTokenAge})");
+                }
+            }
+        }
+    }
+
+    private void CheckTokenRevocation(List<Claim> claims)
+    {
+        var jtiClaim = claims.FirstOrDefault(c => c.Type == "jti");
+        if (jtiClaim != null)
+        {
+            var revocationService = Context.RequestServices.GetService<ITokenRevocationService>();
+            if (revocationService != null)
+            {
+                var isRevoked = revocationService.IsTokenRevokedAsync(jtiClaim.Value)
+                    .GetAwaiter().GetResult();
+
+                if (isRevoked)
+                {
+                    throw new SecurityTokenException("Token has been revoked");
+                }
+            }
+        }
+    }
+
+    private static bool TryParseDateTimeOffset(string value, out DateTimeOffset result)
+    {
+        result = DateTimeOffset.MinValue;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        // Try parsing as ISO 8601 string
+        if (DateTimeOffset.TryParse(value, null,
+            System.Globalization.DateTimeStyles.RoundtripKind, out result))
+        {
+            return true;
+        }
+
+        // Try parsing as Unix timestamp (seconds since epoch)
+        if (long.TryParse(value, out var longValue))
+        {
+            try
+            {
+                result = DateTimeOffset.FromUnixTimeSeconds(longValue);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private static ClaimsPrincipal BuildPrincipal(IEnumerable<Claim> claims)
@@ -186,9 +298,24 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
     }
 }
 
-public sealed class SecurityTokenException : Exception
+public class SecurityTokenException : Exception
 {
     public SecurityTokenException(string message) : base(message)
+    {
+    }
+
+    public SecurityTokenException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
+}
+
+public class SecurityTokenExpiredException : Exception
+{
+    public SecurityTokenExpiredException(string message) : base(message)
+    {
+    }
+
+    public SecurityTokenExpiredException(string message, Exception innerException) : base(message, innerException)
     {
     }
 }
