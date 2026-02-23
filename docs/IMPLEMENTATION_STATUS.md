@@ -29,5 +29,7 @@ The current model now spans tenants, households/members, relationships, contact 
 ## Architecture Direction
 Treat households and events as separate aggregates linked through member IDs, enabling independent evolution of directory data and event participation while maintaining traceability.
 
+- **Batch reads, singular writes**: List endpoints should accept optional ID filters (e.g., `?ids=`) to enable batch reads within the existing `BaseEntityResponse<IReadOnlyCollection<T>>` contract. Write endpoints (create/update/delete) remain singular to preserve clean audit trails, simple error handling, and the `BaseEntityResponse<T>` contract. Workflow-specific batch write endpoints (e.g., bulk meal plan or resource creation during event setup) should be introduced only when concrete requirements arise.
+
 - **API and workflow alignment**: Now that lineage, contact data, attendance, and assignment structures exist, expose them through DTOs/services with validation and authorization hooks so guardianship and arbitration rules become enforceable behaviors rather than schema-only constructs.
 - **Authorization refinement**: The `RequireTenantAccessAttribute` provides tenant- and role-level enforcement. Next steps include household-scoped permission checks and proper HTTP status differentiation (401 for authentication failures, 403 for insufficient permissions).
