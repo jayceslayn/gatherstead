@@ -1,5 +1,6 @@
 using Gatherstead.Api.Services;
 using Gatherstead.Api.Services.Households;
+using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
 using Gatherstead.Data.Interceptors;
@@ -17,6 +18,7 @@ builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>()
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<AuditingSaveChangesInterceptor>();
 builder.Services.AddScoped<IHouseholdService, HouseholdService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 
 // Configure Azure Key Vault (if available)

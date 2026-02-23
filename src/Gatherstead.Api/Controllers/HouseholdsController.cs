@@ -22,9 +22,27 @@ public class HouseholdsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>>> GetHouseholds(Guid tenantId, CancellationToken cancellationToken)
+    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>>> GetHouseholds(
+        Guid tenantId,
+        [FromQuery] string? ids,
+        CancellationToken cancellationToken)
     {
-        var response = await _householdService.ListAsync(tenantId, cancellationToken);
+        IEnumerable<Guid>? parsedIds = null;
+        if (!string.IsNullOrWhiteSpace(ids))
+        {
+            var idList = new List<Guid>();
+            foreach (var segment in ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!Guid.TryParse(segment, out var parsed))
+                {
+                    return BadRequest(new { error = $"Invalid household identifier: '{segment}'." });
+                }
+                idList.Add(parsed);
+            }
+            parsedIds = idList;
+        }
+
+        var response = await _householdService.ListAsync(tenantId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
         {

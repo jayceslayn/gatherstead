@@ -32,6 +32,7 @@ public class HouseholdService : IHouseholdService
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>> ListAsync(
         Guid tenantId,
+        IEnumerable<Guid>? ids = null,
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>();
@@ -42,9 +43,20 @@ public class HouseholdService : IHouseholdService
             return response;
         }
 
-        var households = await _dbContext.Households
+        var query = _dbContext.Households
             .AsNoTracking()
-            .Where(household => household.TenantId == tenantId)
+            .Where(household => household.TenantId == tenantId);
+
+        if (ids is not null)
+        {
+            var idList = ids.ToList();
+            if (idList.Count > 0)
+            {
+                query = query.Where(household => idList.Contains(household.Id));
+            }
+        }
+
+        var households = await query
             .Select(MapToDtoExpression)
             .ToListAsync(cancellationToken);
 
