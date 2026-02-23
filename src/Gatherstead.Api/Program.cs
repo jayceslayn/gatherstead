@@ -52,7 +52,8 @@ builder.Services
                 catch (Exception ex)
                 {
                     // Log warning and fall back to configuration
-                    var logger = builder.Services.BuildServiceProvider().GetRequiredService<ILogger<Program>>();
+                    using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
+                    var logger = loggerFactory.CreateLogger<Program>();
                     logger.LogWarning(ex, "Failed to load public key from Key Vault, falling back to configuration");
                 }
             }
