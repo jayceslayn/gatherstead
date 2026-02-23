@@ -6,7 +6,7 @@ The end-to-end process is designed to be run from a CI/CD pipeline:
 
 1.  **Provision Infrastructure:** Run the Terraform script in the `infrastructure/` directory. This will provision all necessary Azure resources, including the Key Vault, the master key, the SQL server, and the database.
 2.  **Run EF Core Migrations:** The application's deployment pipeline should run standard Entity Framework Core migrations to create the database schema.
-3.  **Configure Database Keys:** Execute the `Gatherstead.Db.Setup` utility, passing in the database connection string and the Key Vault CMK URI (both are outputs from the Terraform script). This utility connects to the database and creates the necessary Column Master Key and Column Encryption Key metadata.
+3.  **Configure Database Keys:** Execute the `Gatherstead.Data.Setup` utility, passing in the database connection string and the Key Vault CMK URI (both are outputs from the Terraform script). This utility connects to the database and creates the necessary Column Master Key and Column Encryption Key metadata.
 4.  **Encrypt Columns:** Execute the `infrastructure/encrypt-columns.sql` script against the database. This script alters the table columns to apply encryption.
 5.  **Deploy Application:** Deploy the application itself.
 
@@ -23,13 +23,13 @@ To run this process locally or for the first time:
 
 2.  **Run Database Migrations:**
     *   Ensure your `appsettings.Development.json` has the correct connection string for the newly created database.
-    *   From the root of the project, run `dotnet ef database update --project packages/db`.
+    *   From the root of the project, run `dotnet ef database update --project src/Gatherstead.Data`.
 
 3.  **Configure Encryption Keys:**
     *   Build the setup utility: `dotnet build Gatherstead.sln`
     *   Run the utility with the correct parameters:
         ```bash
-        dotnet run --project packages/db.setup/Gatherstead.Db.Setup.csproj -- "<your-connection-string>" "<your-key-vault-cmk-id>"
+        dotnet run --project src/Gatherstead.Data.Setup/Gatherstead.Data.Setup.csproj -- "<your-connection-string>" "<your-key-vault-cmk-id>"
         ```
     *   Replace `<your-connection-string>` with the full database connection string, including your admin credentials.
     *   Replace `<your-key-vault-cmk-id>` with the `key_vault_cmk_id` output from Terraform.

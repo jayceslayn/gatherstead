@@ -7,23 +7,23 @@ This repository uses an Azure-first architecture with a C# .NET API and a Vue 3 
 Gatherstead is organized around bounded contexts that align with the two core goals while sharing a multi-tenant foundation.
 
 ### Shared Foundation (Tenancy)
-- **Tenant**: Top-level aggregate for an extended family or organization. Tenants own households, properties, events, and users, providing isolation across families or groups.【F:packages/db/Entities/Tenant.cs†L7-L14】
+- **Tenant**: Top-level aggregate for an extended family or organization. Tenants own households, properties, events, and users, providing isolation across families or groups.【F:src/Gatherstead.Data/Entities/Tenant.cs†L7-L14】
 
 ### Family Directory Context
-- **Household**: Represents a family grouping under a tenant and owns its members.【F:packages/db/Entities/Household.cs†L7-L12】 Households can evolve as families split or merge.
-- **HouseholdMember**: Person-centric record that stores name, birth date, dietary notes/tags, and adult/child markers, with encrypted fields for sensitive data.【F:packages/db/Entities/HouseholdMember.cs†L7-L22】 This is the anchor for relationships to gatherings, meals, and lodging intents.
+- **Household**: Represents a family grouping under a tenant and owns its members.【F:src/Gatherstead.Data/Entities/Household.cs†L7-L12】 Households can evolve as families split or merge.
+- **HouseholdMember**: Person-centric record that stores name, birth date, dietary notes/tags, and adult/child markers, with Always Encrypted columns for sensitive data.【F:src/Gatherstead.Data/Entities/HouseholdMember.cs†L7-L22】 This is the anchor for relationships to gatherings, meals, and lodging intents.
 - **Relationships**: Parent/child/sibling/spouse links will be modeled as member-to-member relationships to keep lineage flexible; this is a planned enhancement beyond current entities.
 - **Contact & extensible details**: Additional value objects (addresses, phone/email, custom attributes) can be attached to HouseholdMember in future iterations to fulfill the directory goal.
 
 ### Gathering Planning Context
-- **Property**: Physical location that can host events and belongs to a tenant.【F:packages/db/Entities/Property.cs†L7-L12】
-- **Event**: Time-bounded gathering tied to a tenant and property; aggregates resources, meal plans, and chore templates for the event window.【F:packages/db/Entities/Event.cs†L7-L19】
-- **Resource**: Lodging or facility slot (e.g., guest room, RV space) with capacities and notes; collects stay intents from members instead of hard reservations.【F:packages/db/Entities/Resource.cs†L7-L16】
-- **StayIntent**: Member's request to use a resource on a given night, with status and notes for offline arbitration.【F:packages/db/Entities/StayIntent.cs†L7-L15】
-- **MealPlan**: Defines meals for specific days within an event and aggregates meal intents and notes.【F:packages/db/Entities/MealPlan.cs†L7-L16】
-- **MealIntent**: Member-level response indicating attendance for a meal, dietary considerations, and bring-your-own-food choices.【F:packages/db/Entities/MealIntent.cs†L7-L15】
-- **ChoreTemplate**: Volunteer-friendly template for recurring chores (by time slot) across an event.【F:packages/db/Entities/ChoreTemplate.cs†L7-L16】
-- **ChoreTask**: Dated chore assignments created from templates, allowing optional meal alignment, multiple assignees, completion tracking, and notes.【F:packages/db/Entities/ChoreTask.cs†L7-L16】
+- **Property**: Physical location that can host events and belongs to a tenant.【F:src/Gatherstead.Data/Entities/Property.cs†L7-L12】
+- **Event**: Time-bounded gathering tied to a tenant and property; aggregates resources, meal plans, and chore templates for the event window.【F:src/Gatherstead.Data/Entities/Event.cs†L7-L19】
+- **Resource**: Lodging or facility slot (e.g., guest room, RV space) with capacities and notes; collects stay intents from members instead of hard reservations.【F:src/Gatherstead.Data/Entities/Resource.cs†L7-L16】
+- **StayIntent**: Member's request to use a resource on a given night, with status and notes for offline arbitration.【F:src/Gatherstead.Data/Entities/StayIntent.cs†L7-L15】
+- **MealPlan**: Defines meals for specific days within an event and aggregates meal intents and notes.【F:src/Gatherstead.Data/Entities/MealPlan.cs†L7-L16】
+- **MealIntent**: Member-level response indicating attendance for a meal, dietary considerations, and bring-your-own-food choices.【F:src/Gatherstead.Data/Entities/MealIntent.cs†L7-L15】
+- **ChoreTemplate**: Volunteer-friendly template for recurring chores (by time slot) across an event.【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs†L7-L16】
+- **ChoreTask**: Dated chore assignments created from templates, allowing optional meal alignment, multiple assignees, completion tracking, and notes.【F:src/Gatherstead.Data/Entities/ChoreTask.cs†L7-L16】
 
 ## Technology Conventions
 
