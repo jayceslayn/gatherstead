@@ -96,7 +96,38 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// Configure HSTS
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+});
+
+// Configure CORS
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (allowedOrigins.Length > 0)
+        {
+            policy
+                .WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+    });
+});
+
 // Add rate limiting services
+var rateLimitingSection = builder.Configuration.GetSection("RateLimiting");
+var permitLimit = rateLimitingSection.GetValue("PermitLimit", 100);
+var windowMinutes = rateLimitingSection.GetValue("WindowMinutes", 1);
+var queueLimit = rateLimitingSection.GetValue("QueueLimit", 0);
+
 builder.Services.AddRateLimiter(options =>
 {
     // Global rate limiter based on IP address
@@ -108,10 +139,10 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: ipAddress,
             factory: _ => new FixedWindowRateLimiterOptions
             {
-                PermitLimit = 100,
-                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = permitLimit,
+                Window = TimeSpan.FromMinutes(windowMinutes),
                 QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
-                QueueLimit = 0
+                QueueLimit = queueLimit
             });
     });
 
@@ -152,6 +183,24 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+    app.UseHsts();
+}
+
+// Security headers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'none'");
+    context.Response.Headers.Append("Referrer-Policy", "no-referrer");
+    context.Response.Headers.Append("Permissions-Policy", "geolocation=(), camera=(), microphone=()");
+    await next();
+});
+
+app.UseCors();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
