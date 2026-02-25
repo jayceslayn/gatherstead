@@ -17,39 +17,39 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
     {
     }
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (!Request.Headers.TryGetValue("Authorization", out var authorizationHeader))
         {
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
         }
 
         var header = authorizationHeader.ToString();
         if (string.IsNullOrWhiteSpace(header))
         {
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
         }
 
         var prefix = PasetoAuthenticationDefaults.TokenPrefix + " ";
         if (!header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
         {
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
         }
 
         var token = header[prefix.Length..].Trim();
         if (string.IsNullOrWhiteSpace(token))
         {
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
         }
 
         if (string.IsNullOrWhiteSpace(Options.PublicKeyBase64))
         {
-            return Task.FromResult(AuthenticateResult.Fail("PASETO public key is not configured."));
+            return AuthenticateResult.Fail("PASETO public key is not configured.");
         }
 
         try
         {
-            var principal = ValidatePasetoToken(token);
+            var principal = await ValidatePasetoTokenAsync(token);
 
             // Extract user context for logging
             var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -64,7 +64,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
             );
 
             var ticket = new AuthenticationTicket(principal, PasetoAuthenticationDefaults.AuthenticationScheme);
-            return Task.FromResult(AuthenticateResult.Success(ticket));
+            return AuthenticateResult.Success(ticket);
         }
         catch (SecurityTokenExpiredException ex)
         {
@@ -73,7 +73,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
                 Request.HttpContext.Connection.RemoteIpAddress,
                 ex.Message
             );
-            return Task.FromResult(AuthenticateResult.Fail(ex.Message));
+            return AuthenticateResult.Fail(ex.Message);
         }
         catch (SecurityTokenException ex)
         {
@@ -83,7 +83,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
                 Request.HttpContext.Connection.RemoteIpAddress,
                 Request.Headers.UserAgent.ToString()
             );
-            return Task.FromResult(AuthenticateResult.Fail(ex.Message));
+            return AuthenticateResult.Fail(ex.Message);
         }
         catch (Exception ex)
         {
@@ -91,11 +91,11 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
                 "PASETO authentication error (unexpected): IP: {IpAddress}",
                 Request.HttpContext.Connection.RemoteIpAddress
             );
-            return Task.FromResult(AuthenticateResult.Fail("Authentication failed due to an unexpected error."));
+            return AuthenticateResult.Fail("Authentication failed due to an unexpected error.");
         }
     }
 
-    private ClaimsPrincipal ValidatePasetoToken(string token)
+    private async Task<ClaimsPrincipal> ValidatePasetoTokenAsync(string token)
     {
         try
         {
@@ -144,7 +144,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
             ValidateTokenClaims(claims);
 
             // Check for token revocation (application-specific)
-            CheckTokenRevocation(claims);
+            await CheckTokenRevocationAsync(claims);
 
             return BuildPrincipal(claims);
         }
@@ -223,7 +223,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
         }
     }
 
-    private void CheckTokenRevocation(List<Claim> claims)
+    private async Task CheckTokenRevocationAsync(List<Claim> claims)
     {
         var jtiClaim = claims.FirstOrDefault(c => c.Type == "jti");
         if (jtiClaim != null)
@@ -231,8 +231,7 @@ public sealed class PasetoAuthenticationHandler : AuthenticationHandler<PasetoAu
             var revocationService = Context.RequestServices.GetService<ITokenRevocationService>();
             if (revocationService != null)
             {
-                var isRevoked = revocationService.IsTokenRevokedAsync(jtiClaim.Value)
-                    .GetAwaiter().GetResult();
+                var isRevoked = await revocationService.IsTokenRevokedAsync(jtiClaim.Value);
 
                 if (isRevoked)
                 {
