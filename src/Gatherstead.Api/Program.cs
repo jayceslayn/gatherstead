@@ -1,4 +1,5 @@
 using Gatherstead.Api.Services;
+using Gatherstead.Api.Services.HouseholdMembers;
 using Gatherstead.Api.Services.Households;
 using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Security;
@@ -17,6 +18,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>();
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<AuditingSaveChangesInterceptor>();
+builder.Services.AddScoped<IHouseholdMemberService, HouseholdMemberService>();
 builder.Services.AddScoped<IHouseholdService, HouseholdService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
