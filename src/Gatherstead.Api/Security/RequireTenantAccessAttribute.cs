@@ -81,7 +81,12 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        // Authorization successful - allow request to proceed
+        // If includeDeleted=true is requested and user has Manager+ role, authorize it
+        if (string.Equals(context.HttpContext.Request.Query["includeDeleted"], "true", StringComparison.OrdinalIgnoreCase)
+            && HasRequiredRole(tenantUser.Role, TenantRole.Manager))
+        {
+            context.HttpContext.Items["IncludeDeletedAuthorized"] = true;
+        }
     }
 
     /// <summary>
