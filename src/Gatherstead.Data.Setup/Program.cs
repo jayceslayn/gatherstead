@@ -38,8 +38,9 @@ class Program
 
             EnsureColumnMasterKey(connection, keyVaultUrl);
             EnsureColumnEncryptionKey(connection);
+            EnsureTemporalRetention(connection);
 
-            Console.WriteLine("\nDatabase encryption keys configured successfully.");
+            Console.WriteLine("\nDatabase setup completed successfully.");
         }
         catch (Exception ex)
         {
@@ -63,11 +64,12 @@ class Program
         }
 
         Console.WriteLine($"Creating Column Master Key '{CmkName}'...");
+        string sanitizedUrl = keyVaultUrl.Replace("'", "''");
         string createCmkSql = $@"
             CREATE COLUMN MASTER KEY [{CmkName}]
             WITH (
                 KEY_STORE_PROVIDER_NAME = 'AZURE_KEY_VAULT',
-                KEY_PATH = '{keyVaultUrl}'
+                KEY_PATH = '{sanitizedUrl}'
             );";
 
         var createCmd = new SqlCommand(createCmkSql, connection);
@@ -102,5 +104,41 @@ class Program
         createCmd.ExecuteNonQuery();
 
         Console.WriteLine("Column Encryption Key created successfully.");
+    }
+
+    private static void EnsureTemporalRetention(SqlConnection connection)
+    {
+        Console.WriteLine("\nConfiguring temporal history retention...");
+
+        // Enable retention policy at the database level (idempotent).
+        var enableCmd = new SqlCommand(
+            "ALTER DATABASE CURRENT SET TEMPORAL_HISTORY_RETENTION ON;", connection);
+        enableCmd.ExecuteNonQuery();
+        Console.WriteLine("Temporal history retention enabled on database.");
+
+        // Find all temporal tables and set a 1-year retention period.
+        var findCmd = new SqlCommand(@"
+            SELECT QUOTENAME(SCHEMA_NAME(schema_id)) AS SchemaName, QUOTENAME(name) AS TableName
+            FROM sys.tables
+            WHERE temporal_type = 2;", connection);
+
+        var tables = new List<(string Schema, string Table)>();
+        using (var reader = findCmd.ExecuteReader())
+        {
+            while (reader.Read())
+                tables.Add((reader.GetString(0), reader.GetString(1)));
+        }
+
+        foreach (var (schema, table) in tables)
+        {
+            var alterCmd = new SqlCommand($@"
+                ALTER TABLE {schema}.{table}
+                SET (SYSTEM_VERSIONING = ON (
+                    HISTORY_RETENTION_PERIOD = 1 YEAR));", connection);
+            alterCmd.ExecuteNonQuery();
+            Console.WriteLine($"  Set 1-year retention on {schema}.{table}.");
+        }
+
+        Console.WriteLine($"Temporal retention configured for {tables.Count} table(s).");
     }
 }
