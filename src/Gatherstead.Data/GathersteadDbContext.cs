@@ -138,7 +138,8 @@ public class GathersteadDbContext : DbContext
         {
             var tenantIdAccess = Expression.Property(parameter, tenantIdProperty);
             var tenantIdAsNullable = Expression.Convert(tenantIdAccess, typeof(Guid?));
-            var tenantIdComparison = Expression.Equal(tenantIdAsNullable, Expression.Constant(_tenantId, typeof(Guid?)));
+            var tenantIdField = Expression.Field(Expression.Constant(this), nameof(_tenantId));
+            var tenantIdComparison = Expression.Equal(tenantIdAsNullable, tenantIdField);
             filterBody = Expression.AndAlso(filterBody, tenantIdComparison);
         }
 
