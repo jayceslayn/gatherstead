@@ -50,9 +50,12 @@ public class GathersteadDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        if (Database.IsSqlServer())
         {
-            modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
+            }
         }
 
         modelBuilder.Entity<ContactMethod>(b =>
