@@ -40,6 +40,11 @@ public class GathersteadDbContext : DbContext
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
     public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+    public DbSet<Address> Addresses => Set<Address>();
+    public DbSet<ContactMethod> ContactMethods => Set<ContactMethod>();
+    public DbSet<MemberAttribute> MemberAttributes => Set<MemberAttribute>();
+    public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
+    public DbSet<DietaryProfile> DietaryProfiles => Set<DietaryProfile>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
