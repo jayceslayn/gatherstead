@@ -12,8 +12,11 @@ Gatherstead is organized around bounded contexts that align with the two core go
 ### Family Directory Context
 - **Household**: Represents a family grouping under a tenant and owns its members.【F:src/Gatherstead.Data/Entities/Household.cs】 Households can evolve as families split or merge.
 - **HouseholdMember**: Person-centric record that stores name, birth date, dietary notes/tags, and adult/child markers, with Always Encrypted columns for sensitive data.【F:src/Gatherstead.Data/Entities/HouseholdMember.cs】 This is the anchor for relationships to gatherings, meals, and lodging intents.
-- **Relationships**: Parent/child/sibling/spouse links will be modeled as member-to-member relationships to keep lineage flexible; this is a planned enhancement beyond current entities.
-- **Contact & extensible details**: Additional value objects (addresses, phone/email, custom attributes) can be attached to HouseholdMember in future iterations to fulfill the directory goal.
+- **MemberRelationship**: Parent/child/sibling/spouse/guardian links modeled as member-to-member relationships with type and notes. Relationships can span households within the same tenant, keeping lineage flexible for split-family scenarios.【F:src/Gatherstead.Data/Entities/MemberRelationship.cs】
+- **Address**: Mailing addresses attached to a member with a primary-address designation (at most one primary per member, enforced by a filtered unique index).【F:src/Gatherstead.Data/Entities/Address.cs】
+- **ContactMethod**: Email, phone, or other contact entries per member, with primary-contact designation mirroring the address pattern.【F:src/Gatherstead.Data/Entities/ContactMethod.cs】
+- **MemberAttribute**: Extensible key-value pairs on a member for custom metadata (e.g., t-shirt size, accessibility needs), with a unique constraint on key per member.【F:src/Gatherstead.Data/Entities/MemberAttribute.cs】
+- **DietaryProfile**: Comprehensive dietary record per member (one-to-one) capturing preferred diet, allergies, restrictions, and notes. A tenant-level list endpoint supports aggregation across attending members for meal planning.【F:src/Gatherstead.Data/Entities/DietaryProfile.cs】
 
 ### Gathering Planning Context
 - **Property**: Physical location that can host events and belongs to a tenant.【F:src/Gatherstead.Data/Entities/Property.cs】
