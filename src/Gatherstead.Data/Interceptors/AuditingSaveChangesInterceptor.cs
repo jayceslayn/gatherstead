@@ -8,10 +8,12 @@ namespace Gatherstead.Data.Interceptors;
 public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUserContext _currentUserContext;
+    private readonly ICurrentTenantContext _currentTenantContext;
 
-    public AuditingSaveChangesInterceptor(ICurrentUserContext currentUserContext)
+    public AuditingSaveChangesInterceptor(ICurrentUserContext currentUserContext, ICurrentTenantContext currentTenantContext)
     {
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
+        _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
     }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -59,6 +61,42 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
                 case EntityState.Deleted:
                     ConvertToSoftDelete(entry, userId, utcNow);
                     break;
+            }
+        }
+
+        ValidateTenantId(context);
+    }
+
+    private void ValidateTenantId(DbContext context)
+    {
+        var currentTenantId = _currentTenantContext.TenantId;
+        if (!currentTenantId.HasValue)
+        {
+            return;
+        }
+
+        foreach (var entry in context.ChangeTracker.Entries())
+        {
+            if (entry.State != EntityState.Added)
+            {
+                continue;
+            }
+
+            var tenantIdProperty = entry.Properties
+                .FirstOrDefault(p => p.Metadata.Name == "TenantId" && p.CurrentValue is Guid);
+
+            if (tenantIdProperty is null)
+            {
+                continue;
+            }
+
+            var entityTenantId = (Guid)tenantIdProperty.CurrentValue!;
+            if (entityTenantId != currentTenantId.Value)
+            {
+                throw new InvalidOperationException(
+                    $"Entity '{entry.Entity.GetType().Name}' has TenantId '{entityTenantId}' " +
+                    $"but the current tenant context is '{currentTenantId.Value}'. " +
+                    $"Cross-tenant writes are not permitted.");
             }
         }
     }

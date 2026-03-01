@@ -10,7 +10,9 @@ public class GathersteadDbContext : DbContext
 {
     private readonly AuditingSaveChangesInterceptor _auditingSaveChangesInterceptor;
     private readonly Guid? _tenantId;
-    private bool _includeDeleted;
+    private readonly IIncludeDeletedContext? _includeDeletedContext;
+
+    private bool IncludeDeleted => _includeDeletedContext?.IncludeDeleted ?? false;
 
     public GathersteadDbContext(
         DbContextOptions<GathersteadDbContext> options,
@@ -21,7 +23,7 @@ public class GathersteadDbContext : DbContext
         _auditingSaveChangesInterceptor = auditingSaveChangesInterceptor
             ?? throw new ArgumentNullException(nameof(auditingSaveChangesInterceptor));
         _tenantId = currentTenantContext?.TenantId;
-        _includeDeleted = includeDeletedContext?.IncludeDeleted ?? false;
+        _includeDeletedContext = includeDeletedContext;
     }
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -130,9 +132,11 @@ public class GathersteadDbContext : DbContext
 
         var parameter = Expression.Parameter(typeof(TEntity), "entity");
 
-        // Soft-delete filter: _includeDeleted || !entity.IsDeleted
-        // EF Core re-evaluates the field reference per query, so the filter is composable.
-        var includeDeletedField = Expression.Field(Expression.Constant(this), nameof(_includeDeleted));
+        // Soft-delete filter: IncludeDeleted || !entity.IsDeleted
+        // EF Core re-evaluates the property reference per query, so the filter is composable.
+        // IncludeDeleted delegates to IIncludeDeletedContext, which reads from HttpContext.Items
+        // set by RequireTenantAccessAttribute after authorization completes.
+        var includeDeletedField = Expression.Property(Expression.Constant(this), nameof(IncludeDeleted));
         var isDeletedProperty = Expression.Property(parameter, nameof(IAuditableEntity.IsDeleted));
         Expression filterBody = Expression.OrElse(includeDeletedField, Expression.Not(isDeletedProperty));
 

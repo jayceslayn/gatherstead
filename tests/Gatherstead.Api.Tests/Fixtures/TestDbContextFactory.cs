@@ -22,8 +22,8 @@ public static class TestDbContextFactory
 
         var userId = currentUserId ?? Guid.NewGuid();
         var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == userId);
-        var interceptor = new AuditingSaveChangesInterceptor(userContext);
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == tenantId);
+        var interceptor = new AuditingSaveChangesInterceptor(userContext, tenantContext);
         var deleteContext = Mock.Of<IIncludeDeletedContext>(c => c.IncludeDeleted == includeDeleted);
 
         var context = new GathersteadDbContext(options, interceptor, tenantContext, deleteContext);

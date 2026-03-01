@@ -19,7 +19,7 @@ public class GathersteadDbContextFactory : IDesignTimeDbContextFactory<Gatherste
         // Create dummy services for the required dependencies
         var currentUserContext = new DummyCurrentUserContext();
         var currentTenantContext = new DummyCurrentTenantContext();
-        var auditingInterceptor = new AuditingSaveChangesInterceptor(currentUserContext);
+        var auditingInterceptor = new AuditingSaveChangesInterceptor(currentUserContext, currentTenantContext);
 
         return new GathersteadDbContext(optionsBuilder.Options, auditingInterceptor, currentTenantContext);
     }
