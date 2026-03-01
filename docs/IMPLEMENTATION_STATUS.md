@@ -12,6 +12,9 @@
 - **Project restructure**: Migrated data projects from `packages/db/` to `src/Gatherstead.Data/` and `src/Gatherstead.Data.Setup/`, aligning namespaces under `Gatherstead.Data`.
 - **Framework upgrade**: Updated all projects to target .NET 10 (`net10.0`) with current package references.
 - **Composable soft-delete query filters**: Global query filters in `GathersteadDbContext` now conditionally apply the soft-delete clause via a `_includeDeleted` field, while tenant isolation remains unconditional. List/read endpoints accept `?includeDeleted=true`, RBAC-gated to `TenantRole.Manager+` in `RequireTenantAccessAttribute`. The authorization decision flows through `IIncludeDeletedContext` → `HttpContext.Items`, ensuring the raw query parameter cannot bypass role checks. Lower-role users' flag is silently ignored.
+- **Cross-tenant write prevention**: The `AuditingSaveChangesInterceptor` validates that every new entity's `TenantId` matches the current tenant context before saving, throwing an `InvalidOperationException` on mismatch. This provides a defense-in-depth backstop against accidental or malicious cross-tenant writes.
+- **Temporal history retention**: `Gatherstead.Data.Setup` configures a 1-year retention policy on all temporal (system-versioned) tables, keeping history bounded and storage predictable.
+- **Integration test suite**: A dedicated `Gatherstead.Api.Tests` project covers the authentication pipeline, CORS policy, rate limiting, security headers, PASETO token handling, tenant access authorization, token revocation, and context propagation (`ICurrentTenantContext`, `ICurrentUserContext`, `IIncludeDeletedContext`).
 
 ## Planned Enhancements
 - Member relationship graphs
@@ -19,7 +22,6 @@
 - Daily attendance summaries
 - Chore sign-up flows
 - Arbitration metadata for lodging
-- Audit trails across mutable entities
 - Add operational indexes/constraints and surface the new lineage/contact/attendance/arbitration capabilities through API endpoints and workflows with validation and authorization to match guardian/admin needs.
 
 ## Schema Review and Recommended Improvements
