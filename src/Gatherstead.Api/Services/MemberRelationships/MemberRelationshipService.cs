@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.MemberRelationships;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,6 +13,7 @@ public class MemberRelationshipService : IMemberRelationshipService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
 
     private static readonly Expression<Func<MemberRelationship, MemberRelationshipDto>> MapToDtoExpression =
         rel => new MemberRelationshipDto(
@@ -29,10 +31,12 @@ public class MemberRelationshipService : IMemberRelationshipService
 
     public MemberRelationshipService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<MemberRelationshipDto>>> ListAsync(
@@ -121,6 +125,12 @@ public class MemberRelationshipService : IMemberRelationshipService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage relationships in this household.");
+            return response;
+        }
+
         if (request.RelatedMemberId == memberId)
         {
             response.AddResponseMessage(MessageType.ERROR, "A member cannot have a relationship with themselves.");
@@ -199,6 +209,12 @@ public class MemberRelationshipService : IMemberRelationshipService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage relationships in this household.");
+            return response;
+        }
+
         var relationship = await _dbContext.MemberRelationships
             .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -247,6 +263,12 @@ public class MemberRelationshipService : IMemberRelationshipService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage relationships in this household.");
             return response;
         }
 

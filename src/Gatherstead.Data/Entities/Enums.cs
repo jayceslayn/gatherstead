@@ -76,3 +76,9 @@ public enum AttendanceStatus
     Maybe,
     NotGoing
 }
+
+public enum HouseholdRole
+{
+    Admin,
+    Member
+}

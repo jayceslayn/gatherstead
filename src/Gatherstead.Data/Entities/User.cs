@@ -14,4 +14,5 @@ public class User : AuditableEntity
     public string ExternalId { get; set; } = string.Empty; // Entra ID subject
 
     public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
+    public ICollection<HouseholdMember> HouseholdMembers { get; set; } = new List<HouseholdMember>();
 }

@@ -94,6 +94,12 @@ public class GathersteadDbContext : DbContext
                 .HasDatabaseName("IX_RevokedToken_TenantUser");
         });
 
+        modelBuilder.Entity<HouseholdMember>(b =>
+        {
+            b.HasIndex(hm => new { hm.TenantId, hm.UserId })
+                .HasDatabaseName("IX_HouseholdMember_TenantUser");
+        });
+
         // Configure MemberRelationship to HouseholdMember relationship
         modelBuilder.Entity<MemberRelationship>(b =>
         {

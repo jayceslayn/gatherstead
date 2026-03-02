@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.MemberAttributes;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,6 +13,7 @@ public class MemberAttributeService : IMemberAttributeService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
 
     private static readonly Expression<Func<MemberAttribute, MemberAttributeDto>> MapToDtoExpression =
         attr => new MemberAttributeDto(
@@ -28,10 +30,12 @@ public class MemberAttributeService : IMemberAttributeService
 
     public MemberAttributeService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>> ListAsync(
@@ -123,6 +127,12 @@ public class MemberAttributeService : IMemberAttributeService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            return response;
+        }
+
         var memberExists = await _dbContext.HouseholdMembers
             .AsNoTracking()
             .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
@@ -184,6 +194,12 @@ public class MemberAttributeService : IMemberAttributeService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            return response;
+        }
+
         var attribute = await _dbContext.MemberAttributes
             .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -228,6 +244,12 @@ public class MemberAttributeService : IMemberAttributeService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
             return response;
         }
 

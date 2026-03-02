@@ -1,5 +1,6 @@
 using Gatherstead.Api.Services;
 using Gatherstead.Api.Services.Addresses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.ContactMethods;
 using Gatherstead.Api.Services.DietaryProfiles;
 using Gatherstead.Api.Services.HouseholdMembers;
@@ -24,6 +25,7 @@ builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>()
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<IIncludeDeletedContext, HttpContextIncludeDeletedContext>();
 builder.Services.AddScoped<AuditingSaveChangesInterceptor>();
+builder.Services.AddScoped<IMemberAuthorizationService, MemberAuthorizationService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
 builder.Services.AddScoped<IDietaryProfileService, DietaryProfileService>();

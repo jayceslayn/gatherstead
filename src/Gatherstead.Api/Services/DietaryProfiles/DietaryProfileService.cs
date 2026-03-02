@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.DietaryProfiles;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,6 +13,7 @@ public class DietaryProfileService : IDietaryProfileService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
 
     private static readonly Expression<Func<DietaryProfile, DietaryProfileDto>> MapToDtoExpression =
         profile => new DietaryProfileDto(
@@ -30,10 +32,12 @@ public class DietaryProfileService : IDietaryProfileService
 
     public DietaryProfileService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<DietaryProfileDto>>> ListAsync(
@@ -119,6 +123,12 @@ public class DietaryProfileService : IDietaryProfileService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            return response;
+        }
+
         var memberExists = await _dbContext.HouseholdMembers
             .AsNoTracking()
             .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
@@ -182,6 +192,12 @@ public class DietaryProfileService : IDietaryProfileService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
             return response;
         }
 

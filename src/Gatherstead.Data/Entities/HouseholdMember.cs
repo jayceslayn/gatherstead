@@ -7,16 +7,22 @@ using Microsoft.EntityFrameworkCore;
 namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(HouseholdId))]
-    [Index(nameof(TenantId), nameof(HouseholdId), nameof(Name))]
-    public class HouseholdMember : AuditableEntity
-    {
-        public Guid Id { get; set; }
-        public Guid TenantId { get; set; }
-        [ForeignKey(nameof(TenantId))]
-        public Tenant? Tenant { get; set; }
-        public Guid HouseholdId { get; set; }
-        [ForeignKey(nameof(HouseholdId))]
-        public Household? Household { get; set; }
+[Index(nameof(TenantId), nameof(HouseholdId), nameof(Name))]
+public class HouseholdMember : AuditableEntity
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    [ForeignKey(nameof(TenantId))]
+    public Tenant? Tenant { get; set; }
+    public Guid HouseholdId { get; set; }
+    [ForeignKey(nameof(HouseholdId))]
+    public Household? Household { get; set; }
+
+    public Guid? UserId { get; set; }
+    [ForeignKey(nameof(UserId))]
+    public User? User { get; set; }
+
+    public HouseholdRole HouseholdRole { get; set; } = HouseholdRole.Member;
 
     public bool IsAdult { get; set; }
     [MaxLength(64)]
@@ -36,6 +42,4 @@ namespace Gatherstead.Data.Entities;
     public ICollection<Address> Addresses { get; set; } = new List<Address>();
     public ICollection<MemberAttribute> Attributes { get; set; } = new List<MemberAttribute>();
     public DietaryProfile? DietaryProfile { get; set; }
-
-    // conversion config is in DbContext using Encrypted converters
 }

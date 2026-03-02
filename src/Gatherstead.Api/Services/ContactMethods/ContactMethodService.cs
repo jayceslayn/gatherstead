@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.ContactMethods;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,6 +13,7 @@ public class ContactMethodService : IContactMethodService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
 
     private static readonly Expression<Func<ContactMethod, ContactMethodDto>> MapToDtoExpression =
         contact => new ContactMethodDto(
@@ -29,10 +31,12 @@ public class ContactMethodService : IContactMethodService
 
     public ContactMethodService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<ContactMethodDto>>> ListAsync(
@@ -123,6 +127,12 @@ public class ContactMethodService : IContactMethodService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            return response;
+        }
+
         var memberExists = await _dbContext.HouseholdMembers
             .AsNoTracking()
             .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
@@ -179,6 +189,12 @@ public class ContactMethodService : IContactMethodService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            return response;
+        }
+
         var contact = await _dbContext.ContactMethods
             .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -216,6 +232,12 @@ public class ContactMethodService : IContactMethodService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
             return response;
         }
 

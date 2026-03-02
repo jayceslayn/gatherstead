@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.HouseholdMembers;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,6 +13,7 @@ public class HouseholdMemberService : IHouseholdMemberService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
 
     private static readonly Expression<Func<HouseholdMember, HouseholdMemberDto>> MapToDtoExpression =
         member => new HouseholdMemberDto(
@@ -32,10 +34,12 @@ public class HouseholdMemberService : IHouseholdMemberService
 
     public HouseholdMemberService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdMemberDto>>> ListAsync(
@@ -123,6 +127,12 @@ public class HouseholdMemberService : IHouseholdMemberService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to add members to this household.");
+            return response;
+        }
+
         var householdExists = await _dbContext.Households
             .AsNoTracking()
             .AnyAsync(h => h.TenantId == tenantId && h.Id == householdId, cancellationToken);
@@ -144,6 +154,7 @@ public class HouseholdMemberService : IHouseholdMemberService
             BirthDate = request.BirthDate,
             DietaryNotes = request.DietaryNotes?.Trim(),
             DietaryTags = request.DietaryTags ?? Array.Empty<string>(),
+            UserId = request.UserId,
         };
 
         _dbContext.HouseholdMembers.Add(member);
@@ -176,6 +187,12 @@ public class HouseholdMemberService : IHouseholdMemberService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            return response;
+        }
+
         var member = await _dbContext.HouseholdMembers
             .Where(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -192,6 +209,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         member.BirthDate = request.BirthDate;
         member.DietaryNotes = request.DietaryNotes?.Trim();
         member.DietaryTags = request.DietaryTags ?? Array.Empty<string>();
+        member.UserId = request.UserId;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -210,6 +228,12 @@ public class HouseholdMemberService : IHouseholdMemberService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to delete this member.");
             return response;
         }
 

@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Households;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,6 +13,7 @@ public class HouseholdService : IHouseholdService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
     private static readonly Expression<Func<Household, HouseholdDto>> MapToDtoExpression = household => new HouseholdDto(
         household.Id,
         household.TenantId,
@@ -24,10 +26,12 @@ public class HouseholdService : IHouseholdService
 
     public HouseholdService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>> ListAsync(
@@ -156,6 +160,12 @@ public class HouseholdService : IHouseholdService
             return response;
         }
 
+        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage this household.");
+            return response;
+        }
+
         // Update entity
         var household = await _dbContext.Households
             .Where(h => h.TenantId == tenantId && h.Id == householdId)
@@ -187,6 +197,12 @@ public class HouseholdService : IHouseholdService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage this household.");
             return response;
         }
 
