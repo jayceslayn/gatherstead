@@ -209,7 +209,20 @@ public class HouseholdMemberService : IHouseholdMemberService
         member.BirthDate = request.BirthDate;
         member.DietaryNotes = request.DietaryNotes?.Trim();
         member.DietaryTags = request.DietaryTags ?? Array.Empty<string>();
-        member.UserId = request.UserId;
+
+        // Only Tenant Owner/Manager or Household Admin can link a User to a HouseholdMember
+        if (request.UserId != member.UserId)
+        {
+            if (await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
+            {
+                member.UserId = request.UserId;
+            }
+            else if (request.UserId is not null)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "You do not have permission to link a user to this member.");
+                return response;
+            }
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

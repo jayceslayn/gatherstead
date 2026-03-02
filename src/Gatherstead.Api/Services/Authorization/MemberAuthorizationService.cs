@@ -33,7 +33,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (role.HasValue && role.Value <= TenantRole.Manager)
             return true;
 
-        // 2-4. Check Self, Household Admin, and Guardian
+        // 2-3. Check Self and Household Admin
         var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
         if (linkedMembers.Count == 0)
             return false;
@@ -46,17 +46,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Admin))
             return true;
 
-        // Guardian check: does any of the user's linked members have a Parent/Guardian relationship to the target?
-        var linkedMemberIds = linkedMembers.Select(m => m.Id).ToList();
-        var isGuardian = await _dbContext.MemberRelationships
-            .AsNoTracking()
-            .AnyAsync(r =>
-                linkedMemberIds.Contains(r.HouseholdMemberId) &&
-                r.RelatedMemberId == memberId &&
-                (r.RelationshipType == RelationshipType.Parent || r.RelationshipType == RelationshipType.Guardian),
-                ct);
-
-        return isGuardian;
+        return false;
     }
 
     public async Task<bool> CanManageHouseholdAsync(Guid tenantId, Guid householdId, CancellationToken ct = default)

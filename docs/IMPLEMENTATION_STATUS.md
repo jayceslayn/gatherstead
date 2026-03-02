@@ -21,12 +21,21 @@
 - **Cross-tenant write prevention**: The `AuditingSaveChangesInterceptor` validates that every new entity's `TenantId` matches the current tenant context before saving, throwing an `InvalidOperationException` on mismatch. This provides a defense-in-depth backstop against accidental or malicious cross-tenant writes.
 - **Temporal history retention**: `Gatherstead.Data.Setup` configures a 1-year retention policy on all temporal (system-versioned) tables, keeping history bounded and storage predictable.
 - **Integration test suite**: A dedicated `Gatherstead.Api.Tests` project covers the authentication pipeline, CORS policy, rate limiting, security headers, PASETO token handling, tenant access authorization, token revocation, and context propagation (`ICurrentTenantContext`, `ICurrentUserContext`, `IIncludeDeletedContext`).
+- **Resource-level RBAC (Self, Household Admin)**: Fine-grained write authorization enforced at the service layer via `IMemberAuthorizationService`. The authorization decision tree evaluates (in order): tenant Owner/Manager override, Self (user's own linked `HouseholdMember` record), and Household Admin (`HouseholdRole.Admin`). Read access remains open to all tenant members. Key changes:
+  - `HouseholdMember` gains a nullable `UserId` FK linking to `User` (one-to-many: one user can be linked to multiple members across households) and a `HouseholdRole` enum (`Admin`, `Member`).
+  - `User` gains a `HouseholdMembers` navigation collection.
+  - All Family Directory write services (`HouseholdService`, `HouseholdMemberService`, `AddressService`, `ContactMethodService`, `DietaryProfileService`, `MemberAttributeService`, `MemberRelationshipService`) enforce `CanEditMemberAsync` or `CanManageHouseholdAsync` before mutations.
+  - `CreateHouseholdMemberRequest` and `UpdateHouseholdMemberRequest` accept an optional `UserId` for linking members to authenticated users. Only Tenant Owner/Manager or Household Admin can set `UserId`; the field is rejected for non-privileged users to prevent privilege escalation.
+  - Per-request caching of tenant role and linked member data via `HttpContext.Items` avoids redundant DB queries within a single request.
+- **Tenant Owner-only mutations**: Tenant update and delete operations are restricted to the `TenantRole.Owner` role. Tenant creation is currently open to authenticated users but is intended to be gated behind a future App Admin role, since a User cannot hold a tenant-level role before the tenant exists.
 
 ## Planned Enhancements
 - Daily attendance summaries
 - Chore sign-up flows
 - Arbitration metadata for lodging
-- Add operational indexes/constraints and surface attendance/arbitration capabilities through API endpoints and workflows with validation and authorization to match guardian/admin needs.
+- Add operational indexes/constraints and surface attendance/arbitration capabilities through API endpoints and workflows with validation and authorization.
+- App Admin role: platform-level privilege for tenant creation and cross-tenant administration. Requires a new role concept above `TenantRole` (e.g., a `User.IsAppAdmin` flag or separate `AppRole` enum).
+- Household migration workflow: as members age out of a parent household, Tenant Owner/Manager can create a new Household and migrate the member, assigning them Household Admin.
 - Consider SQL Server Row-Level Security (RLS) as a backstop to tenancy scoping
 
 ## Schema Review and Recommended Improvements
@@ -40,4 +49,4 @@ Treat households and events as separate aggregates linked through member IDs, en
 - **Batch reads, singular writes**: List endpoints should accept optional ID filters (e.g., `?ids=`) to enable batch reads within the existing `BaseEntityResponse<IReadOnlyCollection<T>>` contract. Write endpoints (create/update/delete) remain singular to preserve clean audit trails, simple error handling, and the `BaseEntityResponse<T>` contract. Workflow-specific batch write endpoints (e.g., bulk meal plan or resource creation during event setup) should be introduced only when concrete requirements arise.
 
 - **API and workflow alignment**: Family Directory sub-entities (relationships, contacts, addresses, attributes, dietary profiles) are now fully exposed through DTOs/services with validation and tenant-scoped authorization. Next, surface Gathering Planning capabilities (attendance, meal intents, chore assignments, lodging arbitration) through similar endpoint patterns so guardianship and arbitration rules become enforceable behaviors.
-- **Authorization refinement**: The `RequireTenantAccessAttribute` provides tenant- and role-level enforcement with RBAC-gated feature flags (e.g., `includeDeleted`). Next steps include household-scoped permission checks and proper HTTP status differentiation (401 for authentication failures, 403 for insufficient permissions).
+- **Authorization refinement**: Tenant-level enforcement (`RequireTenantAccessAttribute`) and resource-level enforcement (`IMemberAuthorizationService`) are now in place. Next steps include proper HTTP status differentiation (401 for authentication failures, 403 for insufficient permissions), unit/integration tests for the authorization decision tree, and implementation of the App Admin role for tenant creation.

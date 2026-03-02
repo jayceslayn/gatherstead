@@ -79,6 +79,8 @@ public class TenantsController : ControllerBase
         return Ok(response);
     }
 
+    // TODO: Restrict to App Admin role once implemented. A User cannot be a tenant Owner before
+    // the tenant exists, so tenant creation requires a platform-level privilege above TenantRole.
     [HttpPost]
     public async Task<ActionResult<TenantResponse>> CreateTenant([FromBody] CreateTenantRequest request, CancellationToken cancellationToken)
     {
@@ -96,7 +98,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPut("{tenantId:guid}")]
-    [RequireTenantAccess(TenantRole.Manager)]
+    [RequireTenantAccess(TenantRole.Owner)]
     public async Task<ActionResult<TenantResponse>> UpdateTenant(Guid tenantId, [FromBody] UpdateTenantRequest request, CancellationToken cancellationToken)
     {
         var response = await _tenantService.UpdateAsync(tenantId, request, cancellationToken);
