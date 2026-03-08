@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.Tenants;
+using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -12,7 +13,7 @@ public class TenantService : ITenantService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
-    private readonly ICurrentUserContext _currentUserContext;
+    private readonly IAppAdminContext _appAdminContext;
 
     private static readonly Expression<Func<Tenant, TenantDto>> MapToDtoExpression = tenant => new TenantDto(
         tenant.Id,
@@ -26,11 +27,11 @@ public class TenantService : ITenantService
     public TenantService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        ICurrentUserContext currentUserContext)
+        IAppAdminContext appAdminContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
-        _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
+        _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TenantSummary>>> ListAsync(
@@ -61,6 +62,28 @@ public class TenantService : ITenantService
 
         var tenants = await query
             .Select(tu => new TenantSummary(tu.TenantId, tu.Tenant!.Name))
+            .ToListAsync(cancellationToken);
+
+        return BaseEntityResponse<IReadOnlyCollection<TenantSummary>>.SuccessfulResponse(tenants);
+    }
+
+    public async Task<BaseEntityResponse<IReadOnlyCollection<TenantSummary>>> ListAllAsync(
+        IEnumerable<Guid>? ids = null,
+        CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.Tenants.AsNoTracking().AsQueryable();
+
+        if (ids is not null)
+        {
+            var idList = ids.ToList();
+            if (idList.Count > 0)
+            {
+                query = query.Where(t => idList.Contains(t.Id));
+            }
+        }
+
+        var tenants = await query
+            .Select(t => new TenantSummary(t.Id, t.Name))
             .ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<TenantSummary>>.SuccessfulResponse(tenants);
@@ -107,10 +130,10 @@ public class TenantService : ITenantService
             return response;
         }
 
-        var userId = _currentUserContext.UserId;
-        if (!userId.HasValue)
+        // Defense-in-depth: only App Admins can create tenants
+        if (await _appAdminContext.IsAppAdminAsync(cancellationToken) != true)
         {
-            response.AddResponseMessage(MessageType.ERROR, "Authentication required.");
+            response.AddResponseMessage(MessageType.ERROR, "Only App Admins can create tenants.");
             return response;
         }
 
@@ -118,6 +141,17 @@ public class TenantService : ITenantService
 
         if (ServiceValidationHelper.HasErrors(response))
         {
+            return response;
+        }
+
+        // Validate that the specified owner user exists
+        var ownerExists = await _dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.Id == request.OwnerUserId, cancellationToken);
+
+        if (!ownerExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "The specified owner user was not found.");
             return response;
         }
 
@@ -130,7 +164,7 @@ public class TenantService : ITenantService
         var tenantUser = new TenantUser
         {
             TenantId = tenant.Id,
-            UserId = userId.Value,
+            UserId = request.OwnerUserId,
             Role = TenantRole.Owner,
         };
 

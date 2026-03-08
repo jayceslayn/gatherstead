@@ -25,6 +25,7 @@ builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>()
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<IIncludeDeletedContext, HttpContextIncludeDeletedContext>();
 builder.Services.AddScoped<AuditingSaveChangesInterceptor>();
+builder.Services.AddScoped<IAppAdminContext, HttpContextAppAdminContext>();
 builder.Services.AddScoped<IMemberAuthorizationService, MemberAuthorizationService>();
 builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IContactMethodService, ContactMethodService>();

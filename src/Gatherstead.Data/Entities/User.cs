@@ -13,6 +13,8 @@ public class User : AuditableEntity
     [MaxLength(200)]
     public string ExternalId { get; set; } = string.Empty; // Entra ID subject
 
+    public bool IsAppAdmin { get; set; }
+
     public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
     public ICollection<HouseholdMember> HouseholdMembers { get; set; } = new List<HouseholdMember>();
 }

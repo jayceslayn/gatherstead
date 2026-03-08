@@ -63,6 +63,18 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
+        // App Admins bypass all tenant membership and role checks
+        var appAdminContext = context.HttpContext.RequestServices.GetRequiredService<IAppAdminContext>();
+        var isAppAdmin = await appAdminContext.IsAppAdminAsync();
+        if (isAppAdmin == true)
+        {
+            if (string.Equals(context.HttpContext.Request.Query["includeDeleted"], "true", StringComparison.OrdinalIgnoreCase))
+            {
+                context.HttpContext.Items["IncludeDeletedAuthorized"] = true;
+            }
+            return;
+        }
+
         // Query tenant membership
         var tenantUser = await dbContext.TenantUsers
             .AsNoTracking()

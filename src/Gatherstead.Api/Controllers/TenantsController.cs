@@ -17,11 +17,16 @@ public class TenantsController : ControllerBase
 {
     private readonly ITenantService _tenantService;
     private readonly ICurrentUserContext _currentUserContext;
+    private readonly IAppAdminContext _appAdminContext;
 
-    public TenantsController(ITenantService tenantService, ICurrentUserContext currentUserContext)
+    public TenantsController(
+        ITenantService tenantService,
+        ICurrentUserContext currentUserContext,
+        IAppAdminContext appAdminContext)
     {
         _tenantService = tenantService ?? throw new ArgumentNullException(nameof(tenantService));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
+        _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
     }
 
     [HttpGet]
@@ -50,7 +55,11 @@ public class TenantsController : ControllerBase
             parsedIds = idList;
         }
 
-        var response = await _tenantService.ListAsync(userId.Value, parsedIds, cancellationToken);
+        // App Admins see all tenants; regular users see only their own
+        var isAppAdmin = await _appAdminContext.IsAppAdminAsync(cancellationToken);
+        var response = isAppAdmin == true
+            ? await _tenantService.ListAllAsync(parsedIds, cancellationToken)
+            : await _tenantService.ListAsync(userId.Value, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
         {
@@ -79,9 +88,8 @@ public class TenantsController : ControllerBase
         return Ok(response);
     }
 
-    // TODO: Restrict to App Admin role once implemented. A User cannot be a tenant Owner before
-    // the tenant exists, so tenant creation requires a platform-level privilege above TenantRole.
     [HttpPost]
+    [RequireAppAdmin]
     public async Task<ActionResult<TenantResponse>> CreateTenant([FromBody] CreateTenantRequest request, CancellationToken cancellationToken)
     {
         var response = await _tenantService.CreateAsync(request, cancellationToken);

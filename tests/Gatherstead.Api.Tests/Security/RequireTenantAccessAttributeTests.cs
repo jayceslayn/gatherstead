@@ -48,9 +48,11 @@ public class RequireTenantAccessAttributeTests : IAsyncLifetime
             httpContext.Request.QueryString = new QueryString($"?includeDeleted={includeDeleted}");
 
         var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == userId);
+        var appAdminContext = Mock.Of<IAppAdminContext>(c => c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(false));
 
         var services = new ServiceCollection();
         services.AddSingleton(userContext);
+        services.AddSingleton<IAppAdminContext>(appAdminContext);
         services.AddSingleton(_dbContext);
         httpContext.RequestServices = services.BuildServiceProvider();
 
@@ -88,8 +90,10 @@ public class RequireTenantAccessAttributeTests : IAsyncLifetime
         httpContext.Request.RouteValues["tenantId"] = "not-a-guid";
 
         var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == _userId);
+        var appAdminContext = Mock.Of<IAppAdminContext>(c => c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(false));
         var services = new ServiceCollection();
         services.AddSingleton(userContext);
+        services.AddSingleton<IAppAdminContext>(appAdminContext);
         services.AddSingleton(_dbContext);
         httpContext.RequestServices = services.BuildServiceProvider();
 

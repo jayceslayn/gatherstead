@@ -1,3 +1,4 @@
+using Gatherstead.Api.Security;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAppAdminContext _appAdminContext;
 
     private const string CacheKey_TenantRole = "MemberAuth_TenantRole";
     private const string CacheKey_LinkedMembers = "MemberAuth_LinkedMembers";
@@ -16,17 +18,23 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     public MemberAuthorizationService(
         GathersteadDbContext dbContext,
         ICurrentUserContext currentUserContext,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IAppAdminContext appAdminContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
     }
 
     public async Task<bool> CanEditMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default)
     {
         var userId = _currentUserContext.UserId;
         if (!userId.HasValue) return false;
+
+        // App Admins can edit anything
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
 
         // 1. Tenant Owner/Manager can edit anything
         var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
@@ -53,6 +61,10 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     {
         var userId = _currentUserContext.UserId;
         if (!userId.HasValue) return false;
+
+        // App Admins can manage anything
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
 
         // Tenant Owner/Manager can manage any household
         var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);

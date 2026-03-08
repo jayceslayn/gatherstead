@@ -27,14 +27,18 @@
   - All Family Directory write services (`HouseholdService`, `HouseholdMemberService`, `AddressService`, `ContactMethodService`, `DietaryProfileService`, `MemberAttributeService`, `MemberRelationshipService`) enforce `CanEditMemberAsync` or `CanManageHouseholdAsync` before mutations.
   - `CreateHouseholdMemberRequest` and `UpdateHouseholdMemberRequest` accept an optional `UserId` for linking members to authenticated users. Only Tenant Owner/Manager or Household Admin can set `UserId`; the field is rejected for non-privileged users to prevent privilege escalation.
   - Per-request caching of tenant role and linked member data via `HttpContext.Items` avoids redundant DB queries within a single request.
-- **Tenant Owner-only mutations**: Tenant update and delete operations are restricted to the `TenantRole.Owner` role. Tenant creation is currently open to authenticated users but is intended to be gated behind a future App Admin role, since a User cannot hold a tenant-level role before the tenant exists.
+- **Tenant Owner-only mutations**: Tenant update and delete operations are restricted to the `TenantRole.Owner` role.
+- **App Admin role**: Platform-level `IsAppAdmin` flag on the `User` entity grants full administrative privileges. App Admins bypass all tenant-level (`RequireTenantAccessAttribute`) and resource-level (`IMemberAuthorizationService`) authorization checks. Key behaviors:
+  - Tenant creation (`POST /api/tenants`) is restricted exclusively to App Admins via `RequireAppAdminAttribute`. The request specifies an `OwnerUserId` to designate the initial tenant Owner.
+  - `GET /api/tenants` returns all tenants for App Admins, while regular users see only tenants they belong to.
+  - App Admin status is resolved per-request via `IAppAdminContext` with `HttpContext.Items` caching.
+  - The first App Admin must be set via direct SQL (`UPDATE Users SET IsAppAdmin = 1 WHERE ...`).
 
 ## Planned Enhancements
 - Daily attendance summaries
 - Chore sign-up flows
 - Arbitration metadata for lodging
 - Add operational indexes/constraints and surface attendance/arbitration capabilities through API endpoints and workflows with validation and authorization.
-- App Admin role: platform-level privilege for tenant creation and cross-tenant administration. Requires a new role concept above `TenantRole` (e.g., a `User.IsAppAdmin` flag or separate `AppRole` enum).
 - Household migration workflow: as members age out of a parent household, Tenant Owner/Manager can create a new Household and migrate the member, assigning them Household Admin.
 - Consider SQL Server Row-Level Security (RLS) as a backstop to tenancy scoping
 
@@ -49,4 +53,4 @@ Treat households and events as separate aggregates linked through member IDs, en
 - **Batch reads, singular writes**: List endpoints should accept optional ID filters (e.g., `?ids=`) to enable batch reads within the existing `BaseEntityResponse<IReadOnlyCollection<T>>` contract. Write endpoints (create/update/delete) remain singular to preserve clean audit trails, simple error handling, and the `BaseEntityResponse<T>` contract. Workflow-specific batch write endpoints (e.g., bulk meal plan or resource creation during event setup) should be introduced only when concrete requirements arise.
 
 - **API and workflow alignment**: Family Directory sub-entities (relationships, contacts, addresses, attributes, dietary profiles) are now fully exposed through DTOs/services with validation and tenant-scoped authorization. Next, surface Gathering Planning capabilities (attendance, meal intents, chore assignments, lodging arbitration) through similar endpoint patterns so guardianship and arbitration rules become enforceable behaviors.
-- **Authorization refinement**: Tenant-level enforcement (`RequireTenantAccessAttribute`) and resource-level enforcement (`IMemberAuthorizationService`) are now in place. Next steps include proper HTTP status differentiation (401 for authentication failures, 403 for insufficient permissions), unit/integration tests for the authorization decision tree, and implementation of the App Admin role for tenant creation.
+- **Authorization refinement**: Three-tier authorization (App Admin → Tenant Role → Resource Role) is now in place. Next steps include proper HTTP status differentiation (401 for authentication failures, 403 for insufficient permissions) and unit/integration tests for the authorization decision trees.
