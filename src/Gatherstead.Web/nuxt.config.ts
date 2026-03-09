@@ -4,6 +4,14 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
 
+  modules: [
+    '@nuxt/ui',
+    '@nuxt/fonts',
+    '@nuxt/icon',
+    '@nuxt/image',
+    '@pinia/nuxt',
+  ],
+
   typescript: {
     strict: true,
     typeCheck: 'build',
