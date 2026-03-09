@@ -16,7 +16,15 @@
     ]
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.20",
+    "@fullcalendar/vue3": "^6.1.20",
+    "@nuxt/fonts": "^0.14.0",
+    "@nuxt/icon": "^2.2.1",
+    "@nuxt/image": "^2.0.0",
+    "@nuxt/ui": "^4.5.1",
+    "@pinia/nuxt": "^0.11.3",
     "nuxt": "^4.3.1",
+    "pinia": "^3.0.4",
     "vue": "^3.5.29",
     "vue-router": "^4.6.4"
   },
