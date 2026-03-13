@@ -66,3 +66,7 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Infrastructure parameter files (may contain tenant-specific IDs)
+infrastructure/parameters/*.bicepparam
+!infrastructure/parameters/*.bicepparam.example
