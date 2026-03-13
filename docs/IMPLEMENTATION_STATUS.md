@@ -35,12 +35,15 @@
   - The first App Admin must be set via direct SQL (`UPDATE Users SET IsAppAdmin = 1 WHERE ...`).
 
 ## Planned Enhancements
-- Daily attendance summaries
-- Chore sign-up flows
-- Arbitration metadata for lodging
-- Add operational indexes/constraints and surface attendance/arbitration capabilities through API endpoints and workflows with validation and authorization.
-- Household migration workflow: as members age out of a parent household, Tenant Owner/Manager can create a new Household and migrate the member, assigning them Household Admin.
-- Consider SQL Server Row-Level Security (RLS) as a backstop to tenancy scoping
+- **Localization (i18n)**: Integrate `@nuxtjs/i18n` with lazy-loaded locale files, `prefix_except_default` URL strategy, cookie persistence, date/number/currency formatting, API error code translation, locale switcher component, and ESLint enforcement of `$t()` usage. English first, structured for easy addition of other languages. See [LOCALIZATION.md](agents/plans/LOCALIZATION.md).
+- **Demo site**: Deploy a zero-friction public demo at `demo.gatherstead.<host>.<ext>` on Azure Static Web Apps (Free tier). Same codebase with `NUXT_PUBLIC_DEMO_MODE` flag, localStorage persistence (no backend), entity limits to drive conversion, seed data for a non-empty first experience, persistent bottom banner with restriction details, and a dedicated CI/CD workflow. See [DEMO_SITE.md](agents/plans/DEMO_SITE.md).
+- **Hybrid rendering**: Production web app will use Nuxt `routeRules` for hybrid SSR/SPA — server-rendered public pages for SEO, client-only SPA for authenticated dashboard routes.
+- **Daily attendance summaries**: Aggregate per-day headcounts from attendance intents so event planners can see who is present on which days at a glance.
+- **Chore sign-up flows**: Let members volunteer for open chore slots during an event, with assignment confirmation and capacity enforcement.
+- **Lodging arbitration**: Surface arbitration metadata through API endpoints so lodging conflicts can be resolved with transparent priority rules and audit trails.
+- **Gathering Planning API**: Add operational indexes/constraints for event-related tables and expose attendance, meal intent, chore assignment, and lodging arbitration capabilities through validated, authorized API endpoints matching the Family Directory patterns.
+- **Household migration workflow**: When members age out of a parent household, allow Tenant Owner/Manager to create a new household and migrate the member, automatically assigning them the Household Admin role.
+- **Row-Level Security**: Evaluate SQL Server Row-Level Security (RLS) as a defense-in-depth backstop to the existing application-layer tenancy scoping.
 
 ## Schema Review and Recommended Improvements
 The current model now spans tenants, households/members, relationships, contact data, event planning, chores, and lodging intents. Composite indexes on `(TenantId, ForeignKey)` and uniqueness constraints (primary contact/address per member, single dietary profile per member, unique attribute keys) are in place for the Family Directory entities. Focus the next round of tightening on:
