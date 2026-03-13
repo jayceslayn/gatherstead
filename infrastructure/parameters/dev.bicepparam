@@ -1,0 +1,16 @@
+using '../main.bicep'
+
+param location = 'eastus'
+param resourceGroupName = 'gatherstead-dev-rg'
+
+// Object ID of your Entra ID user or a dev-team group to be the SQL admin.
+// Get with: az ad signed-in-user show --query id -o tsv
+param sqlEntraAdminObjectId = '<your-entra-object-id>'
+param sqlEntraAdminLogin = '<your-upn-or-group-name>'
+
+// Object ID of the principal running `az deployment sub create` (grants Key Vault Administrator).
+// Get with: az ad signed-in-user show --query id -o tsv
+param deployerObjectId = '<your-entra-object-id>'
+
+// Free tier: 60 CPU min/day shared, no always-on. Fine for development and testing.
+param appServicePlanSku = 'F1'
