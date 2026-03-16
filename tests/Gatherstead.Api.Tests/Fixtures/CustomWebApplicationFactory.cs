@@ -1,20 +1,20 @@
-using System.Threading.RateLimiting;
 using Gatherstead.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Gatherstead.Api.Tests.Fixtures;
 
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    public PasetoTokenHelper TokenHelper { get; } = new();
+    public JwtTokenHelper TokenHelper { get; } = new();
 
     private SqliteConnection? _connection;
 
@@ -26,17 +26,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Authentication:PublicKey"] = TokenHelper.PublicKeyBase64,
-                ["Authentication:Audience"] = PasetoTokenHelper.TestAudience,
-                ["Authentication:Issuer"] = PasetoTokenHelper.TestIssuer,
-                ["Authentication:ValidateAudience"] = "true",
-                ["Authentication:ValidateIssuer"] = "true",
+                // External identity provider config — values feed Program.cs; actual token
+                // validation is overridden in ConfigureTestServices below.
+                ["ExternalIdentity:Instance"] = "https://test-idp.example.com",
+                ["ExternalIdentity:Domain"] = "test-idp.example.com",
+                ["ExternalIdentity:ClientId"] = JwtTokenHelper.TestAudience,
+                ["ExternalIdentity:SignUpSignInPolicyId"] = "B2C_1_test",
+                ["ExternalIdentity:ValidIssuer"] = JwtTokenHelper.TestIssuer,
                 ["ConnectionStrings:Default"] = "DataSource=:memory:",
                 ["Cors:AllowedOrigins:0"] = "https://allowed-origin.example.com",
-                ["RateLimiting:PermitLimit"] = "5",
+                ["RateLimiting:PermitLimit"] = "100",
                 ["RateLimiting:WindowMinutes"] = "1",
                 ["RateLimiting:QueueLimit"] = "0",
-                ["KeyVault:VaultUrl"] = ""
             });
         });
 
@@ -68,8 +69,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             db.Database.EnsureCreated();
 
             // Re-register CORS with test-allowed origins.
-            // The app's Program.cs reads config eagerly, so ConfigureAppConfiguration
-            // overrides arrive too late — we must replace the service directly.
             services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
@@ -81,33 +80,58 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 });
             });
 
-            // Re-register rate limiter with low limits for testing.
-            // Same eager-read issue as CORS above.
-            services.AddRateLimiter(options =>
-            {
-                options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-                {
-                    var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                    return RateLimitPartition.GetFixedWindowLimiter(
-                        partitionKey: ipAddress,
-                        factory: _ => new FixedWindowRateLimiterOptions
-                        {
-                            PermitLimit = 5,
-                            Window = TimeSpan.FromMinutes(1),
-                            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                            QueueLimit = 0
-                        });
-                });
+            // Rate limiting is configured by Program.cs using the config values above.
+            // Individual test classes that need specific limits can subclass this factory.
+        });
 
-                options.OnRejected = async (context, cancellationToken) =>
+        // ConfigureTestServices runs AFTER the app's ConfigureServices (Program.cs),
+        // so these overrides take precedence over the app's JWT Bearer config.
+        builder.ConfigureTestServices(services =>
+        {
+            // Override JWT Bearer to use test signing key and bypass OIDC discovery.
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            {
+                options.Configuration = new OpenIdConnectConfiguration
                 {
-                    context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                    await context.HttpContext.Response.WriteAsJsonAsync(
-                        new { error = "Too many requests. Please try again later." },
-                        cancellationToken: cancellationToken);
+                    Issuer = JwtTokenHelper.TestIssuer,
+                };
+                options.Configuration.SigningKeys.Add(TokenHelper.SecurityKey);
+
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = JwtTokenHelper.TestIssuer,
+                    ValidateAudience = true,
+                    ValidAudience = JwtTokenHelper.TestAudience,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = TokenHelper.SecurityKey,
+                    ClockSkew = TimeSpan.FromMinutes(5),
                 };
             });
         });
+    }
+
+    /// <summary>
+    /// Seeds a user directly via SQL, bypassing the auditing interceptor.
+    /// </summary>
+    public void SeedUser(Guid userId, string externalId)
+    {
+        if (_connection == null)
+        {
+            // Ensure the host is built so the connection is initialized
+            _ = Services;
+        }
+
+        using var cmd = _connection!.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO Users (Id, ExternalId, IsAppAdmin, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
+            VALUES ($id, $externalId, 0, $now, $id, $now, $id, 0)
+            """;
+        cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$id", userId.ToString()));
+        cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$externalId", externalId));
+        cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$now", DateTimeOffset.UtcNow.ToString("O")));
+        cmd.ExecuteNonQuery();
     }
 
     protected override void Dispose(bool disposing)

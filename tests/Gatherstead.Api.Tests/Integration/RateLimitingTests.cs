@@ -1,17 +1,61 @@
 using System.Net;
+using System.Threading.RateLimiting;
 using Gatherstead.Api.Tests.Fixtures;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Gatherstead.Api.Tests.Integration;
 
 public class RateLimitingTests : IAsyncLifetime
 {
-    private CustomWebApplicationFactory _factory = null!;
+    private RateLimitingFactory _factory = null!;
+
+    /// <summary>
+    /// Factory with a low rate limit (5 requests/minute) for testing rate limiting behavior.
+    /// </summary>
+    private class RateLimitingFactory : CustomWebApplicationFactory
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddRateLimiter(options =>
+                {
+                    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                    {
+                        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                        return RateLimitPartition.GetFixedWindowLimiter(
+                            partitionKey: ipAddress,
+                            factory: _ => new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 5,
+                                Window = TimeSpan.FromMinutes(1),
+                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                                QueueLimit = 0
+                            });
+                    });
+
+                    options.OnRejected = async (context, cancellationToken) =>
+                    {
+                        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                        await context.HttpContext.Response.WriteAsJsonAsync(
+                            new { error = "Too many requests. Please try again later." },
+                            cancellationToken: cancellationToken);
+                    };
+                });
+            });
+        }
+    }
 
     public ValueTask InitializeAsync()
     {
         // Each test class gets its own factory so the rate limiter isn't
         // polluted by requests from other integration test classes.
-        _factory = new CustomWebApplicationFactory();
+        _factory = new RateLimitingFactory();
         return ValueTask.CompletedTask;
     }
 
@@ -36,13 +80,13 @@ public class RateLimitingTests : IAsyncLifetime
     [Fact]
     public async Task ExceedsLimit_Returns429()
     {
-        // Factory configures PermitLimit=5
+        // Factory configures PermitLimit=5; hit a path that doesn't require auth
         var client = _factory.CreateClient();
 
         HttpStatusCode lastStatus = HttpStatusCode.OK;
         for (var i = 0; i < 20; i++)
         {
-            var response = await client.GetAsync("/api/tenants", TestContext.Current.CancellationToken);
+            var response = await client.GetAsync("/", TestContext.Current.CancellationToken);
             lastStatus = response.StatusCode;
             if (lastStatus == HttpStatusCode.TooManyRequests)
                 break;
@@ -59,7 +103,7 @@ public class RateLimitingTests : IAsyncLifetime
         HttpResponseMessage? rateLimitedResponse = null;
         for (var i = 0; i < 20; i++)
         {
-            var response = await client.GetAsync("/api/tenants", TestContext.Current.CancellationToken);
+            var response = await client.GetAsync("/", TestContext.Current.CancellationToken);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
                 rateLimitedResponse = response;

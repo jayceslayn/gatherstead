@@ -11,6 +11,7 @@ using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
 using Gatherstead.Data.Interceptors;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 
@@ -37,75 +38,68 @@ builder.Services.AddScoped<IMemberRelationshipService, MemberRelationshipService
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 
-// Configure Azure Key Vault (if available)
-Azure.Security.KeyVault.Secrets.SecretClient? secretClient = null;
-var keyVaultUrl = builder.Configuration["KeyVault:VaultUrl"];
-if (!string.IsNullOrEmpty(keyVaultUrl))
-{
-    secretClient = new Azure.Security.KeyVault.Secrets.SecretClient(
-        new Uri(keyVaultUrl),
-        new Azure.Identity.DefaultAzureCredential()
-    );
-}
+// Configure JWT Bearer authentication with external identity provider (Entra External ID / Azure AD B2C)
+// Note: Consider PASETO migration when ecosystem support improves (broader library/provider adoption).
+var identitySection = builder.Configuration.GetSection("ExternalIdentity");
+var instance = identitySection["Instance"] ?? "";
+var domain = identitySection["Domain"] ?? "";
+var policyId = identitySection["SignUpSignInPolicyId"] ?? "";
+var clientId = identitySection["ClientId"] ?? "";
 
 builder.Services
-    .AddAuthentication(PasetoAuthenticationDefaults.AuthenticationScheme)
-    .AddScheme<PasetoAuthenticationOptions, PasetoAuthenticationHandler>(
-        PasetoAuthenticationDefaults.AuthenticationScheme,
-        options =>
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // Authority URL format depends on the identity provider:
+        //   Entra External ID:  {instance}/{domain}/v2.0  (no policy segment)
+        //   Azure AD B2C:       {instance}/{domain}/{policyId}/v2.0
+        options.Authority = string.IsNullOrEmpty(policyId)
+            ? $"{instance}/{domain}/v2.0"
+            : $"{instance}/{domain}/{policyId}/v2.0";
+        options.Audience = clientId;
+
+        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
         {
-            var authenticationSection = builder.Configuration.GetSection("Authentication");
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            // Issuer format: https://{instance}/{tenantId}/v2.0 — same for B2C and Entra External ID
+            ValidIssuer = identitySection["ValidIssuer"],
+            ValidAudience = clientId,
+            ClockSkew = TimeSpan.FromMinutes(5),
+        };
 
-            // Load public key from Key Vault or fallback to configuration
-            string? publicKey = null;
-            var secretName = authenticationSection["PublicKeySecretName"];
-
-            if (secretClient != null && !string.IsNullOrEmpty(secretName))
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
             {
-                try
+                // Check token revocation if jti claim is present
+                var jti = context.Principal?.FindFirst("jti")?.Value;
+                if (!string.IsNullOrEmpty(jti))
                 {
-                    var publicKeySecret = secretClient.GetSecret(secretName);
-                    publicKey = publicKeySecret.Value.Value;
+                    var revocationService = context.HttpContext.RequestServices
+                        .GetService<ITokenRevocationService>();
+                    if (revocationService != null && await revocationService.IsTokenRevokedAsync(jti))
+                    {
+                        context.Fail("Token has been revoked.");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    // Log warning and fall back to configuration
-                    using var loggerFactory = LoggerFactory.Create(logging => logging.AddConsole());
-                    var logger = loggerFactory.CreateLogger<Program>();
-                    logger.LogWarning(ex, "Failed to load public key from Key Vault, falling back to configuration");
-                }
-            }
-
-            // Fallback to configuration if Key Vault not available or failed
-            if (string.IsNullOrEmpty(publicKey))
+            },
+            OnAuthenticationFailed = context =>
             {
-                publicKey = authenticationSection["PublicKey"];
-            }
-
-            if (string.IsNullOrEmpty(publicKey))
-            {
-                throw new InvalidOperationException(
-                    "Authentication public key is required. Configure either KeyVault:VaultUrl with " +
-                    "Authentication:PublicKeySecretName, or Authentication:PublicKey in appsettings.");
-            }
-
-            options.PublicKeyBase64 = publicKey;
-            options.Audience = authenticationSection["Audience"];
-            options.Issuer = authenticationSection["Issuer"];
-            options.ImplicitAssertion = authenticationSection["ImplicitAssertion"];
-
-            // Apply validation options from config
-            if (TimeSpan.TryParse(authenticationSection["ClockSkew"], out var clockSkew))
-                options.ClockSkew = clockSkew;
-            if (TimeSpan.TryParse(authenticationSection["MaxTokenAge"], out var maxTokenAge))
-                options.MaxTokenAge = maxTokenAge;
-            if (bool.TryParse(authenticationSection["RequireExpirationTime"], out var requireExpirationTime))
-                options.RequireExpirationTime = requireExpirationTime;
-            if (bool.TryParse(authenticationSection["ValidateAudience"], out var validateAudience))
-                options.ValidateAudience = validateAudience;
-            if (bool.TryParse(authenticationSection["ValidateIssuer"], out var validateIssuer))
-                options.ValidateIssuer = validateIssuer;
-        });
+                var logger = context.HttpContext.RequestServices
+                    .GetRequiredService<ILogger<Program>>();
+                logger.LogWarning(
+                    "JWT authentication failed: {Message}, IP: {IpAddress}, UserAgent: {UserAgent}",
+                    context.Exception.Message,
+                    context.HttpContext.Connection.RemoteIpAddress,
+                    context.Request.Headers.UserAgent.ToString()
+                );
+                return Task.CompletedTask;
+            },
+        };
+    });
 
 builder.Services.AddAuthorization();
 

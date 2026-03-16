@@ -26,8 +26,12 @@ public class AuthenticationPipelineTests : IClassFixture<CustomWebApplicationFac
     [Fact]
     public async Task ValidToken_ProtectedEndpoint_ReturnsSuccess()
     {
+        var userId = Guid.NewGuid();
+        var externalId = Guid.NewGuid().ToString();
+        _factory.SeedUser(userId, externalId);
+
         var client = _factory.CreateClient();
-        var token = _factory.TokenHelper.GenerateToken(sub: Guid.NewGuid().ToString());
+        var token = _factory.TokenHelper.GenerateToken(sub: externalId);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await client.GetAsync("/api/tenants", TestContext.Current.CancellationToken);
