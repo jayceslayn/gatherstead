@@ -1,0 +1,43 @@
+{
+  "common": {
+    "appName": "Gatherstead",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "getStarted": "Get Started",
+    "loading": "Loading…",
+    "error": "Something went wrong"
+  },
+  "landing": {
+    "heroTitle": "Plan Your Family Gatherings",
+    "heroSubtitle": "One place for households, events, lodging, and more",
+    "heroDescription": "Gatherstead helps extended families and organizations coordinate reunions, retreats, and recurring get-togethers — from meal planning to room assignments.",
+    "featureHouseholds": "Households",
+    "featureHouseholdsDesc": "Organize family members into households with contact info, dietary profiles, and relationships.",
+    "featureEvents": "Events",
+    "featureEventsDesc": "Plan gatherings with dates, locations, and attendee management.",
+    "featureLodging": "Lodging",
+    "featureLodgingDesc": "Manage rooms, RV spaces, and stay intents so everyone has a place.",
+    "featureDirectory": "Directory",
+    "featureDirectoryDesc": "A shared family directory with privacy controls and easy lookup.",
+    "viewOnGithub": "View on GitHub",
+    "viewDocs": "Documentation"
+  },
+  "nav": {
+    "home": "Home",
+    "tenants": "My Groups",
+    "dashboard": "Dashboard"
+  },
+  "tenant": {
+    "selectTitle": "Select a Group",
+    "selectDescription": "Choose which family or organization you'd like to manage.",
+    "noTenants": "You don't belong to any groups yet.",
+    "noTenantsHint": "Contact an administrator to get started.",
+    "dashboard": "Dashboard",
+    "dashboardPlaceholder": "Your group dashboard is coming soon."
+  },
+  "error": {
+    "notFound": "Page not found",
+    "unauthorized": "You must be signed in to view this page.",
+    "fetchFailed": "Failed to load data. Please try again."
+  }
+}
