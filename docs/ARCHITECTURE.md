@@ -31,6 +31,10 @@ Gatherstead is organized around bounded contexts that align with the two core go
 
 ## Technology Conventions
 
+### Dependency updates
+- Dependency bumps follow the tiered stand-off policy in [SECURITY-DEPS.md](SECURITY-DEPS.md). Dependabot opens weekly grouped PRs for nuget, npm, and github-actions; security-update PRs arrive out-of-band and are triaged against the CVE response tiers in that doc.
+- CI gates every PR with `audit-nuget` (`dotnet list package --vulnerable`), `audit-pnpm` (`pnpm audit --audit-level=high`), and GitHub's `dependency-review` action. All four .NET projects set `RestorePackagesWithLockFile=true` and CI runs `dotnet restore --locked-mode` plus `pnpm install --frozen-lockfile`, so lockfile integrity is enforced on every build.
+
 ### Infrastructure
 - Treat Azure as the primary target: prefer Bicep/ARM over ad-hoc CLI scripting for IaC, and design for App Service/Functions with Managed Identity and Key Vault integration for secrets.
 - Plan observability from the start: include App Insights/Log Analytics hooks, structured logs, and dashboards/alerts for auth failures, data-access anomalies, and PII access patterns.

@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    groups:
+      nuget-patches:
+        update-types: [patch]
+      nuget-minor:
+        update-types: [minor]
+
+  - package-ecosystem: npm
+    directory: /src/Gatherstead.Web
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    groups:
+      npm-patches:
+        update-types: [patch]
+      npm-minor:
+        update-types: [minor]
+    ignore:
+      - dependency-name: serialize-javascript
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-major
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    groups:
+      actions-all:
+        patterns: ["*"]
