@@ -1,25 +1,28 @@
 <script setup lang="ts">
 const { t } = useI18n()
 const { logout } = useAuth()
+
+const items = computed(() => [
+  [{ label: t('nav.tenants'), icon: 'i-heroicons-user-group', to: '/tenants' }],
+])
 </script>
 
 <template>
   <div class="min-h-screen flex">
-    <aside class="w-64 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
-      <NuxtLink to="/" class="text-xl font-bold mb-8">
-        {{ t('common.appName') }}
+    <aside class="w-64 border-r border-(--ui-border) p-4 flex flex-col">
+      <NuxtLink to="/" class="mb-8">
+        <picture>
+          <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png" />
+          <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-12 w-auto" />
+        </picture>
       </NuxtLink>
-      <nav class="flex flex-col gap-2 flex-1">
-        <UButton variant="ghost" to="/tenants" class="justify-start">
-          {{ t('nav.tenants') }}
-        </UButton>
-      </nav>
-      <UButton variant="soft" @click="() => { logout() }" class="mt-auto">
+      <UNavigationMenu orientation="vertical" :items="items" highlight class="flex-1" />
+      <UButton variant="soft" class="mt-auto" @click="() => { logout() }">
         {{ t('common.signOut') }}
       </UButton>
     </aside>
-    <main class="flex-1 p-6">
+    <UMain class="flex-1 p-6">
       <slot />
-    </main>
+    </UMain>
   </div>
 </template>

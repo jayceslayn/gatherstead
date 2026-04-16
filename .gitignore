@@ -70,3 +70,6 @@ dist/
 # Infrastructure parameter files (may contain tenant-specific IDs)
 infrastructure/parameters/*.bicepparam
 !infrastructure/parameters/*.bicepparam.example
+
+# Claude Code local settings
+.claude/settings.local.json

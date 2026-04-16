@@ -20,7 +20,7 @@ watch(
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto py-12 px-4">
+  <UContainer class="max-w-4xl py-12">
     <h1 class="text-2xl font-bold mb-2">{{ t('tenant.selectTitle') }}</h1>
     <p class="text-gray-500 dark:text-gray-400 mb-8">{{ t('tenant.selectDescription') }}</p>
 
@@ -47,5 +47,5 @@ watch(
         <h3 class="font-semibold">{{ tenant.name }}</h3>
       </UCard>
     </div>
-  </div>
+  </UContainer>
 </template>

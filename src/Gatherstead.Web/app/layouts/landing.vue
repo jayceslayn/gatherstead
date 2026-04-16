@@ -5,64 +5,63 @@ const config = useRuntimeConfig()
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
-    <header class="border-b border-gray-200 dark:border-gray-800">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <NuxtLink to="/" class="text-xl font-bold">
-          {{ t('common.appName') }}
-        </NuxtLink>
-        <nav class="flex items-center gap-4">
-          <UButton
-            v-if="loggedIn"
-            variant="ghost"
-            :to="'/tenants'"
-          >
-            {{ t('nav.tenants') }}
-          </UButton>
-          <UButton
-            v-if="loggedIn"
-            variant="soft"
-            @click="() => { logout() }"
-          >
-            {{ t('common.signOut') }}
-          </UButton>
-          <UButton
-            v-else
-            color="primary"
-            to="/auth/azure"
-            external
-          >
-            {{ t('common.signIn') }}
-          </UButton>
-        </nav>
-      </div>
-    </header>
+  <UHeader to="/">
+    <template #title>
+      <picture>
+        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_2.png" />
+        <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-10 w-auto" />
+      </picture>
+    </template>
+    <template #right>
+      <UButton
+        v-if="loggedIn"
+        variant="ghost"
+        to="/tenants"
+      >
+        {{ t('nav.tenants') }}
+      </UButton>
+      <UButton
+        v-if="loggedIn"
+        variant="soft"
+        @click="() => { logout() }"
+      >
+        {{ t('common.signOut') }}
+      </UButton>
+      <UButton
+        v-else
+        color="primary"
+        to="/auth/azure"
+        external
+      >
+        {{ t('common.signIn') }}
+      </UButton>
+    </template>
+  </UHeader>
 
-    <main class="flex-1">
-      <slot />
-    </main>
+  <UMain>
+    <slot />
+  </UMain>
 
-    <footer class="border-t border-gray-200 dark:border-gray-800 py-8">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-center gap-6 text-sm text-gray-500">
-        <a
-          v-if="config.public.githubUrl"
-          :href="config.public.githubUrl as string"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          {{ t('landing.viewOnGithub') }}
-        </a>
-        <a
-          v-if="config.public.docsUrl"
-          :href="config.public.docsUrl as string"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          {{ t('landing.viewDocs') }}
-        </a>
-      </div>
-    </footer>
-  </div>
+  <UFooter>
+    <div class="flex items-center gap-6 text-sm text-(--ui-text-muted)">
+      <UButton
+        v-if="config.public.githubUrl"
+        :to="config.public.githubUrl as string"
+        target="_blank"
+        variant="link"
+        color="neutral"
+      >
+        {{ t('landing.viewOnGithub') }}
+      </UButton>
+      <UButton
+        v-if="config.public.docsUrl"
+        :to="config.public.docsUrl as string"
+        target="_blank"
+        variant="link"
+        color="neutral"
+      >
+        {{ t('landing.viewDocs') }}
+      </UButton>
+    </div>
+  </UFooter>
 </template>

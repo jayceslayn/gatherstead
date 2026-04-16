@@ -4,6 +4,11 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
 
+  css: [
+    '~/assets/css/main.css',
+    '~/assets/css/theme.css',
+  ],
+
   modules: [
     '@nuxt/ui',
     '@nuxt/fonts',

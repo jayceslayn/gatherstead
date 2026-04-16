@@ -1,0 +1,53 @@
+@theme {
+  /* Forest Green - Primary (from logo text & house silhouettes ~#3B5E2B) */
+  --color-forest-50: oklch(0.97 0.01 142);
+  --color-forest-100: oklch(0.93 0.03 142);
+  --color-forest-200: oklch(0.86 0.05 142);
+  --color-forest-300: oklch(0.76 0.07 142);
+  --color-forest-400: oklch(0.64 0.09 142);
+  --color-forest-500: oklch(0.53 0.10 142);
+  --color-forest-600: oklch(0.45 0.09 142);
+  --color-forest-700: oklch(0.38 0.08 142);
+  --color-forest-800: oklch(0.32 0.07 142);
+  --color-forest-900: oklch(0.27 0.06 142);
+  --color-forest-950: oklch(0.18 0.04 142);
+
+  /* Harvest Orange - Secondary (from logo orange house accent ~#C96A2B) */
+  --color-harvest-50: oklch(0.97 0.02 55);
+  --color-harvest-100: oklch(0.93 0.04 55);
+  --color-harvest-200: oklch(0.86 0.08 55);
+  --color-harvest-300: oklch(0.77 0.11 55);
+  --color-harvest-400: oklch(0.68 0.14 55);
+  --color-harvest-500: oklch(0.60 0.14 55);
+  --color-harvest-600: oklch(0.53 0.13 55);
+  --color-harvest-700: oklch(0.45 0.11 55);
+  --color-harvest-800: oklch(0.38 0.09 55);
+  --color-harvest-900: oklch(0.32 0.07 55);
+  --color-harvest-950: oklch(0.20 0.05 55);
+
+  /* Sage - Accent (from logo olive/sage house ~#6B7C3F) */
+  --color-sage-50: oklch(0.97 0.01 130);
+  --color-sage-100: oklch(0.93 0.03 130);
+  --color-sage-200: oklch(0.86 0.05 130);
+  --color-sage-300: oklch(0.76 0.07 130);
+  --color-sage-400: oklch(0.64 0.08 130);
+  --color-sage-500: oklch(0.53 0.08 130);
+  --color-sage-600: oklch(0.45 0.07 130);
+  --color-sage-700: oklch(0.38 0.06 130);
+  --color-sage-800: oklch(0.32 0.05 130);
+  --color-sage-900: oklch(0.27 0.04 130);
+  --color-sage-950: oklch(0.18 0.03 130);
+
+  /* Warm Stone - Neutral (from logo beige/wheat tones ~#C4B48A) */
+  --color-warmstone-50: oklch(0.98 0.005 80);
+  --color-warmstone-100: oklch(0.96 0.008 80);
+  --color-warmstone-200: oklch(0.91 0.012 80);
+  --color-warmstone-300: oklch(0.85 0.014 80);
+  --color-warmstone-400: oklch(0.70 0.012 80);
+  --color-warmstone-500: oklch(0.56 0.010 80);
+  --color-warmstone-600: oklch(0.44 0.008 80);
+  --color-warmstone-700: oklch(0.37 0.007 80);
+  --color-warmstone-800: oklch(0.27 0.005 80);
+  --color-warmstone-900: oklch(0.21 0.004 80);
+  --color-warmstone-950: oklch(0.15 0.003 80);
+}
