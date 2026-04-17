@@ -1,4 +1,4 @@
-name: Build and Test
+name: Dependency Audit
 
 on:
   push:
@@ -10,9 +10,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build-backend:
+  audit-nuget:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -21,16 +20,19 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Restore dependencies
+      - name: Restore (locked)
         run: dotnet restore --locked-mode
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      - name: Audit NuGet dependencies
+        run: |
+          set -o pipefail
+          dotnet list package --vulnerable --include-transitive 2>&1 | tee audit.log
+          if grep -q "has the following vulnerable packages" audit.log; then
+            echo "::error::Vulnerable NuGet packages detected"
+            exit 1
+          fi
 
-      - name: Test
-        run: dotnet test --no-build --configuration Release --verbosity normal
-
-  build-frontend:
+  audit-pnpm:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,5 +55,14 @@ jobs:
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Audit pnpm dependencies
+        run: pnpm audit --audit-level=high
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
