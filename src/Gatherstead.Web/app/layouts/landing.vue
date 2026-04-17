@@ -8,7 +8,7 @@ const config = useRuntimeConfig()
   <UHeader to="/">
     <template #title>
       <picture>
-        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_2.png" />
+        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_wide.png" />
         <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-10 w-auto" />
       </picture>
     </template>
