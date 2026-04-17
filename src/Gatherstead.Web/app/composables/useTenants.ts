@@ -17,7 +17,7 @@ export function useTenants() {
 
   const { data: tenants, pending, error, refresh } = useAsyncData<TenantSummary[]>(
     'tenants',
-    () => $fetch('/api/proxy/tenants'),
+    () => $fetch<TenantSummary[]>('/api/proxy/tenants'),
   )
 
   return { tenants, pending, error, refresh }
