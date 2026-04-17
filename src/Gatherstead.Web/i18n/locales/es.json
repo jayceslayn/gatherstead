@@ -1,0 +1,101 @@
+{
+  "common": {
+    "appName": "Gatherstead",
+    "signIn": "Iniciar Sesión",
+    "signOut": "Cerrar Sesión",
+    "getStarted": "Comenzar",
+    "loading": "Cargando…",
+    "error": "Algo salió mal",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "confirm": "¿Estás seguro?",
+    "search": "Buscar",
+    "noResults": "No se encontraron resultados"
+  },
+  "landing": {
+    "heroTitle": "Planifica tus Reuniones Familiares",
+    "heroSubtitle": "Un solo lugar para hogares, eventos, alojamiento y más",
+    "heroDescription": "Gatherstead ayuda a familias extensas y organizaciones a coordinar reuniones, retiros y encuentros recurrentes — desde la planificación de comidas hasta la asignación de habitaciones.",
+    "featureHouseholds": "Hogares",
+    "featureHouseholdsDesc": "Organiza a los miembros de la familia en hogares con información de contacto, perfiles dietéticos y relaciones.",
+    "featureEvents": "Eventos",
+    "featureEventsDesc": "Planifica reuniones con fechas, ubicaciones y gestión de asistentes.",
+    "featureLodging": "Alojamiento",
+    "featureLodgingDesc": "Gestiona habitaciones, espacios para casas rodantes e intenciones de estadía para que todos tengan un lugar.",
+    "featureDirectory": "Directorio",
+    "featureDirectoryDesc": "Un directorio familiar compartido con controles de privacidad y búsqueda sencilla.",
+    "viewOnGithub": "Ver en GitHub",
+    "viewDocs": "Documentación"
+  },
+  "nav": {
+    "home": "Inicio",
+    "tenants": "Mis Grupos",
+    "dashboard": "Panel",
+    "households": "Hogares",
+    "events": "Eventos",
+    "properties": "Propiedades",
+    "settings": "Configuración"
+  },
+  "tenant": {
+    "selectTitle": "Seleccionar un Grupo",
+    "selectDescription": "Elige la familia u organización que deseas administrar.",
+    "noTenants": "Aún no perteneces a ningún grupo.",
+    "noTenantsHint": "Contacta a un administrador para comenzar.",
+    "dashboard": "Panel",
+    "dashboardPlaceholder": "El panel de tu grupo estará disponible pronto."
+  },
+  "household": {
+    "title": "Hogares",
+    "createTitle": "Crear Hogar",
+    "editTitle": "Editar Hogar",
+    "name": "Nombre del Hogar",
+    "memberCount": "{count} miembro | {count} miembros",
+    "searchPlaceholder": "Buscar hogares…",
+    "roles": {
+      "admin": "Administrador",
+      "member": "Miembro"
+    }
+  },
+  "member": {
+    "title": "Miembros",
+    "name": "Nombre",
+    "birthDate": "Fecha de Nacimiento",
+    "dietaryNotes": "Notas Dietéticas",
+    "isAdult": "Adulto",
+    "ageBand": "Rango de Edad"
+  },
+  "event": {
+    "title": "Eventos",
+    "createTitle": "Crear Evento",
+    "name": "Nombre del Evento",
+    "startDate": "Fecha de Inicio",
+    "endDate": "Fecha de Fin",
+    "mealPlan": "Plan de Comidas",
+    "choreTemplate": "Plantilla de Tareas",
+    "attendance": "Asistencia"
+  },
+  "property": {
+    "title": "Propiedades",
+    "name": "Nombre de la Propiedad",
+    "resources": "Recursos"
+  },
+  "validation": {
+    "required": "{field} es obligatorio",
+    "maxLength": "{field} debe tener {max} caracteres o menos",
+    "invalidEmail": "Por favor ingresa una dirección de correo electrónico válida",
+    "invalidDate": "Por favor ingresa una fecha válida"
+  },
+  "error": {
+    "notFound": "Página no encontrada",
+    "unauthorized": "Debes iniciar sesión para ver esta página.",
+    "fetchFailed": "Error al cargar los datos. Por favor intenta de nuevo.",
+    "forbidden": "No tienes permiso para realizar esta acción",
+    "serverError": "Algo salió mal. Por favor intenta de nuevo más tarde.",
+    "networkError": "No es posible conectarse. Por favor verifica tu conexión a internet."
+  },
+  "apiError": {},
+  "demo": {}
+}

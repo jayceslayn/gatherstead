@@ -17,7 +17,8 @@ const items = computed(() => [
         </picture>
       </NuxtLink>
       <UNavigationMenu orientation="vertical" :items="items" highlight class="flex-1" />
-      <UButton variant="soft" class="mt-auto" @click="() => { logout() }">
+      <LocaleSwitcher class="mt-auto mb-2" />
+      <UButton variant="soft" @click="() => { logout() }">
         {{ t('common.signOut') }}
       </UButton>
     </aside>

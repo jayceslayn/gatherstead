@@ -13,6 +13,7 @@ const config = useRuntimeConfig()
       </picture>
     </template>
     <template #right>
+      <LocaleSwitcher />
       <UButton
         v-if="loggedIn"
         variant="ghost"

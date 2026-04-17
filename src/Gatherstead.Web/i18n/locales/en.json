@@ -5,7 +5,15 @@
     "signOut": "Sign Out",
     "getStarted": "Get Started",
     "loading": "Loading…",
-    "error": "Something went wrong"
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "confirm": "Are you sure?",
+    "search": "Search",
+    "noResults": "No results found"
   },
   "landing": {
     "heroTitle": "Plan Your Family Gatherings",
@@ -25,7 +33,11 @@
   "nav": {
     "home": "Home",
     "tenants": "My Groups",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "households": "Households",
+    "events": "Events",
+    "properties": "Properties",
+    "settings": "Settings"
   },
   "tenant": {
     "selectTitle": "Select a Group",
@@ -35,9 +47,55 @@
     "dashboard": "Dashboard",
     "dashboardPlaceholder": "Your group dashboard is coming soon."
   },
+  "household": {
+    "title": "Households",
+    "createTitle": "Create Household",
+    "editTitle": "Edit Household",
+    "name": "Household Name",
+    "memberCount": "{count} member | {count} members",
+    "searchPlaceholder": "Search households…",
+    "roles": {
+      "admin": "Admin",
+      "member": "Member"
+    }
+  },
+  "member": {
+    "title": "Members",
+    "name": "Name",
+    "birthDate": "Birth Date",
+    "dietaryNotes": "Dietary Notes",
+    "isAdult": "Adult",
+    "ageBand": "Age Band"
+  },
+  "event": {
+    "title": "Events",
+    "createTitle": "Create Event",
+    "name": "Event Name",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "mealPlan": "Meal Plan",
+    "choreTemplate": "Chore Template",
+    "attendance": "Attendance"
+  },
+  "property": {
+    "title": "Properties",
+    "name": "Property Name",
+    "resources": "Resources"
+  },
+  "validation": {
+    "required": "{field} is required",
+    "maxLength": "{field} must be {max} characters or fewer",
+    "invalidEmail": "Please enter a valid email address",
+    "invalidDate": "Please enter a valid date"
+  },
   "error": {
     "notFound": "Page not found",
     "unauthorized": "You must be signed in to view this page.",
-    "fetchFailed": "Failed to load data. Please try again."
-  }
+    "fetchFailed": "Failed to load data. Please try again.",
+    "forbidden": "You do not have permission to perform this action",
+    "serverError": "Something went wrong. Please try again later.",
+    "networkError": "Unable to connect. Please check your internet connection."
+  },
+  "apiError": {},
+  "demo": {}
 }
