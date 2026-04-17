@@ -42,6 +42,7 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@iconify-json/heroicons": "^1.2.3",
     "typescript": "^5.9.3",
     "vue-tsc": "^3.2.6"
   },
