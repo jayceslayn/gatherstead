@@ -1,6 +1,8 @@
 using Azure.Identity;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Gatherstead.Api.Observability;
 
@@ -30,11 +32,12 @@ public static class TelemetryExtensions
                 options.Credential = new DefaultAzureCredential();
             })
             .WithTracing(tracing => tracing
-                .AddSource(GathersteadTelemetry.SourceName))
+                .AddSource(GathersteadTelemetry.SourceName)
+                .AddProcessor(new PiiRedactionActivityProcessor()))
             .WithMetrics(metrics => metrics
-                .AddMeter(GathersteadTelemetry.SourceName));
-
-        // TODO (Phase 3): Register PiiRedactionLogProcessor and PiiRedactionActivityProcessor here.
+                .AddMeter(GathersteadTelemetry.SourceName))
+            .WithLogging(logging => logging
+                .AddProcessor(new PiiRedactionLogProcessor()));
 
         return services;
     }
