@@ -20,6 +20,12 @@ param sqlDatabaseName string
 @description('URI of the Key Vault instance.')
 param keyVaultUri string
 
+@description('Resource ID of the Log Analytics workspace for diagnostic settings.')
+param workspaceId string
+
+@description('Application Insights connection string injected into both apps.')
+param appInsightsConnectionString string
+
 var planName = 'gat-asp-${uniqueString(resourceGroup().id)}'
 var apiAppName = 'gat-api-${uniqueString(resourceGroup().id)}'
 var webAppName = 'gat-web-${uniqueString(resourceGroup().id)}'
@@ -58,6 +64,8 @@ resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
         // Tells DefaultAzureCredential which user-assigned identity to use
         { name: 'AZURE_CLIENT_ID', value: appManagedIdentityClientId }
         { name: 'Authentication__KeyVault__VaultUrl', value: keyVaultUri }
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+        { name: 'ApplicationInsightsAgent_EXTENSION_VERSION', value: '~3' }
         // Allow requests from the web app origin
         { name: 'Cors__AllowedOrigins__0', value: 'https://${webAppName}.azurewebsites.net' }
       ]
@@ -87,8 +95,50 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         // Overrides runtimeConfig.public.apiBaseUrl in nuxt.config.ts
         { name: 'NUXT_PUBLIC_API_BASE_URL', value: 'https://${apiAppName}.azurewebsites.net' }
         { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
+        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+        { name: 'ApplicationInsightsAgent_EXTENSION_VERSION', value: '~3' }
       ]
     }
+  }
+}
+
+// Diagnostic settings for the API app — streams HTTP, console, application, and audit logs
+// to Log Analytics. Effective on B1+ SKU; F1 (free) provisions the resource but collects no data.
+resource apiAppDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'diag-api'
+  scope: apiApp
+  properties: {
+    workspaceId: workspaceId
+    logs: [
+      { category: 'AppServiceHTTPLogs', enabled: true }
+      { category: 'AppServiceConsoleLogs', enabled: true }
+      { category: 'AppServiceAppLogs', enabled: true }
+      { category: 'AppServiceAuditLogs', enabled: true }
+      { category: 'AppServiceIPSecAuditLogs', enabled: true }
+      { category: 'AppServicePlatformLogs', enabled: true }
+    ]
+    metrics: [
+      { category: 'AllMetrics', enabled: true }
+    ]
+  }
+}
+
+resource webAppDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'diag-web'
+  scope: webApp
+  properties: {
+    workspaceId: workspaceId
+    logs: [
+      { category: 'AppServiceHTTPLogs', enabled: true }
+      { category: 'AppServiceConsoleLogs', enabled: true }
+      { category: 'AppServiceAppLogs', enabled: true }
+      { category: 'AppServiceAuditLogs', enabled: true }
+      { category: 'AppServiceIPSecAuditLogs', enabled: true }
+      { category: 'AppServicePlatformLogs', enabled: true }
+    ]
+    metrics: [
+      { category: 'AllMetrics', enabled: true }
+    ]
   }
 }
 

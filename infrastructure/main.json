@@ -1,0 +1,1136 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.41.2.15936",
+      "templateHash": "16467590471771928943"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "The Azure region where resources will be created."
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "gatherstead-rg",
+      "metadata": {
+        "description": "The name of the resource group."
+      }
+    },
+    "sqlEntraAdminObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "The object ID of the Entra ID user or group that will be the SQL administrator."
+      }
+    },
+    "sqlEntraAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "The UPN or display name of the SQL Entra ID administrator."
+      }
+    },
+    "deployerObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "The object ID of the principal running the deployment (granted Key Vault Administrator for initial setup)."
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "F1",
+      "allowedValues": [
+        "F1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1v3",
+        "P2v3",
+        "P3v3"
+      ],
+      "metadata": {
+        "description": "The App Service Plan SKU. F1 = free (dev), B1 = basic always-on (prod)."
+      }
+    },
+    "logRetentionDays": {
+      "type": "int",
+      "defaultValue": 30,
+      "minValue": 30,
+      "maxValue": 730,
+      "metadata": {
+        "description": "Number of days to retain logs in the Log Analytics workspace. Use 30 for dev, 90 for prod."
+      }
+    },
+    "oncallEmail": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address that receives oncall alert notifications from Azure Monitor."
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2024-03-01",
+      "name": "[parameters('resourceGroupName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "identity",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "14479353701972219710"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region where the managed identity will be created."
+              }
+            }
+          },
+          "variables": {
+            "identityName": "[format('gat-id-{0}', uniqueString(resourceGroup().id))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[variables('identityName')]",
+              "location": "[parameters('location')]"
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[variables('identityName')]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').principalId]"
+            },
+            "clientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').clientId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "observability",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logRetentionDays": {
+            "value": "[parameters('logRetentionDays')]"
+          },
+          "oncallEmail": {
+            "value": "[parameters('oncallEmail')]"
+          },
+          "appManagedIdentityPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.principalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "10828363388272455535"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region for observability resources."
+              }
+            },
+            "logRetentionDays": {
+              "type": "int",
+              "defaultValue": 30,
+              "minValue": 30,
+              "maxValue": 730,
+              "metadata": {
+                "description": "Number of days to retain logs in the workspace. Use 30 for dev, 90 for prod."
+              }
+            },
+            "oncallEmail": {
+              "type": "string",
+              "metadata": {
+                "description": "Email address for oncall alert notifications."
+              }
+            },
+            "appManagedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the app managed identity (granted Monitoring Metrics Publisher on App Insights)."
+              }
+            }
+          },
+          "variables": {
+            "workspaceName": "[format('gat-law-{0}', uniqueString(resourceGroup().id))]",
+            "appInsightsName": "[format('gat-ai-{0}', uniqueString(resourceGroup().id))]",
+            "monitoringMetricsPublisherRoleId": "3913510d-42f4-4e42-8a64-420c390055eb"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[variables('workspaceName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": "[parameters('logRetentionDays')]",
+                "features": {
+                  "enableLogAccessUsingOnlyResourcePermissions": true
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[variables('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]",
+                "IngestionMode": "LogAnalytics",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+              "name": "[guid(resourceId('Microsoft.Insights/components', variables('appInsightsName')), parameters('appManagedIdentityPrincipalId'), variables('monitoringMetricsPublisherRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('monitoringMetricsPublisherRoleId'))]",
+                "principalId": "[parameters('appManagedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/actionGroups",
+              "apiVersion": "2023-01-01",
+              "name": "ag-gatherstead-oncall",
+              "location": "global",
+              "properties": {
+                "groupShortName": "gat-oncall",
+                "enabled": true,
+                "emailReceivers": [
+                  {
+                    "name": "oncall-email",
+                    "emailAddress": "[parameters('oncallEmail')]",
+                    "useCommonAlertSchema": true
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "gat-alert-failed-requests",
+              "location": "global",
+              "properties": {
+                "description": "API failed request count exceeded threshold — investigate recent deployments or errors.",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "FailedRequests",
+                      "metricName": "requests/failed",
+                      "metricNamespace": "microsoft.insights/components",
+                      "operator": "GreaterThan",
+                      "threshold": 5,
+                      "timeAggregation": "Count",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+                  }
+                ],
+                "autoMitigate": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+                "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "gat-alert-dependency-failures",
+              "location": "global",
+              "properties": {
+                "description": "Dependency failure count (SQL, Key Vault, etc.) exceeded threshold — may indicate downstream outage.",
+                "severity": 1,
+                "enabled": true,
+                "scopes": [
+                  "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "FailedDependencies",
+                      "metricName": "dependencies/failed",
+                      "metricNamespace": "microsoft.insights/components",
+                      "operator": "GreaterThan",
+                      "threshold": 3,
+                      "timeAggregation": "Count",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+                  }
+                ],
+                "autoMitigate": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+                "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+            },
+            "appInsightsId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+            },
+            "actionGroupId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "keyvault",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appManagedIdentityPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.principalId.value]"
+          },
+          "deployerObjectId": {
+            "value": "[parameters('deployerObjectId')]"
+          },
+          "workspaceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.workspaceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "18136474477927689818"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region where the Key Vault will be created."
+              }
+            },
+            "appManagedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the app managed identity (granted Crypto User + Secrets User)."
+              }
+            },
+            "deployerObjectId": {
+              "type": "string",
+              "metadata": {
+                "description": "The object ID of the deployer (granted Key Vault Administrator for initial setup)."
+              }
+            },
+            "workspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics workspace for diagnostic settings."
+              }
+            }
+          },
+          "variables": {
+            "keyVaultAdministratorRoleId": "00482a5a-887f-4fb3-b363-3b7fe8e74483",
+            "keyVaultCryptoUserRoleId": "12338af0-0e69-4776-bea7-57ae8d297424",
+            "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e0",
+            "keyVaultName": "[format('gat-kv-{0}', uniqueString(resourceGroup().id))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[variables('keyVaultName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "premium"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "enableRbacAuthorization": true,
+                "softDeleteRetentionInDays": 7,
+                "enableSoftDelete": true
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/keys",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', variables('keyVaultName'), 'cmk-gatherstead')]",
+              "properties": {
+                "kty": "RSA",
+                "keySize": 2048,
+                "keyOps": [
+                  "unwrapKey",
+                  "wrapKey"
+                ]
+              },
+              "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('deployerObjectId'), variables('keyVaultAdministratorRoleId')))]",
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('deployerObjectId'), variables('keyVaultAdministratorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultAdministratorRoleId'))]",
+                "principalId": "[parameters('deployerObjectId')]",
+                "principalType": "User"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('appManagedIdentityPrincipalId'), variables('keyVaultCryptoUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultCryptoUserRoleId'))]",
+                "principalId": "[parameters('appManagedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('appManagedIdentityPrincipalId'), variables('keyVaultSecretsUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]",
+                "principalId": "[parameters('appManagedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+              "name": "diag-kv",
+              "properties": {
+                "workspaceId": "[parameters('workspaceId')]",
+                "logs": [
+                  {
+                    "category": "AuditEvent",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AzurePolicyEvaluationDetails",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "keyVaultUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+            },
+            "cmkKeyId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults/keys', variables('keyVaultName'), 'cmk-gatherstead')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "sql",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "sqlEntraAdminObjectId": {
+            "value": "[parameters('sqlEntraAdminObjectId')]"
+          },
+          "sqlEntraAdminLogin": {
+            "value": "[parameters('sqlEntraAdminLogin')]"
+          },
+          "tenantId": {
+            "value": "[tenant().tenantId]"
+          },
+          "workspaceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.workspaceId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "10687043521032723714"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region where SQL resources will be created."
+              }
+            },
+            "sqlEntraAdminObjectId": {
+              "type": "string",
+              "metadata": {
+                "description": "The object ID of the Entra ID user or group that will be the SQL administrator."
+              }
+            },
+            "sqlEntraAdminLogin": {
+              "type": "string",
+              "metadata": {
+                "description": "The UPN or display name of the SQL Entra ID administrator."
+              }
+            },
+            "tenantId": {
+              "type": "string",
+              "metadata": {
+                "description": "The tenant ID for Entra ID authentication."
+              }
+            },
+            "workspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics workspace for diagnostic settings."
+              }
+            }
+          },
+          "variables": {
+            "sqlServerName": "[format('gat-sql-{0}', uniqueString(resourceGroup().id))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Sql/servers",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[variables('sqlServerName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "administrators": {
+                  "administratorType": "ActiveDirectory",
+                  "login": "[parameters('sqlEntraAdminLogin')]",
+                  "sid": "[parameters('sqlEntraAdminObjectId')]",
+                  "tenantId": "[parameters('tenantId')]",
+                  "azureADOnlyAuthentication": true
+                },
+                "minimalTlsVersion": "1.2"
+              }
+            },
+            {
+              "type": "Microsoft.Sql/servers/databases",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', variables('sqlServerName'), 'gatherstead')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "S0",
+                "tier": "Standard"
+              },
+              "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), 'gatherstead')]",
+              "name": "diag-sql",
+              "properties": {
+                "workspaceId": "[parameters('workspaceId')]",
+                "logs": [
+                  {
+                    "category": "SQLSecurityAuditEvents",
+                    "enabled": true
+                  },
+                  {
+                    "category": "SQLInsights",
+                    "enabled": true
+                  },
+                  {
+                    "category": "Errors",
+                    "enabled": true
+                  },
+                  {
+                    "category": "Deadlocks",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "Basic",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), 'gatherstead')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "sqlServerName": {
+              "type": "string",
+              "value": "[variables('sqlServerName')]"
+            },
+            "sqlDatabaseName": {
+              "type": "string",
+              "value": "gatherstead"
+            },
+            "sqlServerFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-08-01-preview').fullyQualifiedDomainName]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "appservice",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appServicePlanSku": {
+            "value": "[parameters('appServicePlanSku')]"
+          },
+          "appManagedIdentityId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.id.value]"
+          },
+          "appManagedIdentityClientId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.clientId.value]"
+          },
+          "sqlServerFqdn": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.sqlServerFqdn.value]"
+          },
+          "sqlDatabaseName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.sqlDatabaseName.value]"
+          },
+          "keyVaultUri": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault'), '2025-04-01').outputs.keyVaultUri.value]"
+          },
+          "workspaceId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.workspaceId.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.41.2.15936",
+              "templateHash": "8655537399703469985"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region where App Service resources will be created."
+              }
+            },
+            "appServicePlanSku": {
+              "type": "string",
+              "defaultValue": "F1",
+              "allowedValues": [
+                "F1",
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1v3",
+                "P2v3",
+                "P3v3"
+              ],
+              "metadata": {
+                "description": "The App Service Plan SKU. Use F1 for dev (free) or B1 for prod (basic, always-on)."
+              }
+            },
+            "appManagedIdentityId": {
+              "type": "string",
+              "metadata": {
+                "description": "Full resource ID of the user-assigned managed identity to attach to the API app."
+              }
+            },
+            "appManagedIdentityClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "Client ID of the managed identity — set as AZURE_CLIENT_ID so DefaultAzureCredential selects the correct identity."
+              }
+            },
+            "sqlServerFqdn": {
+              "type": "string",
+              "metadata": {
+                "description": "Fully qualified domain name of the SQL server."
+              }
+            },
+            "sqlDatabaseName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the SQL database."
+              }
+            },
+            "keyVaultUri": {
+              "type": "string",
+              "metadata": {
+                "description": "URI of the Key Vault instance."
+              }
+            },
+            "workspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics workspace for diagnostic settings."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights connection string injected into both apps."
+              }
+            }
+          },
+          "variables": {
+            "planName": "[format('gat-asp-{0}', uniqueString(resourceGroup().id))]",
+            "apiAppName": "[format('gat-api-{0}', uniqueString(resourceGroup().id))]",
+            "webAppName": "[format('gat-web-{0}', uniqueString(resourceGroup().id))]",
+            "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;Attestation Protocol=HGS;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('planName')]",
+              "location": "[parameters('location')]",
+              "kind": "linux",
+              "sku": {
+                "name": "[parameters('appServicePlanSku')]"
+              },
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('apiAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "app,linux",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('appManagedIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "DOTNETCORE|10.0",
+                  "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
+                  "appSettings": [
+                    {
+                      "name": "AZURE_CLIENT_ID",
+                      "value": "[parameters('appManagedIdentityClientId')]"
+                    },
+                    {
+                      "name": "Authentication__KeyVault__VaultUrl",
+                      "value": "[parameters('keyVaultUri')]"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+                      "value": "~3"
+                    },
+                    {
+                      "name": "Cors__AllowedOrigins__0",
+                      "value": "[format('https://{0}.azurewebsites.net', variables('webAppName'))]"
+                    }
+                  ],
+                  "connectionStrings": [
+                    {
+                      "name": "Default",
+                      "connectionString": "[variables('connectionString')]",
+                      "type": "SQLAzure"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[variables('webAppName')]",
+              "location": "[parameters('location')]",
+              "kind": "app,linux",
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "NODE|24-lts",
+                  "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
+                  "appCommandLine": "node .output/server/index.mjs",
+                  "appSettings": [
+                    {
+                      "name": "NUXT_PUBLIC_API_BASE_URL",
+                      "value": "[format('https://{0}.azurewebsites.net', variables('apiAppName'))]"
+                    },
+                    {
+                      "name": "WEBSITE_RUN_FROM_PACKAGE",
+                      "value": "1"
+                    },
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+                      "value": "~3"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.Web/sites', variables('apiAppName'))]",
+              "name": "diag-api",
+              "properties": {
+                "workspaceId": "[parameters('workspaceId')]",
+                "logs": [
+                  {
+                    "category": "AppServiceHTTPLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceConsoleLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAppLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceIPSecAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServicePlatformLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('apiAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]",
+              "name": "diag-web",
+              "properties": {
+                "workspaceId": "[parameters('workspaceId')]",
+                "logs": [
+                  {
+                    "category": "AppServiceHTTPLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceConsoleLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAppLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServiceIPSecAuditLogs",
+                    "enabled": true
+                  },
+                  {
+                    "category": "AppServicePlatformLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "apiAppName": {
+              "type": "string",
+              "value": "[variables('apiAppName')]"
+            },
+            "apiAppUrl": {
+              "type": "string",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('apiAppName')), '2023-12-01').defaultHostName)]"
+            },
+            "webAppName": {
+              "type": "string",
+              "value": "[variables('webAppName')]"
+            },
+            "webAppUrl": {
+              "type": "string",
+              "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2023-12-01').defaultHostName)]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "managedIdentityName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.name.value]"
+    },
+    "managedIdentityClientId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.clientId.value]"
+    },
+    "sqlServerName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.sqlServerName.value]"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.sqlDatabaseName.value]"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql'), '2025-04-01').outputs.sqlServerFqdn.value]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault'), '2025-04-01').outputs.keyVaultUri.value]"
+    },
+    "keyVaultCmkId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault'), '2025-04-01').outputs.cmkKeyId.value]"
+    },
+    "apiAppUrl": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'appservice'), '2025-04-01').outputs.apiAppUrl.value]"
+    },
+    "webAppUrl": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'appservice'), '2025-04-01').outputs.webAppUrl.value]"
+    },
+    "appInsightsId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.appInsightsId.value]"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.workspaceId.value]"
+    }
+  }
+}

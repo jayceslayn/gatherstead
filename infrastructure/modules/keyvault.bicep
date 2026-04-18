@@ -7,6 +7,9 @@ param appManagedIdentityPrincipalId string
 @description('The object ID of the deployer (granted Key Vault Administrator for initial setup).')
 param deployerObjectId string
 
+@description('Resource ID of the Log Analytics workspace for diagnostic settings.')
+param workspaceId string
+
 // Built-in role definition IDs
 var keyVaultAdministratorRoleId = '00482a5a-887f-4fb3-b363-3b7fe8e74483'
 var keyVaultCryptoUserRoleId = '12338af0-0e69-4776-bea7-57ae8d297424'
@@ -73,6 +76,21 @@ resource appSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
     principalId: appManagedIdentityPrincipalId
     principalType: 'ServicePrincipal'
+  }
+}
+
+resource keyVaultDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'diag-kv'
+  scope: keyVault
+  properties: {
+    workspaceId: workspaceId
+    logs: [
+      { category: 'AuditEvent', enabled: true }
+      { category: 'AzurePolicyEvaluationDetails', enabled: true }
+    ]
+    metrics: [
+      { category: 'AllMetrics', enabled: true }
+    ]
   }
 }
 

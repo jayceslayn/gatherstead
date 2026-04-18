@@ -1,0 +1,130 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.41.2.15936",
+      "templateHash": "10687043521032723714"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "The Azure region where SQL resources will be created."
+      }
+    },
+    "sqlEntraAdminObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "The object ID of the Entra ID user or group that will be the SQL administrator."
+      }
+    },
+    "sqlEntraAdminLogin": {
+      "type": "string",
+      "metadata": {
+        "description": "The UPN or display name of the SQL Entra ID administrator."
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "The tenant ID for Entra ID authentication."
+      }
+    },
+    "workspaceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics workspace for diagnostic settings."
+      }
+    }
+  },
+  "variables": {
+    "sqlServerName": "[format('gat-sql-{0}', uniqueString(resourceGroup().id))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Sql/servers",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[variables('sqlServerName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "administrators": {
+          "administratorType": "ActiveDirectory",
+          "login": "[parameters('sqlEntraAdminLogin')]",
+          "sid": "[parameters('sqlEntraAdminObjectId')]",
+          "tenantId": "[parameters('tenantId')]",
+          "azureADOnlyAuthentication": true
+        },
+        "minimalTlsVersion": "1.2"
+      }
+    },
+    {
+      "type": "Microsoft.Sql/servers/databases",
+      "apiVersion": "2023-08-01-preview",
+      "name": "[format('{0}/{1}', variables('sqlServerName'), 'gatherstead')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "S0",
+        "tier": "Standard"
+      },
+      "properties": {
+        "collation": "SQL_Latin1_General_CP1_CI_AS"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), 'gatherstead')]",
+      "name": "diag-sql",
+      "properties": {
+        "workspaceId": "[parameters('workspaceId')]",
+        "logs": [
+          {
+            "category": "SQLSecurityAuditEvents",
+            "enabled": true
+          },
+          {
+            "category": "SQLInsights",
+            "enabled": true
+          },
+          {
+            "category": "Errors",
+            "enabled": true
+          },
+          {
+            "category": "Deadlocks",
+            "enabled": true
+          }
+        ],
+        "metrics": [
+          {
+            "category": "Basic",
+            "enabled": true
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers/databases', variables('sqlServerName'), 'gatherstead')]"
+      ]
+    }
+  ],
+  "outputs": {
+    "sqlServerName": {
+      "type": "string",
+      "value": "[variables('sqlServerName')]"
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "value": "gatherstead"
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Sql/servers', variables('sqlServerName')), '2023-08-01-preview').fullyQualifiedDomainName]"
+    }
+  }
+}

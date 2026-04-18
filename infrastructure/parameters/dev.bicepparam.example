@@ -14,3 +14,9 @@ param deployerObjectId = '<your-entra-object-id>'
 
 // Free tier: 60 CPU min/day shared, no always-on. Fine for development and testing.
 param appServicePlanSku = 'F1'
+
+// Log Analytics workspace retention. 30 days is the minimum (and cheapest) for dev.
+param logRetentionDays = 30
+
+// Email address that receives Azure Monitor alert notifications (e.g., your own email for dev).
+param oncallEmail = '<your-email>'

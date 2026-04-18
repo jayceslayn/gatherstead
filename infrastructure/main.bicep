@@ -19,6 +19,14 @@ param deployerObjectId string
 @allowed(['F1', 'B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1v3', 'P2v3', 'P3v3'])
 param appServicePlanSku string = 'F1'
 
+@description('Number of days to retain logs in the Log Analytics workspace. Use 30 for dev, 90 for prod.')
+@minValue(30)
+@maxValue(730)
+param logRetentionDays int = 30
+
+@description('Email address that receives oncall alert notifications from Azure Monitor.')
+param oncallEmail string
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -32,6 +40,17 @@ module identity 'modules/identity.bicep' = {
   }
 }
 
+module observability 'modules/observability.bicep' = {
+  name: 'observability'
+  scope: rg
+  params: {
+    location: location
+    logRetentionDays: logRetentionDays
+    oncallEmail: oncallEmail
+    appManagedIdentityPrincipalId: identity.outputs.principalId
+  }
+}
+
 module keyvault 'modules/keyvault.bicep' = {
   name: 'keyvault'
   scope: rg
@@ -39,6 +58,7 @@ module keyvault 'modules/keyvault.bicep' = {
     location: location
     appManagedIdentityPrincipalId: identity.outputs.principalId
     deployerObjectId: deployerObjectId
+    workspaceId: observability.outputs.workspaceId
   }
 }
 
@@ -50,6 +70,7 @@ module sql 'modules/sql.bicep' = {
     sqlEntraAdminObjectId: sqlEntraAdminObjectId
     sqlEntraAdminLogin: sqlEntraAdminLogin
     tenantId: tenant().tenantId
+    workspaceId: observability.outputs.workspaceId
   }
 }
 
@@ -64,6 +85,8 @@ module appservice 'modules/appservice.bicep' = {
     sqlServerFqdn: sql.outputs.sqlServerFqdn
     sqlDatabaseName: sql.outputs.sqlDatabaseName
     keyVaultUri: keyvault.outputs.keyVaultUri
+    workspaceId: observability.outputs.workspaceId
+    appInsightsConnectionString: observability.outputs.appInsightsConnectionString
   }
 }
 
@@ -76,3 +99,5 @@ output keyVaultUri string = keyvault.outputs.keyVaultUri
 output keyVaultCmkId string = keyvault.outputs.cmkKeyId
 output apiAppUrl string = appservice.outputs.apiAppUrl
 output webAppUrl string = appservice.outputs.webAppUrl
+output appInsightsId string = observability.outputs.appInsightsId
+output logAnalyticsWorkspaceId string = observability.outputs.workspaceId

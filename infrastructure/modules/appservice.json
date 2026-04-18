@@ -1,0 +1,297 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.41.2.15936",
+      "templateHash": "8655537399703469985"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "The Azure region where App Service resources will be created."
+      }
+    },
+    "appServicePlanSku": {
+      "type": "string",
+      "defaultValue": "F1",
+      "allowedValues": [
+        "F1",
+        "B1",
+        "B2",
+        "B3",
+        "S1",
+        "S2",
+        "S3",
+        "P1v3",
+        "P2v3",
+        "P3v3"
+      ],
+      "metadata": {
+        "description": "The App Service Plan SKU. Use F1 for dev (free) or B1 for prod (basic, always-on)."
+      }
+    },
+    "appManagedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the user-assigned managed identity to attach to the API app."
+      }
+    },
+    "appManagedIdentityClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "Client ID of the managed identity — set as AZURE_CLIENT_ID so DefaultAzureCredential selects the correct identity."
+      }
+    },
+    "sqlServerFqdn": {
+      "type": "string",
+      "metadata": {
+        "description": "Fully qualified domain name of the SQL server."
+      }
+    },
+    "sqlDatabaseName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the SQL database."
+      }
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI of the Key Vault instance."
+      }
+    },
+    "workspaceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics workspace for diagnostic settings."
+      }
+    },
+    "appInsightsConnectionString": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string injected into both apps."
+      }
+    }
+  },
+  "variables": {
+    "planName": "[format('gat-asp-{0}', uniqueString(resourceGroup().id))]",
+    "apiAppName": "[format('gat-api-{0}', uniqueString(resourceGroup().id))]",
+    "webAppName": "[format('gat-web-{0}', uniqueString(resourceGroup().id))]",
+    "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;Attestation Protocol=HGS;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('planName')]",
+      "location": "[parameters('location')]",
+      "kind": "linux",
+      "sku": {
+        "name": "[parameters('appServicePlanSku')]"
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('apiAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "app,linux",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('appManagedIdentityId'))]": {}
+        }
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "linuxFxVersion": "DOTNETCORE|10.0",
+          "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
+          "appSettings": [
+            {
+              "name": "AZURE_CLIENT_ID",
+              "value": "[parameters('appManagedIdentityClientId')]"
+            },
+            {
+              "name": "Authentication__KeyVault__VaultUrl",
+              "value": "[parameters('keyVaultUri')]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[parameters('appInsightsConnectionString')]"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "Cors__AllowedOrigins__0",
+              "value": "[format('https://{0}.azurewebsites.net', variables('webAppName'))]"
+            }
+          ],
+          "connectionStrings": [
+            {
+              "name": "Default",
+              "connectionString": "[variables('connectionString')]",
+              "type": "SQLAzure"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-12-01",
+      "name": "[variables('webAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "app,linux",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "linuxFxVersion": "NODE|24-lts",
+          "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
+          "appCommandLine": "node .output/server/index.mjs",
+          "appSettings": [
+            {
+              "name": "NUXT_PUBLIC_API_BASE_URL",
+              "value": "[format('https://{0}.azurewebsites.net', variables('apiAppName'))]"
+            },
+            {
+              "name": "WEBSITE_RUN_FROM_PACKAGE",
+              "value": "1"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[parameters('appInsightsConnectionString')]"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~3"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[resourceId('Microsoft.Web/sites', variables('apiAppName'))]",
+      "name": "diag-api",
+      "properties": {
+        "workspaceId": "[parameters('workspaceId')]",
+        "logs": [
+          {
+            "category": "AppServiceHTTPLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceConsoleLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceAppLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceAuditLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceIPSecAuditLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServicePlatformLogs",
+            "enabled": true
+          }
+        ],
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('apiAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/diagnosticSettings",
+      "apiVersion": "2021-05-01-preview",
+      "scope": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]",
+      "name": "diag-web",
+      "properties": {
+        "workspaceId": "[parameters('workspaceId')]",
+        "logs": [
+          {
+            "category": "AppServiceHTTPLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceConsoleLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceAppLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceAuditLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServiceIPSecAuditLogs",
+            "enabled": true
+          },
+          {
+            "category": "AppServicePlatformLogs",
+            "enabled": true
+          }
+        ],
+        "metrics": [
+          {
+            "category": "AllMetrics",
+            "enabled": true
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "apiAppName": {
+      "type": "string",
+      "value": "[variables('apiAppName')]"
+    },
+    "apiAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('apiAppName')), '2023-12-01').defaultHostName)]"
+    },
+    "webAppName": {
+      "type": "string",
+      "value": "[variables('webAppName')]"
+    },
+    "webAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2023-12-01').defaultHostName)]"
+    }
+  }
+}

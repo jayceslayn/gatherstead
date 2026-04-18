@@ -1,0 +1,208 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.41.2.15936",
+      "templateHash": "10828363388272455535"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "The Azure region for observability resources."
+      }
+    },
+    "logRetentionDays": {
+      "type": "int",
+      "defaultValue": 30,
+      "minValue": 30,
+      "maxValue": 730,
+      "metadata": {
+        "description": "Number of days to retain logs in the workspace. Use 30 for dev, 90 for prod."
+      }
+    },
+    "oncallEmail": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address for oncall alert notifications."
+      }
+    },
+    "appManagedIdentityPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Principal ID of the app managed identity (granted Monitoring Metrics Publisher on App Insights)."
+      }
+    }
+  },
+  "variables": {
+    "workspaceName": "[format('gat-law-{0}', uniqueString(resourceGroup().id))]",
+    "appInsightsName": "[format('gat-ai-{0}', uniqueString(resourceGroup().id))]",
+    "monitoringMetricsPublisherRoleId": "3913510d-42f4-4e42-8a64-420c390055eb"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[variables('workspaceName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": "[parameters('logRetentionDays')]",
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]",
+        "IngestionMode": "LogAnalytics",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+      "name": "[guid(resourceId('Microsoft.Insights/components', variables('appInsightsName')), parameters('appManagedIdentityPrincipalId'), variables('monitoringMetricsPublisherRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('monitoringMetricsPublisherRoleId'))]",
+        "principalId": "[parameters('appManagedIdentityPrincipalId')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "ag-gatherstead-oncall",
+      "location": "global",
+      "properties": {
+        "groupShortName": "gat-oncall",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "oncall-email",
+            "emailAddress": "[parameters('oncallEmail')]",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "gat-alert-failed-requests",
+      "location": "global",
+      "properties": {
+        "description": "API failed request count exceeded threshold — investigate recent deployments or errors.",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "FailedRequests",
+              "metricName": "requests/failed",
+              "metricNamespace": "microsoft.insights/components",
+              "operator": "GreaterThan",
+              "threshold": 5,
+              "timeAggregation": "Count",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+          }
+        ],
+        "autoMitigate": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "gat-alert-dependency-failures",
+      "location": "global",
+      "properties": {
+        "description": "Dependency failure count (SQL, Key Vault, etc.) exceeded threshold — may indicate downstream outage.",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "FailedDependencies",
+              "metricName": "dependencies/failed",
+              "metricNamespace": "microsoft.insights/components",
+              "operator": "GreaterThan",
+              "threshold": 3,
+              "timeAggregation": "Count",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        },
+        "actions": [
+          {
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+          }
+        ],
+        "autoMitigate": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "workspaceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+    },
+    "appInsightsConnectionString": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+    },
+    "appInsightsId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+    },
+    "actionGroupId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+    }
+  }
+}

@@ -15,3 +15,9 @@ param deployerObjectId = '<cicd-service-principal-object-id>'
 // Basic tier: 1 dedicated core, 1.75 GB RAM, always-on, custom domains (~$13/month/plan).
 // Scale up to B2/B3/P1v3 as traffic grows.
 param appServicePlanSku = 'B1'
+
+// 90 days matches the App Insights default and gives enough runway for incident investigation.
+param logRetentionDays = 90
+
+// Distribution list or PagerDuty email for production oncall alerts.
+param oncallEmail = '<oncall-distribution-list-or-pagerduty-email>'

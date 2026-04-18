@@ -10,6 +10,9 @@ param sqlEntraAdminLogin string
 @description('The tenant ID for Entra ID authentication.')
 param tenantId string
 
+@description('Resource ID of the Log Analytics workspace for diagnostic settings.')
+param workspaceId string
+
 var sqlServerName = 'gat-sql-${uniqueString(resourceGroup().id)}'
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
@@ -38,6 +41,23 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
+  }
+}
+
+resource sqlDatabaseDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'diag-sql'
+  scope: sqlDatabase
+  properties: {
+    workspaceId: workspaceId
+    logs: [
+      { category: 'SQLSecurityAuditEvents', enabled: true }
+      { category: 'SQLInsights', enabled: true }
+      { category: 'Errors', enabled: true }
+      { category: 'Deadlocks', enabled: true }
+    ]
+    metrics: [
+      { category: 'Basic', enabled: true }
+    ]
   }
 }
 
