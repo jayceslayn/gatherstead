@@ -30,6 +30,11 @@ public class RequireAppAdminAttribute : Attribute, IAsyncAuthorizationFilter
         var isAdmin = await appAdminContext.IsAppAdminAsync();
         if (isAdmin != true)
         {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<RequireAppAdminAttribute>>();
+            logger.LogWarning(
+                "App Admin access denied: user {UserId} is not an App Admin",
+                currentUserContext.UserId);
             context.Result = new ForbidResult();
         }
     }

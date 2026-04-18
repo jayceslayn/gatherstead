@@ -2,6 +2,7 @@ using Gatherstead.Data;
 using Gatherstead.Data.Interceptors;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Gatherstead.Api.Tests.Fixtures;
@@ -23,7 +24,10 @@ public static class TestDbContextFactory
         var userId = currentUserId ?? Guid.NewGuid();
         var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == userId);
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == tenantId);
-        var interceptor = new AuditingSaveChangesInterceptor(userContext, tenantContext);
+        var interceptor = new AuditingSaveChangesInterceptor(
+            userContext,
+            tenantContext,
+            NullLogger<AuditingSaveChangesInterceptor>.Instance);
         var deleteContext = Mock.Of<IIncludeDeletedContext>(c => c.IncludeDeleted == includeDeleted);
 
         var context = new GathersteadDbContext(options, interceptor, tenantContext, deleteContext);

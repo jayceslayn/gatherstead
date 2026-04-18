@@ -11,6 +11,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAppAdminContext _appAdminContext;
+    private readonly ILogger<MemberAuthorizationService> _logger;
 
     private const string CacheKey_TenantRole = "MemberAuth_TenantRole";
     private const string CacheKey_LinkedMembers = "MemberAuth_LinkedMembers";
@@ -19,12 +20,14 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         GathersteadDbContext dbContext,
         ICurrentUserContext currentUserContext,
         IHttpContextAccessor httpContextAccessor,
-        IAppAdminContext appAdminContext)
+        IAppAdminContext appAdminContext,
+        ILogger<MemberAuthorizationService> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<bool> CanEditMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default)
@@ -44,7 +47,12 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         // 2-3. Check Self and Household Admin
         var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
         if (linkedMembers.Count == 0)
+        {
+            _logger.LogWarning(
+                "Member edit denied: no linked members. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
+                tenantId, memberId, userId.Value);
             return false;
+        }
 
         // Self check
         if (linkedMembers.Any(m => m.Id == memberId))
@@ -54,6 +62,9 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Admin))
             return true;
 
+        _logger.LogWarning(
+            "Member edit denied: insufficient role. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
+            tenantId, memberId, userId.Value);
         return false;
     }
 

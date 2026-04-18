@@ -82,6 +82,11 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
 
         if (tenantUser is null)
         {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<RequireTenantAccessAttribute>>();
+            logger.LogWarning(
+                "Tenant access denied: user {UserId} is not a member of tenant {TenantId}",
+                userId, tenantId);
             context.Result = new ForbidResult();
             return;
         }
@@ -89,6 +94,11 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
         // Check minimum role if specified
         if (MinimumRole.HasValue && !HasRequiredRole(tenantUser.Role, MinimumRole.Value))
         {
+            var logger = context.HttpContext.RequestServices
+                .GetRequiredService<ILogger<RequireTenantAccessAttribute>>();
+            logger.LogWarning(
+                "Tenant access denied: user {UserId} has role {UserRole} in tenant {TenantId}, required {RequiredRole}",
+                userId, tenantUser.Role, tenantId, MinimumRole.Value);
             context.Result = new ForbidResult();
             return;
         }

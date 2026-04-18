@@ -1,6 +1,8 @@
+using Gatherstead.Data.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Gatherstead.Data.Interceptors;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Gatherstead.Data;
 
@@ -19,7 +21,10 @@ public class GathersteadDbContextFactory : IDesignTimeDbContextFactory<Gatherste
         // Create dummy services for the required dependencies
         var currentUserContext = new DummyCurrentUserContext();
         var currentTenantContext = new DummyCurrentTenantContext();
-        var auditingInterceptor = new AuditingSaveChangesInterceptor(currentUserContext, currentTenantContext);
+        var auditingInterceptor = new AuditingSaveChangesInterceptor(
+            currentUserContext,
+            currentTenantContext,
+            NullLogger<AuditingSaveChangesInterceptor>.Instance);
 
         return new GathersteadDbContext(optionsBuilder.Options, auditingInterceptor, currentTenantContext);
     }

@@ -2,6 +2,7 @@ using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Gatherstead.Data.Interceptors;
 
@@ -9,11 +10,16 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUserContext _currentUserContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly ILogger<AuditingSaveChangesInterceptor> _logger;
 
-    public AuditingSaveChangesInterceptor(ICurrentUserContext currentUserContext, ICurrentTenantContext currentTenantContext)
+    public AuditingSaveChangesInterceptor(
+        ICurrentUserContext currentUserContext,
+        ICurrentTenantContext currentTenantContext,
+        ILogger<AuditingSaveChangesInterceptor> logger)
     {
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
@@ -93,6 +99,14 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
             var entityTenantId = (Guid)tenantIdProperty.CurrentValue!;
             if (entityTenantId != currentTenantId.Value)
             {
+                _logger.LogCritical(
+                    "Cross-tenant write blocked: entity {EntityType} has TenantId {EntityTenantId} " +
+                    "but current tenant context is {CurrentTenantId}. UserId: {UserId}",
+                    entry.Entity.GetType().Name,
+                    entityTenantId,
+                    currentTenantId.Value,
+                    _currentUserContext.UserId);
+
                 throw new InvalidOperationException(
                     $"Entity '{entry.Entity.GetType().Name}' has TenantId '{entityTenantId}' " +
                     $"but the current tenant context is '{currentTenantId.Value}'. " +

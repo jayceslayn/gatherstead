@@ -45,9 +45,9 @@ RBAC: grant the app's user-assigned managed identity the **Monitoring Metrics Pu
 ## 2. Backend: Azure Monitor OpenTelemetry wiring
 
 **Packages** (add to [Gatherstead.Api.csproj](../../../src/Gatherstead.Api/Gatherstead.Api.csproj)):
-- `Azure.Monitor.OpenTelemetry.AspNetCore`
-- `OpenTelemetry.Instrumentation.EntityFrameworkCore` (via contrib)
-- `OpenTelemetry.Instrumentation.SqlClient`
+- `Azure.Monitor.OpenTelemetry.AspNetCore` — includes SqlClient and ASP.NET Core auto-instrumentation; no separate SqlClient package needed.
+- `Azure.Identity` — for `DefaultAzureCredential`.
+- ~~`OpenTelemetry.Instrumentation.EntityFrameworkCore`~~ — **deferred**: no stable release exists (`1.15.0-beta.1` only). SQL queries appear as `SqlClient` dependency spans (bundled in the Azure Monitor distro) until this package reaches GA. Re-evaluate when a stable version ships.
 
 **New file: `src/Gatherstead.Api/Observability/TelemetryExtensions.cs`**
 
@@ -55,9 +55,10 @@ Single `AddGathersteadTelemetry(this IServiceCollection, IConfiguration)` extens
 - Calls `services.AddOpenTelemetry().UseAzureMonitor(o => { o.Credential = new DefaultAzureCredential(); })` — managed-identity auth, same pattern as SQL/KV.
 - Registers a custom `ActivitySource` named `Gatherstead.Api` for service-layer spans.
 - Registers a custom `Meter` named `Gatherstead.Api` for business metrics (see §4).
-- Adds the EF Core + SqlClient instrumentations.
 - Sets the cloud role name via `ResourceBuilder.AddService("gatherstead-api")`.
+- Skips setup when `APPLICATIONINSIGHTS_CONNECTION_STRING` is absent (clean dev-machine experience).
 - Registers the PII redaction processor (see §5).
+- ~~Adds EF Core instrumentation~~ — deferred until `OpenTelemetry.Instrumentation.EntityFrameworkCore` reaches stable.
 
 Call this once from [Program.cs](../../../src/Gatherstead.Api/Program.cs) right after `var builder = ...`.
 

@@ -51,6 +51,7 @@ public class RequireTenantAccessAttributeTests : IAsyncLifetime
         var appAdminContext = Mock.Of<IAppAdminContext>(c => c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(false));
 
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(userContext);
         services.AddSingleton<IAppAdminContext>(appAdminContext);
         services.AddSingleton(_dbContext);
@@ -92,6 +93,7 @@ public class RequireTenantAccessAttributeTests : IAsyncLifetime
         var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == _userId);
         var appAdminContext = Mock.Of<IAppAdminContext>(c => c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(false));
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(userContext);
         services.AddSingleton<IAppAdminContext>(appAdminContext);
         services.AddSingleton(_dbContext);

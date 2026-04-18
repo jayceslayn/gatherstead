@@ -1,3 +1,5 @@
+using Gatherstead.Api.Middleware;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Services;
 using Gatherstead.Api.Services.Addresses;
 using Gatherstead.Api.Services.Authorization;
@@ -16,6 +18,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddGathersteadTelemetry(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -196,6 +200,8 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseMiddleware<ExceptionLoggingMiddleware>();
+
 // Security headers
 app.Use(async (context, next) =>
 {
@@ -212,6 +218,7 @@ app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<CorrelationEnrichmentMiddleware>();
 
 app.MapControllers();
 
