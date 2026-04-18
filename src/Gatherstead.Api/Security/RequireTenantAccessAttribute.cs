@@ -1,3 +1,4 @@
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -87,6 +88,17 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
             logger.LogWarning(
                 "Tenant access denied: user {UserId} is not a member of tenant {TenantId}",
                 userId, tenantId);
+
+            var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
+            if (securityLogger != null)
+                await securityLogger.LogAsync(
+                    SecurityEventType.AuthzDenial,
+                    SecurityEventSeverity.Warning,
+                    resource: $"Tenant:{tenantId}",
+                    detail: $"{{\"reason\":\"NotTenantMember\"}}",
+                    tenantId: tenantId,
+                    userId: userId);
+
             context.Result = new ForbidResult();
             return;
         }
@@ -99,6 +111,17 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
             logger.LogWarning(
                 "Tenant access denied: user {UserId} has role {UserRole} in tenant {TenantId}, required {RequiredRole}",
                 userId, tenantUser.Role, tenantId, MinimumRole.Value);
+
+            var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
+            if (securityLogger != null)
+                await securityLogger.LogAsync(
+                    SecurityEventType.AuthzDenial,
+                    SecurityEventSeverity.Warning,
+                    resource: $"Tenant:{tenantId}",
+                    detail: $"{{\"reason\":\"InsufficientRole\",\"userRole\":\"{tenantUser.Role}\",\"requiredRole\":\"{MinimumRole.Value}\"}}",
+                    tenantId: tenantId,
+                    userId: userId);
+
             context.Result = new ForbidResult();
             return;
         }

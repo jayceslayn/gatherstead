@@ -1,4 +1,5 @@
 using Gatherstead.Api.Security;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAppAdminContext _appAdminContext;
     private readonly ILogger<MemberAuthorizationService> _logger;
+    private readonly ISecurityEventLogger _securityEventLogger;
 
     private const string CacheKey_TenantRole = "MemberAuth_TenantRole";
     private const string CacheKey_LinkedMembers = "MemberAuth_LinkedMembers";
@@ -21,13 +23,15 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         ICurrentUserContext currentUserContext,
         IHttpContextAccessor httpContextAccessor,
         IAppAdminContext appAdminContext,
-        ILogger<MemberAuthorizationService> logger)
+        ILogger<MemberAuthorizationService> logger,
+        ISecurityEventLogger securityEventLogger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
     }
 
     public async Task<bool> CanEditMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default)
@@ -51,6 +55,11 @@ public class MemberAuthorizationService : IMemberAuthorizationService
             _logger.LogWarning(
                 "Member edit denied: no linked members. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
                 tenantId, memberId, userId.Value);
+            await _securityEventLogger.LogAsync(
+                SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
+                resource: $"HouseholdMember:{memberId}",
+                detail: "{\"reason\":\"NoLinkedMembers\"}",
+                tenantId: tenantId, userId: userId, cancellationToken: ct);
             return false;
         }
 
@@ -65,6 +74,11 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         _logger.LogWarning(
             "Member edit denied: insufficient role. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
             tenantId, memberId, userId.Value);
+        await _securityEventLogger.LogAsync(
+            SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
+            resource: $"HouseholdMember:{memberId}",
+            detail: "{\"reason\":\"InsufficientHouseholdRole\"}",
+            tenantId: tenantId, userId: userId, cancellationToken: ct);
         return false;
     }
 

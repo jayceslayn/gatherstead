@@ -1,4 +1,6 @@
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
+using Gatherstead.Data.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -35,6 +37,16 @@ public class RequireAppAdminAttribute : Attribute, IAsyncAuthorizationFilter
             logger.LogWarning(
                 "App Admin access denied: user {UserId} is not an App Admin",
                 currentUserContext.UserId);
+
+            var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
+            if (securityLogger != null)
+                await securityLogger.LogAsync(
+                    SecurityEventType.AuthzDenial,
+                    SecurityEventSeverity.Warning,
+                    resource: "AppAdmin",
+                    detail: "{\"reason\":\"NotAppAdmin\"}",
+                    userId: currentUserContext.UserId);
+
             context.Result = new ForbidResult();
         }
     }

@@ -9,7 +9,9 @@ using Gatherstead.Api.Services.HouseholdMembers;
 using Gatherstead.Api.Services.Households;
 using Gatherstead.Api.Services.MemberAttributes;
 using Gatherstead.Api.Services.MemberRelationships;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Tenants;
+using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
 using Gatherstead.Data.Interceptors;
@@ -41,6 +43,7 @@ builder.Services.AddScoped<IMemberAttributeService, MemberAttributeService>();
 builder.Services.AddScoped<IMemberRelationshipService, MemberRelationshipService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
+builder.Services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
 
 // Configure JWT Bearer authentication with external identity provider (Entra External ID / Azure AD B2C)
 // Note: Consider PASETO migration when ecosystem support improves (broader library/provider adoption).
@@ -78,7 +81,6 @@ builder.Services
         {
             OnTokenValidated = async context =>
             {
-                // Check token revocation if jti claim is present
                 var jti = context.Principal?.FindFirst("jti")?.Value;
                 if (!string.IsNullOrEmpty(jti))
                 {
@@ -87,20 +89,32 @@ builder.Services
                     if (revocationService != null && await revocationService.IsTokenRevokedAsync(jti))
                     {
                         context.Fail("Token has been revoked.");
+
+                        var securityLogger = context.HttpContext.RequestServices
+                            .GetService<ISecurityEventLogger>();
+                        if (securityLogger != null)
+                            await securityLogger.LogAsync(
+                                SecurityEventType.TokenRevoked,
+                                SecurityEventSeverity.Warning,
+                                detail: $"{{\"jti\":\"{jti}\"}}");
                     }
                 }
             },
-            OnAuthenticationFailed = context =>
+            OnAuthenticationFailed = async context =>
             {
                 var logger = context.HttpContext.RequestServices
                     .GetRequiredService<ILogger<Program>>();
                 logger.LogWarning(
-                    "JWT authentication failed: {Message}, IP: {IpAddress}, UserAgent: {UserAgent}",
-                    context.Exception.Message,
-                    context.HttpContext.Connection.RemoteIpAddress,
-                    context.Request.Headers.UserAgent.ToString()
-                );
-                return Task.CompletedTask;
+                    "JWT authentication failed: {Reason}",
+                    context.Exception.GetType().Name);
+
+                var securityLogger = context.HttpContext.RequestServices
+                    .GetService<ISecurityEventLogger>();
+                if (securityLogger != null)
+                    await securityLogger.LogAsync(
+                        SecurityEventType.AuthFailure,
+                        SecurityEventSeverity.Warning,
+                        detail: $"{{\"reason\":\"{context.Exception.GetType().Name}\"}}");
             },
         };
     });
@@ -164,15 +178,21 @@ builder.Services.AddRateLimiter(options =>
         var logger = context.HttpContext.RequestServices
             .GetRequiredService<ILogger<Program>>();
         logger.LogWarning(
-            "Rate limit exceeded for IP: {IpAddress}, Endpoint: {Endpoint}",
-            context.HttpContext.Connection.RemoteIpAddress,
-            context.HttpContext.Request.Path
-        );
+            "Rate limit exceeded for {Path}",
+            context.HttpContext.Request.Path.Value);
+
+        var securityLogger = context.HttpContext.RequestServices
+            .GetService<ISecurityEventLogger>();
+        if (securityLogger != null)
+            await securityLogger.LogAsync(
+                SecurityEventType.RateLimitBreach,
+                SecurityEventSeverity.Warning,
+                resource: context.HttpContext.Request.Path.Value ?? "",
+                cancellationToken: cancellationToken);
 
         await context.HttpContext.Response.WriteAsJsonAsync(
             new { error = "Too many requests. Please try again later." },
-            cancellationToken: cancellationToken
-        );
+            cancellationToken: cancellationToken);
     };
 });
 

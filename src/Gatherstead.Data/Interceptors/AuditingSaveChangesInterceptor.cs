@@ -40,32 +40,33 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
     private void ApplyAuditing(DbContext? context)
     {
         if (context is null)
-        {
             return;
-        }
 
-        var userId = _currentUserContext.UserId ?? throw new InvalidOperationException("Current user context did not provide a user identifier.");
         var utcNow = DateTimeOffset.UtcNow;
+        // UserId is resolved lazily — only required when there are auditable entries to stamp.
+        // This allows non-IAuditableEntity writes (e.g. SecurityEvent) to succeed without a user context.
+        Guid? userId = null;
 
         foreach (var entry in context.ChangeTracker.Entries<IAuditableEntity>())
         {
             if (entry.State == EntityState.Detached || entry.State == EntityState.Unchanged)
-            {
                 continue;
-            }
+
+            userId ??= _currentUserContext.UserId
+                ?? throw new InvalidOperationException("Current user context did not provide a user identifier.");
 
             switch (entry.State)
             {
                 case EntityState.Added:
-                    ApplyCreation(entry, userId, utcNow);
-                    ApplyUpdate(entry, userId, utcNow);
+                    ApplyCreation(entry, userId.Value, utcNow);
+                    ApplyUpdate(entry, userId.Value, utcNow);
                     break;
                 case EntityState.Modified:
-                    ApplyUpdate(entry, userId, utcNow);
-                    ApplySoftDeleteIfNeeded(entry, userId, utcNow);
+                    ApplyUpdate(entry, userId.Value, utcNow);
+                    ApplySoftDeleteIfNeeded(entry, userId.Value, utcNow);
                     break;
                 case EntityState.Deleted:
-                    ConvertToSoftDelete(entry, userId, utcNow);
+                    ConvertToSoftDelete(entry, userId.Value, utcNow);
                     break;
             }
         }

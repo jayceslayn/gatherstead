@@ -45,6 +45,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<MemberAttribute> MemberAttributes => Set<MemberAttribute>();
     public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
     public DbSet<DietaryProfile> DietaryProfiles => Set<DietaryProfile>();
+    public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -61,9 +62,21 @@ public class GathersteadDbContext : DbContext
         {
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
+                // SecurityEvent is append-only; temporal history adds overhead without benefit.
+                if (entityType.ClrType == typeof(SecurityEvent))
+                    continue;
                 modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
             }
         }
+
+        modelBuilder.Entity<SecurityEvent>(b =>
+        {
+            b.HasIndex(e => e.OccurredAt).HasDatabaseName("IX_SecurityEvent_OccurredAt");
+            b.HasIndex(e => new { e.TenantId, e.OccurredAt }).HasDatabaseName("IX_SecurityEvent_TenantId_OccurredAt");
+            b.HasIndex(e => new { e.EventType, e.OccurredAt }).HasDatabaseName("IX_SecurityEvent_EventType_OccurredAt");
+            b.HasIndex(e => e.UserId).HasDatabaseName("IX_SecurityEvent_UserId");
+            b.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_SecurityEvent_CorrelationId");
+        });
 
         modelBuilder.Entity<ContactMethod>(b =>
         {

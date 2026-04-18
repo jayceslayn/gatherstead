@@ -82,3 +82,22 @@ public enum HouseholdRole
     Admin,
     Member
 }
+
+public enum SecurityEventType
+{
+    AuthFailure,
+    AuthzDenial,
+    CrossTenantWriteBlocked,
+    TokenRevoked,
+    SoftDelete,
+    Restore,
+    AppAdminAction,
+    RateLimitBreach
+}
+
+public enum SecurityEventSeverity
+{
+    Info,
+    Warning,
+    Critical
+}
