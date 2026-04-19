@@ -47,7 +47,7 @@ RBAC: grant the app's user-assigned managed identity the **Monitoring Metrics Pu
 **Packages** (add to [Gatherstead.Api.csproj](../../../src/Gatherstead.Api/Gatherstead.Api.csproj)):
 - `Azure.Monitor.OpenTelemetry.AspNetCore` — includes SqlClient and ASP.NET Core auto-instrumentation; no separate SqlClient package needed.
 - `Azure.Identity` — for `DefaultAzureCredential`.
-- ~~`OpenTelemetry.Instrumentation.EntityFrameworkCore`~~ — **deferred**: no stable release exists (`1.15.0-beta.1` only). SQL queries appear as `SqlClient` dependency spans (bundled in the Azure Monitor distro) until this package reaches GA. Re-evaluate when a stable version ships.
+- `OpenTelemetry.Instrumentation.EntityFrameworkCore 1.15.0-beta.1` — EF Core query spans (prerelease accepted).
 
 **New file: `src/Gatherstead.Api/Observability/TelemetryExtensions.cs`**
 
@@ -58,7 +58,7 @@ Single `AddGathersteadTelemetry(this IServiceCollection, IConfiguration)` extens
 - Sets the cloud role name via `ResourceBuilder.AddService("gatherstead-api")`.
 - Skips setup when `APPLICATIONINSIGHTS_CONNECTION_STRING` is absent (clean dev-machine experience).
 - Registers the PII redaction processor (see §5).
-- ~~Adds EF Core instrumentation~~ — deferred until `OpenTelemetry.Instrumentation.EntityFrameworkCore` reaches stable.
+- Adds EF Core instrumentation via `AddEntityFrameworkCoreInstrumentation()` (prerelease package accepted; `SetDbStatementForText` defaults to `false`, and `PiiRedactionActivityProcessor` strips `db.statement` as a second layer).
 
 Call this once from [Program.cs](../../../src/Gatherstead.Api/Program.cs) right after `var builder = ...`.
 
@@ -199,7 +199,7 @@ The demo Static Web App ([DEMO_SITE.md](./DEMO_SITE.md), currently planned) uses
 
 1. ✅ **Infra first**: `observability.bicep` provisions Log Analytics workspace + workspace-based App Insights + diagnostic settings (App Service, SQL, Key Vault) + action group + starter alert rules. `main.bicep` wires the module and passes `appInsightsConnectionString` down to `appservice.bicep`. Managed-identity `Monitoring Metrics Publisher` RBAC granted. No deployment yet — project not live.
 
-2. ✅ **Backend OTel + exception middleware + correlation ID**: `Azure.Monitor.OpenTelemetry.AspNetCore 1.4.0` + `Azure.Identity 1.21.0` added. `GathersteadTelemetry` (static `ActivitySource` + `Meter`), `TelemetryExtensions.AddGathersteadTelemetry`, `ExceptionLoggingMiddleware` (first in pipeline, RFC 7807 response with correlation ID), and `CorrelationEnrichmentMiddleware` (after auth, sets `X-Correlation-Id` header + `tenant.id` / `user.id` activity tags) all implemented. `ILogger<T>` wired into `MemberAuthorizationService`, `RequireTenantAccessAttribute`, `RequireAppAdminAttribute`, `AuditingSaveChangesInterceptor`. EF Core span instrumentation **deferred** — no stable package exists; SQL queries surface as SqlClient spans via the Azure Monitor distro.
+2. ✅ **Backend OTel + exception middleware + correlation ID**: `Azure.Monitor.OpenTelemetry.AspNetCore 1.4.0` + `Azure.Identity 1.21.0` + `OpenTelemetry.Instrumentation.EntityFrameworkCore 1.15.0-beta.1` added. `GathersteadTelemetry` (static `ActivitySource` + `Meter`), `TelemetryExtensions.AddGathersteadTelemetry` (includes `AddEntityFrameworkCoreInstrumentation()`), `ExceptionLoggingMiddleware` (first in pipeline, RFC 7807 response with correlation ID), and `CorrelationEnrichmentMiddleware` (after auth, sets `X-Correlation-Id` header + `tenant.id` / `user.id` activity tags) all implemented. `ILogger<T>` wired into `MemberAuthorizationService`, `RequireTenantAccessAttribute`, `RequireAppAdminAttribute`, `AuditingSaveChangesInterceptor`.
 
 3. ✅ **PII redaction processor + tests**: `PiiRedactionLogProcessor` (explicit allowlist, lazy redacted-list allocation, clears `FormattedMessage` on any redaction) and `PiiRedactionActivityProcessor` (always strips `db.statement` / `db.query.text`) implemented. `OBSERVABILITY.md` logging contract document written. 15 unit tests covering all allowlisted keys, PII keys (Email, BirthDate, DietaryNote), mixed payloads, FormattedMessage preservation/clearing, and zero-attribute no-throw guard.
 

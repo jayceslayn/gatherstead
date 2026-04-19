@@ -33,6 +33,7 @@ public static class TelemetryExtensions
             })
             .WithTracing(tracing => tracing
                 .AddSource(GathersteadTelemetry.SourceName)
+                .AddEntityFrameworkCoreInstrumentation()
                 .AddProcessor(new PiiRedactionActivityProcessor()))
             .WithMetrics(metrics => metrics
                 .AddMeter(GathersteadTelemetry.SourceName))
