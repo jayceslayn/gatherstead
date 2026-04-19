@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.Tenants;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -172,6 +173,7 @@ public class TenantService : ITenantService
         _dbContext.TenantUsers.Add(tenantUser);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordTenantCreated();
         response.SetSuccess(MapToDto(tenant));
         return response;
     }
@@ -249,6 +251,7 @@ public class TenantService : ITenantService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordSoftDelete("Tenant", tenantId);
         response.SetSuccess(MapToDto(tenant));
         return response;
     }

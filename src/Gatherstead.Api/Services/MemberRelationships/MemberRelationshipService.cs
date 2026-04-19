@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.MemberRelationships;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
@@ -292,6 +293,7 @@ public class MemberRelationshipService : IMemberRelationshipService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordSoftDelete("MemberRelationship", tenantId);
         response.SetSuccess(MapToDto(relationship));
         return response;
     }

@@ -1,3 +1,4 @@
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -89,6 +90,7 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
                 "Tenant access denied: user {UserId} is not a member of tenant {TenantId}",
                 userId, tenantId);
 
+            GathersteadMetrics.RecordAuthzDenied("NotTenantMember", tenantId);
             var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
             if (securityLogger != null)
                 await securityLogger.LogAsync(
@@ -112,6 +114,7 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
                 "Tenant access denied: user {UserId} has role {UserRole} in tenant {TenantId}, required {RequiredRole}",
                 userId, tenantUser.Role, tenantId, MinimumRole.Value);
 
+            GathersteadMetrics.RecordAuthzDenied("InsufficientRole", tenantId);
             var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
             if (securityLogger != null)
                 await securityLogger.LogAsync(

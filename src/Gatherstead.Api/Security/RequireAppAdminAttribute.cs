@@ -1,3 +1,4 @@
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -38,6 +39,7 @@ public class RequireAppAdminAttribute : Attribute, IAsyncAuthorizationFilter
                 "App Admin access denied: user {UserId} is not an App Admin",
                 currentUserContext.UserId);
 
+            GathersteadMetrics.RecordAuthzDenied("NotAppAdmin");
             var securityLogger = context.HttpContext.RequestServices.GetService<ISecurityEventLogger>();
             if (securityLogger != null)
                 await securityLogger.LogAsync(

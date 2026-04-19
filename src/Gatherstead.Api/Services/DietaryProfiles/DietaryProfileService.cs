@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.DietaryProfiles;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
@@ -221,6 +222,7 @@ public class DietaryProfileService : IDietaryProfileService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordSoftDelete("DietaryProfile", tenantId);
         response.SetSuccess(MapToDto(profile));
         return response;
     }

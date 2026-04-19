@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.Addresses;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
@@ -281,6 +282,7 @@ public class AddressService : IAddressService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordSoftDelete("Address", tenantId);
         response.SetSuccess(MapToDto(address));
         return response;
     }

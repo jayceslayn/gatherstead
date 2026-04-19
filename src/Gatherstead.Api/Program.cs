@@ -102,11 +102,13 @@ builder.Services
             },
             OnAuthenticationFailed = async context =>
             {
+                var reason = context.Exception.GetType().Name;
+
                 var logger = context.HttpContext.RequestServices
                     .GetRequiredService<ILogger<Program>>();
-                logger.LogWarning(
-                    "JWT authentication failed: {Reason}",
-                    context.Exception.GetType().Name);
+                logger.LogWarning("JWT authentication failed: {Reason}", reason);
+
+                GathersteadMetrics.RecordAuthnFailed(reason);
 
                 var securityLogger = context.HttpContext.RequestServices
                     .GetService<ISecurityEventLogger>();
@@ -114,7 +116,7 @@ builder.Services
                     await securityLogger.LogAsync(
                         SecurityEventType.AuthFailure,
                         SecurityEventSeverity.Warning,
-                        detail: $"{{\"reason\":\"{context.Exception.GetType().Name}\"}}");
+                        detail: $"{{\"reason\":\"{reason}\"}}");
             },
         };
     });

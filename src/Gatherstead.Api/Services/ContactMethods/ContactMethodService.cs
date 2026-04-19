@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.ContactMethods;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
@@ -261,6 +262,7 @@ public class ContactMethodService : IContactMethodService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordSoftDelete("ContactMethod", tenantId);
         response.SetSuccess(MapToDto(contact));
         return response;
     }

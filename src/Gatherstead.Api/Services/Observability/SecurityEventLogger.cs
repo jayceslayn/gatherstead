@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using Gatherstead.Api.Observability;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 
@@ -34,11 +34,16 @@ public sealed class SecurityEventLogger : ISecurityEventLogger
     {
         var correlationId = Activity.Current?.TraceId.ToString() ?? "";
 
+        var eventTypeName = eventType.ToString();
+        var severityName = severity.ToString();
+
+        GathersteadMetrics.RecordSecurityEvent(eventTypeName, severityName);
+
         Activity.Current?.AddEvent(new ActivityEvent("security_event",
             tags: new ActivityTagsCollection
             {
-                { "event_type", eventType.ToString() },
-                { "severity", severity.ToString() },
+                { "event_type", eventTypeName },
+                { "severity", severityName },
                 { "tenant.id", tenantId?.ToString() },
                 { "user.id", userId?.ToString() },
                 { "resource", resource },

@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Households;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -132,6 +133,7 @@ public class HouseholdService : IHouseholdService
         _dbContext.Households.Add(household);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordHouseholdCreated(tenantId);
         response.SetSuccess(MapToDto(household));
         return response;
     }
@@ -227,6 +229,7 @@ public class HouseholdService : IHouseholdService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        GathersteadMetrics.RecordSoftDelete("Household", tenantId);
         response.SetSuccess(MapToDto(household));
         return response;
     }

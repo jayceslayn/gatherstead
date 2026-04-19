@@ -1,3 +1,4 @@
+using Gatherstead.Api.Observability;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
@@ -55,6 +56,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
             _logger.LogWarning(
                 "Member edit denied: no linked members. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
                 tenantId, memberId, userId.Value);
+            GathersteadMetrics.RecordAuthzDenied("NoLinkedMembers", tenantId);
             await _securityEventLogger.LogAsync(
                 SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
                 resource: $"HouseholdMember:{memberId}",
@@ -74,6 +76,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         _logger.LogWarning(
             "Member edit denied: insufficient role. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
             tenantId, memberId, userId.Value);
+        GathersteadMetrics.RecordAuthzDenied("InsufficientHouseholdRole", tenantId);
         await _securityEventLogger.LogAsync(
             SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
             resource: $"HouseholdMember:{memberId}",
