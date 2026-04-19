@@ -197,15 +197,23 @@ The demo Static Web App ([DEMO_SITE.md](./DEMO_SITE.md), currently planned) uses
 
 ## 10. Rollout phases
 
-1. **Infra first**: add `observability.bicep`, deploy to dev, confirm connection strings appear as app settings.
-2. **Backend OTel + exception middleware + correlation ID**: ship with no behavior changes to clients. Verify traces appear in App Insights end-to-end view.
-3. **PII redaction processor + tests**: before we let any business code log.
-4. **SecurityEvent entity + ISecurityEventLogger + wire the ~6 call sites**.
-5. **Business metrics**.
-6. **Frontend App Insights plugin + error handler**.
-7. **Attribution plugin + User/Tenant schema + API endpoint**.
-8. **Dashboards + alert rules**.
-9. **Demo site instrumentation** (concurrent with the DEMO_SITE.md rollout).
+1. ✅ **Infra first**: `observability.bicep` provisions Log Analytics workspace + workspace-based App Insights + diagnostic settings (App Service, SQL, Key Vault) + action group + starter alert rules. `main.bicep` wires the module and passes `appInsightsConnectionString` down to `appservice.bicep`. Managed-identity `Monitoring Metrics Publisher` RBAC granted. No deployment yet — project not live.
+
+2. ✅ **Backend OTel + exception middleware + correlation ID**: `Azure.Monitor.OpenTelemetry.AspNetCore 1.4.0` + `Azure.Identity 1.21.0` added. `GathersteadTelemetry` (static `ActivitySource` + `Meter`), `TelemetryExtensions.AddGathersteadTelemetry`, `ExceptionLoggingMiddleware` (first in pipeline, RFC 7807 response with correlation ID), and `CorrelationEnrichmentMiddleware` (after auth, sets `X-Correlation-Id` header + `tenant.id` / `user.id` activity tags) all implemented. `ILogger<T>` wired into `MemberAuthorizationService`, `RequireTenantAccessAttribute`, `RequireAppAdminAttribute`, `AuditingSaveChangesInterceptor`. EF Core span instrumentation **deferred** — no stable package exists; SQL queries surface as SqlClient spans via the Azure Monitor distro.
+
+3. ✅ **PII redaction processor + tests**: `PiiRedactionLogProcessor` (explicit allowlist, lazy redacted-list allocation, clears `FormattedMessage` on any redaction) and `PiiRedactionActivityProcessor` (always strips `db.statement` / `db.query.text`) implemented. `OBSERVABILITY.md` logging contract document written. 15 unit tests covering all allowlisted keys, PII keys (Email, BirthDate, DietaryNote), mixed payloads, FormattedMessage preservation/clearing, and zero-attribute no-throw guard.
+
+4. ✅ **SecurityEvent entity + ISecurityEventLogger + call sites + admin API**: `SecurityEvent` entity (append-only, excluded from temporal tables, 5 indexes), `SecurityEventType` and `SecurityEventSeverity` enums, `ISecurityEventLogger` / `SecurityEventLogger` (OTel Activity event first, then DB write with graceful failure), `SecurityEventsController` (`GET /api/tenants/{id}/security-events` Manager+, `GET /api/admin/security-events` App Admin). `AuditingSaveChangesInterceptor` patched to lazy-evaluate `UserId` so pre-auth SecurityEvent writes don't throw. Wired at: `OnAuthenticationFailed`, `OnTokenValidated` (revoked token), rate-limit `OnRejected`, `RequireTenantAccessAttribute` (both denial branches), `RequireAppAdminAttribute`, `MemberAuthorizationService.CanEditMemberAsync` (both denial paths). EF migration not yet created — project not deployed.
+
+5. ✅ **Business metrics**: `GathersteadMetrics` static class with 7 `Counter<long>` instruments on `GathersteadTelemetry.Meter`. Wired: `gatherstead.tenant.created` (TenantService), `gatherstead.household.created` (HouseholdService, tag: `tenant.id`), `gatherstead.member.created` (HouseholdMemberService, tags: `tenant.id` + `household.id`), `gatherstead.authz.denied` (3 sites, tag: `reason`), `gatherstead.authn.failed` (Program.cs, tag: `reason`), `gatherstead.soft_delete` (all 8 service delete methods, tags: `entity_type` + `tenant.id`), `gatherstead.security_event` (SecurityEventLogger, tags: `event_type` + `severity`). `gatherstead.event.created` omitted — no EventService exists yet.
+
+6. ⬜ **Frontend App Insights plugin + error handler**: `@microsoft/applicationinsights-web` package, `appInsights.client.ts` Nuxt plugin (hashed `ai.user.authenticatedId`, `tenant.id` dimension, Vue/window error handlers), `useApiError.ts` `trackException` side effect.
+
+7. ⬜ **Attribution plugin + User/Tenant schema + API endpoint**: `attribution.client.ts` plugin (localStorage TTL snapshot on first landing), `AttributionSource/Medium/Campaign/Term/Content/Via/Referer/CapturedAt` columns on `User` and `Tenant`, `POST /api/users/me/attribution` (idempotent, first-write-wins), EF migration `AddMarketingAttribution`.
+
+8. ⬜ **Dashboards + alert rules**: additional Bicep alert rules for `gatherstead.authn.failed` burst and `CrossTenantWriteBlocked`; dashboard JSON in `infrastructure/dashboards/`.
+
+9. ⬜ **Demo site instrumentation** (concurrent with DEMO_SITE.md rollout): `NUXT_PUBLIC_DEMO_MODE` cloud-role switch to `gatherstead-demo`, attribution stays localStorage-only, `demo_signup_click` custom event.
 
 Each phase is a separate PR.
 
