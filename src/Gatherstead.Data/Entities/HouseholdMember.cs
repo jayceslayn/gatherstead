@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
 
-[Index(nameof(TenantId), nameof(HouseholdId))]
 [Index(nameof(TenantId), nameof(HouseholdId), nameof(Name))]
 public class HouseholdMember : AuditableEntity
 {

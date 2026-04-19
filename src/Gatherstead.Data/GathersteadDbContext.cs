@@ -39,6 +39,8 @@ public class GathersteadDbContext : DbContext
     public DbSet<StayIntent> StayIntents => Set<StayIntent>();
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
     public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
+    public DbSet<ChoreAssignment> ChoreAssignments => Set<ChoreAssignment>();
+    public DbSet<EventAttendance> EventAttendances => Set<EventAttendance>();
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<ContactMethod> ContactMethods => Set<ContactMethod>();

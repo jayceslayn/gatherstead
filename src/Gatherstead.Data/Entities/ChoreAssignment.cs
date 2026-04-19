@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
 
-[Index(nameof(TenantId), nameof(ChoreTaskId))]
 [Index(nameof(TenantId), nameof(HouseholdMemberId))]
 [Index(nameof(TenantId), nameof(ChoreTaskId), nameof(HouseholdMemberId), IsUnique = true)]
 public class ChoreAssignment : AuditableEntity

@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
 
-[Index(nameof(TenantId), nameof(HouseholdMemberId))]
-[Index(nameof(TenantId), nameof(ResourceId))]
+[Index(nameof(TenantId), nameof(HouseholdMemberId), nameof(Night))]
 [Index(nameof(TenantId), nameof(ResourceId), nameof(Night), nameof(HouseholdMemberId), IsUnique = true)]
 public class StayIntent : AuditableEntity
 {

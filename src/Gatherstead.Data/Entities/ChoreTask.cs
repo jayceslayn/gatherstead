@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
 
-[Index(nameof(TenantId), nameof(TemplateId))]
-[Index(nameof(TenantId), nameof(TemplateId), nameof(Day), nameof(MealType), IsUnique = true)]
+[Index(nameof(TenantId), nameof(TemplateId), nameof(Completed))]
+[Index(nameof(TenantId), nameof(TemplateId), nameof(Day), nameof(TimeSlot), IsUnique = true)]
 public class ChoreTask : AuditableEntity
 {
     public Guid Id { get; set; }
@@ -21,7 +21,7 @@ public class ChoreTask : AuditableEntity
     public ChoreTemplate? Template { get; set; }
 
     public DateOnly Day { get; set; }
-    public MealType? MealType { get; set; }
+    public ChoreTimeSlot? TimeSlot { get; set; }
     public bool Completed { get; set; }
     public string? Notes { get; set; }
 

@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
 
-[Index(nameof(TenantId), nameof(EventId))]
 [Index(nameof(TenantId), nameof(HouseholdMemberId))]
+[Index(nameof(TenantId), nameof(EventId), nameof(Day))]
 [Index(nameof(TenantId), nameof(EventId), nameof(HouseholdMemberId), nameof(Day), IsUnique = true)]
 public class EventAttendance : AuditableEntity
 {
