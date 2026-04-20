@@ -12,7 +12,8 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 
 Every PR to `main` must pass four jobs in [.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml):
 
-- **`build`** — `dotnet restore --locked-mode`, build, test.
+- **`build-backend`** — `dotnet restore --locked-mode`, build, test.
+- **`build-frontend`** - `pnpm build`
 - **`audit-nuget`** — fails on any vulnerable NuGet package (direct or transitive).
 - **`audit-pnpm`** — fails on any `high`+ severity pnpm advisory.
 - **`dependency-review`** — blocks PRs that introduce a known-vulnerable dependency.

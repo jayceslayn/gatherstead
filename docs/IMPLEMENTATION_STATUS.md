@@ -3,8 +3,8 @@
 ## Implemented Features
 - **Shared foundation**: Tenants own households, properties, events, and users to keep families isolated.
 - **Family directory context**: Households group members; member records store names, birth dates, dietary notes/tags.
-- **Gathering planning context**: Events tie to properties and manage meal plans, chores, lodging resources, and member intents for attendance, meals, stays, and chores.
-- **Detailed implementation**: Multi-tenant backbone with auditing, households and members (including dietary metadata), relationship graph, contact/addresses/attributes, dietary profiles, event scaffolding with meal planning, daily attendance, chore templates/tasks with assignments, lodging intents with arbitration metadata, and tenant identifiers on dependent tables to enforce tenant-aware filters across the graph.
+- **Gathering planning context**: Events tie to properties and manage meal templates/plans, chore templates/plans, lodging resources, and member intents for attendance, meals, stays, and chores.
+- **Detailed implementation**: Multi-tenant backbone with auditing, households and members (including dietary metadata), relationship graph, contact/addresses/attributes, dietary profiles, event scaffolding with meal templates (`MealTemplate` → `MealPlan` → `MealIntent`) and chore templates (`ChoreTemplate` → `ChorePlan` → `ChoreIntent`), daily attendance, lodging intents with arbitration metadata, and tenant identifiers on dependent tables to enforce tenant-aware filters across the graph.
 - **Family Directory CRUD API**: Full CRUD controllers and services for all Family Directory sub-entities:
   - **Addresses** (`/members/{memberId}/addresses`): CRUD with automatic IsPrimary flag management (setting one primary unsets others).
   - **Contact Methods** (`/members/{memberId}/contacts`): CRUD for email/phone/other with same IsPrimary logic.
@@ -40,9 +40,10 @@
 - **Demo site**: Deploy a zero-friction public demo at `demo.gatherstead.<host>.<ext>` on Azure Static Web Apps (Free tier). Same codebase with `NUXT_PUBLIC_DEMO_MODE` flag, localStorage persistence (no backend), entity limits to drive conversion, seed data for a non-empty first experience, persistent bottom banner with restriction details, and a dedicated CI/CD workflow. See [DEMO_SITE.md](agents/plans/DEMO_SITE.md).
 - **Hybrid rendering**: Production web app will use Nuxt `routeRules` for hybrid SSR/SPA — server-rendered public pages for SEO, client-only SPA for authenticated dashboard routes.
 - **Daily attendance summaries**: Aggregate per-day headcounts from attendance intents so event planners can see who is present on which days at a glance.
-- **Chore sign-up flows**: Let members volunteer for open chore slots during an event, with assignment confirmation and capacity enforcement.
+- **Event plan auto-generation**: When an event's date range changes, `ChorePlan` and `MealPlan` records are automatically generated for added days (per template configuration via `PlanGenerator`) or safely pruned for removed days (only if no user data — intents, completion — and `IsException = false`). Soft-deleted plans with `IsException = true` act as suppression markers and are honoured during generation.
+- **Chore sign-up flows**: Let members volunteer for open chore slots during an event via `ChoreIntent`, with capacity enforcement using `ChoreTemplate.MinimumAssignees`.
 - **Lodging arbitration**: Surface arbitration metadata through API endpoints so lodging conflicts can be resolved with transparent priority rules and audit trails.
-- **Gathering Planning API**: Add operational indexes/constraints for event-related tables and expose attendance, meal intent, chore assignment, and lodging arbitration capabilities through validated, authorized API endpoints matching the Family Directory patterns.
+- **Gathering Planning API**: Expose attendance, meal intent (`MealTemplate`/`MealPlan`/`MealIntent`), chore planning (`ChoreTemplate`/`ChorePlan`/`ChoreIntent`), and lodging arbitration capabilities through validated, authorized API endpoints matching the Family Directory patterns. Exception marking (`IsException`, `ExceptionReason`) on `ChorePlan` and `MealPlan` allows overriding auto-generated schedules.
 - **Household migration workflow**: When members age out of a parent household, allow Tenant Owner/Manager to create a new household and migrate the member, automatically assigning them the Household Admin role.
 - **Row-Level Security**: Evaluate SQL Server Row-Level Security (RLS) as a defense-in-depth backstop to the existing application-layer tenancy scoping.
 

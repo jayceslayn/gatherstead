@@ -53,6 +53,23 @@ public enum ChoreTimeSlot
     Anytime
 }
 
+[Flags]
+public enum ChoreTimeSlotFlags
+{
+    Morning = 0x01,
+    Midday  = 0x02,
+    Evening = 0x04,
+    Anytime = 0x08
+}
+
+[Flags]
+public enum MealTypeFlags
+{
+    Breakfast = 0x01,
+    Lunch     = 0x02,
+    Dinner    = 0x04
+}
+
 public enum RelationshipType
 {
     Parent,

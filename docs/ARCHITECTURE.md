@@ -24,10 +24,12 @@ Gatherstead is organized around bounded contexts that align with the two core go
 - **Event**: Time-bounded gathering tied to a tenant and property; aggregates resources, meal plans, and chore templates for the event window.【F:src/Gatherstead.Data/Entities/Event.cs】
 - **Resource**: Lodging or facility slot (e.g., guest room, RV space) with capacities and notes; collects stay intents from members instead of hard reservations.【F:src/Gatherstead.Data/Entities/Resource.cs】
 - **StayIntent**: Member's request to use a resource on a given night, with status and notes for offline arbitration.【F:src/Gatherstead.Data/Entities/StayIntent.cs】
-- **MealPlan**: Defines meals for specific days within an event and aggregates meal intents and notes.【F:src/Gatherstead.Data/Entities/MealPlan.cs】
+- **MealTemplate**: Template scoped to an event specifying which meal types (Breakfast/Lunch/Dinner via `MealTypeFlags`) to generate across the event's date range.【F:src/Gatherstead.Data/Entities/MealTemplate.cs】
+- **MealPlan**: A specific meal on a specific day, owned by a `MealTemplate`. Supports exception marking (`IsException`) to suppress auto-generated entries. Aggregates meal intents.【F:src/Gatherstead.Data/Entities/MealPlan.cs】
 - **MealIntent**: Member-level response indicating attendance for a meal, dietary considerations, and bring-your-own-food choices.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
-- **ChoreTemplate**: Volunteer-friendly template for recurring chores (by time slot) across an event.【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
-- **ChoreTask**: Dated chore assignments created from templates, allowing optional meal alignment, multiple assignees, completion tracking, and notes.【F:src/Gatherstead.Data/Entities/ChoreTask.cs】
+- **ChoreTemplate**: Template for recurring chores across an event; specifies one or more time slots (Morning/Midday/Evening/Anytime via `ChoreTimeSlotFlags`) and drives automatic `ChorePlan` generation.【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
+- **ChorePlan**: Dated chore instance for a specific day and time slot, owned by a `ChoreTemplate`. Supports exception marking and completion tracking. (Renamed from `ChoreTask`.)【F:src/Gatherstead.Data/Entities/ChorePlan.cs】
+- **ChoreIntent**: Member's volunteer/assignment record for a `ChorePlan`. (Renamed from `ChoreAssignment`; consistent with `MealIntent`/`StayIntent` pattern.)【F:src/Gatherstead.Data/Entities/ChoreIntent.cs】
 
 ## Technology Conventions
 

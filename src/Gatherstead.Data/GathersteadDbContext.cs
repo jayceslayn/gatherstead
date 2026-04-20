@@ -34,12 +34,13 @@ public class GathersteadDbContext : DbContext
     public DbSet<Property> Properties => Set<Property>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<Resource> Resources => Set<Resource>();
+    public DbSet<MealTemplate> MealTemplates => Set<MealTemplate>();
     public DbSet<MealPlan> MealPlans => Set<MealPlan>();
     public DbSet<MealIntent> MealIntents => Set<MealIntent>();
     public DbSet<StayIntent> StayIntents => Set<StayIntent>();
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
-    public DbSet<ChoreTask> ChoreTasks => Set<ChoreTask>();
-    public DbSet<ChoreAssignment> ChoreAssignments => Set<ChoreAssignment>();
+    public DbSet<ChorePlan> ChorePlans => Set<ChorePlan>();
+    public DbSet<ChoreIntent> ChoreIntents => Set<ChoreIntent>();
     public DbSet<EventAttendance> EventAttendances => Set<EventAttendance>();
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
     public DbSet<Address> Addresses => Set<Address>();

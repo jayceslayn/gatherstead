@@ -25,7 +25,7 @@ public class Event : AuditableEntity
     public DateOnly EndDate { get; set; }
 
     public ICollection<Resource> Resources { get; set; } = new List<Resource>();
-    public ICollection<MealPlan> MealPlans { get; set; } = new List<MealPlan>();
+    public ICollection<MealTemplate> MealTemplates { get; set; } = new List<MealTemplate>();
     public ICollection<ChoreTemplate> ChoreTemplates { get; set; } = new List<ChoreTemplate>();
     public ICollection<EventAttendance> Attendances { get; set; } = new List<EventAttendance>();
 }

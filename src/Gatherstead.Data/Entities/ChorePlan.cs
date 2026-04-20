@@ -7,7 +7,7 @@ namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(TemplateId), nameof(Completed))]
 [Index(nameof(TenantId), nameof(TemplateId), nameof(Day), nameof(TimeSlot), IsUnique = true)]
-public class ChoreTask : AuditableEntity
+public class ChorePlan : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }
@@ -24,6 +24,8 @@ public class ChoreTask : AuditableEntity
     public ChoreTimeSlot? TimeSlot { get; set; }
     public bool Completed { get; set; }
     public string? Notes { get; set; }
+    public bool IsException { get; set; }
+    public string? ExceptionReason { get; set; }
 
-    public ICollection<ChoreAssignment> Assignments { get; set; } = new List<ChoreAssignment>();
+    public ICollection<ChoreIntent> Intents { get; set; } = new List<ChoreIntent>();
 }

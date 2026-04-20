@@ -8,7 +8,7 @@ namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(EventId))]
 [Index(nameof(TenantId), nameof(EventId), nameof(Name), IsUnique = true)]
-public class ChoreTemplate : AuditableEntity
+public class MealTemplate : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }
@@ -25,9 +25,8 @@ public class ChoreTemplate : AuditableEntity
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
-    public ChoreTimeSlotFlags TimeSlots { get; set; }
-    public int? MinimumAssignees { get; set; }
+    public MealTypeFlags MealTypes { get; set; }
     public string? Notes { get; set; }
 
-    public ICollection<ChorePlan> Plans { get; set; } = new List<ChorePlan>();
+    public ICollection<MealPlan> Plans { get; set; } = new List<MealPlan>();
 }
