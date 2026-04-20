@@ -1,24 +1,33 @@
 using Gatherstead.Api.Contracts.Events;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Planning;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
-using Gatherstead.Data.Planning;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Api.Services.Events;
 
 public class EventService : IEventService
 {
+    private const string EntityDisplayName = "Event";
+
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly PlanSyncService _planSyncService;
 
     public EventService(
         GathersteadDbContext dbContext,
-        ICurrentTenantContext currentTenantContext)
+        ICurrentTenantContext currentTenantContext,
+        IMemberAuthorizationService memberAuthorizationService,
+        PlanSyncService planSyncService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _planSyncService = planSyncService ?? throw new ArgumentNullException(nameof(planSyncService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<EventDto>>> ListAsync(
@@ -27,9 +36,8 @@ public class EventService : IEventService
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<EventDto>>();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
         var query = _dbContext.Events
@@ -56,21 +64,17 @@ public class EventService : IEventService
         CancellationToken cancellationToken = default)
     {
         var response = new EventResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var @event = await _dbContext.Events
-            .AsNoTracking()
-            .Where(e => e.TenantId == tenantId && e.Id == eventId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var @event = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Events.AsNoTracking().Where(e => e.TenantId == tenantId && e.Id == eventId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (@event is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Event not found.");
-            return response;
-        }
+        if (@event is null) return response;
 
         response.SetSuccess(MapToDto(@event));
         return response;
@@ -82,19 +86,17 @@ public class EventService : IEventService
         CancellationToken cancellationToken = default)
     {
         var response = new EventResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A create event request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "create event", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Event name", response, out string normalizedName);
-
         if (request.EndDate < request.StartDate)
-            response.AddResponseMessage(MessageType.ERROR, "EndDate must be on or after StartDate.");
-
+            response.AddResponseMessage(MessageType.ERROR, "End date must be on or after start date.");
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
@@ -122,41 +124,36 @@ public class EventService : IEventService
         CancellationToken cancellationToken = default)
     {
         var response = new EventResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An update event request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "update event", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Event name", response, out string normalizedName);
-
         if (request.EndDate < request.StartDate)
-            response.AddResponseMessage(MessageType.ERROR, "EndDate must be on or after StartDate.");
-
+            response.AddResponseMessage(MessageType.ERROR, "End date must be on or after start date.");
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
-        var @event = await _dbContext.Events
-            .Where(e => e.TenantId == tenantId && e.Id == eventId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var @event = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Events.Where(e => e.TenantId == tenantId && e.Id == eventId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (@event is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Event not found.");
-            return response;
-        }
+        if (@event is null) return response;
 
-        var oldStart = @event.StartDate;
-        var oldEnd = @event.EndDate;
+        var datesChanged = request.StartDate != @event.StartDate || request.EndDate != @event.EndDate;
 
         @event.Name = normalizedName;
         @event.StartDate = request.StartDate;
         @event.EndDate = request.EndDate;
 
-        if (request.StartDate != oldStart || request.EndDate != oldEnd)
-            await SyncPlansInternalAsync(tenantId, @event, oldStart, oldEnd, cancellationToken);
+        if (datesChanged)
+            await _planSyncService.SyncEventPlansAsync(tenantId, @event, cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -170,24 +167,23 @@ public class EventService : IEventService
         CancellationToken cancellationToken = default)
     {
         var response = new EventResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
-        var @event = await _dbContext.Events
-            .Where(e => e.TenantId == tenantId && e.Id == eventId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var @event = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Events.Where(e => e.TenantId == tenantId && e.Id == eventId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (@event is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Event not found.");
-            return response;
-        }
+        if (@event is null) return response;
 
         if (@event.IsDeleted)
         {
-            response.AddResponseMessage(MessageType.WARNING, "Event already deleted.");
+            response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 
@@ -204,125 +200,25 @@ public class EventService : IEventService
         CancellationToken cancellationToken = default)
     {
         var response = new EventResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
-        var @event = await _dbContext.Events
-            .Where(e => e.TenantId == tenantId && e.Id == eventId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var @event = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Events.Where(e => e.TenantId == tenantId && e.Id == eventId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (@event is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Event not found.");
-            return response;
-        }
+        if (@event is null) return response;
 
-        await SyncPlansInternalAsync(tenantId, @event, @event.StartDate, @event.EndDate, cancellationToken);
+        await _planSyncService.SyncEventPlansAsync(tenantId, @event, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(@event));
         return response;
-    }
-
-    private async Task SyncPlansInternalAsync(
-        Guid tenantId,
-        Event @event,
-        DateOnly oldStart,
-        DateOnly oldEnd,
-        CancellationToken cancellationToken)
-    {
-        var newStart = @event.StartDate;
-        var newEnd = @event.EndDate;
-
-        var choreTemplates = await _dbContext.ChoreTemplates
-            .AsNoTracking()
-            .Where(t => t.TenantId == tenantId && t.EventId == @event.Id)
-            .ToListAsync(cancellationToken);
-
-        foreach (var template in choreTemplates)
-            await ApplyChorePlanDiffAsync(tenantId, template, newStart, newEnd, cancellationToken);
-
-        var mealTemplates = await _dbContext.MealTemplates
-            .AsNoTracking()
-            .Where(t => t.TenantId == tenantId && t.EventId == @event.Id)
-            .ToListAsync(cancellationToken);
-
-        foreach (var template in mealTemplates)
-            await ApplyMealPlanDiffAsync(tenantId, template, newStart, newEnd, cancellationToken);
-    }
-
-    private async Task ApplyChorePlanDiffAsync(
-        Guid tenantId,
-        ChoreTemplate template,
-        DateOnly start,
-        DateOnly end,
-        CancellationToken cancellationToken)
-    {
-        // Load all plans including soft-deleted so PlanGenerator can detect suppression markers.
-        // IgnoreQueryFilters() removes the global soft-delete filter; tenant isolation is
-        // re-enforced explicitly below since this is an internal operation.
-        var existing = await _dbContext.ChorePlans
-            .IgnoreQueryFilters()
-            .Include(p => p.Intents)
-            .Where(p => p.TenantId == tenantId && p.TemplateId == template.Id)
-            .ToListAsync(cancellationToken);
-
-        var diff = PlanGenerator.DiffChorePlans(template.TimeSlots, start, end, existing);
-
-        foreach (var (day, slot) in diff.ToAdd)
-        {
-            _dbContext.ChorePlans.Add(new ChorePlan
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantId,
-                TemplateId = template.Id,
-                Day = day,
-                TimeSlot = slot,
-                Completed = false,
-            });
-        }
-
-        foreach (var plan in diff.ToRestore)
-            plan.IsDeleted = false;
-
-        foreach (var plan in diff.ToPrune)
-            plan.IsDeleted = true;
-    }
-
-    private async Task ApplyMealPlanDiffAsync(
-        Guid tenantId,
-        MealTemplate template,
-        DateOnly start,
-        DateOnly end,
-        CancellationToken cancellationToken)
-    {
-        var existing = await _dbContext.MealPlans
-            .IgnoreQueryFilters()
-            .Include(p => p.Intents)
-            .Where(p => p.TenantId == tenantId && p.MealTemplateId == template.Id)
-            .ToListAsync(cancellationToken);
-
-        var diff = PlanGenerator.DiffMealPlans(template.MealTypes, start, end, existing);
-
-        foreach (var (day, mealType) in diff.ToAdd)
-        {
-            _dbContext.MealPlans.Add(new MealPlan
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenantId,
-                MealTemplateId = template.Id,
-                Day = day,
-                MealType = mealType,
-            });
-        }
-
-        foreach (var plan in diff.ToRestore)
-            plan.IsDeleted = false;
-
-        foreach (var plan in diff.ToPrune)
-            plan.IsDeleted = true;
     }
 
     private static EventDto MapToDto(Event @event) => new(
