@@ -71,7 +71,7 @@ public class ChorePlan : AuditableEntity
 **Delete:** `src/Gatherstead.Data/Entities/ChoreAssignment.cs`
 **Create:** `src/Gatherstead.Data/Entities/ChoreIntent.cs`
 
-Hierarchy: `ChoreIntent` belongs to `ChorePlan`. Consistent with `MealIntent` / `StayIntent` pattern.
+Hierarchy: `ChoreIntent` belongs to `ChorePlan`. Consistent with `MealIntent` / `AccommodationIntent` pattern.
 
 ```csharp
 [Index(nameof(TenantId), nameof(HouseholdMemberId))]
@@ -349,7 +349,7 @@ Replace `MealPlan`, `MealIntent`, `ChoreTemplate`, `ChoreTask` bullets with:
 - **MealIntent**: Member-level response indicating attendance for a meal, dietary considerations, and bring-your-own-food choices.
 - **ChoreTemplate**: Template for recurring chores across an event; specifies one or more time slots (Morning/Midday/Evening/Anytime via ChoreTimeSlotFlags) and drives automatic ChorePlan generation.
 - **ChorePlan**: Dated chore instance for a specific day and time slot, owned by a ChoreTemplate. Supports exception marking and completion tracking. (Renamed from ChoreTask.)
-- **ChoreIntent**: Member's volunteer/assignment record for a ChorePlan. (Renamed from ChoreAssignment; consistent with MealIntent/StayIntent pattern.)
+- **ChoreIntent**: Member's volunteer/assignment record for a ChorePlan. (Renamed from ChoreAssignment; consistent with MealIntent/AccommodationIntent pattern.)
 ```
 
 ### `docs/IMPLEMENTATION_STATUS.md`

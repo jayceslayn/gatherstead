@@ -8,7 +8,7 @@ public enum TenantRole
     Guest
 }
 
-public enum ResourceType
+public enum AccommodationType
 {
     Bedroom,
     Bunk,
@@ -31,14 +31,14 @@ public enum MealIntentStatus
     NotGoing
 }
 
-public enum StayIntentStatus
+public enum AccommodationIntentStatus
 {
     Intent,
     Hold,
     Confirmed
 }
 
-public enum StayIntentDecision
+public enum AccommodationIntentDecision
 {
     Pending,
     Approved,

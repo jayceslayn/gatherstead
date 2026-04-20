@@ -21,15 +21,81 @@ Gatherstead is organized around bounded contexts that align with the two core go
 
 ### Gathering Planning Context
 - **Property**: Physical location that can host events and belongs to a tenant.【F:src/Gatherstead.Data/Entities/Property.cs】
-- **Event**: Time-bounded gathering tied to a tenant and property; aggregates resources, meal plans, and chore templates for the event window.【F:src/Gatherstead.Data/Entities/Event.cs】
-- **Resource**: Lodging or facility slot (e.g., guest room, RV space) with capacities and notes; collects stay intents from members instead of hard reservations.【F:src/Gatherstead.Data/Entities/Resource.cs】
-- **StayIntent**: Member's request to use a resource on a given night, with status and notes for offline arbitration.【F:src/Gatherstead.Data/Entities/StayIntent.cs】
+- **Accommodation**: A place a member may occupy at a property (e.g., guest room, bunk, RV pad, tent site, or offsite placeholder). Accommodations are owned by a `Property` and exist independently of any event — the room inventory doesn't change per gathering. Captures type, adult/child capacity, and notes.【F:src/Gatherstead.Data/Entities/Accommodation.cs】
+- **AccommodationIntent**: Member's request to occupy an accommodation on a given night, with status (`Intent`/`Hold`/`Confirmed`) and a decision field for offline arbitration. Not scoped to an event; nights may fall outside any formal gathering.【F:src/Gatherstead.Data/Entities/AccommodationIntent.cs】
+- **Event**: Time-bounded gathering tied to a tenant and property; aggregates meal plans, chore templates, and attendance records for the event window.【F:src/Gatherstead.Data/Entities/Event.cs】
+- **EventAttendance**: Per-member, per-day attendance record for an event. Tracks `AttendanceStatus`, arrival/departure windows, and notes. Cross-references `HouseholdMember` from the Family Directory context; a member's attendance record is the anchor for generating their meal and chore intents.【F:src/Gatherstead.Data/Entities/EventAttendance.cs】
 - **MealTemplate**: Template scoped to an event specifying which meal types (Breakfast/Lunch/Dinner via `MealTypeFlags`) to generate across the event's date range.【F:src/Gatherstead.Data/Entities/MealTemplate.cs】
 - **MealPlan**: A specific meal on a specific day, owned by a `MealTemplate`. Supports exception marking (`IsException`) to suppress auto-generated entries. Aggregates meal intents.【F:src/Gatherstead.Data/Entities/MealPlan.cs】
 - **MealIntent**: Member-level response indicating attendance for a meal, dietary considerations, and bring-your-own-food choices.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
 - **ChoreTemplate**: Template for recurring chores across an event; specifies one or more time slots (Morning/Midday/Evening/Anytime via `ChoreTimeSlotFlags`) and drives automatic `ChorePlan` generation.【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
 - **ChorePlan**: Dated chore instance for a specific day and time slot, owned by a `ChoreTemplate`. Supports exception marking and completion tracking. (Renamed from `ChoreTask`.)【F:src/Gatherstead.Data/Entities/ChorePlan.cs】
-- **ChoreIntent**: Member's volunteer/assignment record for a `ChorePlan`. (Renamed from `ChoreAssignment`; consistent with `MealIntent`/`StayIntent` pattern.)【F:src/Gatherstead.Data/Entities/ChoreIntent.cs】
+- **ChoreIntent**: Member's volunteer/assignment record for a `ChorePlan`. (Renamed from `ChoreAssignment`; consistent with `MealIntent`/`AccommodationIntent` pattern.)【F:src/Gatherstead.Data/Entities/ChoreIntent.cs】
+
+## Entity Hierarchy
+
+The verified ownership hierarchy, derived from FK relationships in the EF Core entities. Solid arrows represent FK ownership (parent → child); dashed arrows represent cross-context references.
+>
+> **Future work:** A separate `Resource` / `ResourceIntent` entity pair is planned for shared equipment and facilities (e.g., kayaks, communal tools) that members can reserve without a lodging connotation.
+
+### Ownership flowchart
+
+```mermaid
+flowchart TD
+    Tenant -->|"M:N via TenantUser\n(TenantRole)"| User
+    Tenant --> Household --> HouseholdMember
+    HouseholdMember -.->|"optional UserId"| User
+    HouseholdMember --> MemberRelationship
+    HouseholdMember --> Address
+    HouseholdMember --> ContactMethod
+    HouseholdMember --> MemberAttribute
+    HouseholdMember --> DietaryProfile
+
+    Tenant --> Property
+    Property --> Accommodation --> AccommodationIntent
+    Property --> Event
+    Event --> MealTemplate --> MealPlan --> MealIntent
+    Event --> ChoreTemplate --> ChorePlan --> ChoreIntent
+    Event --> EventAttendance
+
+    HouseholdMember -.->|HouseholdMemberId| AccommodationIntent
+    HouseholdMember -.->|HouseholdMemberId| MealIntent
+    HouseholdMember -.->|HouseholdMemberId| ChoreIntent
+    HouseholdMember -.->|HouseholdMemberId| EventAttendance
+```
+
+### ER diagram (FK cardinality)
+
+```mermaid
+erDiagram
+    Tenant ||--o{ TenantUser : "role"
+    User   ||--o{ TenantUser : ""
+    Tenant ||--o{ Household : ""
+    Household ||--o{ HouseholdMember : ""
+    User   |o--o{ HouseholdMember : "optional"
+    HouseholdMember ||--o{ MemberRelationship : "source"
+    HouseholdMember ||--o{ MemberRelationship : "related"
+    HouseholdMember |o--o| DietaryProfile : ""
+    HouseholdMember ||--o{ Address : ""
+    HouseholdMember ||--o{ ContactMethod : ""
+    HouseholdMember ||--o{ MemberAttribute : ""
+
+    Tenant          ||--o{ Property : ""
+    Property        ||--o{ Accommodation : ""
+    Accommodation   ||--o{ AccommodationIntent : ""
+    HouseholdMember ||--o{ AccommodationIntent : ""
+    Property        ||--o{ Event : ""
+    Event           ||--o{ MealTemplate : ""
+    MealTemplate    ||--o{ MealPlan : ""
+    MealPlan        ||--o{ MealIntent : ""
+    HouseholdMember ||--o{ MealIntent : ""
+    Event           ||--o{ ChoreTemplate : ""
+    ChoreTemplate   ||--o{ ChorePlan : ""
+    ChorePlan       ||--o{ ChoreIntent : ""
+    HouseholdMember ||--o{ ChoreIntent : ""
+    Event           ||--o{ EventAttendance : ""
+    HouseholdMember ||--o{ EventAttendance : ""
+```
 
 ## Technology Conventions
 

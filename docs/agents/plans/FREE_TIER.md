@@ -66,7 +66,7 @@ tier-scoped quotas.
   Paid:  (effectively unlimited / far higher caps)
   ```
 - **New** `IQuotaService` — `AssertCanCreate(tenantId, entityKind, ct)` that loads the tenant's tier and current count, throws `QuotaExceededException` on breach.
-- Inject into each create path: `HouseholdService`, `MemberService`, `EventService`, `PropertyService`, `ResourceService`, `MealPlanService`, `ChoreTemplateService`. One line at the top of each `CreateAsync`.
+- Inject into each create path: `HouseholdService`, `MemberService`, `EventService`, `PropertyService`, `AccommodationService`, `MealPlanService`, `ChoreTemplateService`. One line at the top of each `CreateAsync`.
 - Custom exception surfaces as HTTP 402 Payment Required with `{ entity, limit, tier }` payload so the UI can render the conversion CTA.
 
 ### 3. Self-serve signup & tenant creation

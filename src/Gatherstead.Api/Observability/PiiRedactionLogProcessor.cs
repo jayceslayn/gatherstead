@@ -28,7 +28,7 @@ public sealed class PiiRedactionLogProcessor : BaseProcessor<LogRecord>
         "MemberId",       "member_id",       "member.id",
         "HouseholdId",    "household_id",    "household.id",
         "EventId",        "event_id",        "event.id",
-        "ResourceId",     "resource_id",     "resource.id",
+        "AccommodationId", "accommodation_id", "accommodation.id",
         "CorrelationId",  "correlation_id",  "correlation.id",
         "EntityTenantId", "CurrentTenantId",  // used in cross-tenant write log
 

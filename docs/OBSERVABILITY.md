@@ -30,7 +30,7 @@ The processors maintain an explicit allowlist. Any structured log property or sp
 | `MemberId` / `member_id` / `member.id` | Internal `Guid` |
 | `HouseholdId` / `household_id` / `household.id` | Internal `Guid` |
 | `EventId` / `event_id` / `event.id` | Internal `Guid` |
-| `ResourceId` / `resource_id` / `resource.id` | Internal `Guid` |
+| `AccommodationId` / `accommodation_id` / `accommodation.id` | Internal `Guid` |
 | `CorrelationId` / `correlation_id` / `correlation.id` | OTel `TraceId` string |
 | `EntityTenantId`, `CurrentTenantId` | Internal `Guid` (cross-tenant log) |
 

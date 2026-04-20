@@ -112,7 +112,7 @@ There are no test projects, no test files, no test framework references, and no 
 
 ### 4. Limited Feature Surface
 
-Only 3 controllers (Tenants, Households, HouseholdMembers) are implemented out of a much larger domain model (Events, Properties, Resources, MealPlans, ChoreTemplates, etc.). Entity definitions exist but have no service/controller layer.
+Only 3 controllers (Tenants, Households, HouseholdMembers) are implemented out of a much larger domain model (Events, Properties, Accommodations, MealPlans, ChoreTemplates, etc.). Entity definitions exist but have no service/controller layer.
 
 ---
 
@@ -245,12 +245,12 @@ The hardest part (the architecture) is done right. The gaps are all addressable 
 1. **Events context (recommended):**
    - `EventsController`, `IEventService`, `EventService`
    - Demonstrates the architecture scales beyond basic CRUD
-   - Exercises relationships (EventAttendance, StayIntent, MealIntent)
+   - Exercises relationships (EventAttendance, AccommodationIntent, MealIntent)
 
 2. **Shows domain complexity:**
    - Date range validation
    - Attendance aggregation
-   - Resource availability checks
+   - Accommodation availability checks
 
 ### Priority 6: Polish for Showcase
 

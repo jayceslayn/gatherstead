@@ -18,4 +18,5 @@ public class Property : AuditableEntity
     public string Name { get; set; } = string.Empty;
 
     public ICollection<Event> Events { get; set; } = new List<Event>();
+    public ICollection<Accommodation> Accommodations { get; set; } = new List<Accommodation>();
 }
