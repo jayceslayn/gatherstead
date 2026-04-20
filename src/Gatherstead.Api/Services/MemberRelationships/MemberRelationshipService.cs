@@ -12,6 +12,9 @@ namespace Gatherstead.Api.Services.MemberRelationships;
 
 public class MemberRelationshipService : IMemberRelationshipService
 {
+    private const string EntityDisplayName = "Member relationship";
+    private const string AuthorizationDeniedMessage = "You do not have permission to manage relationships in this household.";
+
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
@@ -48,12 +51,9 @@ public class MemberRelationshipService : IMemberRelationshipService
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<MemberRelationshipDto>>();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var query = _dbContext.MemberRelationships
             .AsNoTracking()
@@ -83,23 +83,19 @@ public class MemberRelationshipService : IMemberRelationshipService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberRelationshipResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
-        var relationship = await _dbContext.MemberRelationships
-            .AsNoTracking()
-            .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var relationship = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MemberRelationships
+                .AsNoTracking()
+                .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (relationship is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Member relationship not found.");
-            return response;
-        }
+        if (relationship is null) return response;
 
         response.SetSuccess(MapToDto(relationship));
         return response;
@@ -113,24 +109,14 @@ public class MemberRelationshipService : IMemberRelationshipService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberRelationshipResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A create member relationship request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "create member relationship", response))
+            return response;
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!await ServiceGuards.AuthorizeHouseholdManageAsync(response, _memberAuthorizationService, tenantId, householdId, AuthorizationDeniedMessage, cancellationToken))
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage relationships in this household.");
-            return response;
-        }
 
         if (request.RelatedMemberId == memberId)
         {
@@ -138,15 +124,8 @@ public class MemberRelationshipService : IMemberRelationshipService
             return response;
         }
 
-        var memberExists = await _dbContext.HouseholdMembers
-            .AsNoTracking()
-            .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
-
-        if (!memberExists)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
 
         var relatedMemberExists = await _dbContext.HouseholdMembers
             .AsNoTracking()
@@ -197,34 +176,23 @@ public class MemberRelationshipService : IMemberRelationshipService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberRelationshipResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An update member relationship request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceGuards.RequireRequest(request, "update member relationship", response))
             return response;
-        }
 
-        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage relationships in this household.");
+        if (!await ServiceGuards.AuthorizeHouseholdManageAsync(response, _memberAuthorizationService, tenantId, householdId, AuthorizationDeniedMessage, cancellationToken))
             return response;
-        }
 
-        var relationship = await _dbContext.MemberRelationships
-            .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var relationship = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MemberRelationships
+                .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (relationship is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Member relationship not found.");
-            return response;
-        }
+        if (relationship is null) return response;
 
         if (request.RelationshipType != relationship.RelationshipType)
         {
@@ -260,32 +228,24 @@ public class MemberRelationshipService : IMemberRelationshipService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberRelationshipResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage relationships in this household.");
+        if (!await ServiceGuards.AuthorizeHouseholdManageAsync(response, _memberAuthorizationService, tenantId, householdId, AuthorizationDeniedMessage, cancellationToken))
             return response;
-        }
 
-        var relationship = await _dbContext.MemberRelationships
-            .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var relationship = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MemberRelationships
+                .Where(r => r.TenantId == tenantId && r.HouseholdMemberId == memberId && r.Id == relationshipId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (relationship is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Member relationship not found.");
-            return response;
-        }
+        if (relationship is null) return response;
 
         if (relationship.IsDeleted)
         {
-            response.AddResponseMessage(MessageType.WARNING, "Member relationship already deleted.");
+            response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 

@@ -12,6 +12,8 @@ namespace Gatherstead.Api.Services.MemberAttributes;
 
 public class MemberAttributeService : IMemberAttributeService
 {
+    private const string EntityDisplayName = "Member attribute";
+
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
@@ -47,12 +49,9 @@ public class MemberAttributeService : IMemberAttributeService
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var query = _dbContext.MemberAttributes
             .AsNoTracking()
@@ -82,23 +81,19 @@ public class MemberAttributeService : IMemberAttributeService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberAttributeResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
-        var attribute = await _dbContext.MemberAttributes
-            .AsNoTracking()
-            .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var attribute = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MemberAttributes
+                .AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (attribute is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Member attribute not found.");
-            return response;
-        }
+        if (attribute is null) return response;
 
         response.SetSuccess(MapToDto(attribute));
         return response;
@@ -112,37 +107,20 @@ public class MemberAttributeService : IMemberAttributeService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberAttributeResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A create member attribute request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "create member attribute", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Key, "Attribute key", response, out string normalizedKey);
         ServiceValidationHelper.TryNormalizeString(request.Value, "Attribute value", response, out string normalizedValue);
-
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
-
-        var memberExists = await _dbContext.HouseholdMembers
-            .AsNoTracking()
-            .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
-
-        if (!memberExists)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
-            return response;
-        }
 
         var duplicateExists = await _dbContext.MemberAttributes
             .AsNoTracking()
@@ -179,37 +157,27 @@ public class MemberAttributeService : IMemberAttributeService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberAttributeResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An update member attribute request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "update member attribute", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Key, "Attribute key", response, out string normalizedKey);
         ServiceValidationHelper.TryNormalizeString(request.Value, "Attribute value", response, out string normalizedValue);
-
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
 
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
-            return response;
-        }
+        var attribute = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MemberAttributes
+                .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId),
+            EntityDisplayName,
+            cancellationToken);
 
-        var attribute = await _dbContext.MemberAttributes
-            .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (attribute is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Member attribute not found.");
-            return response;
-        }
+        if (attribute is null) return response;
 
         if (!string.Equals(attribute.Key, normalizedKey, StringComparison.Ordinal))
         {
@@ -241,32 +209,24 @@ public class MemberAttributeService : IMemberAttributeService
         CancellationToken cancellationToken = default)
     {
         var response = new MemberAttributeResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
 
-        var attribute = await _dbContext.MemberAttributes
-            .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var attribute = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MemberAttributes
+                .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (attribute is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Member attribute not found.");
-            return response;
-        }
+        if (attribute is null) return response;
 
         if (attribute.IsDeleted)
         {
-            response.AddResponseMessage(MessageType.WARNING, "Member attribute already deleted.");
+            response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 

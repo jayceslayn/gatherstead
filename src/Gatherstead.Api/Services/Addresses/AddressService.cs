@@ -12,6 +12,8 @@ namespace Gatherstead.Api.Services.Addresses;
 
 public class AddressService : IAddressService
 {
+    private const string EntityDisplayName = "Address";
+
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
@@ -52,12 +54,9 @@ public class AddressService : IAddressService
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<AddressDto>>();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var query = _dbContext.Addresses
             .AsNoTracking()
@@ -87,23 +86,19 @@ public class AddressService : IAddressService
         CancellationToken cancellationToken = default)
     {
         var response = new AddressResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
-        var address = await _dbContext.Addresses
-            .AsNoTracking()
-            .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == addressId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var address = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Addresses
+                .AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == addressId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (address is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Address not found.");
-            return response;
-        }
+        if (address is null) return response;
 
         response.SetSuccess(MapToDto(address));
         return response;
@@ -117,40 +112,23 @@ public class AddressService : IAddressService
         CancellationToken cancellationToken = default)
     {
         var response = new AddressResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A create address request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "create address", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Line1, "Address line 1", response, out string normalizedLine1);
         ServiceValidationHelper.TryNormalizeString(request.City, "City", response, out string normalizedCity);
         ServiceValidationHelper.TryNormalizeString(request.State, "State", response, out string normalizedState);
         ServiceValidationHelper.TryNormalizeString(request.PostalCode, "Postal code", response, out string normalizedPostalCode);
         ServiceValidationHelper.TryNormalizeString(request.Country, "Country", response, out string normalizedCountry);
-
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
-
-        var memberExists = await _dbContext.HouseholdMembers
-            .AsNoTracking()
-            .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
-
-        if (!memberExists)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
-            return response;
-        }
 
         if (request.IsPrimary)
         {
@@ -187,40 +165,30 @@ public class AddressService : IAddressService
         CancellationToken cancellationToken = default)
     {
         var response = new AddressResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An update address request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "update address", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Line1, "Address line 1", response, out string normalizedLine1);
         ServiceValidationHelper.TryNormalizeString(request.City, "City", response, out string normalizedCity);
         ServiceValidationHelper.TryNormalizeString(request.State, "State", response, out string normalizedState);
         ServiceValidationHelper.TryNormalizeString(request.PostalCode, "Postal code", response, out string normalizedPostalCode);
         ServiceValidationHelper.TryNormalizeString(request.Country, "Country", response, out string normalizedCountry);
-
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
 
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
-            return response;
-        }
+        var address = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Addresses
+                .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == addressId),
+            EntityDisplayName,
+            cancellationToken);
 
-        var address = await _dbContext.Addresses
-            .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == addressId)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (address is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Address not found.");
-            return response;
-        }
+        if (address is null) return response;
 
         if (request.IsPrimary)
         {
@@ -249,32 +217,24 @@ public class AddressService : IAddressService
         CancellationToken cancellationToken = default)
     {
         var response = new AddressResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
 
-        var address = await _dbContext.Addresses
-            .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == addressId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var address = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.Addresses
+                .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == addressId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (address is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Address not found.");
-            return response;
-        }
+        if (address is null) return response;
 
         if (address.IsDeleted)
         {
-            response.AddResponseMessage(MessageType.WARNING, "Address already deleted.");
+            response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 

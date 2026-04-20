@@ -12,6 +12,8 @@ namespace Gatherstead.Api.Services.DietaryProfiles;
 
 public class DietaryProfileService : IDietaryProfileService
 {
+    private const string EntityDisplayName = "Dietary profile";
+
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
@@ -47,12 +49,9 @@ public class DietaryProfileService : IDietaryProfileService
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<DietaryProfileDto>>();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var query = _dbContext.DietaryProfiles
             .AsNoTracking()
@@ -81,23 +80,19 @@ public class DietaryProfileService : IDietaryProfileService
         CancellationToken cancellationToken = default)
     {
         var response = new DietaryProfileResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
-        var profile = await _dbContext.DietaryProfiles
-            .AsNoTracking()
-            .Where(dp => dp.TenantId == tenantId && dp.HouseholdMemberId == memberId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var profile = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.DietaryProfiles
+                .AsNoTracking()
+                .Where(dp => dp.TenantId == tenantId && dp.HouseholdMemberId == memberId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (profile is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Dietary profile not found.");
-            return response;
-        }
+        if (profile is null) return response;
 
         response.SetSuccess(MapToDto(profile));
         return response;
@@ -111,34 +106,16 @@ public class DietaryProfileService : IDietaryProfileService
         CancellationToken cancellationToken = default)
     {
         var response = new DietaryProfileResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An upsert dietary profile request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceGuards.RequireRequest(request, "upsert dietary profile", response))
             return response;
-        }
 
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
-
-        var memberExists = await _dbContext.HouseholdMembers
-            .AsNoTracking()
-            .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
-
-        if (!memberExists)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
 
         var existing = await _dbContext.DietaryProfiles
             .Where(dp => dp.TenantId == tenantId && dp.HouseholdMemberId == memberId)
@@ -189,32 +166,24 @@ public class DietaryProfileService : IDietaryProfileService
         CancellationToken cancellationToken = default)
     {
         var response = new DietaryProfileResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
 
-        var profile = await _dbContext.DietaryProfiles
-            .Where(dp => dp.TenantId == tenantId && dp.HouseholdMemberId == memberId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var profile = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.DietaryProfiles
+                .Where(dp => dp.TenantId == tenantId && dp.HouseholdMemberId == memberId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (profile is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Dietary profile not found.");
-            return response;
-        }
+        if (profile is null) return response;
 
         if (profile.IsDeleted)
         {
-            response.AddResponseMessage(MessageType.WARNING, "Dietary profile already deleted.");
+            response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 

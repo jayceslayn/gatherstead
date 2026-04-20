@@ -12,6 +12,8 @@ namespace Gatherstead.Api.Services.ContactMethods;
 
 public class ContactMethodService : IContactMethodService
 {
+    private const string EntityDisplayName = "Contact method";
+
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
@@ -48,12 +50,9 @@ public class ContactMethodService : IContactMethodService
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<ContactMethodDto>>();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var query = _dbContext.ContactMethods
             .AsNoTracking()
@@ -83,23 +82,19 @@ public class ContactMethodService : IContactMethodService
         CancellationToken cancellationToken = default)
     {
         var response = new ContactMethodResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
-        var contact = await _dbContext.ContactMethods
-            .AsNoTracking()
-            .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var contact = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.ContactMethods
+                .AsNoTracking()
+                .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (contact is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Contact method not found.");
-            return response;
-        }
+        if (contact is null) return response;
 
         response.SetSuccess(MapToDto(contact));
         return response;
@@ -113,36 +108,19 @@ public class ContactMethodService : IContactMethodService
         CancellationToken cancellationToken = default)
     {
         var response = new ContactMethodResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "A create contact method request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "create contact method", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Value, "Contact value", response, out string normalizedValue);
-
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
-
-        var memberExists = await _dbContext.HouseholdMembers
-            .AsNoTracking()
-            .AnyAsync(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId, cancellationToken);
-
-        if (!memberExists)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
-            return response;
-        }
 
         if (request.IsPrimary)
         {
@@ -175,36 +153,26 @@ public class ContactMethodService : IContactMethodService
         CancellationToken cancellationToken = default)
     {
         var response = new ContactMethodResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (request is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An update contact method request is required.");
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
+        if (!ServiceGuards.RequireRequest(request, "update contact method", response))
+            return response;
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Value, "Contact value", response, out string normalizedValue);
-
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
 
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
-            return response;
-        }
+        var contact = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.ContactMethods
+                .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId),
+            EntityDisplayName,
+            cancellationToken);
 
-        var contact = await _dbContext.ContactMethods
-            .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (contact is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Contact method not found.");
-            return response;
-        }
+        if (contact is null) return response;
 
         if (request.IsPrimary)
         {
@@ -229,32 +197,24 @@ public class ContactMethodService : IContactMethodService
         CancellationToken cancellationToken = default)
     {
         var response = new ContactMethodResponse();
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
 
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
-
-        if (!await _memberAuthorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
-        {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
-        }
 
-        var contact = await _dbContext.ContactMethods
-            .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId)
-            .SingleOrDefaultAsync(cancellationToken);
+        var contact = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.ContactMethods
+                .Where(c => c.TenantId == tenantId && c.HouseholdMemberId == memberId && c.Id == contactMethodId),
+            EntityDisplayName,
+            cancellationToken);
 
-        if (contact is null)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "Contact method not found.");
-            return response;
-        }
+        if (contact is null) return response;
 
         if (contact.IsDeleted)
         {
-            response.AddResponseMessage(MessageType.WARNING, "Contact method already deleted.");
+            response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 
