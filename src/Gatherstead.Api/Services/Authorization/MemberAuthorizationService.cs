@@ -85,6 +85,18 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         return false;
     }
 
+    public async Task<bool> CanManageTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return false;
+
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
+
+        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
+        return role.HasValue && role.Value <= TenantRole.Manager;
+    }
+
     public async Task<bool> CanManageHouseholdAsync(Guid tenantId, Guid householdId, CancellationToken ct = default)
     {
         var userId = _currentUserContext.UserId;

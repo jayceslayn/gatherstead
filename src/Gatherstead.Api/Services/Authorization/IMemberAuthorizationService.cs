@@ -14,4 +14,11 @@ public interface IMemberAuthorizationService
     /// Returns true if: tenant Owner/Manager, or household Admin.
     /// </summary>
     Task<bool> CanManageHouseholdAsync(Guid tenantId, Guid householdId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Determines if the current user can manage tenant-level resources
+    /// (events, properties, templates, accommodations).
+    /// Returns true if: App Admin, or tenant Owner/Manager.
+    /// </summary>
+    Task<bool> CanManageTenantAsync(Guid tenantId, CancellationToken ct = default);
 }

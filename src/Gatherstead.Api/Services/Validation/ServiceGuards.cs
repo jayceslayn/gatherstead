@@ -42,6 +42,20 @@ public static class ServiceGuards
         return true;
     }
 
+    public static async Task<bool> AuthorizeTenantManageAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        if (!await authorizationService.CanManageTenantAsync(tenantId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage this tenant's resources.");
+            return false;
+        }
+        return true;
+    }
+
     public static async Task<bool> AuthorizeHouseholdManageAsync<T>(
         BaseEntityResponse<T> response,
         IMemberAuthorizationService authorizationService,
