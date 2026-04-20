@@ -74,6 +74,7 @@ public class GathersteadDbContext : DbContext
 
         modelBuilder.Entity<SecurityEvent>(b =>
         {
+            b.ToTable("SecurityEvents", "security");
             b.HasIndex(e => e.OccurredAt).HasDatabaseName("IX_SecurityEvent_OccurredAt");
             b.HasIndex(e => new { e.TenantId, e.OccurredAt }).HasDatabaseName("IX_SecurityEvent_TenantId_OccurredAt");
             b.HasIndex(e => new { e.EventType, e.OccurredAt }).HasDatabaseName("IX_SecurityEvent_EventType_OccurredAt");
@@ -97,7 +98,7 @@ public class GathersteadDbContext : DbContext
 
         modelBuilder.Entity<RevokedToken>(b =>
         {
-            // Index on Jti for fast revocation lookups
+            b.ToTable("RevokedTokens", "security");
             b.HasIndex(p => p.Jti)
                 .HasDatabaseName("IX_RevokedToken_Jti");
 
