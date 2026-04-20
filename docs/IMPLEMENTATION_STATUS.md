@@ -3,8 +3,8 @@
 ## Implemented Features
 - **Shared foundation**: Tenants own households, properties, events, and users to keep families isolated.
 - **Family directory context**: Households group members; member records store names, birth dates, dietary notes/tags.
-- **Gathering planning context**: Events tie to properties and manage meal templates/plans, chore templates/plans, lodging resources, and member intents for attendance, meals, stays, and chores.
-- **Detailed implementation**: Multi-tenant backbone with auditing, households and members (including dietary metadata), relationship graph, contact/addresses/attributes, dietary profiles, event scaffolding with meal templates (`MealTemplate` → `MealPlan` → `MealIntent`) and chore templates (`ChoreTemplate` → `ChorePlan` → `ChoreIntent`), daily attendance, lodging intents with arbitration metadata, and tenant identifiers on dependent tables to enforce tenant-aware filters across the graph.
+- **Gathering planning context**: Events tie to properties and manage meal templates/plans, chore templates/plans, accommodations, and member intents for attendance, meals, stays, and chores.
+- **Detailed implementation**: Multi-tenant backbone with auditing, households and members (including dietary metadata), relationship graph, contact/addresses/attributes, dietary profiles, event scaffolding with meal templates (`MealTemplate` → `MealPlan` → `MealIntent`) and chore templates (`ChoreTemplate` → `ChorePlan` → `ChoreIntent`), daily attendance, accommodation intents with arbitration metadata, and tenant identifiers on dependent tables to enforce tenant-aware filters across the graph.
 - **Family Directory CRUD API**: Full CRUD controllers and services for all Family Directory sub-entities:
   - **Addresses** (`/members/{memberId}/addresses`): CRUD with automatic IsPrimary flag management (setting one primary unsets others).
   - **Contact Methods** (`/members/{memberId}/contacts`): CRUD for email/phone/other with same IsPrimary logic.
@@ -34,29 +34,21 @@
   - `GET /api/tenants` returns all tenants for App Admins, while regular users see only tenants they belong to.
   - App Admin status is resolved per-request via `IAppAdminContext` with `HttpContext.Items` caching.
   - The first App Admin must be set via direct SQL (`UPDATE Users SET IsAppAdmin = 1 WHERE ...`).
+- **Localization (i18n)**: `@nuxtjs/i18n` v10 integrated with lazy-loaded locale files (English, Spanish), `prefix_except_default` URL strategy, cookie persistence, and browser language detection. See [LOCALIZATION.md](agents/plans/LOCALIZATION.md).
+- **Demo site**: `demoMode` runtime config flag implemented; `useAuth`, `useTenants`, and route middleware all branch on it, stubbing auth and tenant data with in-memory values. Full localStorage persistence layer for entity data is pending. See [DEMO_SITE.md](agents/plans/DEMO_SITE.md).
+- **Hybrid rendering**: Nuxt `routeRules` configured — public root is prerendered for SEO; authenticated tenant routes (`/tenants/**`) are client-only SPA.
+- **Event plan auto-generation**: `PlanGenerator` computes `ChorePlan` and `MealPlan` diffs when an event's date range changes — adding plans for new days, restoring soft-deleted non-exception plans, and pruning empty plans for removed days. `EventService.SyncPlansAsync()` is the call site, covered by unit tests.
 
 ## Planned Enhancements
-- **Localization (i18n)**: Integrate `@nuxtjs/i18n` with lazy-loaded locale files, `prefix_except_default` URL strategy, cookie persistence, date/number/currency formatting, API error code translation, locale switcher component, and ESLint enforcement of `$t()` usage. English first, structured for easy addition of other languages. See [LOCALIZATION.md](agents/plans/LOCALIZATION.md).
-- **Demo site**: Deploy a zero-friction public demo at `demo.gatherstead.<host>.<ext>` on Azure Static Web Apps (Free tier). Same codebase with `NUXT_PUBLIC_DEMO_MODE` flag, localStorage persistence (no backend), entity limits to drive conversion, seed data for a non-empty first experience, persistent bottom banner with restriction details, and a dedicated CI/CD workflow. See [DEMO_SITE.md](agents/plans/DEMO_SITE.md).
-- **Hybrid rendering**: Production web app will use Nuxt `routeRules` for hybrid SSR/SPA — server-rendered public pages for SEO, client-only SPA for authenticated dashboard routes.
 - **Daily attendance summaries**: Aggregate per-day headcounts from attendance intents so event planners can see who is present on which days at a glance.
-- **Event plan auto-generation**: When an event's date range changes, `ChorePlan` and `MealPlan` records are automatically generated for added days (per template configuration via `PlanGenerator`) or safely pruned for removed days (only if no user data — intents, completion — and `IsException = false`). Soft-deleted plans with `IsException = true` act as suppression markers and are honoured during generation.
 - **Chore sign-up flows**: Let members volunteer for open chore slots during an event via `ChoreIntent`, with capacity enforcement using `ChoreTemplate.MinimumAssignees`.
-- **Lodging arbitration**: Surface arbitration metadata through API endpoints so lodging conflicts can be resolved with transparent priority rules and audit trails.
-- **Gathering Planning API**: Expose attendance, meal intent (`MealTemplate`/`MealPlan`/`MealIntent`), chore planning (`ChoreTemplate`/`ChorePlan`/`ChoreIntent`), and lodging arbitration capabilities through validated, authorized API endpoints matching the Family Directory patterns. Exception marking (`IsException`, `ExceptionReason`) on `ChorePlan` and `MealPlan` allows overriding auto-generated schedules.
+- **Accommodation arbitration**: Surface arbitration metadata through API endpoints so accommodation conflicts can be resolved with transparent priority rules and audit trails.
+- **Gathering Planning API**: `EventService` and request/response contracts exist; `SyncPlansAsync()` manages plan generation. Still needed: REST controllers for `Property`, `Accommodation`, `AccommodationIntent`, `MealTemplate`/`MealPlan`/`MealIntent`, `ChoreTemplate`/`ChorePlan`/`ChoreIntent`, and `EventAttendance` — matching the Family Directory patterns with the same validation, authorization, and soft-delete conventions.
 - **Household migration workflow**: When members age out of a parent household, allow Tenant Owner/Manager to create a new household and migrate the member, automatically assigning them the Household Admin role.
 - **Row-Level Security**: Evaluate SQL Server Row-Level Security (RLS) as a defense-in-depth backstop to the existing application-layer tenancy scoping.
-
-## Schema Review and Recommended Improvements
-The current model now spans tenants, households/members, relationships, contact data, event planning, chores, and lodging intents. Composite indexes on `(TenantId, ForeignKey)` and uniqueness constraints (primary contact/address per member, single dietary profile per member, unique attribute keys) are in place for the Family Directory entities. Focus the next round of tightening on:
-
-- **Indexing for event-related tables**: Add composite indexes on `(TenantId, ForeignKey)` for high-churn Gathering Planning tables (events, chores, meal intents, stay intents) to keep tenant-specific queries predictable.
 
 ## Architecture Direction
 Treat households and events as separate aggregates linked through member IDs, enabling independent evolution of directory data and event participation while maintaining traceability.
 
-- **Batch reads, singular writes**: List endpoints should accept optional ID filters (e.g., `?ids=`) to enable batch reads within the existing `BaseEntityResponse<IReadOnlyCollection<T>>` contract. Write endpoints (create/update/delete) remain singular to preserve clean audit trails, simple error handling, and the `BaseEntityResponse<T>` contract. Workflow-specific batch write endpoints (e.g., bulk meal plan or resource creation during event setup) should be introduced only when concrete requirements arise.
-
 - **API and workflow alignment**: Family Directory sub-entities (relationships, contacts, addresses, attributes, dietary profiles) are now fully exposed through DTOs/services with validation and tenant-scoped authorization. Next, surface Gathering Planning capabilities (attendance, meal intents, chore assignments, lodging arbitration) through similar endpoint patterns so guardianship and arbitration rules become enforceable behaviors.
 - **Authorization refinement**: Three-tier authorization (App Admin → Tenant Role → Resource Role) is now in place. Next steps include proper HTTP status differentiation (401 for authentication failures, 403 for insufficient permissions) and unit/integration tests for the authorization decision trees.
-- **Identity provider compatibility**: The `ExternalIdentity` configuration section supports both Microsoft Entra External ID (`ciamlogin.com`) and Azure AD B2C (`b2clogin.com`). Both use standard OIDC/JWT; the only differences are the authority URL pattern (Entra External ID omits the policy segment) and whether `SignUpSignInPolicyId` is required.
