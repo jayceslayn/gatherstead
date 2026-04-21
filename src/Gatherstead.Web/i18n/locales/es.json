@@ -48,7 +48,11 @@
     "noEventsYet": "Tu reunión familiar comienza aquí",
     "noEventsHint": "Crea tu primer evento para comenzar.",
     "waitingForEvent": "Esperando que se configure un evento — vuelve pronto.",
-    "createEvent": "Crear Evento"
+    "createEvent": "Crear Evento",
+    "upcomingEvents": "Próximos Eventos",
+    "viewAll": "Ver Todos",
+    "myTasks": "Mis Tareas",
+    "tasksComingSoon": "Tu disponibilidad, intenciones de comida y tareas aparecerán aquí."
   },
   "tenant": {
     "selectTitle": "Seleccionar un Grupo",
@@ -86,7 +90,18 @@
     "endDate": "Fecha de Fin",
     "mealPlan": "Plan de Comidas",
     "choreTemplate": "Plantilla de Tareas",
-    "attendance": "Asistencia"
+    "attendance": "Asistencia",
+    "noEvents": "Aún no hay eventos planificados",
+    "noEventsHintManager": "Crea tu primer evento para comenzar.",
+    "noEventsHintMember": "Vuelve pronto — los eventos aparecerán aquí.",
+    "calendarView": "Vista de calendario",
+    "listView": "Vista de lista",
+    "overview": "Resumen",
+    "meals": "Comidas",
+    "chores": "Tareas",
+    "accommodations": "Alojamiento",
+    "myAttendance": "Mi Asistencia",
+    "tabsComingSoon": "Esta sección estará disponible pronto."
   },
   "property": {
     "title": "Propiedades",

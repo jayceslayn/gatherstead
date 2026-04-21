@@ -48,7 +48,11 @@
     "noEventsYet": "Your family gathering starts here",
     "noEventsHint": "Create your first event to get started.",
     "waitingForEvent": "Waiting for an event to be set up — check back soon.",
-    "createEvent": "Create Event"
+    "createEvent": "Create Event",
+    "upcomingEvents": "Upcoming Events",
+    "viewAll": "View All",
+    "myTasks": "My Tasks",
+    "tasksComingSoon": "Availability, meal intents, and chore sign-ups will appear here."
   },
   "tenant": {
     "selectTitle": "Select a Group",
@@ -86,7 +90,18 @@
     "endDate": "End Date",
     "mealPlan": "Meal Plan",
     "choreTemplate": "Chore Template",
-    "attendance": "Attendance"
+    "attendance": "Attendance",
+    "noEvents": "No events planned yet",
+    "noEventsHintManager": "Create your first event to get started.",
+    "noEventsHintMember": "Check back soon — events will appear here.",
+    "calendarView": "Calendar view",
+    "listView": "List view",
+    "overview": "Overview",
+    "meals": "Meals",
+    "chores": "Chores",
+    "accommodations": "Accommodations",
+    "myAttendance": "My Attendance",
+    "tabsComingSoon": "This section is coming soon."
   },
   "property": {
     "title": "Properties",

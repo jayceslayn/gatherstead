@@ -347,12 +347,16 @@ Backend changes shipped with Phase 1:
 - ✅ `useTenants.ts` — fixed response unwrapping (`BaseEntityResponse` wrapper), added `userRole` field
 - ✅ `i18n/locales/en.json` + `es.json` — added `nav.directory`, `nav.reports`, `nav.more`, `nav.yourProfile`, `nav.switchGroup`, `dashboard.*`, `status.*` keys
 
-### Phase 2 — Core Member Value
-6. `GsCalendar` component (FullCalendar wrapper) + install `@fullcalendar/daygrid` and `@fullcalendar/list`
-7. Dashboard (`app/index.vue`) — 3-column layout, member view first
-8. Event List (`events/index.vue`) — calendar + list toggle
-9. Event Detail (`events/[eventId]/index.vue`) — Overview tab with per-day attendance quick-action
-10. `GsAttendanceToggle`
+### Phase 2 — Core Member Value ✅ COMPLETE (2026-04-21)
+6. ✅ `GsCalendar` component (FullCalendar wrapper) + installed `@fullcalendar/daygrid` and `@fullcalendar/list`
+7. ✅ Dashboard (`app/index.vue`) — 3-column layout (upcoming events, listWeek calendar, tasks placeholder)
+8. ✅ Event List (`events/index.vue`) — calendar (dayGridMonth) + list view toggle, persisted in localStorage
+9. ✅ Event Detail (`events/[eventId]/index.vue`) — 4-tab layout; Overview tab with dayGridMonth calendar + per-day attendance strip (gated on linkedMemberId)
+10. ✅ `GsAttendanceToggle` — Going/Maybe/NotGoing with per-button loading state
+
+New composables shipped with Phase 2:
+- ✅ `useEvents()` + `useEvent(eventId)` — tenant-scoped event fetch with reactive keys
+- ✅ `useEventAttendance(eventId)` — fetch + upsert attendance records
 
 ### Phase 3 — Family Directory
 11. Household List + Household Detail
