@@ -1,6 +1,7 @@
 # 🏡 Gatherstead
 
 [![Build and Test](https://github.com/jayceslayn/gatherstead/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/jayceslayn/gatherstead/actions/workflows/build-and-test.yml)
+[![Coverage](https://codecov.io/gh/jayceslayn/gatherstead/graph/badge.svg)](https://codecov.io/gh/jayceslayn/gatherstead)
 
 Gatherstead keeps sprawling families organized and together: one source of truth for everyone’s details, and one place to plan every shared weekend, holiday, or reunion.
 
