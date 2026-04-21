@@ -1,268 +1,211 @@
 # Gatherstead Repository Quality Assessment
 
-**Date:** 2026-02-24
+**Date:** 2026-04-20
 **Scope:** High-level analysis of production readiness, security, code quality, and portfolio/showcase value.
-**Status:** Pre-MVP
+**Status:** Post-MVP (active development)
 
 ---
 
 ## Executive Summary
 
-Gatherstead is a pre-MVP, multi-tenant family gathering coordination API built on .NET 10 / ASP.NET Core / EF Core / SQL Server with an Azure-first deployment model. The codebase is ~3,400 lines across 64 C# files, organized into three projects (API, Data, Data.Setup). It is clean, consistent, well-architected, and security-conscious — but has meaningful gaps that prevent it from being a strong portfolio showcase in its current state.
+Gatherstead has grown substantially since the February 2026 assessment. The codebase is now ~14,600 lines across 226 C# files organized into four projects (API, Data, Data.Setup, and two test projects), plus a Nuxt 4 / Vue 3 frontend. All major domain contexts are implemented end-to-end — 20 controllers, 20 service pairs, 100+ REST endpoints. Test infrastructure has been added with 16 test classes across unit and integration suites. CI/CD pipelines run on every push. The critical gaps from the prior assessment (zero tests, no CI, missing security hardening) have been substantially addressed.
 
 ---
 
 ## Scorecard
 
-| Dimension | Score | Notes |
-|---|---|---|
-| **Architecture & Design** | 9/10 | DDD bounded contexts, multi-tenant isolation, clean layering |
-| **Code Quality & Consistency** | 9/10 | Uniform patterns across all controllers/services/entities |
-| **Security** | 8/10 | PASETO auth, RBAC, Always Encrypted, rate limiting. Missing CORS/security headers |
-| **Documentation** | 8/10 | Excellent architecture docs; no API-level XML docs or inline comments |
-| **Testing** | 1/10 | Zero tests, zero test infrastructure, zero coverage |
-| **CI/CD & DevOps** | 1/10 | No pipeline, no Dockerfile, no GitHub Actions |
-| **Production Readiness** | 3/10 | Pre-MVP; missing tests, CI, containerization, observability |
-| **Portfolio/Showcase Value** | 5/10 | Strong bones, but gaps undermine the impression |
+| Dimension | Feb Score | Apr Score | Notes |
+|---|---|---|---|
+| **Architecture & Design** | 9/10 | 9/10 | Patterns hold at scale; no architectural debt introduced |
+| **Code Quality & Consistency** | 9/10 | 9/10 | Uniform patterns maintained across 20 controllers/services |
+| **Security** | 8/10 | 9/10 | CORS, security headers, HSTS added; sync-over-async eliminated |
+| **Documentation** | 8/10 | 8/10 | New OBSERVABILITY.md and SECURITY-DEPS.md; XML docs still missing |
+| **Testing** | 1/10 | 7/10 | 16 test classes, 2 projects, integration + unit; Codecov badge in README |
+| **CI/CD & DevOps** | 1/10 | 8/10 | Build/test, dependency-audit, and Codecov coverage reporting; no Dockerfile yet |
+| **Production Readiness** | 3/10 | 7/10 | Tests, CI, security hardened; missing containerization and observability instrumentation |
+| **Portfolio/Showcase Value** | 5/10 | 9/10 | Full domain surface, frontend, tests, CI — compelling showcase |
 
-### **Overall Quality: 6.5 / 10**
-
----
-
-## What's Done Well
-
-### Architecture (9/10)
-
-The tenant-isolation model is enforced at three layers (authorization attribute, service validation, EF Core global query filters) — this is defense-in-depth. The soft-delete pattern with RBAC-gated `?includeDeleted=true` and temporal tables for audit history is mature, production-grade thinking.
-
-- DDD bounded contexts (Shared Foundation, Family Directory, Gathering Planning) are well-defined
-- Clean separation: Controllers -> Services -> DbContext
-- Expression-based DTO mapping avoids unnecessary object allocations
-- Global query filters for tenant isolation and soft-delete are composable and re-evaluated per query
-- `AuditingSaveChangesInterceptor` centralizes audit metadata (who, when) at the persistence layer
-- Foreign keys set to `DeleteBehavior.Restrict` — prevents accidental cascading deletes
-
-### Code Quality & Consistency (9/10)
-
-Every controller, service, and entity follows the same patterns:
-
-- Constructor injection with `ArgumentNullException` null guards
-- `ServiceValidationHelper` for centralized validation
-- `BaseEntityResponse<T>` wrappers for consistent API responses
-- `AsNoTracking()` for read operations
-- `CancellationToken` propagation throughout async operations
-- Static `Expression<Func<>>` fields for compiled DTO mapping
-- Proper use of `[Required]`, `[MaxLength]`, `[Index]` attributes on entities
-- Records for response DTOs (immutable, value semantics)
-- `init` properties on request DTOs with automatic trimming
-
-### Security (8/10)
-
-- **PASETO v4** authentication (more secure than JWT by design)
-- **Azure Key Vault** integration for secret management with `DefaultAzureCredential`
-- **RBAC** with role hierarchy: Owner > Manager > Member > Guest
-- **SQL Server Always Encrypted** for PII at rest (contact methods, dietary notes)
-- **Rate limiting**: 100 req/min per IP with proper 429 responses
-- **Token revocation** service with database-backed revocation list
-- **No raw SQL** in application code — EF Core LINQ throughout
-- **No hardcoded secrets** — Azure Key Vault for prod, config for dev
-- **Comprehensive auth logging**: success/failure with IP, UserAgent, reason
-- Identity delegated to Azure Entra ID (no password storage)
-
-### Documentation (8/10)
-
-- README communicates the "why" clearly with vision and use cases
-- ARCHITECTURE.md provides comprehensive bounded context modeling
-- DESIGN_PRINCIPLES.md establishes security and privacy-first principles
-- IMPLEMENTATION_STATUS.md tracks progress and planned enhancements
-- DEPLOYMENT.md covers manual and automated deployment steps
-- AGENTS.md provides guidelines for AI-assisted development
+### **Overall Quality: 8.1 / 10** *(was 6.5 / 10)*
 
 ---
 
-## Critical Gaps
+## What Changed Since February 2026
 
-### 1. Zero Tests (1/10) — The Single Biggest Problem
+### Domain Surface: 3 → 20 Controllers
 
-There are no test projects, no test files, no test framework references, and no coverage tooling. The code is *extremely testable* — proper DI, clear interfaces, separation of concerns — but none of that testability is demonstrated.
+All planned bounded contexts are now implemented:
 
-**Impact on showcase value:** A senior engineer reviewing this will immediately check for tests. Their absence signals either "doesn't value testing" or "doesn't know how to test."
+| Context | Controllers |
+|---|---|
+| **Shared Foundation** | Tenants, SecurityEvents |
+| **Family Directory** | Households, HouseholdMembers, Addresses, ContactMethods, DietaryProfiles, MemberAttributes, MemberRelationships |
+| **Properties** | Properties, Accommodations, AccommodationIntents |
+| **Gathering Planning** | Events, ChoreTemplates, ChorePlans, ChoreIntents, MealTemplates, MealPlans, MealIntents, EventAttendance |
 
-**What exists but isn't exercised:**
-- Services with proper interface contracts (ready for mocking)
-- Constructor injection (ready for test doubles)
-- `ServiceValidationHelper` (validation logic ready for unit testing)
-- `PasetoAuthenticationHandler` (complex auth logic with 10+ testable scenarios)
-- RBAC filter (`RequireTenantAccessAttribute`) with role hierarchy logic
+Each controller follows the established pattern: `[Authorize]`, `[RequireTenantAccess]`, full CRUD, `CancellationToken` propagation, `BaseEntityResponse<T>` wrappers.
 
-### 2. No CI/CD Pipeline (1/10)
+### Testing: 0 → 16 Test Classes
 
-- No GitHub Actions workflows
-- No Dockerfile or docker-compose
-- Deployment guide describes manual steps only
-- No automated quality gates (build, test, lint)
+Two test projects were added:
 
-### 3. Missing Security Hardening
+**`Gatherstead.Api.Tests`** (15 classes):
+- Integration: `AuthenticationPipelineTests`, `CorsTests`, `RateLimitingTests`, `SecurityHeadersTests`
+- Security: `HttpContextCurrentTenantContextTests`, `HttpContextCurrentUserContextTests`, `HttpContextIncludeDeletedContextTests`, `JwtAuthenticationTests`, `RequireTenantAccessAttributeTests`
+- Services: `MemberAuthorizationServiceTests`, `PlanSyncServiceTests`, `TokenRevocationServiceTests`
+- Observability: `PiiRedactionActivityProcessorTests`, `PiiRedactionLogProcessorTests`
+- Data: `AuditingSaveChangesInterceptorTenantValidationTests`
 
-- No explicit CORS policy (relies on ASP.NET defaults)
-- No security headers middleware (HSTS, X-Content-Type-Options, X-Frame-Options, CSP)
-- Swagger may be enabled in all environments (should be dev-only gated)
-- Rate limiter values are hardcoded rather than configurable via appsettings
-- `GetAwaiter().GetResult()` in auth handler for token revocation (sync-over-async risk under load)
+**`Gatherstead.Data.Tests`** (1 class):
+- Planning: `PlanGeneratorTests`
 
-### 4. Limited Feature Surface
+Framework: xUnit v3, Moq, `Microsoft.AspNetCore.Mvc.Testing`, SQLite (in-memory).
 
-Only 3 controllers (Tenants, Households, HouseholdMembers) are implemented out of a much larger domain model (Events, Properties, Accommodations, MealPlans, ChoreTemplates, etc.). Entity definitions exist but have no service/controller layer.
+### CI/CD: 0 → 2 GitHub Actions Workflows
+
+- **`build-and-test.yml`**: Runs on every push and PR to main. Builds backend (dotnet) and frontend (pnpm/Node 24) in parallel; executes all tests; collects Cobertura coverage via `coverlet.collector`; generates a Markdown summary written to the Actions job summary; uploads a full HTML report as a build artifact; uploads merged coverage to Codecov.
+- **`dependency-audit.yml`**: NuGet locked restore + `--vulnerable` check; pnpm audit at `high` level; GitHub dependency-review action on PRs.
+
+### Security Hardening: All Prior Gaps Addressed
+
+- **CORS**: Configurable allowlist via `Cors:AllowedOrigins` in appsettings — no longer relying on framework defaults.
+- **Security headers**: Inline middleware emits `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Content-Security-Policy: default-src 'none'`, `Referrer-Policy: no-referrer`, `Permissions-Policy`.
+- **HSTS**: 365-day max-age, subdomains included.
+- **Swagger**: Development environment only.
+- **Rate limiting**: Fixed-window values are now configurable via appsettings.
+- **Sync-over-async**: Eliminated — no `.GetAwaiter().GetResult()` anywhere in the codebase.
+
+### Authentication: PASETO → JWT (Azure Entra External ID)
+
+The custom `PasetoAuthenticationHandler` was replaced with standard `JwtBearer` configured against Azure Entra External ID. This trades the marginal cryptographic advantage of PASETO for significantly lower operational complexity, better ecosystem support, and alignment with Azure-first strategy. Token revocation and security event logging are preserved.
+
+### Frontend: Nuxt 4 / Vue 3 Added
+
+A frontend project exists at `src/Gatherstead.Web/` with:
+- Nuxt 4 + Vue 3 + Pinia + Tailwind CSS + @nuxt/ui
+- FullCalendar Vue3 for event scheduling views
+- i18n support via `@nuxtjs/i18n`
+- Auth middleware and composables (`useAuth`, `useTenants`, `useApiError`)
+- Route structure: landing, tenant dashboard, tenant detail
+- CI integration: `pnpm build` runs on every push
 
 ---
 
-## Projection: Future State
+## What's Still Done Well (Unchanged)
 
-If the current quality trajectory holds, this project has the potential to reach **8.5-9/10** once:
+The patterns documented in the February assessment remain intact at 4× the code volume — a meaningful signal that the architecture scales:
 
-- A test suite is added (unit + integration)
-- A CI pipeline runs those tests on every push
-- The remaining bounded contexts (Gathering Planning) are implemented
-- Security headers and CORS are properly configured
-
-The architectural foundation is solid enough that scaling the codebase shouldn't require rework. The patterns are repeatable and the code is clean.
+- Defense-in-depth tenant isolation (auth attribute + service validation + EF global query filters)
+- `AuditingSaveChangesInterceptor` now includes cross-tenant write validation that throws on violation
+- Soft-delete with temporal audit trail
+- `DeleteBehavior.Restrict` on all foreign keys
+- Constructor injection + `ArgumentNullException` guards
+- `AsNoTracking()` for reads, `CancellationToken` throughout
+- Static `Expression<Func<>>` DTO mapping fields
+- Records for response DTOs, `init` properties with trimming on request DTOs
 
 ---
 
-## Portfolio/Showcase Assessment
+## Remaining Gaps
 
-### Current State: Not Ready
+### 1. No Dockerfile / Containerization
 
-**What a hiring manager sees today:**
-- Well-structured but very small API (3 CRUD controllers)
-- Zero tests — this alone may disqualify the repo as a positive signal
-- No CI/CD — suggests the project isn't "real" yet
-- Lots of documentation and entity definitions that aren't wired up
+No `Dockerfile` or `docker-compose.yml` exists. The deployment guide describes Azure App Service deployment but a multi-stage Dockerfile would demonstrate containerization awareness and simplify local development parity.
 
-### What Would Make It Compelling
+**Impact:** Low for showcase value given Azure App Service is a reasonable production target; medium for developer experience.
 
-The hardest part (the architecture) is done right. The gaps are all addressable with focused effort, and none require rethinking the design.
+### 2. Test Coverage for New Service Layer
+
+Coverage is now measured and reported via Codecov on every CI run. The security layer and core services (MemberAuthorizationService, PlanSyncService, TokenRevocationService) are tested, but the expanded service layer (AccommodationService, MealTemplateService, EventAttendanceService, and others added during domain expansion) likely has low or zero direct unit test coverage. The Codecov dashboard will confirm the actual numbers once the first CI run completes.
+
+**Impact:** Medium — coverage badge in the README is a strong positive signal; low percentage would raise questions.
+
+### 3. Frontend is Early-Stage
+
+~19 Vue/TS files cover three page routes (landing, tenant list, tenant detail). The frontend is architecturally sound but has very limited surface area relative to the 100+ backend endpoints. A reviewer exploring the frontend would find it skeletal.
+
+**Impact:** Medium — sets expectations about project completeness.
+
+### 4. No XML Documentation / Swagger Enrichment
+
+Public API methods have no `<summary>` XML docs, so Swagger UI shows raw parameter/type information without descriptions. This limits the Swagger page as API documentation.
+
+**Impact:** Low for function; moderate for first-impression quality.
+
+### 5. No CONTRIBUTING.md
+
+**Impact:** Low — primarily signals open-source readiness.
 
 ---
 
 ## Suggested Improvements (Priority Order)
 
-### Priority 1: Test Infrastructure and Initial Coverage
+### Priority 1: Unit Tests for Expanded Service Layer
 
-**Effort:** 1-2 days for infrastructure + initial tests
+**Effort:** 1-2 days
 
-1. **Create test project:**
-   - `tests/Gatherstead.Api.Tests/Gatherstead.Api.Tests.csproj`
-   - Dependencies: xUnit, Moq, Microsoft.EntityFrameworkCore.InMemory, Microsoft.AspNetCore.Mvc.Testing
+Coverage collection is in place (coverlet + Codecov). The next step is filling the gaps it reveals. The new domain services (AccommodationService, MealTemplateService, MealPlanService, EventAttendanceService, ChoreTemplateService, etc.) have no direct unit tests. Target 70%+ line coverage overall, 100% for tenant isolation and RBAC paths.
 
-2. **Unit tests for service layer (target: 85%+ coverage):**
-   - `TenantServiceTests` — CRUD operations, validation scenarios, tenant isolation
-   - `HouseholdServiceTests` — CRUD, household existence validation
-   - `HouseholdMemberServiceTests` — CRUD, dietary data handling, soft-delete behavior
-   - `ServiceValidationHelperTests` — string normalization, tenant context validation
+### Priority 2: Dockerfile
 
-3. **Unit tests for security layer:**
-   - `PasetoAuthenticationHandlerTests` — 10+ scenarios (expired tokens, clock skew, revocation, invalid signatures, missing claims)
-   - `RequireTenantAccessAttributeTests` — role hierarchy, tenant isolation, includeDeleted gating
+**Effort:** 30-60 minutes
 
-4. **Integration tests using `WebApplicationFactory<Program>`:**
-   - Authentication flow end-to-end
-   - Multi-tenant isolation (cross-tenant access denied)
-   - Soft-delete visibility based on role
-   - Rate limiting behavior
+Multi-stage build:
 
-5. **Coverage configuration:**
-   - Coverlet for coverage collection
-   - Minimum threshold: 70% overall, 100% for security paths
+```dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish src/Gatherstead.Api -c Release -o /app/publish
 
-### Priority 2: CI/CD Pipeline
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "Gatherstead.Api.dll"]
+```
+
+Optional: `docker-compose.yml` with API + SQL Server for local dev.
+
+### Priority 3: Expand Frontend Surface
+
+**Effort:** 3-5 days
+
+Implement at minimum 2-3 more page flows to demonstrate the domain:
+- **Event detail page**: Shows attendance, meal plans, chore assignments
+- **Household member profile**: Shows dietary profile, contact methods, attributes
+- **Property/accommodation list**: Shows inventory management
+
+This gives a reviewer something substantive to explore in the UI.
+
+### Priority 4: XML Documentation on Controllers
 
 **Effort:** 2-4 hours
 
-1. **GitHub Actions workflow (`.github/workflows/build-and-test.yml`):**
-   ```yaml
-   # Build, test, and report coverage on every push and PR
-   - dotnet restore
-   - dotnet build --no-restore
-   - dotnet test --no-build --collect:"XPlat Code Coverage"
-   ```
+Add `<summary>` docs to controller actions and key request/response DTOs. Swagger will render these as inline descriptions, making the API self-documenting for reviewers.
 
-2. **Add status badges to README:**
-   - Build status
-   - Test coverage percentage
-
-3. **Branch protection rules:**
-   - Require passing CI on PRs to main
-
-### Priority 3: Dockerfile
+### Priority 5: CONTRIBUTING.md
 
 **Effort:** 30 minutes
 
-1. **Multi-stage Dockerfile:**
-   - Build stage: `mcr.microsoft.com/dotnet/sdk:10.0`
-   - Runtime stage: `mcr.microsoft.com/dotnet/aspnet:10.0`
-   - Demonstrates containerization awareness even if deploying to Azure App Service
-
-2. **Optional docker-compose.yml:**
-   - API + SQL Server for local development
-
-### Priority 4: Security Hardening
-
-**Effort:** 1-2 hours
-
-1. **Security headers middleware:**
-   - Add HSTS (`app.UseHsts()` in production)
-   - Add X-Content-Type-Options, X-Frame-Options, CSP headers
-   - Consider NWebsec package or custom middleware
-
-2. **Explicit CORS configuration:**
-   ```csharp
-   builder.Services.AddCors(options =>
-       options.AddDefaultPolicy(policy =>
-           policy.WithOrigins("https://your-frontend.com")
-                 .AllowAnyHeader()
-                 .AllowAnyMethod()));
-   ```
-
-3. **Gate Swagger to development only:**
-   ```csharp
-   if (app.Environment.IsDevelopment())
-   {
-       app.UseSwagger();
-       app.UseSwaggerUI();
-   }
-   ```
-
-4. **Move rate limiter values to appsettings.json**
-
-5. **Fix sync-over-async in PasetoAuthenticationHandler:**
-   - Token revocation check uses `.GetAwaiter().GetResult()` — convert to async path
-
-### Priority 5: Implement One More Bounded Context
-
-**Effort:** 1-2 weeks
-
-1. **Events context (recommended):**
-   - `EventsController`, `IEventService`, `EventService`
-   - Demonstrates the architecture scales beyond basic CRUD
-   - Exercises relationships (EventAttendance, AccommodationIntent, MealIntent)
-
-2. **Shows domain complexity:**
-   - Date range validation
-   - Attendance aggregation
-   - Accommodation availability checks
-
-### Priority 6: Polish for Showcase
-
-**Effort:** 2-4 hours
-
-1. **XML documentation on public API methods** (for Swagger docs)
-2. **Add a CONTRIBUTING.md** (signals open-source readiness)
-3. **Add architecture diagrams** (C4 model or similar in ARCHITECTURE.md)
-4. **Add example API requests** in documentation or a Postman collection
+Standard contributing guide: local setup, branch naming, PR process. Signals open-source readiness.
 
 ---
 
-## Summary
+## Portfolio/Showcase Assessment
 
-The codebase demonstrates **professional-grade architecture and code quality**. The patterns, security model, and consistency are genuinely strong. The gap between what has been *designed* and what has been *proven to work* (via tests and CI) is where the showcase value falls short. The improvements above are ordered by impact-to-effort ratio — Priorities 1-3 alone would transform how this repository reads to a reviewer.
+### Current State: Compelling
+
+**What a hiring manager sees today:**
+- Full-domain REST API with 100+ endpoints across all bounded contexts
+- Modern security posture (JWT/Entra, RBAC, CORS, security headers, rate limiting, token revocation)
+- Test infrastructure with integration and unit tests across security, services, and observability
+- GitHub Actions running build, test, and dependency audits on every push
+- Vue 3 / Nuxt 4 frontend with CI coverage
+- Azure-first architecture with Key Vault integration
+- 14,600 lines of consistent, clean C# following the same patterns throughout
+
+**What would push it from 9/10 to 10/10:**
+- Coverage badge showing a meaningful percentage (infrastructure is in place; unit tests for the expanded service layer need to be written to drive the number up)
+- Dockerfile (containerization awareness)
+- A few more frontend pages (closes the gap between backend depth and frontend breadth)
+
+The hardest part — architecture and consistency — remains the strongest aspect and now scales to a production-representative codebase size.
