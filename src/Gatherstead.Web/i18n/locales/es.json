@@ -34,10 +34,21 @@
     "home": "Inicio",
     "tenants": "Mis Grupos",
     "dashboard": "Panel",
+    "directory": "Directorio",
     "households": "Hogares",
     "events": "Eventos",
     "properties": "Propiedades",
-    "settings": "Configuración"
+    "reports": "Informes",
+    "settings": "Configuración",
+    "more": "Más",
+    "yourProfile": "Tu Perfil",
+    "switchGroup": "Cambiar Grupo"
+  },
+  "dashboard": {
+    "noEventsYet": "Tu reunión familiar comienza aquí",
+    "noEventsHint": "Crea tu primer evento para comenzar.",
+    "waitingForEvent": "Esperando que se configure un evento — vuelve pronto.",
+    "createEvent": "Crear Evento"
   },
   "tenant": {
     "selectTitle": "Seleccionar un Grupo",
@@ -81,6 +92,20 @@
     "title": "Propiedades",
     "name": "Nombre de la Propiedad",
     "resources": "Recursos"
+  },
+  "status": {
+    "covered": "Cubierto",
+    "partial": "Parcial",
+    "open": "Abierto",
+    "exception": "Excepción",
+    "going": "Asistiendo",
+    "maybe": "Tal vez",
+    "notGoing": "No asiste",
+    "noResponse": "Sin respuesta",
+    "intent": "Solicitado",
+    "hold": "En espera",
+    "confirmed": "Confirmado",
+    "declined": "Rechazado"
   },
   "validation": {
     "required": "{field} es obligatorio",

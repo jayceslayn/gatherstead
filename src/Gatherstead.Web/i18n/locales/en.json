@@ -34,10 +34,21 @@
     "home": "Home",
     "tenants": "My Groups",
     "dashboard": "Dashboard",
+    "directory": "Directory",
     "households": "Households",
     "events": "Events",
     "properties": "Properties",
-    "settings": "Settings"
+    "reports": "Reports",
+    "settings": "Settings",
+    "more": "More",
+    "yourProfile": "Your Profile",
+    "switchGroup": "Switch Group"
+  },
+  "dashboard": {
+    "noEventsYet": "Your family gathering starts here",
+    "noEventsHint": "Create your first event to get started.",
+    "waitingForEvent": "Waiting for an event to be set up — check back soon.",
+    "createEvent": "Create Event"
   },
   "tenant": {
     "selectTitle": "Select a Group",
@@ -81,6 +92,20 @@
     "title": "Properties",
     "name": "Property Name",
     "resources": "Resources"
+  },
+  "status": {
+    "covered": "Covered",
+    "partial": "Partial",
+    "open": "Open",
+    "exception": "Exception",
+    "going": "Going",
+    "maybe": "Maybe",
+    "notGoing": "Not Going",
+    "noResponse": "No Response",
+    "intent": "Requested",
+    "hold": "Hold",
+    "confirmed": "Confirmed",
+    "declined": "Declined"
   },
   "validation": {
     "required": "{field} is required",

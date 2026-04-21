@@ -26,6 +26,7 @@ export default defineNuxtConfig({
   routeRules: {
     '/': { prerender: true },
     '/tenants/**': { ssr: false },
+    '/app/**': { ssr: false },
   },
 
   i18n: {

@@ -62,7 +62,7 @@ public class TenantService : ITenantService
         }
 
         var tenants = await query
-            .Select(tu => new TenantSummary(tu.TenantId, tu.Tenant!.Name))
+            .Select(tu => new TenantSummary(tu.TenantId, tu.Tenant!.Name, tu.Role))
             .ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<TenantSummary>>.SuccessfulResponse(tenants);

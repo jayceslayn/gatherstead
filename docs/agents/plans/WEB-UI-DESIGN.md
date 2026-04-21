@@ -333,12 +333,19 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 
 ## 9. Implementation Phases
 
-### Phase 1 — Foundation (everything downstream depends on this)
-1. `useTenantStore` + `useCurrentMemberStore` + `useEventStore` Pinia stores
-2. `useTenantRole` composable
-3. `app/middleware/tenant.ts` — runs on all `/app/**` routes: reads `last_tenant_id` cookie, populates Pinia store from API if empty, redirects to `/tenants` if no valid tenant found
-4. Refactor `layouts/default.vue` — full sidebar nav with role gates, tenant name display, user account dropdown, mobile bottom tab bar
-5. `GsPageHeader`, `GsEmptyState`, `GsConfirmModal`, `GsBreadcrumb`, `GsRoleGate`, `GsStatusBadge`
+### Phase 1 — Foundation ✅ COMPLETE (2026-04-21)
+1. ✅ `useTenantStore` + `useCurrentMemberStore` + `useEventStore` Pinia stores
+2. ✅ `useTenantRole` composable
+3. ✅ `app/middleware/tenant.global.ts` — global middleware scoped to `/app/**` routes: reads `last_tenant_id` cookie, populates Pinia store from API if empty, redirects to `/tenants` if no valid tenant found
+4. ✅ Refactor `layouts/default.vue` — full sidebar nav with role gates, tenant name display, user account dropdown, mobile bottom tab bar
+5. ✅ `GsPageHeader`, `GsEmptyState`, `GsConfirmModal`, `GsBreadcrumb`, `GsRoleGate`, `GsStatusBadge`
+
+Backend changes shipped with Phase 1:
+- ✅ `TenantSummary` extended with `TenantRole? UserRole`
+- ✅ `TenantService.ListAsync` projection includes `tu.Role`
+- ✅ `nuxt.config.ts` — `/app/**` route rule added (SSR disabled)
+- ✅ `useTenants.ts` — fixed response unwrapping (`BaseEntityResponse` wrapper), added `userRole` field
+- ✅ `i18n/locales/en.json` + `es.json` — added `nav.directory`, `nav.reports`, `nav.more`, `nav.yourProfile`, `nav.switchGroup`, `dashboard.*`, `status.*` keys
 
 ### Phase 2 — Core Member Value
 6. `GsCalendar` component (FullCalendar wrapper) + install `@fullcalendar/daygrid` and `@fullcalendar/list`

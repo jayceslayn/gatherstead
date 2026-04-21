@@ -1,18 +1,29 @@
 <script setup lang="ts">
+import { useTenantStore } from '~/stores/tenant'
+
 definePageMeta({
   middleware: 'auth',
 })
 
 const { t } = useI18n()
 const { tenants, pending, error } = useTenants()
+const tenantStore = useTenantStore()
 const lastTenantId = useCookie('last_tenant_id')
+
+function selectTenant(tenant: { id: string; name: string; userRole: import('~/composables/useTenants').TenantRole | null }) {
+  lastTenantId.value = tenant.id
+  tenantStore.setTenant(tenant.id, tenant.name, tenant.userRole)
+  navigateTo('/app')
+}
 
 watch(
   () => tenants.value,
   (list) => {
     if (!list?.length) return
-    if (lastTenantId.value && list.some(t => t.id === lastTenantId.value)) {
-      navigateTo(`/tenants/${lastTenantId.value}`)
+    const last = list.find(t => t.id === lastTenantId.value)
+    if (last) {
+      tenantStore.setTenant(last.id, last.name, last.userRole)
+      navigateTo('/app')
     }
   },
   { immediate: true },
@@ -42,7 +53,7 @@ watch(
         v-for="tenant in tenants"
         :key="tenant.id"
         class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-shadow"
-        @click="navigateTo(`/tenants/${tenant.id}`)"
+        @click="selectTenant(tenant)"
       >
         <h3 class="font-semibold">{{ tenant.name }}</h3>
       </UCard>
