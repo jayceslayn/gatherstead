@@ -358,10 +358,19 @@ New composables shipped with Phase 2:
 - ✅ `useEvents()` + `useEvent(eventId)` — tenant-scoped event fetch with reactive keys
 - ✅ `useEventAttendance(eventId)` — fetch + upsert attendance records
 
-### Phase 3 — Family Directory
-11. Household List + Household Detail
-12. Member Detail + Member Edit
-13. `GsMemberAvatar`, `GsDietaryTags`
+### Phase 3 — Family Directory ✅ Complete
+11. ✅ Household List (`/app/directory/index.vue`) — search bar + card grid, role-gated create button
+12. ✅ Household Detail (`/app/directory/[householdId]/index.vue`) — member list cards, breadcrumb
+13. ✅ Member Detail (`/app/directory/[householdId]/[memberId]/index.vue`) — two-column identity + dietary profile, edit button gated to self or Manager+
+14. ✅ Member Edit (`/app/directory/[householdId]/[memberId]/edit.vue`) — UForm with name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags; unsaved-changes guard via `onBeforeRouteLeave`
+15. ✅ `GsMemberAvatar` — initials circle with xs/sm/md/lg sizes
+16. ✅ `GsDietaryTags` — allergy chips (secondary/harvest), restriction chips (success/sage), basic tag chips (neutral)
+
+New composables shipped with Phase 3:
+- ✅ `useHouseholds()` + `useHousehold(householdId)` — tenant-scoped household fetch with reactive keys
+- ✅ `useHouseholdMembers(householdId)` + `useMember(householdId, memberId)` + `useDietaryProfile(householdId, memberId)` — member and dietary profile fetch; dietary profile silently returns null on 404
+
+i18n additions: `household.noHouseholds*`, `member.adult/child/identity/addMember/editMember/dietaryProfile/preferredDiet/allergies/restrictions/noDietaryProfile/dietaryTags*`, `common.notes/unsavedChanges`
 
 ### Phase 4 — Meal & Chore Plans
 14. Meal Plan View + template detail + member intent toggles

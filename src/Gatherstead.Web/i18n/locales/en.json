@@ -13,7 +13,9 @@
     "create": "Create",
     "confirm": "Are you sure?",
     "search": "Search",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "notes": "Notes",
+    "unsavedChanges": "You have unsaved changes. Leave anyway?"
   },
   "landing": {
     "heroTitle": "Plan Your Family Gatherings",
@@ -69,6 +71,9 @@
     "name": "Household Name",
     "memberCount": "{count} member | {count} members",
     "searchPlaceholder": "Search households…",
+    "noHouseholds": "No households yet",
+    "noHouseholdsHintManager": "Create your first household to get started.",
+    "noHouseholdsHintMember": "No households have been set up yet.",
     "roles": {
       "admin": "Admin",
       "member": "Member"
@@ -79,8 +84,27 @@
     "name": "Name",
     "birthDate": "Birth Date",
     "dietaryNotes": "Dietary Notes",
+    "dietaryNotesPlaceholder": "Any dietary notes…",
     "isAdult": "Adult",
-    "ageBand": "Age Band"
+    "adult": "Adult",
+    "child": "Child",
+    "ageBand": "Age Band",
+    "ageBandPlaceholder": "e.g. Teen, Senior",
+    "identity": "Identity",
+    "addMember": "Add Member",
+    "editMember": "Edit Member",
+    "savedSuccessfully": "Member saved",
+    "noMembers": "No members yet",
+    "noMembersHintManager": "Add the first member to this household.",
+    "noMembersHintMember": "No members have been added to this household yet.",
+    "dietaryProfile": "Dietary Profile",
+    "preferredDiet": "Preferred Diet",
+    "allergies": "Allergies",
+    "restrictions": "Dietary Restrictions",
+    "noDietaryProfile": "No dietary profile on file.",
+    "dietaryTags": "Dietary Tags",
+    "dietaryTagsPlaceholder": "e.g. veg, gf, df",
+    "dietaryTagsHint": "Comma-separated tags"
   },
   "event": {
     "title": "Events",

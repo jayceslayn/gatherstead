@@ -13,7 +13,9 @@
     "create": "Crear",
     "confirm": "¿Estás seguro?",
     "search": "Buscar",
-    "noResults": "No se encontraron resultados"
+    "noResults": "No se encontraron resultados",
+    "notes": "Notas",
+    "unsavedChanges": "Tienes cambios sin guardar. ¿Salir de todas formas?"
   },
   "landing": {
     "heroTitle": "Planifica tus Reuniones Familiares",
@@ -69,6 +71,9 @@
     "name": "Nombre del Hogar",
     "memberCount": "{count} miembro | {count} miembros",
     "searchPlaceholder": "Buscar hogares…",
+    "noHouseholds": "Aún no hay hogares",
+    "noHouseholdsHintManager": "Crea tu primer hogar para comenzar.",
+    "noHouseholdsHintMember": "Aún no se han configurado hogares.",
     "roles": {
       "admin": "Administrador",
       "member": "Miembro"
@@ -79,8 +84,27 @@
     "name": "Nombre",
     "birthDate": "Fecha de Nacimiento",
     "dietaryNotes": "Notas Dietéticas",
+    "dietaryNotesPlaceholder": "Cualquier nota dietética…",
     "isAdult": "Adulto",
-    "ageBand": "Rango de Edad"
+    "adult": "Adulto",
+    "child": "Niño",
+    "ageBand": "Rango de Edad",
+    "ageBandPlaceholder": "p. ej. Adolescente, Mayor",
+    "identity": "Identidad",
+    "addMember": "Agregar Miembro",
+    "editMember": "Editar Miembro",
+    "savedSuccessfully": "Miembro guardado",
+    "noMembers": "Aún no hay miembros",
+    "noMembersHintManager": "Agrega el primer miembro a este hogar.",
+    "noMembersHintMember": "Aún no se han agregado miembros a este hogar.",
+    "dietaryProfile": "Perfil Dietético",
+    "preferredDiet": "Dieta Preferida",
+    "allergies": "Alergias",
+    "restrictions": "Restricciones Dietéticas",
+    "noDietaryProfile": "No hay perfil dietético registrado.",
+    "dietaryTags": "Etiquetas Dietéticas",
+    "dietaryTagsPlaceholder": "p. ej. veg, sin-gluten, sin-lactosa",
+    "dietaryTagsHint": "Etiquetas separadas por comas"
   },
   "event": {
     "title": "Eventos",
