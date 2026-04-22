@@ -1,4 +1,4 @@
-@theme {
+@theme static {
   /* Forest Green - Primary (from logo text & house silhouettes ~#3B5E2B) */
   --color-forest-50: oklch(0.97 0.01 142);
   --color-forest-100: oklch(0.93 0.03 142);
