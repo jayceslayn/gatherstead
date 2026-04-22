@@ -125,7 +125,25 @@
     "chores": "Tareas",
     "accommodations": "Alojamiento",
     "myAttendance": "Mi Asistencia",
-    "tabsComingSoon": "Esta sección estará disponible pronto."
+    "tabsComingSoon": "Esta sección estará disponible pronto.",
+    "meal": {
+      "breakfast": "Desayuno",
+      "lunch": "Almuerzo",
+      "dinner": "Cena",
+      "noTemplates": "No se han configurado planes de comida para este evento.",
+      "noPlans": "No hay detalles del plan de comida disponibles."
+    },
+    "chore": {
+      "morning": "Mañana",
+      "midday": "Mediodía",
+      "evening": "Tarde/Noche",
+      "anytime": "Cualquier momento",
+      "volunteer": "Inscribirse",
+      "volunteered": "Inscrito",
+      "noTemplates": "No se han configurado tareas para este evento.",
+      "noPlans": "No hay detalles del plan de tareas disponibles.",
+      "minimumAssignees": "mín. {n}"
+    }
   },
   "property": {
     "title": "Propiedades",

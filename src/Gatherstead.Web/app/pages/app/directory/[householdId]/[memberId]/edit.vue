@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useTenantStore } from '~/stores/tenant'
 import type { HouseholdMember } from '~/composables/useHouseholdMembers'
+import { useHousehold } from '~/composables/useHouseholds'
+import { useMember } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
   layout: 'default',

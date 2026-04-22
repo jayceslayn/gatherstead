@@ -358,7 +358,7 @@ New composables shipped with Phase 2:
 - ✅ `useEvents()` + `useEvent(eventId)` — tenant-scoped event fetch with reactive keys
 - ✅ `useEventAttendance(eventId)` — fetch + upsert attendance records
 
-### Phase 3 — Family Directory ✅ Complete
+### Phase 3 — Family Directory ✅ COMPLETE (2026-04-22)
 11. ✅ Household List (`/app/directory/index.vue`) — search bar + card grid, role-gated create button
 12. ✅ Household Detail (`/app/directory/[householdId]/index.vue`) — member list cards, breadcrumb
 13. ✅ Member Detail (`/app/directory/[householdId]/[memberId]/index.vue`) — two-column identity + dietary profile, edit button gated to self or Manager+
@@ -372,10 +372,21 @@ New composables shipped with Phase 3:
 
 i18n additions: `household.noHouseholds*`, `member.adult/child/identity/addMember/editMember/dietaryProfile/preferredDiet/allergies/restrictions/noDietaryProfile/dietaryTags*`, `common.notes/unsavedChanges`
 
-### Phase 4 — Meal & Chore Plans
-14. Meal Plan View + template detail + member intent toggles
-15. Chore Plan View + template detail + volunteer signup
-16. `GsDayIntentGrid` (with mobile stacked layout)
+### Phase 4 — Meal & Chore Plans ✅ COMPLETE (2026-04-22)
+17. ✅ Meal Plan View — Meals tab in event detail replaced with live `GsMealTemplateSection` per template; `useMealTemplates(eventId)` fetches templates, `useMealPlanSection(eventId, templateId, memberId, householdId)` fetches plans + member intents in parallel (Promise.all per plan), upserts via PUT
+18. ✅ Chore Plan View — Chores tab replaced with live `GsChoreTemplateSection`; `useChoreTemplates(eventId)` + `useChorePlanSection(…)` follow same pattern; volunteer toggle (boolean) replaces status enum
+19. ✅ `GsDayIntentGrid` — desktop scrollable table + mobile day-stacked layout via `sm:` breakpoint; generic scoped `#cell` slot so parent controls cell content
+
+New composables shipped with Phase 4:
+- ✅ `useMealPlans.ts` — `useMealTemplates(eventId)`, `useMealPlanSection(eventId, templateId, memberId, householdId)`; exports `MealTemplate`, `MealPlan`, `MealIntent`, `MealIntentStatus`, `mealTypesFromFlags(flags)`
+- ✅ `useChoreTemplates.ts` — `useChoreTemplates(eventId)`, `useChorePlanSection(eventId, templateId, memberId, householdId)`; exports `ChoreTemplate`, `ChorePlan`, `ChoreIntent`, `choreSlotsFromFlags(flags)`
+
+New components shipped with Phase 4:
+- ✅ `GsDayIntentGrid.vue` — generic `rows/columns` props, `#cell` scoped slot; desktop table / mobile stack
+- ✅ `GsMealTemplateSection.vue` — UCard per template; fetches plans + member intents; renders `GsDayIntentGrid` with `GsAttendanceToggle` (reuses Going/Maybe/NotGoing — same enum values as `MealIntentStatus`)
+- ✅ `GsChoreTemplateSection.vue` — UCard per template; fetches plans + member intents; renders `GsDayIntentGrid` with Sign Up / Signed Up `UButton` (success color when volunteered)
+
+i18n additions: `event.meal.{breakfast,lunch,dinner,noTemplates,noPlans}`, `event.chore.{morning,midday,evening,anytime,volunteer,volunteered,noTemplates,noPlans,minimumAssignees}` (en + es)
 
 ### Phase 5 — Properties & Accommodations
 17. Property List + Property Detail + accommodation grid

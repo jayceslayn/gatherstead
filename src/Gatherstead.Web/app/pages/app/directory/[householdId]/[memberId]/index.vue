@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
+import { useHousehold } from '~/composables/useHouseholds'
+import { useMember, useDietaryProfile } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
   layout: 'default',

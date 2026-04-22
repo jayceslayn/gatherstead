@@ -125,7 +125,25 @@
     "chores": "Chores",
     "accommodations": "Accommodations",
     "myAttendance": "My Attendance",
-    "tabsComingSoon": "This section is coming soon."
+    "tabsComingSoon": "This section is coming soon.",
+    "meal": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "noTemplates": "No meal plans have been set up for this event.",
+      "noPlans": "No meal plan details available."
+    },
+    "chore": {
+      "morning": "Morning",
+      "midday": "Midday",
+      "evening": "Evening",
+      "anytime": "Anytime",
+      "volunteer": "Sign Up",
+      "volunteered": "Signed Up",
+      "noTemplates": "No chores have been set up for this event.",
+      "noPlans": "No chore plan details available.",
+      "minimumAssignees": "min. {n}"
+    }
   },
   "property": {
     "title": "Properties",

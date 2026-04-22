@@ -2,6 +2,8 @@
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useCurrentMemberStore } from '~/stores/member'
 import type { AttendanceStatus } from '~/composables/useEventAttendance'
+import { useMealTemplates } from '~/composables/useMealPlans'
+import { useChoreTemplates } from '~/composables/useChoreTemplates'
 
 definePageMeta({
   layout: 'default',
@@ -16,6 +18,8 @@ const eventId = computed(() => route.params.eventId as string)
 
 const { event, pending: eventPending } = useEvent(eventId)
 const { attendance, upsert } = useEventAttendance(eventId)
+const { templates: mealTemplates, pending: mealTemplatesPending } = useMealTemplates(eventId)
+const { templates: choreTemplates, pending: choreTemplatesPending } = useChoreTemplates(eventId)
 
 const tabs = computed(() => [
   { label: t('event.overview'), slot: 'overview' as const },
@@ -138,21 +142,47 @@ function formatDayLabel(date: string) {
         </template>
 
         <template #meals>
-          <GsEmptyState
-            icon="i-heroicons-cake"
-            :title="t('event.meals')"
-            :description="t('event.tabsComingSoon')"
-            class="mt-4"
-          />
+          <div class="mt-4">
+            <div v-if="mealTemplatesPending" class="py-8 text-center text-sm text-muted">
+              {{ t('common.loading') }}
+            </div>
+            <GsEmptyState
+              v-else-if="!mealTemplates.length"
+              icon="i-heroicons-cake"
+              :title="t('event.meal.noTemplates')"
+              class="mt-4"
+            />
+            <div v-else class="space-y-4">
+              <GsMealTemplateSection
+                v-for="template in mealTemplates"
+                :key="template.id"
+                :template="template"
+                :event-id="eventId"
+              />
+            </div>
+          </div>
         </template>
 
         <template #chores>
-          <GsEmptyState
-            icon="i-heroicons-clipboard-document-list"
-            :title="t('event.chores')"
-            :description="t('event.tabsComingSoon')"
-            class="mt-4"
-          />
+          <div class="mt-4">
+            <div v-if="choreTemplatesPending" class="py-8 text-center text-sm text-muted">
+              {{ t('common.loading') }}
+            </div>
+            <GsEmptyState
+              v-else-if="!choreTemplates.length"
+              icon="i-heroicons-clipboard-document-list"
+              :title="t('event.chore.noTemplates')"
+              class="mt-4"
+            />
+            <div v-else class="space-y-4">
+              <GsChoreTemplateSection
+                v-for="template in choreTemplates"
+                :key="template.id"
+                :template="template"
+                :event-id="eventId"
+              />
+            </div>
+          </div>
         </template>
 
         <template #accommodations>

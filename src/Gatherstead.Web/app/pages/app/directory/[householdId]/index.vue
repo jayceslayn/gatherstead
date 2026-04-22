@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
+import { useHousehold } from '~/composables/useHouseholds'
+import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
   layout: 'default',
