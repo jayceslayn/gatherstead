@@ -388,6 +388,15 @@ New components shipped with Phase 4:
 
 i18n additions: `event.meal.{breakfast,lunch,dinner,noTemplates,noPlans}`, `event.chore.{morning,midday,evening,anytime,volunteer,volunteered,noTemplates,noPlans,minimumAssignees}` (en + es)
 
+### Data Layer Refactor (planned, before or alongside Phase 5)
+See **[REPOSITORY-PATTERN.md](REPOSITORY-PATTERN.md)** for the full plan. Summary:
+- Introduce `app/repositories/` with live (`$fetch`-backed) and demo (localStorage-backed) implementations per domain aggregate
+- Composables become thin `useAsyncData` wrappers; all `if (demoMode)` branches removed
+- A `.client.ts` Nuxt plugin selects the correct implementation at startup via `provide/inject`
+- Demo is fully interactive and localStorage-persisted, with conversion-gate entity limits surfaced as toasts
+- Fixes `tenant.global.ts` bug where demo mode still calls the proxy API
+- Adds a `UAlert` demo warning banner to `default.vue`
+
 ### Phase 5 — Properties & Accommodations
 17. Property List + Property Detail + accommodation grid
 18. Accommodation Intent Management

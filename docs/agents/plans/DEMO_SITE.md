@@ -56,156 +56,50 @@ NUXT_PUBLIC_DEMO_MODE=true nuxt generate
 
 Output is written to `.output/public/` -- a fully static site ready for deployment.
 
-## Service Layer Abstraction
+## Repository Pattern
 
-This is the core architectural pattern. Every data operation goes through an interface that has two implementations: a real API client and a localStorage client. Components call a factory composable and never know which implementation is active.
+The data access layer uses a **repository pattern** with two implementations per domain aggregate: a live implementation that wraps `$fetch` calls to the backend proxy, and a demo implementation backed by a reactive localStorage singleton. See **[REPOSITORY-PATTERN.md](REPOSITORY-PATTERN.md)** for the full design, file structure, interface definitions, implementation steps, and verification checklist.
 
-### File Structure
+### Summary
 
-```
-src/Gatherstead.Web/app/
-  services/
-    types.ts                        # Shared TypeScript interfaces for all service contracts
-    api/
-      householdService.ts           # Real API implementation ($fetch to backend)
-      memberService.ts
-      eventService.ts
-      propertyService.ts
-      ...
-    demo/
-      demoStorageUtils.ts           # Shared localStorage read/write helpers
-      demoLimits.ts                 # Entity limit constants
-      demoSeedData.ts               # Initial seed data for first visit
-      demoHouseholdService.ts       # localStorage CRUD implementation
-      demoMemberService.ts
-      demoEventService.ts
-      demoPropertyService.ts
-      ...
-  composables/
-    useService.ts                   # Factory composable that returns correct implementation
-    useDemoLimits.ts                # Limit enforcement and error handling
-    useAuth.ts                      # Auth composable with demo bypass
-```
-
-### Service Interfaces
-
-Define contracts in `services/types.ts`:
-
-```ts
-export interface IHouseholdService {
-  list(): Promise<Household[]>
-  get(id: string): Promise<Household>
-  create(data: CreateHouseholdRequest): Promise<Household>
-  update(id: string, data: UpdateHouseholdRequest): Promise<Household>
-  delete(id: string): Promise<void>
-}
-
-// Same pattern for IMemberService, IEventService, IPropertyService, etc.
-```
-
-### Service Factory
-
-`composables/useService.ts`:
-
-```ts
-export function useHouseholdService(): IHouseholdService {
-  const { demoMode } = useRuntimeConfig().public
-  if (demoMode) {
-    return useDemoHouseholdService()
-  }
-  return useApiHouseholdService()
-}
-
-// Same pattern for each service
-```
-
-Components always call `useHouseholdService()` -- they never know or care which implementation is active.
-
-### localStorage Utilities
-
-`services/demo/demoStorageUtils.ts` provides centralized helpers:
-
-```ts
-function getCollection<T>(key: string): T[]
-function setCollection<T>(key: string, items: T[]): void
-function generateId(): string       // crypto.randomUUID()
-function getTimestamp(): string      // new Date().toISOString()
-```
+- **Injection**: A `.client.ts` Nuxt plugin selects live vs. demo repositories at startup and provides them to the Vue app via `provide/inject`. Composables call `useRepositories()` — they contain no `if (demoMode)` logic.
+- **Live repositories**: `app/repositories/live/Live*Repository.ts` — lift `$fetch` calls verbatim from composables.
+- **Demo repositories**: `app/repositories/demo/Demo*Repository.ts` — read from and write to a shared reactive singleton (`DemoStore.ts`) backed by localStorage key `gs-demo-store`.
+- **Composables**: thin `useAsyncData` wrappers over repository methods; write methods catch `DemoLimitError` and surface a warning toast.
+- **`useAuth.ts`**: unchanged — authentication identity is not data and retains its own demo branch.
 
 ## Entity Limits
 
-Defined in `services/demo/demoLimits.ts`:
+Limits are defined as constants in `repositories/demo/DemoStore.ts` and enforced by demo repository write methods, which throw `DemoLimitError` when exceeded. Composable write functions catch `DemoLimitError` and surface a warning toast — pages require no changes.
 
 ```ts
 export const DEMO_LIMITS = {
-  tenants: 1,
-  households: 3,
-  membersPerHousehold: 6,
-  events: 3,
-  properties: 2,
-  resourcesPerProperty: 4,
-  mealPlansPerEvent: 10,
-  choreTemplatesPerEvent: 5,
+  householdsPerTenant:    3,   // teases directory feature, encourages upgrade
+  membersPerHousehold:    4,
+  events:                 1,   // single event; max 3 days duration
+  eventMaxDays:           3,
+  mealTemplatesPerEvent:  2,
+  choreTemplatesPerEvent: 2,
 } as const
-
-export type DemoLimitKey = keyof typeof DEMO_LIMITS
 ```
-
-### Limit Enforcement
-
-Each demo service checks limits before create operations:
-
-```ts
-function assertLimit(collection: unknown[], limit: number, entityName: string): void {
-  if (collection.length >= limit) {
-    throw new DemoLimitError(entityName, limit)
-  }
-}
-```
-
-`DemoLimitError` is a custom error class that the UI catches and displays a conversion-oriented message.
 
 ### Conversion Messaging
 
-Create `composables/useDemoLimits.ts`:
+When a limit is hit, the composable's write function catches `DemoLimitError` and shows a toast via `useToast()`. No separate composable or utility is needed.
 
-```ts
-export function useDemoLimits() {
-  const { t } = useI18n()
-
-  function handleLimitError(error: unknown): string | null {
-    if (error instanceof DemoLimitError) {
-      return t('demo.limitReached', {
-        entity: t(`entity.${error.entityName}`),
-        limit: error.limit,
-      })
-    }
-    return null
-  }
-
-  function getRemainingCapacity(entityType: DemoLimitKey, currentCount: number): number {
-    return Math.max(0, DEMO_LIMITS[entityType] - currentCount)
-  }
-
-  return { handleLimitError, getRemainingCapacity }
-}
-```
-
-Locale keys (in `app/locales/en.json`):
+Locale keys to add under `demo.*` in `en.json` and `es.json`:
 
 ```json
 {
   "demo": {
-    "bannerText": "You're using the Gatherstead Demo",
-    "learnMore": "Learn More",
-    "signUp": "Sign Up for Full Access",
-    "resetDemo": "Reset Demo Data",
-    "limitReached": "Demo limit reached: maximum {limit} {entity}. Sign up for unlimited access!",
-    "restrictions": {
-      "title": "Demo Restrictions",
-      "noAuth": "No login required -- data is stored in your browser",
-      "localStorage": "Data persists in this browser only and may be cleared by your browser",
-      "limits": "Entity limits apply to encourage you to try the full version"
+    "banner": {
+      "title": "You're exploring the Gatherstead Demo",
+      "description": "Data is stored in your browser. Some features are limited.",
+      "learnMore": "Learn more"
+    },
+    "limitReached": {
+      "title": "Demo limit reached",
+      "description": "Sign up for full access to remove these restrictions."
     }
   }
 }
@@ -213,26 +107,25 @@ Locale keys (in `app/locales/en.json`):
 
 ## Seed Data
 
-`services/demo/demoSeedData.ts` pre-populates localStorage on first visit so the demo experience is not empty.
+`repositories/demo/DemoStore.ts` writes seed data to the `gs-demo-store` localStorage key on first visit. The seed is intentionally minimal — leaving room for the visitor to add entities up to the limits — so the demo interaction feels like real use rather than a pre-filled snapshot.
 
 ### Seed Content
 
 | Entity | Seed Data |
 |--------|-----------|
-| Tenant | 1: "The Anderson Family" |
-| Households | 2: "Anderson Main" (4 members), "Anderson-West" (3 members) |
-| Members | 7 total: mix of adults/children with dietary profiles, relationships, contact methods |
-| Property | 1: "Lake House" with 3 resources (Master Suite, Guest Room, RV Pad) |
-| Event | 1: "Summer Reunion 2026" with meal plans and chore templates |
-| Relationships | Parent/child/sibling/spouse links across members |
-| Dietary Profiles | Varied: vegetarian, gluten-free, nut allergy, etc. |
+| Tenant | 1: "Demo Community" (Owner role) |
+| Households | 1: "The Demo Family" |
+| Members | 1 adult: "Demo User" |
+| Events | 1: "Summer Gathering" (3 days, starting next weekend) |
+| Meal / Chore Templates | None (visitor adds up to 2 of each) |
+| Attendance / Intents | None (visitor toggles interactively) |
 
 ### Initialization
 
-The seed function checks for a `demo_initialized` flag in localStorage:
-- **First visit**: Flag absent -- write all seed data, set flag
-- **Return visit**: Flag present -- skip seeding, use existing data
-- **Reset**: Clear all localStorage keys, re-run seeding
+`getDemoStore()` checks for an existing `gs-demo-store` key in localStorage:
+- **First visit**: Key absent — write seed data
+- **Return visit**: Key present — deserialise and resume; all prior mutations are intact
+- **Reset**: Clear `gs-demo-store`, call `getDemoStore()` again to re-seed (exposed via the demo banner's "Learn more" page)
 
 ## Auth Bypass
 
@@ -261,50 +154,21 @@ This prevents any auth-related redirects or checks from blocking the demo experi
 
 ## Demo Banner
 
-`app/components/DemoBanner.vue` -- a persistent bottom banner, always visible in demo mode.
+A `UAlert` is rendered above the main content slot in `app/layouts/default.vue`, visible only when `demoMode` is true. It is always present (not dismissible) so visitors are continually aware of the demo context.
 
-### Design
-
-- **Position**: Fixed to viewport bottom, full width
-- **Z-index**: Above all page content, below modals
-- **Color**: Amber/warning tone from the Nuxt UI color palette
-- **Content padding**: Main app content gets bottom padding when banner is visible so content is not obscured
-
-### States
-
-**Collapsed (default):**
-```
- You're using the Gatherstead Demo    [Learn More]  [Sign Up]
+```vue
+<!-- app/layouts/default.vue — above the <slot /> -->
+<UAlert
+  v-if="config.public.demoMode"
+  color="warning"
+  variant="subtle"
+  :title="$t('demo.banner.title')"
+  :description="$t('demo.banner.description')"
+  :actions="[{ label: $t('demo.banner.learnMore'), to: '/demo' }]"
+/>
 ```
 
-**Expanded / Modal (on "Learn More"):**
-
-A `UModal` or slide-up panel listing:
-- Demo restrictions (entity limits table)
-- "Data is stored in your browser only"
-- "No login required"
-- Call-to-action: "Sign up for unlimited access"
-- "Reset Demo Data" button
-
-### Buttons
-
-- **"Learn More"**: Opens the restrictions modal/panel
-- **"Sign Up"**: Links to the production site's registration page
-- **"Reset Demo"**: Clears all localStorage and re-seeds data
-
-### Rendering
-
-In [`app.vue`](../src/Gatherstead.Web/app/app.vue):
-
-```html
-<template>
-  <div>
-    <NuxtRouteAnnouncer />
-    <NuxtPage />
-    <DemoBanner v-if="runtimeConfig.public.demoMode" />
-  </div>
-</template>
-```
+The `/demo` route (a public page) explains the demo's limitations, entity limits table, and provides a "Reset Demo Data" button that clears `gs-demo-store` from localStorage and reloads the seed.
 
 ## Infrastructure
 
@@ -426,17 +290,20 @@ With `nuxt generate`, all routes must be statically pre-renderable. Since the de
 | File | Action |
 |------|--------|
 | `src/Gatherstead.Web/nuxt.config.ts` | Add `demoMode` config, `routeRules`, conditional SSR |
-| `src/Gatherstead.Web/app/app.vue` | Add `<DemoBanner>` conditional rendering |
-| `src/Gatherstead.Web/app/services/types.ts` | **Create** -- Service interfaces |
-| `src/Gatherstead.Web/app/services/api/*.ts` | **Create** -- Real API implementations |
-| `src/Gatherstead.Web/app/services/demo/demoStorageUtils.ts` | **Create** -- localStorage helpers |
-| `src/Gatherstead.Web/app/services/demo/demoLimits.ts` | **Create** -- Entity limit constants |
-| `src/Gatherstead.Web/app/services/demo/demoSeedData.ts` | **Create** -- First-visit seed data |
-| `src/Gatherstead.Web/app/services/demo/demo*Service.ts` | **Create** -- localStorage CRUD |
-| `src/Gatherstead.Web/app/composables/useService.ts` | **Create** -- Service factory |
-| `src/Gatherstead.Web/app/composables/useDemoLimits.ts` | **Create** -- Limit error handling |
-| `src/Gatherstead.Web/app/composables/useAuth.ts` | **Create** -- Auth with demo bypass |
-| `src/Gatherstead.Web/app/components/DemoBanner.vue` | **Create** -- Bottom banner |
-| `infrastructure/modules/staticwebapp.bicep` | **Create** -- Static Web App module |
+| `src/Gatherstead.Web/app/repositories/types.ts` | **Create** — domain types moved from composables |
+| `src/Gatherstead.Web/app/repositories/interfaces.ts` | **Create** — `I*Repository` interfaces + `Repositories` aggregate |
+| `src/Gatherstead.Web/app/repositories/live/Live*Repository.ts` | **Create** — `$fetch`-backed live implementations (7 files) |
+| `src/Gatherstead.Web/app/repositories/demo/DemoStore.ts` | **Create** — reactive localStorage singleton + `DEMO_LIMITS` + `DemoLimitError` |
+| `src/Gatherstead.Web/app/repositories/demo/Demo*Repository.ts` | **Create** — localStorage-backed demo implementations (7 files) |
+| `src/Gatherstead.Web/app/plugins/repositories.client.ts` | **Create** — selects live vs. demo; provides via `provide/inject` |
+| `src/Gatherstead.Web/app/composables/useRepositories.ts` | **Create** — `inject()` wrapper |
+| `src/Gatherstead.Web/app/composables/use*.ts` (7 files) | **Update** — remove `if (demoMode)` branches; delegate to repositories |
+| `src/Gatherstead.Web/app/composables/useAuth.ts` | **Unchanged** — auth identity retains its own demo branch |
+| `src/Gatherstead.Web/app/middleware/tenant.global.ts` | **Update** — add demo short-circuit before API call |
+| `src/Gatherstead.Web/app/layouts/default.vue` | **Update** — add `UAlert` demo banner |
+| `src/Gatherstead.Web/app/pages/demo.vue` | **Create** — public page explaining demo limits + reset button |
+| `src/Gatherstead.Web/app/i18n/locales/en.json` | **Update** — add `demo.banner.*` and `demo.limitReached.*` keys |
+| `src/Gatherstead.Web/app/i18n/locales/es.json` | **Update** — same keys in Spanish |
+| `infrastructure/modules/staticwebapp.bicep` | **Create** — Static Web App module |
 | `infrastructure/main.bicep` | Add conditional demo module |
-| `.github/workflows/deploy-demo.yml` | **Create** -- Demo CI/CD workflow |
+| `.github/workflows/deploy-demo.yml` | **Create** — Demo CI/CD workflow |
