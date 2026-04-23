@@ -3,6 +3,7 @@ import { useTenantStore } from '~/stores/tenant'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useCurrentMemberStore } from '~/stores/member'
 
+const config = useRuntimeConfig()
 const { t } = useI18n()
 const { logout, user } = useAuth()
 const tenantStore = useTenantStore()
@@ -12,8 +13,8 @@ const currentMemberStore = useCurrentMemberStore()
 const primaryNavItems = computed(() => [[
   { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
   { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
-  { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
   { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
+  { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
 ]])
 
 const managementNavItems = computed(() => isManagerOrAbove.value
@@ -73,8 +74,8 @@ const initials = computed(() => {
 const mobileNavItems = computed(() => [
   { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
   { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
-  { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
   { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
+  { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
 ])
 
 const route = useRoute()
@@ -133,6 +134,15 @@ function isActive(path: string) {
         </div>
       </div>
 
+      <UAlert
+        v-if="config.public.demoMode"
+        color="warning"
+        variant="subtle"
+        :title="t('demo.banner.title')"
+        :description="t('demo.banner.description')"
+        class="mb-4"
+        :actions="[{ label: t('demo.banner.learnMore'), to: '/demo' }]"
+      />
       <slot />
     </UMain>
 

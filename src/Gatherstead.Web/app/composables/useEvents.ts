@@ -1,46 +1,16 @@
 import { useTenantStore } from '~/stores/tenant'
+import type { EventSummary } from '~/repositories/types'
+import { useRepositories } from '~/composables/useRepositories'
 
-export interface EventSummary {
-  id: string
-  tenantId: string
-  propertyId: string
-  name: string
-  startDate: string
-  endDate: string
-}
-
-interface EventsApiResponse {
-  entity: EventSummary[]
-  successful: boolean
-}
-
-interface EventApiResponse {
-  entity: EventSummary
-  successful: boolean
-}
+export type { EventSummary }
 
 export function useEvents() {
   const tenantStore = useTenantStore()
-  const config = useRuntimeConfig()
-
-  if (config.public.demoMode) {
-    return {
-      events: ref<EventSummary[]>([]),
-      upcomingEvents: ref<EventSummary[]>([]),
-      pending: ref(false),
-      error: ref(null),
-      refresh: () => Promise.resolve(),
-    }
-  }
+  const { events: repo } = useRepositories()
 
   const { data, pending, error, refresh } = useAsyncData<EventSummary[]>(
     () => `events-${tenantStore.currentTenantId}`,
-    async () => {
-      const response = await $fetch<EventsApiResponse>(
-        `/api/proxy/tenants/${tenantStore.currentTenantId}/events`,
-      )
-      return response.entity ?? []
-    },
+    () => repo.listEvents(tenantStore.currentTenantId!),
     { watch: [() => tenantStore.currentTenantId] },
   )
 
@@ -57,27 +27,13 @@ export function useEvents() {
 
 export function useEvent(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
-  const config = useRuntimeConfig()
+  const { events: repo } = useRepositories()
 
-  if (config.public.demoMode) {
-    return {
-      event: ref<EventSummary | null>(null),
-      pending: ref(false),
-      error: ref(null),
-    }
-  }
-
-  const { data, pending, error } = useAsyncData<EventSummary>(
+  const { data, pending, error } = useAsyncData<EventSummary | null>(
     () => `event-${tenantStore.currentTenantId}-${eventId.value}`,
-    async () => {
-      const response = await $fetch<EventApiResponse>(
-        `/api/proxy/tenants/${tenantStore.currentTenantId}/events/${eventId.value}`,
-      )
-      return response.entity
-    },
+    () => repo.getEvent(tenantStore.currentTenantId!, eventId.value),
     { watch: [eventId] },
   )
 
-  const event = computed(() => data.value ?? null)
-  return { event, pending, error }
+  return { event: computed(() => data.value ?? null), pending, error }
 }

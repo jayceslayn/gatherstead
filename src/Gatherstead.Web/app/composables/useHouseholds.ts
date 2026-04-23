@@ -1,72 +1,31 @@
 import { useTenantStore } from '~/stores/tenant'
+import type { HouseholdSummary } from '~/repositories/types'
+import { useRepositories } from '~/composables/useRepositories'
 
-export interface HouseholdSummary {
-  id: string
-  tenantId: string
-  name: string
-}
-
-interface HouseholdsApiResponse {
-  entity: HouseholdSummary[]
-  successful: boolean
-}
-
-interface HouseholdApiResponse {
-  entity: HouseholdSummary
-  successful: boolean
-}
+export type { HouseholdSummary }
 
 export function useHouseholds() {
   const tenantStore = useTenantStore()
-  const config = useRuntimeConfig()
-
-  if (config.public.demoMode) {
-    return {
-      households: ref<HouseholdSummary[]>([]),
-      pending: ref(false),
-      error: ref(null),
-      refresh: () => Promise.resolve(),
-    }
-  }
+  const { households: repo } = useRepositories()
 
   const { data, pending, error, refresh } = useAsyncData<HouseholdSummary[]>(
     () => `households-${tenantStore.currentTenantId}`,
-    async () => {
-      const response = await $fetch<HouseholdsApiResponse>(
-        `/api/proxy/tenants/${tenantStore.currentTenantId}/households`,
-      )
-      return response.entity ?? []
-    },
+    () => repo.listHouseholds(tenantStore.currentTenantId!),
     { watch: [() => tenantStore.currentTenantId] },
   )
 
-  const households = computed(() => data.value ?? [])
-  return { households, pending, error, refresh }
+  return { households: computed(() => data.value ?? []), pending, error, refresh }
 }
 
 export function useHousehold(householdId: Ref<string>) {
   const tenantStore = useTenantStore()
-  const config = useRuntimeConfig()
+  const { households: repo } = useRepositories()
 
-  if (config.public.demoMode) {
-    return {
-      household: ref<HouseholdSummary | null>(null),
-      pending: ref(false),
-      error: ref(null),
-    }
-  }
-
-  const { data, pending, error } = useAsyncData<HouseholdSummary>(
+  const { data, pending, error } = useAsyncData<HouseholdSummary | null>(
     () => `household-${tenantStore.currentTenantId}-${householdId.value}`,
-    async () => {
-      const response = await $fetch<HouseholdApiResponse>(
-        `/api/proxy/tenants/${tenantStore.currentTenantId}/households/${householdId.value}`,
-      )
-      return response.entity
-    },
+    () => repo.getHousehold(tenantStore.currentTenantId!, householdId.value),
     { watch: [householdId] },
   )
 
-  const household = computed(() => data.value ?? null)
-  return { household, pending, error }
+  return { household: computed(() => data.value ?? null), pending, error }
 }

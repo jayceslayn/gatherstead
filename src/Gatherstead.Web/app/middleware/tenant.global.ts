@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { TenantRole } from '~/composables/useTenants'
+import type { TenantRole } from '~/repositories/types'
 
 interface TenantsApiResponse {
   entity: Array<{ id: string; name: string; userRole: TenantRole | null }>
@@ -19,6 +19,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   const tenantStore = useTenantStore()
+
+  if (config.public.demoMode) {
+    if (!tenantStore.currentTenantId) {
+      tenantStore.setTenant('demo-tenant', 'Demo Community', 'Owner')
+    }
+    return
+  }
+
   if (tenantStore.currentTenantId) return
 
   const lastTenantId = useCookie('last_tenant_id')

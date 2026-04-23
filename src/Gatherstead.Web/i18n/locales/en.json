@@ -179,5 +179,15 @@
     "networkError": "Unable to connect. Please check your internet connection."
   },
   "apiError": {},
-  "demo": {}
+  "demo": {
+    "banner": {
+      "title": "Demo Mode",
+      "description": "You're exploring a limited demo — data resets between sessions. Sign up to keep your gatherings.",
+      "learnMore": "Learn More"
+    },
+    "limitReached": {
+      "title": "Demo Limit Reached",
+      "description": "You've reached the limit for this feature in demo mode. Sign up to continue."
+    }
+  }
 }

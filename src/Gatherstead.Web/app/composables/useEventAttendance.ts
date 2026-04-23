@@ -1,56 +1,39 @@
 import { useTenantStore } from '~/stores/tenant'
+import type { AttendanceStatus, AttendanceRecord } from '~/repositories/types'
+import { DemoLimitError } from '~/repositories/interfaces'
+import { useRepositories } from '~/composables/useRepositories'
 
-export type AttendanceStatus = 'Going' | 'Maybe' | 'NotGoing'
-
-export interface AttendanceRecord {
-  id: string
-  eventId: string
-  householdMemberId: string
-  day: string
-  status: AttendanceStatus
-}
-
-interface AttendanceApiResponse {
-  entity: AttendanceRecord[]
-  successful: boolean
-}
+export type { AttendanceStatus, AttendanceRecord }
 
 export function useEventAttendance(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
-  const config = useRuntimeConfig()
-
-  if (config.public.demoMode) {
-    return {
-      attendance: ref<AttendanceRecord[]>([]),
-      pending: ref(false),
-      error: ref(null),
-      refresh: () => Promise.resolve(),
-      upsert: async (_householdId: string, _memberId: string, _day: string, _status: AttendanceStatus) => {},
-    }
-  }
+  const { eventAttendance: repo } = useRepositories()
+  const { t } = useI18n()
 
   const { data, pending, error, refresh } = useAsyncData<AttendanceRecord[]>(
     () => `attendance-${tenantStore.currentTenantId}-${eventId.value}`,
-    async () => {
-      const response = await $fetch<AttendanceApiResponse>(
-        `/api/proxy/tenants/${tenantStore.currentTenantId}/events/${eventId.value}/attendance`,
-      )
-      return response.entity ?? []
-    },
+    () => repo.listAttendance(tenantStore.currentTenantId!, eventId.value),
     { watch: [eventId] },
   )
 
   const attendance = computed(() => data.value ?? [])
 
   async function upsert(householdId: string, memberId: string, day: string, status: AttendanceStatus) {
-    await $fetch(
-      `/api/proxy/tenants/${tenantStore.currentTenantId}/events/${eventId.value}/attendance?householdId=${encodeURIComponent(householdId)}`,
-      {
-        method: 'PUT',
-        body: { householdMemberId: memberId, day, status },
-      },
-    )
-    await refresh()
+    try {
+      await repo.upsertAttendance(tenantStore.currentTenantId!, eventId.value, householdId, memberId, day, status)
+      await refresh()
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        useToast().add({
+          title: t('demo.limitReached.title'),
+          description: t('demo.limitReached.description'),
+          color: 'warning',
+        })
+        return
+      }
+      throw e
+    }
   }
 
   return { attendance, pending, error, refresh, upsert }

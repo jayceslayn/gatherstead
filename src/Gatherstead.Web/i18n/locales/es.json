@@ -179,5 +179,15 @@
     "networkError": "No es posible conectarse. Por favor verifica tu conexión a internet."
   },
   "apiError": {},
-  "demo": {}
+  "demo": {
+    "banner": {
+      "title": "Modo Demostración",
+      "description": "Estás explorando una demo limitada — los datos se reinician entre sesiones. Regístrate para guardar tus reuniones.",
+      "learnMore": "Saber Más"
+    },
+    "limitReached": {
+      "title": "Límite de Demo Alcanzado",
+      "description": "Has alcanzado el límite para esta función en el modo de demostración. Regístrate para continuar."
+    }
+  }
 }

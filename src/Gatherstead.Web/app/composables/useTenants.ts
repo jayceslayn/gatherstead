@@ -1,41 +1,15 @@
-export type TenantRole = 'Owner' | 'Manager' | 'Member' | 'Guest'
+import type { TenantSummary, TenantRole } from '~/repositories/types'
+import { useRepositories } from '~/composables/useRepositories'
 
-export interface TenantSummary {
-  id: string
-  name: string
-  userRole: TenantRole | null
-}
-
-interface TenantsApiResponse {
-  entity: Array<{ id: string; name: string; userRole: TenantRole | null }>
-  successful: boolean
-}
+export type { TenantSummary, TenantRole }
 
 export function useTenants() {
-  const config = useRuntimeConfig()
-
-  if (config.public.demoMode) {
-    return {
-      tenants: ref<TenantSummary[]>([]),
-      pending: ref(false),
-      error: ref(null),
-      refresh: () => Promise.resolve(),
-    }
-  }
+  const { tenants: repo } = useRepositories()
 
   const { data, pending, error, refresh } = useAsyncData<TenantSummary[]>(
     'tenants',
-    async () => {
-      const response = await $fetch<TenantsApiResponse>('/api/proxy/tenants')
-      return (response.entity ?? []).map(t => ({
-        id: t.id,
-        name: t.name,
-        userRole: t.userRole,
-      }))
-    },
+    () => repo.listTenants(),
   )
 
-  const tenants = computed(() => data.value ?? [])
-
-  return { tenants, pending, error, refresh }
+  return { tenants: computed(() => data.value ?? []), pending, error, refresh }
 }
