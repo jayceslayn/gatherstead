@@ -48,11 +48,13 @@ const accountMenuItems = computed(() => {
     }])
   }
 
-  groups.push([{
-    label: t('common.signOut'),
-    icon: 'i-heroicons-arrow-right-on-rectangle',
-    onSelect: () => logout(),
-  }])
+  if (!config.public.demoMode) {
+    groups.push([{
+      label: t('common.signOut'),
+      icon: 'i-heroicons-arrow-right-on-rectangle',
+      onSelect: () => logout(),
+    }])
+  }
 
   return groups
 })
@@ -86,65 +88,60 @@ function isActive(path: string) {
 </script>
 
 <template>
-  <div class="min-h-screen flex">
-    <!-- Desktop sidebar (md+) -->
-    <aside class="hidden md:flex w-64 border-r border-(--ui-border) p-4 flex-col shrink-0">
-      <NuxtLink to="/app" class="mb-1">
-        <picture>
-          <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png" />
-          <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-12 w-auto" />
-        </picture>
-      </NuxtLink>
+  <div class="min-h-screen flex flex-col">
+    <DemoBanner />
 
-      <p v-if="tenantStore.currentTenantName" class="text-xs text-muted mb-6 pl-1 truncate">
-        {{ tenantStore.currentTenantName }}
-      </p>
+    <div class="flex flex-1 min-h-0">
+      <!-- Desktop sidebar (md+) -->
+      <aside class="hidden md:flex w-64 border-r border-(--ui-border) p-4 flex-col shrink-0">
+        <NuxtLink to="/app" class="mb-1">
+          <picture>
+            <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png" />
+            <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-12 w-auto" />
+          </picture>
+        </NuxtLink>
 
-      <UNavigationMenu orientation="vertical" :items="primaryNavItems" highlight class="mb-2" />
-      <UNavigationMenu v-if="managementNavItems.length" orientation="vertical" :items="managementNavItems" highlight class="mt-2" />
+        <p v-if="tenantStore.currentTenantName" class="text-xs text-muted mb-6 pl-1 truncate">
+          {{ tenantStore.currentTenantName }}
+        </p>
 
-      <div class="mt-auto pt-4 border-t border-(--ui-border) flex items-center gap-2">
-        <LocaleSwitcher />
-        <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }">
-          <UButton variant="ghost" class="flex-1 justify-start gap-2 min-w-0">
-            <span class="inline-flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold shrink-0">
-              {{ initials }}
-            </span>
-            <span class="truncate text-sm">{{ displayName }}</span>
-          </UButton>
-        </UDropdownMenu>
-      </div>
-    </aside>
+        <UNavigationMenu orientation="vertical" :items="primaryNavItems" highlight class="mb-2" />
+        <UNavigationMenu v-if="managementNavItems.length" orientation="vertical" :items="managementNavItems" highlight class="mt-2" />
 
-    <!-- Main content -->
-    <UMain class="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">
-      <!-- Mobile top bar -->
-      <div class="md:hidden flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-8 w-auto" />
-          <span v-if="tenantStore.currentTenantName" class="text-sm font-medium truncate max-w-40">
-            {{ tenantStore.currentTenantName }}
-          </span>
-        </div>
-        <div class="flex items-center gap-1">
+        <div class="mt-auto pt-4 border-t border-(--ui-border) flex items-center gap-2">
           <LocaleSwitcher />
           <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }">
-            <UButton variant="ghost" size="sm" icon="i-heroicons-user-circle" :aria-label="t('nav.yourProfile')" />
+            <UButton variant="ghost" class="flex-1 justify-start gap-2 min-w-0">
+              <span class="inline-flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold shrink-0">
+                {{ initials }}
+              </span>
+              <span class="truncate text-sm">{{ displayName }}</span>
+            </UButton>
           </UDropdownMenu>
         </div>
-      </div>
+      </aside>
 
-      <UAlert
-        v-if="config.public.demoMode"
-        color="warning"
-        variant="subtle"
-        :title="t('demo.banner.title')"
-        :description="t('demo.banner.description')"
-        class="mb-4"
-        :actions="[{ label: t('demo.banner.learnMore'), to: '/demo' }]"
-      />
-      <slot />
-    </UMain>
+      <!-- Main content -->
+      <UMain class="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">
+        <!-- Mobile top bar -->
+        <div class="md:hidden flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-8 w-auto" />
+            <span v-if="tenantStore.currentTenantName" class="text-sm font-medium truncate max-w-40">
+              {{ tenantStore.currentTenantName }}
+            </span>
+          </div>
+          <div class="flex items-center gap-1">
+            <LocaleSwitcher />
+            <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }">
+              <UButton variant="ghost" size="sm" icon="i-heroicons-user-circle" :aria-label="t('nav.yourProfile')" />
+            </UDropdownMenu>
+          </div>
+        </div>
+
+        <slot />
+      </UMain>
+    </div>
 
     <!-- Mobile bottom tab bar -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-(--ui-border) bg-(--ui-bg) flex items-stretch h-16 safe-b">

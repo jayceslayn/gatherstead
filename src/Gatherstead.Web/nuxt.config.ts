@@ -58,6 +58,8 @@ export default defineNuxtConfig({
       demoMode: false,
       githubUrl: '',
       docsUrl: '',
+      liveUrl: '',
+      demoUrl: '',
     },
   },
 })

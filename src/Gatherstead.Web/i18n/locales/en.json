@@ -30,7 +30,8 @@
     "featureDirectory": "Directory",
     "featureDirectoryDesc": "A shared family directory with privacy controls and easy lookup.",
     "viewOnGithub": "View on GitHub",
-    "viewDocs": "Documentation"
+    "viewDocs": "Documentation",
+    "tryDemo": "Try the Demo"
   },
   "nav": {
     "home": "Home",
@@ -182,8 +183,23 @@
   "demo": {
     "banner": {
       "title": "Demo Mode",
-      "description": "You're exploring a limited demo — data resets between sessions. Sign up to keep your gatherings.",
-      "learnMore": "Learn More"
+      "learnMore": "Learn More",
+      "goLive": "Use the Live App"
+    },
+    "modal": {
+      "title": "About Demo Mode",
+      "intro": "You're exploring a live preview of Gatherstead with pre-loaded sample data. Nothing here is permanent — data is stored in your browser and resets periodically.",
+      "limitsTitle": "Demo Limits",
+      "limits": {
+        "householdsPerTenant": "Households per group",
+        "membersPerHousehold": "Members per household",
+        "events": "Active events",
+        "eventMaxDays": "Max event length (days)",
+        "mealTemplatesPerEvent": "Meal templates per event",
+        "choreTemplatesPerEvent": "Chore templates per event"
+      },
+      "dataResets": "Demo data lives in your browser's localStorage. Clearing site data or switching browsers resets everything to the original sample data.",
+      "cta": "Ready to keep your gatherings?"
     },
     "limitReached": {
       "title": "Demo Limit Reached",

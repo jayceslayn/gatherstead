@@ -30,7 +30,8 @@
     "featureDirectory": "Directorio",
     "featureDirectoryDesc": "Un directorio familiar compartido con controles de privacidad y búsqueda sencilla.",
     "viewOnGithub": "Ver en GitHub",
-    "viewDocs": "Documentación"
+    "viewDocs": "Documentación",
+    "tryDemo": "Probar la Demo"
   },
   "nav": {
     "home": "Inicio",
@@ -182,8 +183,23 @@
   "demo": {
     "banner": {
       "title": "Modo Demostración",
-      "description": "Estás explorando una demo limitada — los datos se reinician entre sesiones. Regístrate para guardar tus reuniones.",
-      "learnMore": "Saber Más"
+      "learnMore": "Saber Más",
+      "goLive": "Usar la App en Vivo"
+    },
+    "modal": {
+      "title": "Acerca del Modo Demostración",
+      "intro": "Estás explorando una vista previa en vivo de Gatherstead con datos de muestra precargados. Nada aquí es permanente — los datos se almacenan en tu navegador y se reinician periódicamente.",
+      "limitsTitle": "Límites de la Demo",
+      "limits": {
+        "householdsPerTenant": "Hogares por grupo",
+        "membersPerHousehold": "Miembros por hogar",
+        "events": "Eventos activos",
+        "eventMaxDays": "Duración máxima del evento (días)",
+        "mealTemplatesPerEvent": "Plantillas de comida por evento",
+        "choreTemplatesPerEvent": "Plantillas de tareas por evento"
+      },
+      "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
+      "cta": "¿Listo para guardar tus reuniones?"
     },
     "limitReached": {
       "title": "Límite de Demo Alcanzado",

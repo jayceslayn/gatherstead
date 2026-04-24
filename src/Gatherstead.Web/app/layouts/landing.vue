@@ -5,7 +5,8 @@ const config = useRuntimeConfig()
 </script>
 
 <template>
-  <UHeader to="/">
+  <DemoBanner />
+  <UHeader to="/" :toggle="!config.public.demoMode">
     <template #title>
       <picture>
         <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_wide.png" />
@@ -15,27 +16,37 @@ const config = useRuntimeConfig()
     <template #right>
       <LocaleSwitcher />
       <UButton
-        v-if="loggedIn"
-        variant="ghost"
-        to="/tenants"
-      >
-        {{ t('nav.tenants') }}
-      </UButton>
-      <UButton
-        v-if="loggedIn"
+        v-if="!config.public.demoMode && config.public.demoUrl"
         variant="soft"
-        @click="() => { logout() }"
-      >
-        {{ t('common.signOut') }}
-      </UButton>
-      <UButton
-        v-else
-        color="primary"
-        to="/auth/azure"
+        :to="(config.public.demoUrl as string)"
         external
       >
-        {{ t('common.signIn') }}
+        {{ t('landing.tryDemo') }}
       </UButton>
+      <template v-if="!config.public.demoMode">
+        <UButton
+          v-if="loggedIn"
+          variant="ghost"
+          to="/tenants"
+        >
+          {{ t('nav.tenants') }}
+        </UButton>
+        <UButton
+          v-if="loggedIn"
+          variant="soft"
+          @click="() => { logout() }"
+        >
+          {{ t('common.signOut') }}
+        </UButton>
+        <UButton
+          v-else
+          color="primary"
+          to="/auth/azure"
+          external
+        >
+          {{ t('common.signIn') }}
+        </UButton>
+      </template>
     </template>
   </UHeader>
 
