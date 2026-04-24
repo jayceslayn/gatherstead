@@ -7,10 +7,10 @@ const { t } = useI18n()
 const { loggedIn } = useAuth()
 
 const features = computed(() => [
-  { title: t('landing.featureHouseholds'), description: t('landing.featureHouseholdsDesc'), icon: 'i-heroicons-home' },
+  { title: t('landing.featureDirectory'), description: t('landing.featureDirectoryDesc'), icon: 'i-heroicons-user-group' },
+  { title: t('landing.featureProperties'), description: t('landing.featurePropertiesDesc'), icon: 'i-heroicons-map-pin' },
   { title: t('landing.featureEvents'), description: t('landing.featureEventsDesc'), icon: 'i-heroicons-calendar-days' },
   { title: t('landing.featureLodging'), description: t('landing.featureLodgingDesc'), icon: 'i-heroicons-building-office' },
-  { title: t('landing.featureDirectory'), description: t('landing.featureDirectoryDesc'), icon: 'i-heroicons-user-group' },
 ])
 </script>
 
