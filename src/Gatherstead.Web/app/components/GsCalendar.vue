@@ -68,6 +68,23 @@ const calendarOptions = computed(() => ({
 </template>
 
 <style>
+.gs-calendar {
+  --fc-border-color: var(--ui-border);
+  --fc-neutral-bg-color: var(--ui-bg-elevated);
+  --fc-page-bg-color: var(--ui-bg);
+  --fc-today-bg-color: color-mix(in oklab, var(--color-harvest-500) 12%, transparent);
+  --fc-button-text-color: var(--ui-text);
+  --fc-button-bg-color: var(--ui-bg-elevated);
+  --fc-button-border-color: var(--ui-border);
+  --fc-button-hover-bg-color: var(--ui-bg-accented);
+  --fc-button-hover-border-color: var(--ui-border-accented);
+  --fc-button-active-bg-color: var(--color-forest-600);
+  --fc-button-active-border-color: var(--color-forest-700);
+  --fc-button-active-text-color: #fff;
+}
+.gs-calendar .fc-toolbar-title {
+  color: var(--ui-text-highlighted);
+}
 .gs-calendar .fc-event {
   --fc-event-bg-color: var(--color-harvest-500, #e8873f);
   --fc-event-border-color: var(--color-harvest-600, #d07535);

@@ -32,6 +32,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       birthDate: null,
       dietaryNotes: null,
       dietaryTags: [],
+      householdRole: 'Member',
     }
     store.members.value.push(m)
     persistDemoStore()

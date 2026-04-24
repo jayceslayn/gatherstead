@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useTenantRole } from '~/composables/useTenantRole'
-import { useCurrentMemberStore } from '~/stores/member'
-import type { AttendanceStatus } from '~/composables/useEventAttendance'
 import { useMealTemplates } from '~/composables/useMealPlans'
 import { useChoreTemplates } from '~/composables/useChoreTemplates'
+import { useHouseholds } from '~/composables/useHouseholds'
+import { useCurrentMemberStore } from '~/stores/member'
+import { useTenantRole } from '~/composables/useTenantRole'
 
 definePageMeta({
   layout: 'default',
@@ -11,22 +11,44 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
-const { isManagerOrAbove } = useTenantRole()
 const memberStore = useCurrentMemberStore()
+const { isManagerOrAbove } = useTenantRole()
+const { households } = useHouseholds()
 
 const eventId = computed(() => route.params.eventId as string)
 
 const { event, pending: eventPending } = useEvent(eventId)
-const { attendance, upsert } = useEventAttendance(eventId)
 const { templates: mealTemplates, pending: mealTemplatesPending } = useMealTemplates(eventId)
 const { templates: choreTemplates, pending: choreTemplatesPending } = useChoreTemplates(eventId)
 
 const tabs = computed(() => [
-  { label: t('event.overview'), slot: 'overview' as const },
+  { label: t('event.attendance'), slot: 'attendance' as const },
   { label: t('event.meals'), slot: 'meals' as const },
   { label: t('event.chores'), slot: 'chores' as const },
   { label: t('event.accommodations'), slot: 'accommodations' as const },
 ])
+
+// Household selection — shared across all tabs
+const selectedHouseholdId = ref<string>(memberStore.linkedHouseholdId ?? '')
+
+watchEffect(() => {
+  const first = households.value[0]
+  if (!selectedHouseholdId.value && first) {
+    selectedHouseholdId.value = first.id
+  }
+})
+
+const manageableHouseholds = computed(() => {
+  if (isManagerOrAbove.value) return households.value
+  if (memberStore.linkedHouseholdId) {
+    return households.value.filter(h => h.id === memberStore.linkedHouseholdId)
+  }
+  return []
+})
+
+const householdSelectItems = computed(() =>
+  manageableHouseholds.value.map(h => ({ label: h.name, value: h.id })),
+)
 
 const eventDays = computed(() => {
   if (!event.value) return []
@@ -38,15 +60,6 @@ const eventDays = computed(() => {
     current.setDate(current.getDate() + 1)
   }
   return days
-})
-
-const myAttendanceByDay = computed<Record<string, AttendanceStatus>>(() => {
-  if (!memberStore.linkedMemberId) return {}
-  return Object.fromEntries(
-    attendance.value
-      .filter(a => a.householdMemberId === memberStore.linkedMemberId)
-      .map(a => [a.day, a.status]),
-  )
 })
 
 const calendarEvents = computed(() => {
@@ -61,27 +74,8 @@ const calendarEvents = computed(() => {
   }]
 })
 
-const attendanceUpdating = ref<Record<string, boolean>>({})
-
-async function toggleAttendance(day: string, status: AttendanceStatus) {
-  if (!memberStore.linkedMemberId || !memberStore.linkedHouseholdId) return
-  attendanceUpdating.value[day] = true
-  try {
-    await upsert(memberStore.linkedHouseholdId, memberStore.linkedMemberId, day, status)
-  }
-  finally {
-    attendanceUpdating.value[day] = false
-  }
-}
-
 function formatHeader(date: string) {
   return new Intl.DateTimeFormat(undefined, { month: 'long', day: 'numeric', year: 'numeric' }).format(
-    new Date(date + 'T00:00:00'),
-  )
-}
-
-function formatDayLabel(date: string) {
-  return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(
     new Date(date + 'T00:00:00'),
   )
 }
@@ -107,37 +101,29 @@ function formatDayLabel(date: string) {
         </GsRoleGate>
       </GsPageHeader>
 
-      <div class="flex items-center gap-2 text-sm text-muted mb-6">
+      <div class="flex items-center gap-2 text-sm text-muted mb-4">
         <UIcon name="i-heroicons-calendar-days" class="size-4 shrink-0" />
         <span>{{ formatHeader(event.startDate) }} – {{ formatHeader(event.endDate) }}</span>
       </div>
 
-      <UTabs :items="tabs">
-        <template #overview>
-          <div class="mt-4 space-y-6">
-            <GsCalendar
-              :events="calendarEvents"
-              initial-view="dayGridMonth"
-              :initial-date="event.startDate"
-            />
+      <div v-if="manageableHouseholds.length > 1" class="flex items-center gap-3 mb-6">
+        <UFormField :label="t('event.selectHousehold')">
+          <USelect
+            v-model="selectedHouseholdId"
+            :items="householdSelectItems"
+            class="min-w-48 max-w-xs"
+          />
+        </UFormField>
+      </div>
 
-            <div v-if="memberStore.linkedMemberId">
-              <h3 class="text-sm font-semibold mb-3">{{ t('event.myAttendance') }}</h3>
-              <div class="divide-y divide-(--ui-border)">
-                <div
-                  v-for="day in eventDays"
-                  :key="day"
-                  class="flex items-center justify-between gap-4 py-2.5"
-                >
-                  <span class="text-sm">{{ formatDayLabel(day) }}</span>
-                  <GsAttendanceToggle
-                    :model-value="myAttendanceByDay[day] ?? null"
-                    :loading="attendanceUpdating[day]"
-                    @update:model-value="toggleAttendance(day, $event)"
-                  />
-                </div>
-              </div>
-            </div>
+      <UTabs :items="tabs">
+        <template #attendance>
+          <div class="mt-4">
+            <GsEventAttendanceGrid
+              :event-id="eventId"
+              :days="eventDays"
+              :household-id="selectedHouseholdId"
+            />
           </div>
         </template>
 

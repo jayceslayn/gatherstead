@@ -31,8 +31,8 @@ const options: Array<{
   activeColor: 'success' | 'secondary' | 'neutral'
 }> = [
   { value: 'Going', icon: 'i-heroicons-check', labelKey: 'status.going', activeColor: 'success' },
-  { value: 'Maybe', icon: 'i-heroicons-question-mark-circle', labelKey: 'status.maybe', activeColor: 'secondary' },
-  { value: 'NotGoing', icon: 'i-heroicons-x-mark', labelKey: 'status.notGoing', activeColor: 'neutral' },
+  { value: 'Maybe', icon: 'i-heroicons-question-mark-circle', labelKey: 'status.maybe', activeColor: 'neutral' },
+  { value: 'NotGoing', icon: 'i-heroicons-x-mark', labelKey: 'status.notGoing', activeColor: 'secondary' },
 ]
 </script>
 

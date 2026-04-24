@@ -116,6 +116,11 @@
     "mealPlan": "Meal Plan",
     "choreTemplate": "Chore Template",
     "attendance": "Attendance",
+    "attendanceGrid": {
+      "totals": "Event Totals",
+      "rowActions": "Set attendance for {name}",
+      "columnActions": "Set attendance for {day}"
+    },
     "noEvents": "No events planned yet",
     "noEventsHintManager": "Create your first event to get started.",
     "noEventsHintMember": "Check back soon — events will appear here.",
@@ -126,6 +131,7 @@
     "chores": "Chores",
     "accommodations": "Accommodations",
     "myAttendance": "My Attendance",
+    "selectHousehold": "Select household",
     "tabsComingSoon": "This section is coming soon.",
     "meal": {
       "breakfast": "Breakfast",

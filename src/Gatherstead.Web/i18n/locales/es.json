@@ -116,6 +116,11 @@
     "mealPlan": "Plan de Comidas",
     "choreTemplate": "Plantilla de Tareas",
     "attendance": "Asistencia",
+    "attendanceGrid": {
+      "totals": "Totales del Evento",
+      "rowActions": "Establecer asistencia para {name}",
+      "columnActions": "Establecer asistencia para {day}"
+    },
     "noEvents": "Aún no hay eventos planificados",
     "noEventsHintManager": "Crea tu primer evento para comenzar.",
     "noEventsHintMember": "Vuelve pronto — los eventos aparecerán aquí.",
@@ -126,6 +131,7 @@
     "chores": "Tareas",
     "accommodations": "Alojamiento",
     "myAttendance": "Mi Asistencia",
+    "selectHousehold": "Seleccionar hogar",
     "tabsComingSoon": "Esta sección estará disponible pronto.",
     "meal": {
       "breakfast": "Desayuno",

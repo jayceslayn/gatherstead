@@ -97,6 +97,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: 'Large portions — saving the world burns a lot of calories.',
         dietaryTags: [],
+        householdRole: 'Admin',
       },
       {
         id: 'demo-member-helen',
@@ -108,6 +109,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: null,
         dietaryTags: [],
+        householdRole: 'Admin',
       },
       {
         id: 'demo-member-violet',
@@ -119,6 +121,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: 'Will not eat anything if people are watching.',
         dietaryTags: [],
+        householdRole: 'Member',
       },
       {
         id: 'demo-member-dash',
@@ -130,6 +133,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: 'Eats at top speed. Food must be secured to the plate.',
         dietaryTags: [],
+        householdRole: 'Member',
       },
       {
         id: 'demo-member-jackjack',
@@ -141,6 +145,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: 'Baby food only. Keep away from raccoons.',
         dietaryTags: [],
+        householdRole: 'Member',
       },
       {
         id: 'demo-member-lucius',
@@ -152,6 +157,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: null,
         dietaryTags: [],
+        householdRole: 'Admin',
       },
       {
         id: 'demo-member-honey',
@@ -163,6 +169,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: null,
         dietaryTags: [],
+        householdRole: 'Member',
       },
       {
         id: 'demo-member-edna',
@@ -174,6 +181,7 @@ function seedState(): DemoState {
         birthDate: null,
         dietaryNotes: 'No capes. Also no gluten.',
         dietaryTags: ['Gluten-Free'],
+        householdRole: 'Admin',
       },
     ],
     events: [

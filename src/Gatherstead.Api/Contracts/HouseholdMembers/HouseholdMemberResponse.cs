@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.HouseholdMembers;
 
@@ -16,6 +17,7 @@ public record HouseholdMemberDto(
     DateOnly? BirthDate,
     string? DietaryNotes,
     string[] DietaryTags,
+    HouseholdRole HouseholdRole,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
