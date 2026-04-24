@@ -50,4 +50,43 @@
   --color-warmstone-800: oklch(0.27 0.005 80);
   --color-warmstone-900: oklch(0.21 0.004 80);
   --color-warmstone-950: oklch(0.15 0.003 80);
+
+  /* Amber - Warning (golden harvest complement) */
+  --color-amber-50: oklch(0.98 0.02 75);
+  --color-amber-100: oklch(0.95 0.05 75);
+  --color-amber-200: oklch(0.89 0.09 75);
+  --color-amber-300: oklch(0.82 0.13 75);
+  --color-amber-400: oklch(0.74 0.16 75);
+  --color-amber-500: oklch(0.67 0.16 75);
+  --color-amber-600: oklch(0.58 0.14 75);
+  --color-amber-700: oklch(0.49 0.12 75);
+  --color-amber-800: oklch(0.40 0.09 75);
+  --color-amber-900: oklch(0.33 0.07 75);
+  --color-amber-950: oklch(0.22 0.05 75);
+
+  /* Terracotta - Error (earthy brick red) */
+  --color-terracotta-50: oklch(0.97 0.01 25);
+  --color-terracotta-100: oklch(0.93 0.04 25);
+  --color-terracotta-200: oklch(0.86 0.08 25);
+  --color-terracotta-300: oklch(0.77 0.12 25);
+  --color-terracotta-400: oklch(0.67 0.15 25);
+  --color-terracotta-500: oklch(0.57 0.16 25);
+  --color-terracotta-600: oklch(0.49 0.14 25);
+  --color-terracotta-700: oklch(0.41 0.12 25);
+  --color-terracotta-800: oklch(0.33 0.09 25);
+  --color-terracotta-900: oklch(0.27 0.07 25);
+  --color-terracotta-950: oklch(0.18 0.05 25);
+
+  /* Slate - Info (dusty blue complement to earthy palette) */
+  --color-slate-50: oklch(0.97 0.008 240);
+  --color-slate-100: oklch(0.93 0.016 240);
+  --color-slate-200: oklch(0.87 0.028 240);
+  --color-slate-300: oklch(0.78 0.040 240);
+  --color-slate-400: oklch(0.67 0.048 240);
+  --color-slate-500: oklch(0.57 0.048 240);
+  --color-slate-600: oklch(0.48 0.042 240);
+  --color-slate-700: oklch(0.40 0.036 240);
+  --color-slate-800: oklch(0.32 0.028 240);
+  --color-slate-900: oklch(0.26 0.022 240);
+  --color-slate-950: oklch(0.17 0.015 240);
 }

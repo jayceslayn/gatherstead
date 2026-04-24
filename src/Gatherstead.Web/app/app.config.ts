@@ -5,6 +5,9 @@ export default defineAppConfig({
       secondary: 'harvest',
       success: 'sage',
       neutral: 'warmstone',
+      warning: 'amber',
+      error: 'terracotta',
+      info: 'slate',
     },
   },
 })
