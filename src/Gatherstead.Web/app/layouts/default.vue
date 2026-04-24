@@ -64,15 +64,6 @@ const displayName = computed(() => {
   return name ?? t('common.appName')
 })
 
-const initials = computed(() => {
-  return displayName.value
-    .split(' ')
-    .slice(0, 2)
-    .map((w: string) => w[0])
-    .join('')
-    .toUpperCase()
-})
-
 const mobileNavItems = computed(() => [
   { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
   { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
@@ -110,13 +101,13 @@ function isActive(path: string) {
 
         <div class="mt-auto pt-4 border-t border-(--ui-border) flex items-center gap-2">
           <LocaleSwitcher />
-          <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }">
-            <UButton variant="ghost" class="flex-1 justify-start gap-2 min-w-0">
-              <span class="inline-flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold shrink-0">
-                {{ initials }}
-              </span>
-              <span class="truncate text-sm">{{ displayName }}</span>
-            </UButton>
+          <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }" class="flex-1 min-w-0">
+            <UUser
+              as="button"
+              :name="displayName"
+              :avatar="{ alt: displayName }"
+              class="w-full px-2 py-1 rounded-md hover:bg-(--ui-bg-elevated) transition-colors truncate"
+            />
           </UDropdownMenu>
         </div>
       </aside>
@@ -134,7 +125,12 @@ function isActive(path: string) {
           <div class="flex items-center gap-1">
             <LocaleSwitcher />
             <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }">
-              <UButton variant="ghost" size="sm" icon="i-heroicons-user-circle" :aria-label="t('nav.yourProfile')" />
+              <UUser
+                as="button"
+                size="sm"
+                :avatar="{ alt: displayName }"
+                :aria-label="t('nav.yourProfile')"
+              />
             </UDropdownMenu>
           </div>
         </div>
