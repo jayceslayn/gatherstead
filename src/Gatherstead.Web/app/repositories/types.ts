@@ -121,6 +121,40 @@ export interface ChoreIntent {
   volunteered: boolean
 }
 
+export type AccommodationType = 'Bedroom' | 'Bunk' | 'RvPad' | 'Tent' | 'Offsite'
+export type AccommodationIntentStatus = 'Intent' | 'Hold' | 'Confirmed'
+export type AccommodationIntentDecision = 'Pending' | 'Approved' | 'Declined'
+
+export interface PropertySummary {
+  id: string
+  tenantId: string
+  name: string
+}
+
+export interface AccommodationSummary {
+  id: string
+  tenantId: string
+  propertyId: string
+  name: string
+  type: AccommodationType
+  capacityAdults: number | null
+  capacityChildren: number | null
+  notes: string | null
+}
+
+export interface AccommodationIntent {
+  id: string
+  tenantId: string
+  accommodationId: string
+  householdMemberId: string
+  night: string
+  status: AccommodationIntentStatus
+  notes: string | null
+  decision: AccommodationIntentDecision
+  partySize: number | null
+  priority: number | null
+}
+
 export const MEAL_TYPE_FLAGS: Record<MealType, number> = {
   Breakfast: 0x01,
   Lunch: 0x02,

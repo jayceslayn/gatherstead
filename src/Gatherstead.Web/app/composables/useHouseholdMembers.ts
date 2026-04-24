@@ -4,6 +4,28 @@ import { useRepositories } from '~/composables/useRepositories'
 
 export type { HouseholdMember, DietaryProfile }
 
+export function useAllMembers() {
+  const tenantStore = useTenantStore()
+  const { households: householdRepo, householdMembers: memberRepo } = useRepositories()
+
+  const { data, pending } = useAsyncData<Map<string, HouseholdMember>>(
+    () => `all-members-${tenantStore.currentTenantId}`,
+    async () => {
+      const households = await householdRepo.listHouseholds(tenantStore.currentTenantId!)
+      const arrays = await Promise.all(
+        households.map(h => memberRepo.listMembers(tenantStore.currentTenantId!, h.id)),
+      )
+      return new Map(arrays.flat().map(m => [m.id, m]))
+    },
+    { watch: [() => tenantStore.currentTenantId] },
+  )
+
+  return {
+    memberMap: computed(() => data.value ?? new Map<string, HouseholdMember>()),
+    pending,
+  }
+}
+
 export function useHouseholdMembers(householdId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { householdMembers: repo } = useRepositories()

@@ -155,7 +155,42 @@
   "property": {
     "title": "Propiedades",
     "name": "Nombre de la Propiedad",
-    "resources": "Recursos"
+    "resources": "Recursos",
+    "noProperties": "Aún no hay propiedades",
+    "noPropertiesHintManager": "Agrega tu primera propiedad para comenzar.",
+    "noPropertiesHintMember": "Aún no se han agregado propiedades.",
+    "addProperty": "Agregar Propiedad",
+    "accommodations": "Alojamientos",
+    "noAccommodations": "Aún no se han agregado alojamientos.",
+    "noAccommodationsHintManager": "Agrega el primer alojamiento a esta propiedad.",
+    "addAccommodation": "Agregar Alojamiento"
+  },
+  "accommodation": {
+    "types": {
+      "bedroom": "Habitación",
+      "bunk": "Litera",
+      "rvPad": "Espacio para Casa Rodante",
+      "tent": "Sitio para Carpa",
+      "offsite": "Fuera del Lugar"
+    },
+    "adults": "{n} adulto | {n} adultos",
+    "children": "{n} niño | {n} niños",
+    "intentCount": "{n} solicitud | {n} solicitudes",
+    "intents": "Solicitudes de Estadía",
+    "noIntents": "No hay solicitudes de estadía para este alojamiento.",
+    "requestStay": "Solicitar Estadía",
+    "updateStay": "Actualizar Estadía",
+    "status": "Estado",
+    "partySize": "Tamaño del Grupo",
+    "partySizeValue": "Grupo de {n}",
+    "promote": "Aprobar",
+    "decline": "Rechazar",
+    "nightOf": "Noche del {date}",
+    "decision": {
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "declined": "Rechazado"
+    }
   },
   "status": {
     "covered": "Cubierto",

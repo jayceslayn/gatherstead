@@ -397,10 +397,27 @@ See **[REPOSITORY-PATTERN.md](REPOSITORY-PATTERN.md)** for the full plan. Summar
 - Fixes `tenant.global.ts` bug where demo mode still calls the proxy API
 - Adds a `UAlert` demo warning banner to `default.vue`
 
-### Phase 5 — Properties & Accommodations
-17. Property List + Property Detail + accommodation grid
-18. Accommodation Intent Management
-19. `GsAccommodationCard`
+### Phase 5 — Properties & Accommodations ✅ COMPLETE (2026-04-24)
+17. ✅ Property List (`/app/properties/index.vue`) — card grid, role-gated Add Property button
+18. ✅ Property Detail (`/app/properties/[propertyId]/index.vue`) — accommodation grid grouped by type (Bedroom → Bunk → RV Pad → Tent → Offsite), each card links to intents page
+19. ✅ Accommodation Intent Management (`/app/properties/[propertyId]/accommodations/[accommodationId]/intents.vue`) — night-grouped intent list; Manager+ approve/decline; Member request-stay modal
+20. ✅ `GsAccommodationCard` — type icon, capacity label, optional status badge, optional link
+
+New composables shipped with Phase 5:
+- ✅ `useProperties.ts` — `useProperties()` + `useProperty(propertyId)` — tenant-scoped property fetch
+- ✅ `useAccommodations.ts` — `useAccommodations(propertyId)`, `useAccommodationIntents(propertyId, accommodationId, memberId?)`, `useAccommodationIntentActions(...)` — fetch + promote/decline/request intents
+- ✅ `useAllMembers()` added to `useHouseholdMembers.ts` — parallel-loads all household members into a `Map<id, HouseholdMember>` for name resolution on the intents page
+
+Repository layer shipped with Phase 5:
+- ✅ `IPropertyRepository`, `IAccommodationRepository`, `IAccommodationIntentRepository` interfaces
+- ✅ `LivePropertyRepository`, `LiveAccommodationRepository`, `LiveAccommodationIntentRepository`
+- ✅ `DemoPropertyRepository`, `DemoAccommodationRepository`, `DemoAccommodationIntentRepository`
+- ✅ `DemoStore` seeded with Camp Nomanisan property, 4 accommodations (Cabin A/B, RV Pad 1, Tent Site 1), and pre-loaded intents for Bob Parr (Confirmed, Cabin A), Lucius Best (Hold, RV Pad), Edna Mode (Confirmed, Cabin B)
+
+Event Detail update shipped with Phase 5:
+- ✅ Accommodations tab in `events/[eventId]/index.vue` — replaced placeholder with live `GsAccommodationCard` grid for the event's property, each card links to the intents page
+
+i18n additions: `property.{noProperties*, addProperty, accommodations, noAccommodations*, addAccommodation}`, `accommodation.{types.*, adults, children, intentCount, intents, noIntents, requestStay, updateStay, status, partySize, partySizeValue, promote, decline, nightOf, decision.*}` (en + es)
 
 ### Phase 6 — Management & Settings
 20. Full Attendance Manager grid (Manager+)

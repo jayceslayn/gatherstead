@@ -13,6 +13,11 @@ import type {
   ChoreTemplate,
   ChorePlan,
   ChoreIntent,
+  PropertySummary,
+  AccommodationSummary,
+  AccommodationIntent,
+  AccommodationIntentStatus,
+  AccommodationIntentDecision,
 } from './types'
 
 export const REPOSITORIES_KEY = Symbol('repositories')
@@ -99,6 +104,42 @@ export interface IChoreRepository {
   ): Promise<void>
 }
 
+export interface IPropertyRepository {
+  listProperties(tenantId: string): Promise<PropertySummary[]>
+  getProperty(tenantId: string, propertyId: string): Promise<PropertySummary | null>
+}
+
+export interface IAccommodationRepository {
+  listAccommodations(tenantId: string, propertyId: string): Promise<AccommodationSummary[]>
+  getAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<AccommodationSummary | null>
+}
+
+export interface IAccommodationIntentRepository {
+  listIntents(tenantId: string, propertyId: string, accommodationId: string): Promise<AccommodationIntent[]>
+  listIntentsForMember(tenantId: string, propertyId: string, accommodationId: string, memberId: string): Promise<AccommodationIntent[]>
+  createIntent(
+    tenantId: string,
+    propertyId: string,
+    accommodationId: string,
+    householdId: string,
+    memberId: string,
+    night: string,
+    status: AccommodationIntentStatus,
+    notes?: string | null,
+    partySize?: number | null,
+  ): Promise<AccommodationIntent>
+  updateIntent(
+    tenantId: string,
+    propertyId: string,
+    accommodationId: string,
+    intentId: string,
+    status: AccommodationIntentStatus,
+    decision: AccommodationIntentDecision,
+    notes?: string | null,
+    partySize?: number | null,
+  ): Promise<void>
+}
+
 export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
@@ -107,4 +148,7 @@ export interface Repositories {
   eventAttendance: IEventAttendanceRepository
   mealPlans: IMealPlanRepository
   chores: IChoreRepository
+  properties: IPropertyRepository
+  accommodations: IAccommodationRepository
+  accommodationIntents: IAccommodationIntentRepository
 }

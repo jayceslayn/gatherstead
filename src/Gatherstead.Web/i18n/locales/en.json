@@ -155,7 +155,42 @@
   "property": {
     "title": "Properties",
     "name": "Property Name",
-    "resources": "Resources"
+    "resources": "Resources",
+    "noProperties": "No properties yet",
+    "noPropertiesHintManager": "Add your first property to get started.",
+    "noPropertiesHintMember": "No properties have been added yet.",
+    "addProperty": "Add Property",
+    "accommodations": "Accommodations",
+    "noAccommodations": "No accommodations added yet.",
+    "noAccommodationsHintManager": "Add the first accommodation to this property.",
+    "addAccommodation": "Add Accommodation"
+  },
+  "accommodation": {
+    "types": {
+      "bedroom": "Bedroom",
+      "bunk": "Bunk",
+      "rvPad": "RV Pad",
+      "tent": "Tent Site",
+      "offsite": "Offsite"
+    },
+    "adults": "{n} adult | {n} adults",
+    "children": "{n} child | {n} children",
+    "intentCount": "{n} request | {n} requests",
+    "intents": "Stay Requests",
+    "noIntents": "No stay requests for this accommodation.",
+    "requestStay": "Request Stay",
+    "updateStay": "Update Stay",
+    "status": "Status",
+    "partySize": "Party Size",
+    "partySizeValue": "Party of {n}",
+    "promote": "Approve",
+    "decline": "Decline",
+    "nightOf": "Night of {date}",
+    "decision": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "declined": "Declined"
+    }
   },
   "status": {
     "covered": "Covered",

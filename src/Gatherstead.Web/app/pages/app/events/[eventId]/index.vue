@@ -2,6 +2,7 @@
 import { useMealTemplates } from '~/composables/useMealPlans'
 import { useChoreTemplates } from '~/composables/useChoreTemplates'
 import { useHouseholds } from '~/composables/useHouseholds'
+import { useAccommodations } from '~/composables/useAccommodations'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
 
@@ -20,6 +21,9 @@ const eventId = computed(() => route.params.eventId as string)
 const { event, pending: eventPending } = useEvent(eventId)
 const { templates: mealTemplates, pending: mealTemplatesPending } = useMealTemplates(eventId)
 const { templates: choreTemplates, pending: choreTemplatesPending } = useChoreTemplates(eventId)
+
+const eventPropertyId = computed(() => event.value?.propertyId ?? '')
+const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
 
 const tabs = computed(() => [
   { label: t('event.attendance'), slot: 'attendance' as const },
@@ -60,18 +64,6 @@ const eventDays = computed(() => {
     current.setDate(current.getDate() + 1)
   }
   return days
-})
-
-const calendarEvents = computed(() => {
-  if (!event.value) return []
-  const end = new Date(event.value.endDate + 'T00:00:00')
-  end.setDate(end.getDate() + 1)
-  return [{
-    id: event.value.id,
-    title: event.value.name,
-    start: event.value.startDate,
-    end: end.toISOString().split('T')[0],
-  }]
 })
 
 function formatHeader(date: string) {
@@ -172,12 +164,24 @@ function formatHeader(date: string) {
         </template>
 
         <template #accommodations>
-          <GsEmptyState
-            icon="i-heroicons-home"
-            :title="t('event.accommodations')"
-            :description="t('event.tabsComingSoon')"
-            class="mt-4"
-          />
+          <div class="mt-4">
+            <div v-if="accommodationsPending" class="py-8 text-center text-sm text-muted">
+              {{ t('common.loading') }}
+            </div>
+            <GsEmptyState
+              v-else-if="!accommodations.length"
+              icon="i-heroicons-home"
+              :title="t('property.noAccommodations')"
+            />
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <GsAccommodationCard
+                v-for="accommodation in accommodations"
+                :key="accommodation.id"
+                :accommodation="accommodation"
+                :link-to="`/app/properties/${eventPropertyId}/accommodations/${accommodation.id}/intents`"
+              />
+            </div>
+          </div>
         </template>
       </UTabs>
     </template>
