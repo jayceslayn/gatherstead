@@ -1,10 +1,9 @@
 <script setup lang="ts">
 const route = useRoute()
-const lastTenantId = useCookie('last_tenant_id')
+const { switchToTenantId } = useTenantSelect()
 
 onMounted(() => {
-  lastTenantId.value = route.params.tenantId as string
-  navigateTo('/app', { replace: true })
+  switchToTenantId(route.params.tenantId as string)
 })
 </script>
 
