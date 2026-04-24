@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useTenantStore } from '~/stores/tenant'
+import { useCurrentMemberStore } from '~/stores/member'
+import { useEventStore } from '~/stores/event'
 
 definePageMeta({
   middleware: 'auth',
@@ -8,26 +10,19 @@ definePageMeta({
 const { t } = useI18n()
 const { tenants, pending, error } = useTenants()
 const tenantStore = useTenantStore()
+const memberStore = useCurrentMemberStore()
+const eventStore = useEventStore()
 const lastTenantId = useCookie('last_tenant_id')
 
 function selectTenant(tenant: { id: string; name: string; userRole: import('~/composables/useTenants').TenantRole | null }) {
+  if (tenant.id !== tenantStore.currentTenantId) {
+    memberStore.clear()
+    eventStore.clear()
+  }
   lastTenantId.value = tenant.id
   tenantStore.setTenant(tenant.id, tenant.name, tenant.userRole)
   navigateTo('/app')
 }
-
-watch(
-  () => tenants.value,
-  (list) => {
-    if (!list?.length) return
-    const last = list.find(t => t.id === lastTenantId.value)
-    if (last) {
-      tenantStore.setTenant(last.id, last.name, last.userRole)
-      navigateTo('/app')
-    }
-  },
-  { immediate: true },
-)
 </script>
 
 <template>
