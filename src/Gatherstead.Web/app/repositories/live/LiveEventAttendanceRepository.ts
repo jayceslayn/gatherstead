@@ -1,14 +1,11 @@
 import type { IEventAttendanceRepository } from '../interfaces'
 import type { AttendanceRecord, AttendanceStatus } from '../types'
 
-interface AttendanceApiResponse {
-  entity: AttendanceRecord[]
-  successful: boolean
-}
+interface ApiResponse<T> { entity: T; successful: boolean }
 
 export class LiveEventAttendanceRepository implements IEventAttendanceRepository {
   async listAttendance(tenantId: string, eventId: string): Promise<AttendanceRecord[]> {
-    const r = await $fetch<AttendanceApiResponse>(
+    const r = await $fetch<ApiResponse<AttendanceRecord[]>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/attendance`,
     )
     return r.entity ?? []
@@ -28,6 +25,13 @@ export class LiveEventAttendanceRepository implements IEventAttendanceRepository
         method: 'PUT',
         body: { householdMemberId: memberId, day, status },
       },
+    )
+  }
+
+  async deleteAttendance(tenantId: string, eventId: string, attendanceId: string): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/attendance/${attendanceId}`,
+      { method: 'DELETE' },
     )
   }
 }

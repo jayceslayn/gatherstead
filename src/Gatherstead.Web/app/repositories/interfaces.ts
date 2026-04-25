@@ -2,6 +2,7 @@ import type {
   TenantSummary,
   HouseholdSummary,
   HouseholdMember,
+  HouseholdRole,
   DietaryProfile,
   EventSummary,
   AttendanceStatus,
@@ -15,6 +16,7 @@ import type {
   ChoreIntent,
   PropertySummary,
   AccommodationSummary,
+  AccommodationType,
   AccommodationIntent,
   AccommodationIntentStatus,
   AccommodationIntentDecision,
@@ -36,17 +38,59 @@ export interface ITenantRepository {
 export interface IHouseholdRepository {
   listHouseholds(tenantId: string): Promise<HouseholdSummary[]>
   getHousehold(tenantId: string, householdId: string): Promise<HouseholdSummary | null>
+  createHousehold(tenantId: string, name: string): Promise<HouseholdSummary>
+  updateHousehold(tenantId: string, householdId: string, name: string): Promise<void>
+  deleteHousehold(tenantId: string, householdId: string): Promise<void>
 }
 
 export interface IHouseholdMemberRepository {
   listMembers(tenantId: string, householdId: string): Promise<HouseholdMember[]>
   getMember(tenantId: string, householdId: string, memberId: string): Promise<HouseholdMember | null>
   getDietaryProfile(tenantId: string, householdId: string, memberId: string): Promise<DietaryProfile | null>
+  createMember(
+    tenantId: string,
+    householdId: string,
+    name: string,
+    isAdult: boolean,
+    ageBand: string | null,
+    birthDate: string | null,
+    householdRole: HouseholdRole,
+    dietaryNotes: string | null,
+    dietaryTags: string[],
+  ): Promise<HouseholdMember>
+  updateMember(
+    tenantId: string,
+    householdId: string,
+    memberId: string,
+    name: string,
+    isAdult: boolean,
+    ageBand: string | null,
+    birthDate: string | null,
+    householdRole: HouseholdRole,
+    dietaryNotes: string | null,
+    dietaryTags: string[],
+  ): Promise<void>
+  deleteMember(tenantId: string, householdId: string, memberId: string): Promise<void>
 }
 
 export interface IEventRepository {
   listEvents(tenantId: string): Promise<EventSummary[]>
   getEvent(tenantId: string, eventId: string): Promise<EventSummary | null>
+  createEvent(
+    tenantId: string,
+    propertyId: string,
+    name: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<EventSummary>
+  updateEvent(
+    tenantId: string,
+    eventId: string,
+    name: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<void>
+  deleteEvent(tenantId: string, eventId: string): Promise<void>
 }
 
 export interface IEventAttendanceRepository {
@@ -59,6 +103,7 @@ export interface IEventAttendanceRepository {
     day: string,
     status: AttendanceStatus,
   ): Promise<void>
+  deleteAttendance(tenantId: string, eventId: string, attendanceId: string): Promise<void>
 }
 
 export interface IMealPlanRepository {
@@ -81,6 +126,29 @@ export interface IMealPlanRepository {
     status: MealIntentStatus,
     bringOwnFood: boolean,
   ): Promise<void>
+  createTemplate(
+    tenantId: string,
+    eventId: string,
+    name: string,
+    mealTypes: number,
+    notes: string | null,
+  ): Promise<MealTemplate>
+  updateTemplate(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    name: string,
+    mealTypes: number,
+    notes: string | null,
+  ): Promise<void>
+  deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>
+  deleteIntent(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    intentId: string,
+  ): Promise<void>
 }
 
 export interface IChoreRepository {
@@ -102,16 +170,64 @@ export interface IChoreRepository {
     memberId: string,
     volunteered: boolean,
   ): Promise<void>
+  createTemplate(
+    tenantId: string,
+    eventId: string,
+    name: string,
+    timeSlots: number,
+    minimumAssignees: number | null,
+    notes: string | null,
+  ): Promise<ChoreTemplate>
+  updateTemplate(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    name: string,
+    timeSlots: number,
+    minimumAssignees: number | null,
+    notes: string | null,
+  ): Promise<void>
+  deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>
+  deleteIntent(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    intentId: string,
+  ): Promise<void>
 }
 
 export interface IPropertyRepository {
   listProperties(tenantId: string): Promise<PropertySummary[]>
   getProperty(tenantId: string, propertyId: string): Promise<PropertySummary | null>
+  createProperty(tenantId: string, name: string): Promise<PropertySummary>
+  updateProperty(tenantId: string, propertyId: string, name: string): Promise<void>
+  deleteProperty(tenantId: string, propertyId: string): Promise<void>
 }
 
 export interface IAccommodationRepository {
   listAccommodations(tenantId: string, propertyId: string): Promise<AccommodationSummary[]>
   getAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<AccommodationSummary | null>
+  createAccommodation(
+    tenantId: string,
+    propertyId: string,
+    name: string,
+    type: AccommodationType,
+    capacityAdults: number | null,
+    capacityChildren: number | null,
+    notes: string | null,
+  ): Promise<AccommodationSummary>
+  updateAccommodation(
+    tenantId: string,
+    propertyId: string,
+    accommodationId: string,
+    name: string,
+    type: AccommodationType,
+    capacityAdults: number | null,
+    capacityChildren: number | null,
+    notes: string | null,
+  ): Promise<void>
+  deleteAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<void>
 }
 
 export interface IAccommodationIntentRepository {
@@ -137,6 +253,12 @@ export interface IAccommodationIntentRepository {
     decision: AccommodationIntentDecision,
     notes?: string | null,
     partySize?: number | null,
+  ): Promise<void>
+  deleteIntent(
+    tenantId: string,
+    propertyId: string,
+    accommodationId: string,
+    intentId: string,
   ): Promise<void>
 }
 

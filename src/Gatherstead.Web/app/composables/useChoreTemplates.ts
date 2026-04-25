@@ -16,6 +16,63 @@ import { useRepositories } from '~/composables/useRepositories'
 export type { ChoreTimeSlot, ChoreTemplate, ChorePlan, ChoreIntent }
 export { ALL_CHORE_SLOTS, choreSlotsFromFlags, CHORE_SLOT_FLAGS }
 
+export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
+  const tenantStore = useTenantStore()
+  const { chores: repo } = useRepositories()
+  const toast = useToast()
+  const { t } = useI18n()
+  const { translateError } = useApiError()
+  const updating = ref<string[]>([])
+
+  async function createTemplate(name: string, timeSlots: number, minimumAssignees: number | null, notes: string | null) {
+    updating.value.push('new')
+    try {
+      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, timeSlots, minimumAssignees, notes)
+      await refresh()
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
+        return
+      }
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== 'new')
+    }
+  }
+
+  async function updateTemplate(templateId: string, name: string, timeSlots: number, minimumAssignees: number | null, notes: string | null) {
+    updating.value.push(templateId)
+    try {
+      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, timeSlots, minimumAssignees, notes)
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== templateId)
+    }
+  }
+
+  async function deleteTemplate(templateId: string) {
+    updating.value.push(templateId)
+    try {
+      await repo.deleteTemplate(tenantStore.currentTenantId!, eventId.value, templateId)
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== templateId)
+    }
+  }
+
+  return { updating, createTemplate, updateTemplate, deleteTemplate }
+}
+
 export function useChoreTemplates(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { chores: repo } = useRepositories()
@@ -115,6 +172,29 @@ export function useChorePlanSection(
     }
   }
 
+  async function deleteIntent(planId: string, intentId: string) {
+    if (!memberId.value) return
+    updating.value = [...updating.value, planId]
+    try {
+      await repo.deleteIntent(tenantStore.currentTenantId!, eventId.value, templateId.value, planId, intentId)
+      intentMap.value[planId] = null
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        useToast().add({
+          title: t('demo.limitReached.title'),
+          description: t('demo.limitReached.description'),
+          color: 'warning',
+        })
+        return
+      }
+      throw e
+    }
+    finally {
+      updating.value = updating.value.filter(id => id !== planId)
+    }
+  }
+
   const pending = computed(() => plansPending.value || intentsPending.value)
-  return { plans, intentMap, pending, updating, toggle }
+  return { plans, intentMap, pending, updating, toggle, deleteIntent }
 }

@@ -36,5 +36,10 @@ export function useEventAttendance(eventId: Ref<string>) {
     }
   }
 
-  return { attendance, pending, error, refresh, upsert }
+  async function deleteAttendance(attendanceId: string) {
+    await repo.deleteAttendance(tenantStore.currentTenantId!, eventId.value, attendanceId)
+    await refresh()
+  }
+
+  return { attendance, pending, error, refresh, upsert, deleteAttendance }
 }

@@ -70,4 +70,16 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
       },
     )
   }
+
+  async deleteIntent(
+    tenantId: string,
+    propertyId: string,
+    accommodationId: string,
+    intentId: string,
+  ): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/properties/${propertyId}/accommodations/${accommodationId}/intents/${intentId}`,
+      { method: 'DELETE' },
+    )
+  }
 }

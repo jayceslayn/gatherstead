@@ -48,4 +48,54 @@ export class LiveChoreRepository implements IChoreRepository {
       },
     )
   }
+
+  async createTemplate(
+    tenantId: string,
+    eventId: string,
+    name: string,
+    timeSlots: number,
+    minimumAssignees: number | null,
+    notes: string | null,
+  ): Promise<ChoreTemplate> {
+    const r = await $fetch<ApiResponse<ChoreTemplate>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates`,
+      { method: 'POST', body: { name, timeSlots, minimumAssignees, notes } },
+    )
+    return r.entity
+  }
+
+  async updateTemplate(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    name: string,
+    timeSlots: number,
+    minimumAssignees: number | null,
+    notes: string | null,
+  ): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}`,
+      { method: 'PUT', body: { name, timeSlots, minimumAssignees, notes } },
+    )
+  }
+
+  async deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}`,
+      { method: 'DELETE' },
+    )
+  }
+
+  async deleteIntent(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    intentId: string,
+  ): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}/plans/${planId}/intents/${intentId}`,
+      { method: 'DELETE' },
+    )
+  }
 }

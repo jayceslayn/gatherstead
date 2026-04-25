@@ -17,4 +17,23 @@ export class LivePropertyRepository implements IPropertyRepository {
     )
     return r.entity ?? null
   }
+
+  async createProperty(tenantId: string, name: string): Promise<PropertySummary> {
+    const r = await $fetch<ApiResponse<PropertySummary>>(
+      `/api/proxy/tenants/${tenantId}/properties`,
+      { method: 'POST', body: { name } },
+    )
+    return r.entity
+  }
+
+  async updateProperty(tenantId: string, propertyId: string, name: string): Promise<void> {
+    await $fetch(`/api/proxy/tenants/${tenantId}/properties/${propertyId}`, {
+      method: 'PUT',
+      body: { name },
+    })
+  }
+
+  async deleteProperty(tenantId: string, propertyId: string): Promise<void> {
+    await $fetch(`/api/proxy/tenants/${tenantId}/properties/${propertyId}`, { method: 'DELETE' })
+  }
 }

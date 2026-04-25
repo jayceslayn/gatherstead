@@ -35,4 +35,43 @@ export class DemoEventRepository implements IEventRepository {
     persistDemoStore()
     return e
   }
+
+  async updateEvent(
+    _tenantId: string,
+    eventId: string,
+    name: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<void> {
+    const store = getDemoStore()
+    const e = store.events.value.find(x => x.id === eventId)
+    if (!e) return
+    e.name = name
+    e.startDate = startDate
+    e.endDate = endDate
+    persistDemoStore()
+  }
+
+  async deleteEvent(_tenantId: string, eventId: string): Promise<void> {
+    const store = getDemoStore()
+    const planIds = [
+      ...store.mealPlans.value.filter(p => {
+        const t = store.mealTemplates.value.find(t => t.id === p.mealTemplateId)
+        return t?.eventId === eventId
+      }).map(p => p.id),
+      ...store.chorePlans.value.filter(p => {
+        const t = store.choreTemplates.value.find(t => t.id === p.templateId)
+        return t?.eventId === eventId
+      }).map(p => p.id),
+    ]
+    store.mealIntents.value = store.mealIntents.value.filter(i => !planIds.includes(i.mealPlanId))
+    store.choreIntents.value = store.choreIntents.value.filter(i => !planIds.includes(i.chorePlanId))
+    store.mealPlans.value = store.mealPlans.value.filter(p => !planIds.includes(p.id))
+    store.chorePlans.value = store.chorePlans.value.filter(p => !planIds.includes(p.id))
+    store.mealTemplates.value = store.mealTemplates.value.filter(t => t.eventId !== eventId)
+    store.choreTemplates.value = store.choreTemplates.value.filter(t => t.eventId !== eventId)
+    store.attendance.value = store.attendance.value.filter(a => a.eventId !== eventId)
+    store.events.value = store.events.value.filter(e => e.id !== eventId)
+    persistDemoStore()
+  }
 }

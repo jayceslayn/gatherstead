@@ -1,8 +1,9 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { HouseholdMember, DietaryProfile } from '~/repositories/types'
+import type { HouseholdMember, HouseholdRole, DietaryProfile } from '~/repositories/types'
+import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { HouseholdMember, DietaryProfile }
+export type { HouseholdMember, HouseholdRole, DietaryProfile }
 
 export function useAllMembers() {
   const tenantStore = useTenantStore()
@@ -63,4 +64,84 @@ export function useDietaryProfile(householdId: Ref<string>, memberId: Ref<string
   )
 
   return { dietaryProfile: computed(() => data.value ?? null), pending, error }
+}
+
+export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () => Promise<void>) {
+  const tenantStore = useTenantStore()
+  const { householdMembers: repo } = useRepositories()
+  const toast = useToast()
+  const { t } = useI18n()
+  const { translateError } = useApiError()
+  const updating = ref<string[]>([])
+
+  async function createMember(
+    name: string,
+    isAdult: boolean,
+    ageBand: string | null,
+    birthDate: string | null,
+    householdRole: HouseholdRole,
+    dietaryNotes: string | null,
+    dietaryTags: string[],
+  ) {
+    updating.value.push('new')
+    try {
+      await repo.createMember(
+        tenantStore.currentTenantId!, householdId.value,
+        name, isAdult, ageBand, birthDate, householdRole, dietaryNotes, dietaryTags,
+      )
+      await refresh()
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
+        return
+      }
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== 'new')
+    }
+  }
+
+  async function updateMember(
+    memberId: string,
+    name: string,
+    isAdult: boolean,
+    ageBand: string | null,
+    birthDate: string | null,
+    householdRole: HouseholdRole,
+    dietaryNotes: string | null,
+    dietaryTags: string[],
+  ) {
+    updating.value.push(memberId)
+    try {
+      await repo.updateMember(
+        tenantStore.currentTenantId!, householdId.value, memberId,
+        name, isAdult, ageBand, birthDate, householdRole, dietaryNotes, dietaryTags,
+      )
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== memberId)
+    }
+  }
+
+  async function deleteMember(memberId: string) {
+    updating.value.push(memberId)
+    try {
+      await repo.deleteMember(tenantStore.currentTenantId!, householdId.value, memberId)
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== memberId)
+    }
+  }
+
+  return { updating, createMember, updateMember, deleteMember }
 }

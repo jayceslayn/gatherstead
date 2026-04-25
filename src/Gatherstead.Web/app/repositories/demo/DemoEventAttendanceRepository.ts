@@ -27,4 +27,10 @@ export class DemoEventAttendanceRepository implements IEventAttendanceRepository
     }
     persistDemoStore()
   }
+
+  async deleteAttendance(_tenantId: string, _eventId: string, attendanceId: string): Promise<void> {
+    const store = getDemoStore()
+    store.attendance.value = store.attendance.value.filter(a => a.id !== attendanceId)
+    persistDemoStore()
+  }
 }

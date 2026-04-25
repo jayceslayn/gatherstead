@@ -54,14 +54,58 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     persistDemoStore()
   }
 
-  async createTemplate(tenantId: string, eventId: string, name: string, mealTypes: number): Promise<MealTemplate> {
+  async createTemplate(
+    tenantId: string,
+    eventId: string,
+    name: string,
+    mealTypes: number,
+    notes: string | null,
+  ): Promise<MealTemplate> {
     const store = getDemoStore()
     if (store.mealTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.mealTemplatesPerEvent) {
       throw new DemoLimitError('mealTemplatesPerEvent')
     }
-    const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, notes: null }
+    const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, notes }
     store.mealTemplates.value.push(t)
     persistDemoStore()
     return t
+  }
+
+  async updateTemplate(
+    _tenantId: string,
+    _eventId: string,
+    templateId: string,
+    name: string,
+    mealTypes: number,
+    notes: string | null,
+  ): Promise<void> {
+    const store = getDemoStore()
+    const t = store.mealTemplates.value.find(x => x.id === templateId)
+    if (!t) return
+    t.name = name
+    t.mealTypes = mealTypes
+    t.notes = notes
+    persistDemoStore()
+  }
+
+  async deleteTemplate(_tenantId: string, _eventId: string, templateId: string): Promise<void> {
+    const store = getDemoStore()
+    const planIds = store.mealPlans.value.filter(p => p.mealTemplateId === templateId).map(p => p.id)
+    store.mealIntents.value = store.mealIntents.value.filter(i => !planIds.includes(i.mealPlanId))
+    store.mealPlans.value = store.mealPlans.value.filter(p => p.mealTemplateId !== templateId)
+    store.mealTemplates.value = store.mealTemplates.value.filter(t => t.id !== templateId)
+    persistDemoStore()
+  }
+
+  async deleteIntent(
+    _tenantId: string,
+    _eventId: string,
+    _templateId: string,
+    _planId: string,
+    intentId: string,
+  ): Promise<void> {
+    const store = getDemoStore()
+    store.mealIntents.value = store.mealIntents.value.filter(i => i.id !== intentId)
+    persistDemoStore()
   }
 }

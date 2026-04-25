@@ -26,6 +26,8 @@ export const DEMO_LIMITS = {
   eventMaxDays: 3,
   mealTemplatesPerEvent: 2,
   choreTemplatesPerEvent: 2,
+  propertiesPerTenant: 2,
+  accommodationsPerProperty: 6,
 } as const
 
 export class DemoLimitError extends Error {

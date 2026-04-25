@@ -49,4 +49,52 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
       },
     )
   }
+
+  async createTemplate(
+    tenantId: string,
+    eventId: string,
+    name: string,
+    mealTypes: number,
+    notes: string | null,
+  ): Promise<MealTemplate> {
+    const r = await $fetch<ApiResponse<MealTemplate>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates`,
+      { method: 'POST', body: { name, mealTypes, notes } },
+    )
+    return r.entity
+  }
+
+  async updateTemplate(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    name: string,
+    mealTypes: number,
+    notes: string | null,
+  ): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}`,
+      { method: 'PUT', body: { name, mealTypes, notes } },
+    )
+  }
+
+  async deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}`,
+      { method: 'DELETE' },
+    )
+  }
+
+  async deleteIntent(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    intentId: string,
+  ): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}/plans/${planId}/intents/${intentId}`,
+      { method: 'DELETE' },
+    )
+  }
 }

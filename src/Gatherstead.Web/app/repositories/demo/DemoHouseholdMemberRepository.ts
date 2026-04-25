@@ -1,5 +1,5 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, DietaryProfile } from '../types'
+import type { HouseholdMember, HouseholdRole, DietaryProfile } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 
 export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository {
@@ -17,7 +17,17 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     return null
   }
 
-  async createMember(tenantId: string, householdId: string, name: string): Promise<HouseholdMember> {
+  async createMember(
+    tenantId: string,
+    householdId: string,
+    name: string,
+    isAdult: boolean,
+    ageBand: string | null,
+    birthDate: string | null,
+    householdRole: HouseholdRole,
+    dietaryNotes: string | null,
+    dietaryTags: string[],
+  ): Promise<HouseholdMember> {
     const store = getDemoStore()
     if (store.members.value.filter(m => m.householdId === householdId).length >= DEMO_LIMITS.membersPerHousehold) {
       throw new DemoLimitError('membersPerHousehold')
@@ -27,15 +37,46 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       tenantId,
       householdId,
       name,
-      isAdult: true,
-      ageBand: null,
-      birthDate: null,
-      dietaryNotes: null,
-      dietaryTags: [],
-      householdRole: 'Member',
+      isAdult,
+      ageBand,
+      birthDate,
+      dietaryNotes,
+      dietaryTags,
+      householdRole,
     }
     store.members.value.push(m)
     persistDemoStore()
     return m
+  }
+
+  async updateMember(
+    _tenantId: string,
+    _householdId: string,
+    memberId: string,
+    name: string,
+    isAdult: boolean,
+    ageBand: string | null,
+    birthDate: string | null,
+    householdRole: HouseholdRole,
+    dietaryNotes: string | null,
+    dietaryTags: string[],
+  ): Promise<void> {
+    const store = getDemoStore()
+    const m = store.members.value.find(x => x.id === memberId)
+    if (!m) return
+    m.name = name
+    m.isAdult = isAdult
+    m.ageBand = ageBand
+    m.birthDate = birthDate
+    m.householdRole = householdRole
+    m.dietaryNotes = dietaryNotes
+    m.dietaryTags = dietaryTags
+    persistDemoStore()
+  }
+
+  async deleteMember(_tenantId: string, _householdId: string, memberId: string): Promise<void> {
+    const store = getDemoStore()
+    store.members.value = store.members.value.filter(m => m.id !== memberId)
+    persistDemoStore()
   }
 }

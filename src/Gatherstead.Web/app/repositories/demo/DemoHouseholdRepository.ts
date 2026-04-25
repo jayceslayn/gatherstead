@@ -23,4 +23,19 @@ export class DemoHouseholdRepository implements IHouseholdRepository {
     persistDemoStore()
     return h
   }
+
+  async updateHousehold(_tenantId: string, householdId: string, name: string): Promise<void> {
+    const store = getDemoStore()
+    const h = store.households.value.find(x => x.id === householdId)
+    if (!h) return
+    h.name = name
+    persistDemoStore()
+  }
+
+  async deleteHousehold(_tenantId: string, householdId: string): Promise<void> {
+    const store = getDemoStore()
+    store.members.value = store.members.value.filter(m => m.householdId !== householdId)
+    store.households.value = store.households.value.filter(h => h.id !== householdId)
+    persistDemoStore()
+  }
 }

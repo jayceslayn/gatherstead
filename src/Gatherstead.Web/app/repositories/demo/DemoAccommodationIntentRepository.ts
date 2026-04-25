@@ -89,4 +89,15 @@ export class DemoAccommodationIntentRepository implements IAccommodationIntentRe
     intent.partySize = partySize ?? null
     persistDemoStore()
   }
+
+  async deleteIntent(
+    _tenantId: string,
+    _propertyId: string,
+    _accommodationId: string,
+    intentId: string,
+  ): Promise<void> {
+    const store = getDemoStore()
+    store.accommodationIntents.value = store.accommodationIntents.value.filter(i => i.id !== intentId)
+    persistDemoStore()
+  }
 }

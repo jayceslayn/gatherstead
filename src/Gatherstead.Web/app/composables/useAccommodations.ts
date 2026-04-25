@@ -1,13 +1,15 @@
 import { useTenantStore } from '~/stores/tenant'
 import type {
   AccommodationSummary,
+  AccommodationType,
   AccommodationIntent,
   AccommodationIntentStatus,
   AccommodationIntentDecision,
 } from '~/repositories/types'
+import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { AccommodationSummary, AccommodationIntent, AccommodationIntentStatus, AccommodationIntentDecision }
+export type { AccommodationSummary, AccommodationType, AccommodationIntent, AccommodationIntentStatus, AccommodationIntentDecision }
 
 export function useAccommodations(propertyId: Ref<string>) {
   const tenantStore = useTenantStore()
@@ -53,6 +55,80 @@ export function useAccommodationIntents(
   )
 
   return { intents: computed(() => data.value ?? []), pending, error, refresh }
+}
+
+export function useAccommodationActions(propertyId: Ref<string>, refresh: () => Promise<void>) {
+  const tenantStore = useTenantStore()
+  const { accommodations: repo } = useRepositories()
+  const toast = useToast()
+  const { t } = useI18n()
+  const { translateError } = useApiError()
+  const updating = ref<string[]>([])
+
+  async function createAccommodation(
+    name: string,
+    type: AccommodationType,
+    capacityAdults: number | null,
+    capacityChildren: number | null,
+    notes: string | null,
+  ) {
+    updating.value.push('new')
+    try {
+      await repo.createAccommodation(
+        tenantStore.currentTenantId!, propertyId.value, name, type, capacityAdults, capacityChildren, notes,
+      )
+      await refresh()
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
+        return
+      }
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== 'new')
+    }
+  }
+
+  async function updateAccommodation(
+    accommodationId: string,
+    name: string,
+    type: AccommodationType,
+    capacityAdults: number | null,
+    capacityChildren: number | null,
+    notes: string | null,
+  ) {
+    updating.value.push(accommodationId)
+    try {
+      await repo.updateAccommodation(
+        tenantStore.currentTenantId!, propertyId.value, accommodationId, name, type, capacityAdults, capacityChildren, notes,
+      )
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== accommodationId)
+    }
+  }
+
+  async function deleteAccommodation(accommodationId: string) {
+    updating.value.push(accommodationId)
+    try {
+      await repo.deleteAccommodation(tenantStore.currentTenantId!, propertyId.value, accommodationId)
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== accommodationId)
+    }
+  }
+
+  return { updating, createAccommodation, updateAccommodation, deleteAccommodation }
 }
 
 export function useAccommodationIntentActions(
@@ -127,5 +203,24 @@ export function useAccommodationIntentActions(
     }
   }
 
-  return { updating, requestIntent, promoteIntent }
+  async function deleteIntent(intentId: string) {
+    updating.value.push(intentId)
+    try {
+      await repo.deleteIntent(
+        tenantStore.currentTenantId!,
+        propertyId.value,
+        accommodationId.value,
+        intentId,
+      )
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== intentId)
+    }
+  }
+
+  return { updating, requestIntent, promoteIntent, deleteIntent }
 }
