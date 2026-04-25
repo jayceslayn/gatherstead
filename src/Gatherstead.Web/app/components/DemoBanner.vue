@@ -1,12 +1,39 @@
 <script setup lang="ts">
-import { DEMO_LIMITS } from '~/repositories/demo/DemoStore'
+import { inject } from 'vue'
+import { REPOSITORIES_KEY } from '~/repositories/interfaces'
+import type { Repositories } from '~/repositories/interfaces'
+import { DEMO_LIMITS, clearDemoStore, getDemoStore } from '~/repositories/demo/DemoStore'
+import { seedDemoData } from '~/repositories/demo/seedDemoData'
+import { useCurrentMemberStore } from '~/stores/member'
+import { useEventStore } from '~/stores/event'
 
 const config = useRuntimeConfig()
 const { t } = useI18n()
 const open = ref(false)
+const isResetting = ref(false)
+
+const repos = inject<Repositories | null>(REPOSITORIES_KEY, null)
+const memberStore = useCurrentMemberStore()
+const eventStore = useEventStore()
 
 type LimitKey = keyof typeof DEMO_LIMITS
 const limitKeys = Object.keys(DEMO_LIMITS) as LimitKey[]
+
+async function resetDemoData() {
+  if (!repos) return
+  isResetting.value = true
+  clearDemoStore()
+  await seedDemoData(repos)
+  const store = getDemoStore()
+  const firstMember = store.members.value[0]
+  if (firstMember) {
+    memberStore.setLinkedMember(firstMember.id, firstMember.householdId)
+  }
+  eventStore.clear()
+  open.value = false
+  await navigateTo('/app')
+  isResetting.value = false
+}
 </script>
 
 <template>
@@ -59,6 +86,15 @@ const limitKeys = Object.keys(DEMO_LIMITS) as LimitKey[]
               external
             >
               {{ t('demo.banner.goLive') }}
+            </UButton>
+            <UButton
+              variant="ghost"
+              color="warning"
+              :loading="isResetting"
+              :disabled="isResetting"
+              @click="resetDemoData"
+            >
+              {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
             </UButton>
             <UButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UButton>
           </div>

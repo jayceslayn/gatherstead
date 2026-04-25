@@ -10,7 +10,7 @@ import type {
   MealTemplate,
   MealPlan,
   MealIntent,
-  MealIntentStatus,
+  MealAttendance,
   ChoreTemplate,
   ChorePlan,
   ChoreIntent,
@@ -123,8 +123,7 @@ export interface IMealPlanRepository {
     planId: string,
     householdId: string,
     memberId: string,
-    status: MealIntentStatus,
-    bringOwnFood: boolean,
+    volunteered: boolean,
   ): Promise<void>
   createTemplate(
     tenantId: string,
@@ -194,6 +193,28 @@ export interface IChoreRepository {
     templateId: string,
     planId: string,
     intentId: string,
+  ): Promise<void>
+}
+
+export interface IMealAttendanceRepository {
+  listMealAttendance(tenantId: string, eventId: string, templateId: string, planId: string): Promise<MealAttendance[]>
+  upsertMealAttendance(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    householdId: string,
+    memberId: string,
+    status: AttendanceStatus,
+    bringOwnFood: boolean,
+    notes?: string | null,
+  ): Promise<MealAttendance>
+  deleteMealAttendance(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    attendanceId: string,
   ): Promise<void>
 }
 
@@ -269,6 +290,7 @@ export interface Repositories {
   events: IEventRepository
   eventAttendance: IEventAttendanceRepository
   mealPlans: IMealPlanRepository
+  mealAttendance: IMealAttendanceRepository
   chores: IChoreRepository
   properties: IPropertyRepository
   accommodations: IAccommodationRepository

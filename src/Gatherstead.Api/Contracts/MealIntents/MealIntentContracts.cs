@@ -1,6 +1,6 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
-using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.MealIntents;
 
@@ -9,9 +9,7 @@ public record MealIntentDto(
     Guid TenantId,
     Guid MealPlanId,
     Guid HouseholdMemberId,
-    MealIntentStatus Status,
-    bool BringOwnFood,
-    string? Notes,
+    bool Volunteered,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
@@ -25,9 +23,5 @@ public class UpsertMealIntentRequest
     [Required]
     public Guid HouseholdMemberId { get; init; }
 
-    [Required]
-    public MealIntentStatus Status { get; init; }
-
-    public bool BringOwnFood { get; init; }
-    public string? Notes { get; init; }
+    public bool Volunteered { get; init; }
 }

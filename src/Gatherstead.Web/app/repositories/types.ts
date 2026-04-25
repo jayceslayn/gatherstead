@@ -57,7 +57,6 @@ export interface AttendanceRecord {
 }
 
 export type MealType = 'Breakfast' | 'Lunch' | 'Dinner'
-export type MealIntentStatus = 'Going' | 'Maybe' | 'NotGoing'
 
 export interface MealTemplate {
   id: string
@@ -84,7 +83,15 @@ export interface MealIntent {
   tenantId: string
   mealPlanId: string
   householdMemberId: string
-  status: MealIntentStatus
+  volunteered: boolean
+}
+
+export interface MealAttendance {
+  id: string
+  tenantId: string
+  mealPlanId: string
+  householdMemberId: string
+  status: AttendanceStatus
   bringOwnFood: boolean
   notes: string | null
 }

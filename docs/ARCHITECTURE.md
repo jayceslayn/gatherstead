@@ -31,7 +31,8 @@ Gatherstead is organized around bounded contexts that align with the two core go
 - **EventAttendance**: Per-member, per-day attendance record. Tracks `AttendanceStatus`, arrival/departure windows, and notes; drives meal and chore intent generation for the member.【F:src/Gatherstead.Data/Entities/EventAttendance.cs】
 - **MealTemplate**: Specifies which meal types (`MealTypeFlags`: Breakfast/Lunch/Dinner) to auto-generate across the event's date range.【F:src/Gatherstead.Data/Entities/MealTemplate.cs】
 - **MealPlan**: A specific meal on a specific day. Supports exception marking (`IsException`) to suppress auto-generated entries.【F:src/Gatherstead.Data/Entities/MealPlan.cs】
-- **MealIntent**: Member-level response indicating attendance for a meal, dietary considerations, and bring-your-own-food choices.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
+- **MealAttendance**: Member's attendance response for a specific `MealPlan`. Tracks `AttendanceStatus` (Going/Maybe/NotGoing), `BringOwnFood`, and optional `Notes`. Unique per `(MealPlanId, HouseholdMemberId)` — mirrors `EventAttendance` at the individual-meal level.【F:src/Gatherstead.Data/Entities/MealAttendance.cs】
+- **MealIntent**: Member's cook-volunteer record for a `MealPlan`. Tracks a single `Volunteered: bool` — parallel in shape to `ChoreIntent`.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
 - **ChoreTemplate**: Template for a recurring chore; specifies one or more time slots (`ChoreTimeSlotFlags`: Morning/Midday/Evening/Anytime) and drives automatic `ChorePlan` generation.【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
 - **ChorePlan**: Dated chore instance for a specific day and time slot. Supports exception marking and completion tracking.【F:src/Gatherstead.Data/Entities/ChorePlan.cs】
 - **ChoreIntent**: Member's volunteer/assignment record for a `ChorePlan`.【F:src/Gatherstead.Data/Entities/ChoreIntent.cs】
@@ -59,11 +60,13 @@ flowchart TD
     Property --> Accommodation --> AccommodationIntent
     Property --> Event
     Event --> MealTemplate --> MealPlan --> MealIntent
+    MealPlan --> MealAttendance
     Event --> ChoreTemplate --> ChorePlan --> ChoreIntent
     Event --> EventAttendance
 
     HouseholdMember -.->|HouseholdMemberId| AccommodationIntent
     HouseholdMember -.->|HouseholdMemberId| MealIntent
+    HouseholdMember -.->|HouseholdMemberId| MealAttendance
     HouseholdMember -.->|HouseholdMemberId| ChoreIntent
     HouseholdMember -.->|HouseholdMemberId| EventAttendance
 ```
@@ -91,7 +94,9 @@ erDiagram
     Property        ||--o{ Event : ""
     Event           ||--o{ MealTemplate : ""
     MealTemplate    ||--o{ MealPlan : ""
+    MealPlan        ||--o{ MealAttendance : ""
     MealPlan        ||--o{ MealIntent : ""
+    HouseholdMember ||--o{ MealAttendance : ""
     HouseholdMember ||--o{ MealIntent : ""
     Event           ||--o{ ChoreTemplate : ""
     ChoreTemplate   ||--o{ ChorePlan : ""

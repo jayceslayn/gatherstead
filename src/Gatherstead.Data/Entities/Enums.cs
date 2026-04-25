@@ -24,13 +24,6 @@ public enum MealType
     Dinner
 }
 
-public enum MealIntentStatus
-{
-    Going,
-    Maybe,
-    NotGoing
-}
-
 public enum AccommodationIntentStatus
 {
     Intent,
@@ -66,8 +59,8 @@ public enum ChoreTimeSlotFlags
 public enum MealTypeFlags
 {
     Breakfast = 0x01,
-    Lunch     = 0x02,
-    Dinner    = 0x04
+    Lunch = 0x02,
+    Dinner = 0x04
 }
 
 public enum RelationshipType

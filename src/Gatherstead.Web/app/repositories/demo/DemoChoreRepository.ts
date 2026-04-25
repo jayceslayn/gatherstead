@@ -1,6 +1,8 @@
 import type { IChoreRepository } from '../interfaces'
 import type { ChoreTemplate, ChorePlan, ChoreIntent } from '../types'
+import { choreSlotsFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+import { enumDays } from './DemoHelpers'
 
 export class DemoChoreRepository implements IChoreRepository {
   async listChoreTemplates(_tenantId: string, eventId: string): Promise<ChoreTemplate[]> {
@@ -65,13 +67,34 @@ export class DemoChoreRepository implements IChoreRepository {
     }
     const t: ChoreTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes }
     store.choreTemplates.value.push(t)
+
+    const event = store.events.value.find(e => e.id === eventId)
+    if (event) {
+      const days = enumDays(event.startDate, event.endDate)
+      for (const day of days) {
+        for (const timeSlot of choreSlotsFromFlags(timeSlots)) {
+          store.chorePlans.value.push({
+            id: demoId(),
+            tenantId,
+            templateId: t.id,
+            day,
+            timeSlot,
+            completed: false,
+            notes: null,
+            isException: false,
+            exceptionReason: null,
+          })
+        }
+      }
+    }
+
     persistDemoStore()
     return t
   }
 
   async updateTemplate(
-    _tenantId: string,
-    _eventId: string,
+    tenantId: string,
+    eventId: string,
     templateId: string,
     name: string,
     timeSlots: number,
@@ -81,6 +104,35 @@ export class DemoChoreRepository implements IChoreRepository {
     const store = getDemoStore()
     const t = store.choreTemplates.value.find(x => x.id === templateId)
     if (!t) return
+
+    if (t.timeSlots !== timeSlots) {
+      const affectedPlanIds = store.chorePlans.value
+        .filter(p => p.templateId === templateId)
+        .map(p => p.id)
+      store.choreIntents.value = store.choreIntents.value.filter(i => !affectedPlanIds.includes(i.chorePlanId))
+      store.chorePlans.value = store.chorePlans.value.filter(p => p.templateId !== templateId)
+
+      const event = store.events.value.find(e => e.id === eventId)
+      if (event) {
+        const days = enumDays(event.startDate, event.endDate)
+        for (const day of days) {
+          for (const timeSlot of choreSlotsFromFlags(timeSlots)) {
+            store.chorePlans.value.push({
+              id: demoId(),
+              tenantId,
+              templateId,
+              day,
+              timeSlot,
+              completed: false,
+              notes: null,
+              isException: false,
+              exceptionReason: null,
+            })
+          }
+        }
+      }
+    }
+
     t.name = name
     t.timeSlots = timeSlots
     t.minimumAssignees = minimumAssignees

@@ -1,5 +1,5 @@
 import type { IMealPlanRepository } from '../interfaces'
-import type { MealTemplate, MealPlan, MealIntent, MealIntentStatus } from '../types'
+import type { MealTemplate, MealPlan, MealIntent } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -38,14 +38,13 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     planId: string,
     householdId: string,
     memberId: string,
-    status: MealIntentStatus,
-    bringOwnFood: boolean,
+    volunteered: boolean,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}/plans/${planId}/intents?householdId=${encodeURIComponent(householdId)}`,
       {
         method: 'PUT',
-        body: { householdMemberId: memberId, status, bringOwnFood },
+        body: { householdMemberId: memberId, volunteered },
       },
     )
   }

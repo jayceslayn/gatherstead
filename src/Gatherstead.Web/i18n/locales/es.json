@@ -137,6 +137,8 @@
       "breakfast": "Desayuno",
       "lunch": "Almuerzo",
       "dinner": "Cena",
+      "volunteer": "Voluntario Cocinero",
+      "volunteered": "Voluntario",
       "noTemplates": "No se han configurado planes de comida para este evento.",
       "noPlans": "No hay detalles del plan de comida disponibles."
     },
@@ -240,7 +242,9 @@
         "choreTemplatesPerEvent": "Plantillas de tareas por evento"
       },
       "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
-      "cta": "¿Listo para guardar tus reuniones?"
+      "cta": "¿Listo para guardar tus reuniones?",
+      "resetButton": "Restablecer Datos de Demo",
+      "resetting": "Restableciendo…"
     },
     "limitReached": {
       "title": "Límite de Demo Alcanzado",

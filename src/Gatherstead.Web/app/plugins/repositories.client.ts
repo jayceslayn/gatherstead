@@ -6,6 +6,7 @@ import { LiveHouseholdMemberRepository } from '~/repositories/live/LiveHousehold
 import { LiveEventRepository } from '~/repositories/live/LiveEventRepository'
 import { LiveEventAttendanceRepository } from '~/repositories/live/LiveEventAttendanceRepository'
 import { LiveMealPlanRepository } from '~/repositories/live/LiveMealPlanRepository'
+import { LiveMealAttendanceRepository } from '~/repositories/live/LiveMealAttendanceRepository'
 import { LiveChoreRepository } from '~/repositories/live/LiveChoreRepository'
 import { LivePropertyRepository } from '~/repositories/live/LivePropertyRepository'
 import { LiveAccommodationRepository } from '~/repositories/live/LiveAccommodationRepository'
@@ -16,14 +17,16 @@ import { DemoHouseholdMemberRepository } from '~/repositories/demo/DemoHousehold
 import { DemoEventRepository } from '~/repositories/demo/DemoEventRepository'
 import { DemoEventAttendanceRepository } from '~/repositories/demo/DemoEventAttendanceRepository'
 import { DemoMealPlanRepository } from '~/repositories/demo/DemoMealPlanRepository'
+import { DemoMealAttendanceRepository } from '~/repositories/demo/DemoMealAttendanceRepository'
 import { DemoChoreRepository } from '~/repositories/demo/DemoChoreRepository'
 import { DemoPropertyRepository } from '~/repositories/demo/DemoPropertyRepository'
 import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodationRepository'
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
 import { getDemoStore } from '~/repositories/demo/DemoStore'
+import { seedDemoData } from '~/repositories/demo/seedDemoData'
 import { useCurrentMemberStore } from '~/stores/member'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin(async (nuxtApp) => {
   const config = useRuntimeConfig()
 
   const repos: Repositories = config.public.demoMode
@@ -34,6 +37,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         events: new DemoEventRepository(),
         eventAttendance: new DemoEventAttendanceRepository(),
         mealPlans: new DemoMealPlanRepository(),
+        mealAttendance: new DemoMealAttendanceRepository(),
         chores: new DemoChoreRepository(),
         properties: new DemoPropertyRepository(),
         accommodations: new DemoAccommodationRepository(),
@@ -46,6 +50,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         events: new LiveEventRepository(),
         eventAttendance: new LiveEventAttendanceRepository(),
         mealPlans: new LiveMealPlanRepository(),
+        mealAttendance: new LiveMealAttendanceRepository(),
         chores: new LiveChoreRepository(),
         properties: new LivePropertyRepository(),
         accommodations: new LiveAccommodationRepository(),
@@ -56,6 +61,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   if (config.public.demoMode) {
     const store = getDemoStore()
+    if (store.properties.value.length === 0) {
+      await seedDemoData(repos)
+    }
     const member = store.members.value[0]
     if (member) {
       const memberStore = useCurrentMemberStore()

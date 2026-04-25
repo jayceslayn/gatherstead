@@ -1,6 +1,8 @@
 import type { IMealPlanRepository } from '../interfaces'
-import type { MealTemplate, MealPlan, MealIntent, MealIntentStatus } from '../types'
+import type { MealTemplate, MealPlan, MealIntent } from '../types'
+import { mealTypesFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+import { enumDays } from './DemoHelpers'
 
 export class DemoMealPlanRepository implements IMealPlanRepository {
   async listMealTemplates(_tenantId: string, eventId: string): Promise<MealTemplate[]> {
@@ -30,15 +32,14 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     planId: string,
     _householdId: string,
     memberId: string,
-    status: MealIntentStatus,
-    bringOwnFood: boolean,
+    volunteered: boolean,
   ): Promise<void> {
     const store = getDemoStore()
     const idx = store.mealIntents.value.findIndex(
       i => i.mealPlanId === planId && i.householdMemberId === memberId,
     )
     if (idx >= 0) {
-      store.mealIntents.value[idx] = { ...store.mealIntents.value[idx]!, status, bringOwnFood }
+      store.mealIntents.value[idx] = { ...store.mealIntents.value[idx]!, volunteered }
     }
     else {
       store.mealIntents.value.push({
@@ -46,9 +47,7 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
         tenantId,
         mealPlanId: planId,
         householdMemberId: memberId,
-        status,
-        bringOwnFood,
-        notes: null,
+        volunteered,
       })
     }
     persistDemoStore()
@@ -67,13 +66,33 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     }
     const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, notes }
     store.mealTemplates.value.push(t)
+
+    const event = store.events.value.find(e => e.id === eventId)
+    if (event) {
+      const days = enumDays(event.startDate, event.endDate)
+      for (const day of days) {
+        for (const mealType of mealTypesFromFlags(mealTypes)) {
+          store.mealPlans.value.push({
+            id: demoId(),
+            tenantId,
+            mealTemplateId: t.id,
+            day,
+            mealType,
+            notes: null,
+            isException: false,
+            exceptionReason: null,
+          })
+        }
+      }
+    }
+
     persistDemoStore()
     return t
   }
 
   async updateTemplate(
-    _tenantId: string,
-    _eventId: string,
+    tenantId: string,
+    eventId: string,
     templateId: string,
     name: string,
     mealTypes: number,
@@ -82,6 +101,35 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     const store = getDemoStore()
     const t = store.mealTemplates.value.find(x => x.id === templateId)
     if (!t) return
+
+    if (t.mealTypes !== mealTypes) {
+      const affectedPlanIds = store.mealPlans.value
+        .filter(p => p.mealTemplateId === templateId)
+        .map(p => p.id)
+      store.mealAttendance.value = store.mealAttendance.value.filter(a => !affectedPlanIds.includes(a.mealPlanId))
+      store.mealIntents.value = store.mealIntents.value.filter(i => !affectedPlanIds.includes(i.mealPlanId))
+      store.mealPlans.value = store.mealPlans.value.filter(p => p.mealTemplateId !== templateId)
+
+      const event = store.events.value.find(e => e.id === eventId)
+      if (event) {
+        const days = enumDays(event.startDate, event.endDate)
+        for (const day of days) {
+          for (const mealType of mealTypesFromFlags(mealTypes)) {
+            store.mealPlans.value.push({
+              id: demoId(),
+              tenantId,
+              mealTemplateId: templateId,
+              day,
+              mealType,
+              notes: null,
+              isException: false,
+              exceptionReason: null,
+            })
+          }
+        }
+      }
+    }
+
     t.name = name
     t.mealTypes = mealTypes
     t.notes = notes
@@ -91,6 +139,7 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
   async deleteTemplate(_tenantId: string, _eventId: string, templateId: string): Promise<void> {
     const store = getDemoStore()
     const planIds = store.mealPlans.value.filter(p => p.mealTemplateId === templateId).map(p => p.id)
+    store.mealAttendance.value = store.mealAttendance.value.filter(a => !planIds.includes(a.mealPlanId))
     store.mealIntents.value = store.mealIntents.value.filter(i => !planIds.includes(i.mealPlanId))
     store.mealPlans.value = store.mealPlans.value.filter(p => p.mealTemplateId !== templateId)
     store.mealTemplates.value = store.mealTemplates.value.filter(t => t.id !== templateId)

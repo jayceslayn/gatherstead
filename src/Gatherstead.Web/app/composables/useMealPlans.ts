@@ -1,7 +1,6 @@
 import { useTenantStore } from '~/stores/tenant'
 import type {
   MealType,
-  MealIntentStatus,
   MealTemplate,
   MealPlan,
   MealIntent,
@@ -14,7 +13,7 @@ import {
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { MealType, MealIntentStatus, MealTemplate, MealPlan, MealIntent }
+export type { MealType, MealTemplate, MealPlan, MealIntent }
 export { ALL_MEAL_TYPES, mealTypesFromFlags, MEAL_TYPE_FLAGS }
 
 export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
@@ -137,13 +136,13 @@ export function useMealPlanSection(
 
   watch([plans, memberId], () => loadIntents(), { immediate: true })
 
-  async function upsert(planId: string, status: MealIntentStatus, bringOwnFood = false) {
+  async function upsert(planId: string, volunteered: boolean) {
     if (!memberId.value || !householdId.value) return
     updating.value = [...updating.value, planId]
     try {
       await repo.upsertIntent(
         tenantStore.currentTenantId!, eventId.value, templateId.value, planId,
-        householdId.value, memberId.value, status, bringOwnFood,
+        householdId.value, memberId.value, volunteered,
       )
       try {
         const intents = await repo.listIntentsForMember(

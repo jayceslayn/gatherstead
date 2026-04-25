@@ -27,4 +27,5 @@ public class MealPlan : AuditableEntity
     public string? ExceptionReason { get; set; }
 
     public ICollection<MealIntent> Intents { get; set; } = new List<MealIntent>();
+    public ICollection<MealAttendance> Attendances { get; set; } = new List<MealAttendance>();
 }

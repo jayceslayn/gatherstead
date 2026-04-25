@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import type { MealTemplate, MealIntentStatus } from '~/composables/useMealPlans'
+import type { MealTemplate } from '~/composables/useMealPlans'
 import { useMealPlanSection, mealTypesFromFlags } from '~/composables/useMealPlans'
+import { useMealAttendance } from '~/composables/useMealAttendance'
+import type { AttendanceStatus } from '~/composables/useMealAttendance'
 import { useCurrentMemberStore } from '~/stores/member'
 
 const props = defineProps<{
@@ -16,12 +18,22 @@ const templateId = computed(() => props.template.id)
 const memberId = computed(() => memberStore.linkedMemberId)
 const householdId = computed(() => memberStore.linkedHouseholdId)
 
-const { plans, intentMap, pending, updating, upsert } = useMealPlanSection(
+const { plans, intentMap, pending: intentsPending, updating: intentUpdating, upsert: upsertIntent } = useMealPlanSection(
   eventId,
   templateId,
   memberId,
   householdId,
 )
+
+const { attendancePending, updating: attendanceUpdating, myAttendance, upsert: upsertAttendance } = useMealAttendance(
+  eventId,
+  templateId,
+  plans,
+  memberId,
+  householdId,
+)
+
+const pending = computed(() => intentsPending.value || attendancePending.value)
 
 const days = computed(() => [...new Set(plans.value.map(p => p.day))].sort())
 const templateMealTypes = computed(() => mealTypesFromFlags(props.template.mealTypes))
@@ -56,12 +68,20 @@ function cellPlanId(dayId: string, mealTypeId: string): string | null {
   return planGrid.value[dayId]?.[mealTypeId] ?? null
 }
 
-function getStatus(planId: string): MealIntentStatus | null {
-  return intentMap.value[planId]?.status ?? null
+function isVolunteered(planId: string): boolean {
+  return intentMap.value[planId]?.volunteered === true
 }
 
-function isUpdating(planId: string): boolean {
-  return updating.value.includes(planId)
+function isIntentUpdating(planId: string): boolean {
+  return intentUpdating.value.includes(planId)
+}
+
+function isAttendanceUpdating(planId: string): boolean {
+  return attendanceUpdating.value.includes(planId)
+}
+
+function toggleVolunteer(planId: string) {
+  upsertIntent(planId, !isVolunteered(planId))
 }
 </script>
 
@@ -86,14 +106,26 @@ function isUpdating(planId: string): boolean {
       :columns="mealTypeCols"
     >
       <template #cell="{ row, column }">
-        <GsAttendanceToggle
-          v-if="cellPlanId(row.id, column.id) && memberId"
-          :model-value="getStatus(cellPlanId(row.id, column.id)!)"
-          :loading="isUpdating(cellPlanId(row.id, column.id)!)"
-          size="xs"
-          @update:model-value="upsert(cellPlanId(row.id, column.id)!, $event as MealIntentStatus)"
-        />
-        <span v-else-if="cellPlanId(row.id, column.id)" class="text-xs text-muted">—</span>
+        <div v-if="cellPlanId(row.id, column.id)" class="flex flex-col gap-1.5 items-start">
+          <GsAttendanceToggle
+            v-if="memberId"
+            :model-value="myAttendance(cellPlanId(row.id, column.id)!)?.status ?? null"
+            :loading="isAttendanceUpdating(cellPlanId(row.id, column.id)!)"
+            size="xs"
+            @update:model-value="upsertAttendance(cellPlanId(row.id, column.id)!, $event as AttendanceStatus)"
+          />
+          <span v-else class="text-xs text-muted">—</span>
+          <UButton
+            v-if="memberId"
+            :color="isVolunteered(cellPlanId(row.id, column.id)!) ? 'success' : 'neutral'"
+            :variant="isVolunteered(cellPlanId(row.id, column.id)!) ? 'solid' : 'outline'"
+            size="xs"
+            :loading="isIntentUpdating(cellPlanId(row.id, column.id)!)"
+            @click="toggleVolunteer(cellPlanId(row.id, column.id)!)"
+          >
+            {{ isVolunteered(cellPlanId(row.id, column.id)!) ? t('event.meal.volunteered') : t('event.meal.volunteer') }}
+          </UButton>
+        </div>
       </template>
     </GsDayIntentGrid>
   </UCard>

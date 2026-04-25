@@ -1,22 +1,23 @@
-using Gatherstead.Api.Contracts.MealIntents;
+using Gatherstead.Api.Contracts.MealAttendance;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using MealAttendanceEntity = Gatherstead.Data.Entities.MealAttendance;
 
-namespace Gatherstead.Api.Services.MealIntents;
+namespace Gatherstead.Api.Services.MealAttendance;
 
-public class MealIntentService : IMealIntentService
+public class MealAttendanceService : IMealAttendanceService
 {
-    private const string EntityDisplayName = "Meal intent";
+    private const string EntityDisplayName = "Meal attendance";
 
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    public MealIntentService(
+    public MealAttendanceService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService)
@@ -26,69 +27,69 @@ public class MealIntentService : IMealIntentService
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
-    public async Task<BaseEntityResponse<IReadOnlyCollection<MealIntentDto>>> ListAsync(
+    public async Task<BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>> ListAsync(
         Guid tenantId,
         Guid planId,
         IEnumerable<Guid>? memberIds = null,
         CancellationToken cancellationToken = default)
     {
-        var response = new BaseEntityResponse<IReadOnlyCollection<MealIntentDto>>();
+        var response = new BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var query = _dbContext.MealIntents
+        var query = _dbContext.MealAttendances
             .AsNoTracking()
-            .Where(i => i.TenantId == tenantId && i.MealPlanId == planId);
+            .Where(a => a.TenantId == tenantId && a.MealPlanId == planId);
 
         if (memberIds is not null)
         {
             var memberIdList = memberIds.ToList();
             if (memberIdList.Count > 0)
-                query = query.Where(i => memberIdList.Contains(i.HouseholdMemberId));
+                query = query.Where(a => memberIdList.Contains(a.HouseholdMemberId));
         }
 
-        var intents = await query.Select(i => MapToDto(i)).ToListAsync(cancellationToken);
+        var attendances = await query.Select(a => MapToDto(a)).ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<MealIntentDto>>.SuccessfulResponse(intents);
+        return BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>.SuccessfulResponse(attendances);
     }
 
-    public async Task<MealIntentResponse> GetAsync(
+    public async Task<MealAttendanceResponse> GetAsync(
         Guid tenantId,
         Guid planId,
-        Guid intentId,
+        Guid attendanceId,
         CancellationToken cancellationToken = default)
     {
-        var response = new MealIntentResponse();
+        var response = new MealAttendanceResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var intent = await ServiceGuards.LoadOrNotFoundAsync(
+        var attendance = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.MealIntents.AsNoTracking()
-                .Where(i => i.TenantId == tenantId && i.MealPlanId == planId && i.Id == intentId),
+            _dbContext.MealAttendances.AsNoTracking()
+                .Where(a => a.TenantId == tenantId && a.MealPlanId == planId && a.Id == attendanceId),
             EntityDisplayName,
             cancellationToken);
 
-        if (intent is null) return response;
+        if (attendance is null) return response;
 
-        response.SetSuccess(MapToDto(intent));
+        response.SetSuccess(MapToDto(attendance));
         return response;
     }
 
-    public async Task<MealIntentResponse> UpsertAsync(
+    public async Task<MealAttendanceResponse> UpsertAsync(
         Guid tenantId,
         Guid planId,
         Guid householdId,
-        UpsertMealIntentRequest request,
+        UpsertMealAttendanceRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new MealIntentResponse();
+        var response = new MealAttendanceResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "upsert meal intent", response))
+        if (!ServiceGuards.RequireRequest(request, "upsert meal attendance", response))
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
@@ -103,27 +104,29 @@ public class MealIntentService : IMealIntentService
             return response;
         }
 
-        var existing = await _dbContext.MealIntents
-            .Where(i => i.TenantId == tenantId && i.MealPlanId == planId && i.HouseholdMemberId == request.HouseholdMemberId)
+        var existing = await _dbContext.MealAttendances
+            .Where(a => a.TenantId == tenantId && a.MealPlanId == planId && a.HouseholdMemberId == request.HouseholdMemberId)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (existing is null)
         {
-            existing = new MealIntent
+            existing = new MealAttendanceEntity
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
                 MealPlanId = planId,
                 HouseholdMemberId = request.HouseholdMemberId,
             };
-            _dbContext.MealIntents.Add(existing);
+            _dbContext.MealAttendances.Add(existing);
         }
         else if (existing.IsDeleted)
         {
             existing.IsDeleted = false;
         }
 
-        existing.Volunteered = request.Volunteered;
+        existing.Status = request.Status;
+        existing.BringOwnFood = request.BringOwnFood;
+        existing.Notes = request.Notes?.Trim();
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -131,43 +134,43 @@ public class MealIntentService : IMealIntentService
         return response;
     }
 
-    public async Task<MealIntentResponse> DeleteAsync(
+    public async Task<MealAttendanceResponse> DeleteAsync(
         Guid tenantId,
         Guid planId,
-        Guid intentId,
+        Guid attendanceId,
         CancellationToken cancellationToken = default)
     {
-        var response = new MealIntentResponse();
+        var response = new MealAttendanceResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var intent = await ServiceGuards.LoadOrNotFoundAsync(
+        var attendance = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.MealIntents
-                .Where(i => i.TenantId == tenantId && i.MealPlanId == planId && i.Id == intentId),
+            _dbContext.MealAttendances
+                .Where(a => a.TenantId == tenantId && a.MealPlanId == planId && a.Id == attendanceId),
             EntityDisplayName,
             cancellationToken);
 
-        if (intent is null) return response;
+        if (attendance is null) return response;
 
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, attendance.HouseholdMemberId, cancellationToken))
             return response;
 
-        if (intent.IsDeleted)
+        if (attendance.IsDeleted)
         {
             response.AddResponseMessage(MessageType.WARNING, $"{EntityDisplayName} already deleted.");
             return response;
         }
 
-        intent.IsDeleted = true;
+        attendance.IsDeleted = true;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(intent));
+        response.SetSuccess(MapToDto(attendance));
         return response;
     }
 
-    private static MealIntentDto MapToDto(MealIntent i) => new(
-        i.Id, i.TenantId, i.MealPlanId, i.HouseholdMemberId, i.Volunteered,
-        i.CreatedAt, i.UpdatedAt, i.IsDeleted, i.DeletedAt, i.DeletedByUserId);
+    private static MealAttendanceDto MapToDto(MealAttendanceEntity a) => new(
+        a.Id, a.TenantId, a.MealPlanId, a.HouseholdMemberId, a.Status, a.BringOwnFood, a.Notes,
+        a.CreatedAt, a.UpdatedAt, a.IsDeleted, a.DeletedAt, a.DeletedByUserId);
 }

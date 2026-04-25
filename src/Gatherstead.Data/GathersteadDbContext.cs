@@ -38,6 +38,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<MealTemplate> MealTemplates => Set<MealTemplate>();
     public DbSet<MealPlan> MealPlans => Set<MealPlan>();
     public DbSet<MealIntent> MealIntents => Set<MealIntent>();
+    public DbSet<MealAttendance> MealAttendances => Set<MealAttendance>();
     public DbSet<ChoreTemplate> ChoreTemplates => Set<ChoreTemplate>();
     public DbSet<ChorePlan> ChorePlans => Set<ChorePlan>();
     public DbSet<ChoreIntent> ChoreIntents => Set<ChoreIntent>();
