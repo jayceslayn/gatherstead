@@ -18,4 +18,5 @@ public class User : AuditableEntity
     public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
     public ICollection<HouseholdMember> HouseholdMembers { get; set; } = new List<HouseholdMember>();
     public ICollection<UserNotificationPreference> NotificationPreferences { get; set; } = new List<UserNotificationPreference>();
+    public UserPreferenceSettings? PreferenceSettings { get; set; }
 }

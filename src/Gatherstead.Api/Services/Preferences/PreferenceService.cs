@@ -386,6 +386,73 @@ public class PreferenceService : IPreferenceService
         return response;
     }
 
+
+    public async Task<UserPreferenceSettingsResponse> GetUserPreferenceSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var response = new UserPreferenceSettingsResponse();
+        if (_currentUserContext.UserId is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "User context is required.");
+            return response;
+        }
+
+        var userId = _currentUserContext.UserId.Value;
+
+        var settings = await _dbContext.UserPreferenceSettings
+            .AsNoTracking()
+            .SingleOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+
+        if (settings is null)
+        {
+            response.AddResponseMessage(MessageType.INFO, "User preference settings not found.");
+            return response;
+        }
+
+        response.SetSuccess(new UserPreferenceSettingsDto(settings.Id, settings.UserId, settings.PreferredEmail, settings.PreferredPhoneNumber, settings.CreatedAt, settings.UpdatedAt, settings.IsDeleted, settings.DeletedAt, settings.DeletedByUserId));
+        return response;
+    }
+
+    public async Task<UserPreferenceSettingsResponse> UpsertUserPreferenceSettingsAsync(UpsertUserPreferenceSettingsRequest request, CancellationToken cancellationToken = default)
+    {
+        var response = new UserPreferenceSettingsResponse();
+        if (!ServiceGuards.RequireRequest(request, "upsert user preference settings", response))
+            return response;
+        if (_currentUserContext.UserId is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "User context is required.");
+            return response;
+        }
+
+        var userId = _currentUserContext.UserId.Value;
+        var preferredEmail = request.PreferredEmail?.Trim();
+        var preferredPhoneNumber = request.PreferredPhoneNumber?.Trim();
+
+        var settings = await _dbContext.UserPreferenceSettings
+            .SingleOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+
+        if (settings is null)
+        {
+            settings = new UserPreferenceSettings
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                PreferredEmail = string.IsNullOrWhiteSpace(preferredEmail) ? null : preferredEmail,
+                PreferredPhoneNumber = string.IsNullOrWhiteSpace(preferredPhoneNumber) ? null : preferredPhoneNumber,
+            };
+            _dbContext.UserPreferenceSettings.Add(settings);
+        }
+        else
+        {
+            settings.PreferredEmail = string.IsNullOrWhiteSpace(preferredEmail) ? null : preferredEmail;
+            settings.PreferredPhoneNumber = string.IsNullOrWhiteSpace(preferredPhoneNumber) ? null : preferredPhoneNumber;
+            settings.IsDeleted = false;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        response.SetSuccess(new UserPreferenceSettingsDto(settings.Id, settings.UserId, settings.PreferredEmail, settings.PreferredPhoneNumber, settings.CreatedAt, settings.UpdatedAt, settings.IsDeleted, settings.DeletedAt, settings.DeletedByUserId));
+        return response;
+    }
+
     private static MemberPreferenceSettingsDto Map(MemberPreferenceSettings settings) =>
         new(settings.Id, settings.TenantId, settings.HouseholdMemberId, settings.PreferredLanguage, settings.TimeZone, settings.CreatedAt, settings.UpdatedAt, settings.IsDeleted, settings.DeletedAt, settings.DeletedByUserId);
 

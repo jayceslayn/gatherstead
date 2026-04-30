@@ -21,4 +21,7 @@ public interface IPreferenceService
     Task<BaseEntityResponse<IReadOnlyCollection<UserNotificationPreferenceDto>>> ListUserPreferencesAsync(CancellationToken cancellationToken = default);
     Task<UserNotificationPreferenceResponse> UpsertUserPreferenceAsync(UpsertNotificationPreferenceRequest request, CancellationToken cancellationToken = default);
     Task<UserNotificationPreferenceResponse> DeleteUserPreferenceAsync(NotificationChannel channel, NotificationCategory category, CancellationToken cancellationToken = default);
+
+    Task<UserPreferenceSettingsResponse> GetUserPreferenceSettingsAsync(CancellationToken cancellationToken = default);
+    Task<UserPreferenceSettingsResponse> UpsertUserPreferenceSettingsAsync(UpsertUserPreferenceSettingsRequest request, CancellationToken cancellationToken = default);
 }

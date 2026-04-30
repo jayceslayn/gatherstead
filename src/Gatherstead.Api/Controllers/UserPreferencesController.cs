@@ -20,6 +20,24 @@ public class UserPreferencesController : ControllerBase
         _preferenceService = preferenceService ?? throw new ArgumentNullException(nameof(preferenceService));
     }
 
+
+    [HttpGet("settings")]
+    public async Task<ActionResult<UserPreferenceSettingsResponse>> GetSettings(CancellationToken cancellationToken)
+    {
+        var response = await _preferenceService.GetUserPreferenceSettingsAsync(cancellationToken);
+        if (ServiceValidationHelper.HasErrors(response)) return BadRequest(response);
+        if (response.Entity is null) return NotFound(response);
+        return Ok(response);
+    }
+
+    [HttpPut("settings")]
+    public async Task<ActionResult<UserPreferenceSettingsResponse>> UpsertSettings([FromBody] UpsertUserPreferenceSettingsRequest request, CancellationToken cancellationToken)
+    {
+        var response = await _preferenceService.UpsertUserPreferenceSettingsAsync(request, cancellationToken);
+        if (ServiceValidationHelper.HasErrors(response)) return BadRequest(response);
+        return Ok(response);
+    }
+
     [HttpGet]
     public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<UserNotificationPreferenceDto>>>> List(CancellationToken cancellationToken)
     {

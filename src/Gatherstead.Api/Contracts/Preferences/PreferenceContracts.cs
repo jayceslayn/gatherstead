@@ -50,6 +50,31 @@ public record UserNotificationPreferenceDto(
 
 public class UserNotificationPreferenceResponse : BaseEntityResponse<UserNotificationPreferenceDto> { }
 
+
+public record UserPreferenceSettingsDto(
+    Guid Id,
+    Guid UserId,
+    string? PreferredEmail,
+    string? PreferredPhoneNumber,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    bool IsDeleted,
+    DateTimeOffset? DeletedAt,
+    Guid? DeletedByUserId);
+
+public class UserPreferenceSettingsResponse : BaseEntityResponse<UserPreferenceSettingsDto> { }
+
+public class UpsertUserPreferenceSettingsRequest
+{
+    [EmailAddress]
+    [StringLength(320)]
+    public string? PreferredEmail { get; init; }
+
+    [Phone]
+    [StringLength(32)]
+    public string? PreferredPhoneNumber { get; init; }
+}
+
 public class MemberPreferenceSettingsResponse : BaseEntityResponse<MemberPreferenceSettingsDto> { }
 public class NotificationPreferenceResponse : BaseEntityResponse<NotificationPreferenceDto> { }
 
