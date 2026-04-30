@@ -54,7 +54,6 @@ public class GathersteadDbContext : DbContext
     public DbSet<TenantNotificationPolicy> TenantNotificationPolicies => Set<TenantNotificationPolicy>();
     public DbSet<MemberNotificationPreference> MemberNotificationPreferences => Set<MemberNotificationPreference>();
     public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();
-    public DbSet<UserPreferenceSettings> UserPreferenceSettings => Set<UserPreferenceSettings>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -151,12 +150,6 @@ public class GathersteadDbContext : DbContext
                 .HasDatabaseName("IX_UserNotificationPreference_UserChannelCategory");
         });
 
-        modelBuilder.Entity<UserPreferenceSettings>(b =>
-        {
-            b.HasIndex(up => up.UserId)
-                .IsUnique()
-                .HasDatabaseName("IX_UserPreferenceSettings_UserId");
-        });
 
         // Configure MemberRelationship to HouseholdMember relationship
         modelBuilder.Entity<MemberRelationship>(b =>

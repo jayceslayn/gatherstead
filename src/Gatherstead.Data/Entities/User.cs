@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
@@ -15,8 +16,15 @@ public class User : AuditableEntity
 
     public bool IsAppAdmin { get; set; }
 
+    [EmailAddress]
+    [MaxLength(320)]
+    public string? PreferredEmail { get; set; }
+
+    [Phone]
+    [MaxLength(32)]
+    public string? PreferredPhoneNumber { get; set; }
+
     public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
     public ICollection<HouseholdMember> HouseholdMembers { get; set; } = new List<HouseholdMember>();
     public ICollection<UserNotificationPreference> NotificationPreferences { get; set; } = new List<UserNotificationPreference>();
-    public UserPreferenceSettings? PreferenceSettings { get; set; }
 }

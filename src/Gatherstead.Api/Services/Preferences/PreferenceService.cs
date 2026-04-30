@@ -398,17 +398,17 @@ public class PreferenceService : IPreferenceService
 
         var userId = _currentUserContext.UserId.Value;
 
-        var settings = await _dbContext.UserPreferenceSettings
+        var user = await _dbContext.Users
             .AsNoTracking()
-            .SingleOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
-        if (settings is null)
+        if (user is null)
         {
-            response.AddResponseMessage(MessageType.INFO, "User preference settings not found.");
+            response.AddResponseMessage(MessageType.ERROR, "User not found.");
             return response;
         }
 
-        response.SetSuccess(new UserPreferenceSettingsDto(settings.Id, settings.UserId, settings.PreferredEmail, settings.PreferredPhoneNumber, settings.CreatedAt, settings.UpdatedAt, settings.IsDeleted, settings.DeletedAt, settings.DeletedByUserId));
+        response.SetSuccess(new UserPreferenceSettingsDto(user.Id, user.Id, user.PreferredEmail, user.PreferredPhoneNumber, user.CreatedAt, user.UpdatedAt, user.IsDeleted, user.DeletedAt, user.DeletedByUserId));
         return response;
     }
 
@@ -427,29 +427,20 @@ public class PreferenceService : IPreferenceService
         var preferredEmail = request.PreferredEmail?.Trim();
         var preferredPhoneNumber = request.PreferredPhoneNumber?.Trim();
 
-        var settings = await _dbContext.UserPreferenceSettings
-            .SingleOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+        var user = await _dbContext.Users
+            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
-        if (settings is null)
+        if (user is null)
         {
-            settings = new UserPreferenceSettings
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                PreferredEmail = string.IsNullOrWhiteSpace(preferredEmail) ? null : preferredEmail,
-                PreferredPhoneNumber = string.IsNullOrWhiteSpace(preferredPhoneNumber) ? null : preferredPhoneNumber,
-            };
-            _dbContext.UserPreferenceSettings.Add(settings);
+            response.AddResponseMessage(MessageType.ERROR, "User not found.");
+            return response;
         }
-        else
-        {
-            settings.PreferredEmail = string.IsNullOrWhiteSpace(preferredEmail) ? null : preferredEmail;
-            settings.PreferredPhoneNumber = string.IsNullOrWhiteSpace(preferredPhoneNumber) ? null : preferredPhoneNumber;
-            settings.IsDeleted = false;
-        }
+
+        user.PreferredEmail = string.IsNullOrWhiteSpace(preferredEmail) ? null : preferredEmail;
+        user.PreferredPhoneNumber = string.IsNullOrWhiteSpace(preferredPhoneNumber) ? null : preferredPhoneNumber;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        response.SetSuccess(new UserPreferenceSettingsDto(settings.Id, settings.UserId, settings.PreferredEmail, settings.PreferredPhoneNumber, settings.CreatedAt, settings.UpdatedAt, settings.IsDeleted, settings.DeletedAt, settings.DeletedByUserId));
+        response.SetSuccess(new UserPreferenceSettingsDto(user.Id, user.Id, user.PreferredEmail, user.PreferredPhoneNumber, user.CreatedAt, user.UpdatedAt, user.IsDeleted, user.DeletedAt, user.DeletedByUserId));
         return response;
     }
 
