@@ -41,4 +41,6 @@ public class HouseholdMember : AuditableEntity
     public ICollection<Address> Addresses { get; set; } = new List<Address>();
     public ICollection<MemberAttribute> Attributes { get; set; } = new List<MemberAttribute>();
     public DietaryProfile? DietaryProfile { get; set; }
+    public MemberPreferenceSettings? PreferenceSettings { get; set; }
+    public ICollection<MemberNotificationPreference> NotificationPreferences { get; set; } = new List<MemberNotificationPreference>();
 }

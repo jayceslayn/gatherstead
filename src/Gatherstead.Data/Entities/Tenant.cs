@@ -17,4 +17,7 @@ public class Tenant : AuditableEntity
     public ICollection<Household> Households { get; set; } = new List<Household>();
     public ICollection<Property> Properties { get; set; } = new List<Property>();
     public ICollection<Event> Events { get; set; } = new List<Event>();
+    public ICollection<TenantNotificationPolicy> NotificationPolicies { get; set; } = new List<TenantNotificationPolicy>();
+    public ICollection<MemberPreferenceSettings> MemberPreferenceSettings { get; set; } = new List<MemberPreferenceSettings>();
+    public ICollection<MemberNotificationPreference> MemberNotificationPreferences { get; set; } = new List<MemberNotificationPreference>();
 }

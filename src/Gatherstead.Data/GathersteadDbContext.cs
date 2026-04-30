@@ -50,6 +50,10 @@ public class GathersteadDbContext : DbContext
     public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
     public DbSet<DietaryProfile> DietaryProfiles => Set<DietaryProfile>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+    public DbSet<MemberPreferenceSettings> MemberPreferenceSettings => Set<MemberPreferenceSettings>();
+    public DbSet<TenantNotificationPolicy> TenantNotificationPolicies => Set<TenantNotificationPolicy>();
+    public DbSet<MemberNotificationPreference> MemberNotificationPreferences => Set<MemberNotificationPreference>();
+    public DbSet<UserNotificationPreference> UserNotificationPreferences => Set<UserNotificationPreference>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -116,6 +120,34 @@ public class GathersteadDbContext : DbContext
         {
             b.HasIndex(hm => new { hm.TenantId, hm.UserId })
                 .HasDatabaseName("IX_HouseholdMember_TenantUser");
+        });
+
+        modelBuilder.Entity<MemberPreferenceSettings>(b =>
+        {
+            b.HasIndex(mps => new { mps.TenantId, mps.HouseholdMemberId })
+                .IsUnique()
+                .HasDatabaseName("IX_MemberPreferenceSettings_TenantMember");
+        });
+
+        modelBuilder.Entity<TenantNotificationPolicy>(b =>
+        {
+            b.HasIndex(tp => new { tp.TenantId, tp.Channel, tp.Category })
+                .IsUnique()
+                .HasDatabaseName("IX_TenantNotificationPolicy_TenantChannelCategory");
+        });
+
+        modelBuilder.Entity<MemberNotificationPreference>(b =>
+        {
+            b.HasIndex(mp => new { mp.TenantId, mp.HouseholdMemberId, mp.Channel, mp.Category })
+                .IsUnique()
+                .HasDatabaseName("IX_MemberNotificationPreference_UniquePreference");
+        });
+
+        modelBuilder.Entity<UserNotificationPreference>(b =>
+        {
+            b.HasIndex(up => new { up.UserId, up.Channel, up.Category })
+                .IsUnique()
+                .HasDatabaseName("IX_UserNotificationPreference_UserChannelCategory");
         });
 
         // Configure MemberRelationship to HouseholdMember relationship

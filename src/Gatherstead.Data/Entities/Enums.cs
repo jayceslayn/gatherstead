@@ -93,6 +93,29 @@ public enum HouseholdRole
     Member
 }
 
+
+public enum NotificationChannel
+{
+    Email,
+    Sms
+}
+
+public enum NotificationCategory
+{
+    Invites,
+    Responsibilities,
+    Billing,
+    System,
+    Feedback
+}
+
+public enum NotificationMode
+{
+    Immediate,
+    Digest,
+    Muted
+}
+
 public enum SecurityEventType
 {
     AuthFailure,
