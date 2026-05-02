@@ -23,6 +23,7 @@ using Gatherstead.Api.Services.MemberRelationships;
 using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Planning;
 using Gatherstead.Api.Services.Properties;
+using Gatherstead.Api.Services.Preferences;
 using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
@@ -68,6 +69,7 @@ builder.Services.AddScoped<IMealIntentService, MealIntentService>();
 builder.Services.AddScoped<IMealAttendanceService, MealAttendanceService>();
 builder.Services.AddScoped<IChoreIntentService, ChoreIntentService>();
 builder.Services.AddScoped<IAccommodationIntentService, AccommodationIntentService>();
+builder.Services.AddScoped<IPreferenceService, PreferenceService>();
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 builder.Services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
 
