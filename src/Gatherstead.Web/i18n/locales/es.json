@@ -119,7 +119,8 @@
     "attendanceGrid": {
       "totals": "Totales del Evento",
       "rowActions": "Establecer asistencia para {name}",
-      "columnActions": "Establecer asistencia para {day}"
+      "columnActions": "Establecer asistencia para {day}",
+      "hint": "Usa el menú ··· en cualquier fila o encabezado de columna para establecer la asistencia de una persona o día completo a la vez."
     },
     "noEvents": "Aún no hay eventos planificados",
     "noEventsHintManager": "Crea tu primer evento para comenzar.",
@@ -239,7 +240,9 @@
         "events": "Eventos activos",
         "eventMaxDays": "Duración máxima del evento (días)",
         "mealTemplatesPerEvent": "Plantillas de comida por evento",
-        "choreTemplatesPerEvent": "Plantillas de tareas por evento"
+        "choreTemplatesPerEvent": "Plantillas de tareas por evento",
+        "propertiesPerTenant": "Propiedades por grupo",
+        "accommodationsPerProperty": "Alojamientos por propiedad"
       },
       "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
       "cta": "¿Listo para guardar tus reuniones?",

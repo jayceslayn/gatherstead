@@ -119,7 +119,8 @@
     "attendanceGrid": {
       "totals": "Event Totals",
       "rowActions": "Set attendance for {name}",
-      "columnActions": "Set attendance for {day}"
+      "columnActions": "Set attendance for {day}",
+      "hint": "Use the ··· menu on any row or column header to set attendance for an entire person or day at once."
     },
     "noEvents": "No events planned yet",
     "noEventsHintManager": "Create your first event to get started.",
@@ -239,7 +240,9 @@
         "events": "Active events",
         "eventMaxDays": "Max event length (days)",
         "mealTemplatesPerEvent": "Meal templates per event",
-        "choreTemplatesPerEvent": "Chore templates per event"
+        "choreTemplatesPerEvent": "Chore templates per event",
+        "propertiesPerTenant": "Properties per group",
+        "accommodationsPerProperty": "Accommodations per property"
       },
       "dataResets": "Demo data lives in your browser's localStorage. Clearing site data or switching browsers resets everything to the original sample data.",
       "cta": "Ready to keep your gatherings?",

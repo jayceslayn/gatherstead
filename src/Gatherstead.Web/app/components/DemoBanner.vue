@@ -73,31 +73,33 @@ async function resetDemoData() {
         </table>
 
         <p class="text-xs text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
+        <UButton
+          variant="ghost"
+          color="warning"
+          :loading="isResetting"
+          :disabled="isResetting"
+          @click="resetDemoData"
+        >
+          {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
+        </UButton>
+      </div>
+    </template>
 
-        <div class="flex items-center gap-3">
-          <p v-if="config.public.liveUrl" class="text-sm text-muted flex-1">
-            {{ t('demo.modal.cta') }}
-          </p>
-          <div class="flex gap-2 ml-auto">
-            <UButton
-              v-if="config.public.liveUrl"
-              color="primary"
-              :to="(config.public.liveUrl as string)"
-              external
-            >
-              {{ t('demo.banner.goLive') }}
-            </UButton>
-            <UButton
-              variant="ghost"
-              color="warning"
-              :loading="isResetting"
-              :disabled="isResetting"
-              @click="resetDemoData"
-            >
-              {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
-            </UButton>
-            <UButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UButton>
-          </div>
+    <template #footer>
+      <div class="flex items-center gap-3">
+        <p v-if="config.public.liveUrl" class="text-sm text-muted flex-1">
+          {{ t('demo.modal.cta') }}
+        </p>
+        <div class="flex gap-2 ml-auto">
+          <UButton
+            v-if="config.public.liveUrl"
+            color="primary"
+            :to="(config.public.liveUrl as string)"
+            external
+          >
+            {{ t('demo.banner.goLive') }}
+          </UButton>
+          <UButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UButton>
         </div>
       </div>
     </template>

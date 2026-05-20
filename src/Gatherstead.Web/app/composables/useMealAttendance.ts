@@ -9,8 +9,6 @@ export function useMealAttendance(
   eventId: Ref<string>,
   templateId: Ref<string>,
   plans: Ref<MealPlan[]>,
-  memberId: Ref<string | null>,
-  householdId: Ref<string | null>,
 ) {
   const tenantStore = useTenantStore()
   const { mealAttendance: repo } = useRepositories()
@@ -18,7 +16,6 @@ export function useMealAttendance(
 
   const attendanceMap = ref<Record<string, MealAttendance[]>>({})
   const attendancePending = ref(false)
-  const updating = ref<string[]>([])
 
   async function loadAttendance() {
     if (!plans.value.length) {
@@ -49,20 +46,18 @@ export function useMealAttendance(
 
   watch([plans], () => loadAttendance(), { immediate: true })
 
-  function myAttendance(planId: string): MealAttendance | null {
-    return attendanceMap.value[planId]?.find(a => a.householdMemberId === memberId.value) ?? null
+  function getAttendance(planId: string, memberId: string): MealAttendance | null {
+    return attendanceMap.value[planId]?.find(a => a.householdMemberId === memberId) ?? null
   }
 
-  async function upsert(planId: string, status: AttendanceStatus, bringOwnFood = false, notes?: string | null) {
-    if (!memberId.value || !householdId.value) return
-    updating.value = [...updating.value, planId]
+  async function upsert(planId: string, householdId: string, memberId: string, status: AttendanceStatus, bringOwnFood = false, notes?: string | null) {
     try {
       const record = await repo.upsertMealAttendance(
         tenantStore.currentTenantId!, eventId.value, templateId.value, planId,
-        householdId.value, memberId.value, status, bringOwnFood, notes,
+        householdId, memberId, status, bringOwnFood, notes,
       )
       const list = [...(attendanceMap.value[planId] ?? [])]
-      const idx = list.findIndex(a => a.householdMemberId === memberId.value)
+      const idx = list.findIndex(a => a.householdMemberId === memberId)
       if (idx >= 0) list[idx] = record
       else list.push(record)
       attendanceMap.value[planId] = list
@@ -78,24 +73,14 @@ export function useMealAttendance(
       }
       throw e
     }
-    finally {
-      updating.value = updating.value.filter(id => id !== planId)
-    }
   }
 
   async function deleteAttendance(planId: string, attendanceId: string) {
-    if (!memberId.value) return
-    updating.value = [...updating.value, planId]
-    try {
-      await repo.deleteMealAttendance(
-        tenantStore.currentTenantId!, eventId.value, templateId.value, planId, attendanceId,
-      )
-      attendanceMap.value[planId] = (attendanceMap.value[planId] ?? []).filter(a => a.id !== attendanceId)
-    }
-    finally {
-      updating.value = updating.value.filter(id => id !== planId)
-    }
+    await repo.deleteMealAttendance(
+      tenantStore.currentTenantId!, eventId.value, templateId.value, planId, attendanceId,
+    )
+    attendanceMap.value[planId] = (attendanceMap.value[planId] ?? []).filter(a => a.id !== attendanceId)
   }
 
-  return { attendanceMap, attendancePending, updating, myAttendance, upsert, deleteAttendance }
+  return { attendanceMap, attendancePending, getAttendance, upsert, deleteAttendance }
 }

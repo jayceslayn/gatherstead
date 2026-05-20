@@ -5,6 +5,7 @@ import { useHouseholds } from '~/composables/useHouseholds'
 import { useAccommodations } from '~/composables/useAccommodations'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
+import type { TabsItem } from '@nuxt/ui'
 
 definePageMeta({
   layout: 'default',
@@ -25,12 +26,22 @@ const { templates: choreTemplates, pending: choreTemplatesPending } = useChoreTe
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
 const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
 
-const tabs = computed(() => [
-  { label: t('event.attendance'), slot: 'attendance' as const },
-  { label: t('event.meals'), slot: 'meals' as const },
-  { label: t('event.chores'), slot: 'chores' as const },
-  { label: t('event.accommodations'), slot: 'accommodations' as const },
-])
+// Tab state
+const tabs: TabsItem[] = [
+  { label: t('event.attendance'), value: 'attendance', slot: 'attendance'},
+  { label: t('event.meals'), value: 'meals', slot: 'meals'},
+  { label: t('event.chores'), value: 'chores', slot: 'chores'},
+  { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations'},
+]
+
+const activeTab = ref<string | number>(tabs[0]?.value ?? 0);
+
+watch(activeTab, (newVal) => {
+  const tab = tabs.find(t => t.value === newVal)
+  if (tab) {
+    history.replaceState(null, '', `#${tab.value}`)
+  }
+})
 
 // Household selection — shared across all tabs
 const selectedHouseholdId = ref<string>(memberStore.linkedHouseholdId ?? '')
@@ -71,6 +82,12 @@ function formatHeader(date: string) {
     new Date(date + 'T00:00:00'),
   )
 }
+
+onMounted(() => {
+  if (tabs.some(tab => tab.value === route.hash.substring(1))) {
+    activeTab.value = route.hash.substring(1)
+  }
+})
 </script>
 
 <template>
@@ -108,7 +125,10 @@ function formatHeader(date: string) {
         </UFormField>
       </div>
 
-      <UTabs :items="tabs">
+      <UTabs
+        :items="tabs"
+        v-model="activeTab"
+      >
         <template #attendance>
           <div class="mt-4">
             <GsEventAttendanceGrid
@@ -136,6 +156,7 @@ function formatHeader(date: string) {
                 :key="template.id"
                 :template="template"
                 :event-id="eventId"
+                :household-id="selectedHouseholdId"
               />
             </div>
           </div>
