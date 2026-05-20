@@ -26,7 +26,7 @@ export const DEMO_LIMITS = {
   events: 1,
   eventMaxDays: 3,
   mealTemplatesPerEvent: 3,
-  choreTemplatesPerEvent: 2,
+  choreTemplatesPerEvent: 4,
   propertiesPerTenant: 2,
   accommodationsPerProperty: 6,
 } as const

@@ -49,15 +49,15 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const helen = await repos.householdMembers.createMember(
     TENANT_ID, parrFamily.id, 'Helen Parr', true, null, null, 'Admin', null, [],
   )
-  await repos.householdMembers.createMember(
+  const violet = await repos.householdMembers.createMember(
     TENANT_ID, parrFamily.id, 'Violet Parr', false, '13-17', null, 'Member',
     'Will not eat anything if people are watching.', [],
   )
-  await repos.householdMembers.createMember(
+  const dash = await repos.householdMembers.createMember(
     TENANT_ID, parrFamily.id, 'Dash Parr', false, '8-12', null, 'Member',
     'Eats at top speed. Food must be secured to the plate.', [],
   )
-  await repos.householdMembers.createMember(
+  const jackJack = await repos.householdMembers.createMember(
     TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, '0-3', null, 'Member',
     'Baby food only. Keep away from raccoons.', [],
   )
@@ -65,7 +65,7 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const lucius = await repos.householdMembers.createMember(
     TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, null, null, 'Admin', null, [],
   )
-  await repos.householdMembers.createMember(
+  const honey = await repos.householdMembers.createMember(
     TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, null, 'Member', null, [],
   )
 
@@ -94,6 +94,10 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
 
   // 7. Chore templates — plans auto-generated per (day × timeSlot) by createTemplate
   await repos.chores.createTemplate(
+    TENANT_ID, event.id, 'Set Up', 0x01, null,
+    'Prepare the venue before the event.',
+  )
+  await repos.chores.createTemplate(
     TENANT_ID, event.id, 'Suit Inventory Check', 0x01, 1,
     'Coordinate with Edna. Do NOT ask about capes.',
   )
@@ -101,15 +105,32 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     TENANT_ID, event.id, 'Keep Dash From Running', 0x08, 2,
     'Two adults minimum. Past attempts with one have failed.',
   )
+  await repos.chores.createTemplate(
+    TENANT_ID, event.id, 'Tear Down', 0x04, null,
+    'Clean up and close out the venue.',
+  )
 
-  // 8. Seed meal attendance for day 1 plans
+  // 8. Event days
+  const day1 = eventStart
+  const day2 = addDays(eventStart, 1)
+  const day3 = addDays(eventStart, 2)
+
+  // 9. Seed meal attendance
   const breakfastPlans = await repos.mealPlans.listPlans(TENANT_ID, event.id, breakfastTemplate.id)
   const lunchPlans = await repos.mealPlans.listPlans(TENANT_ID, event.id, lunchTemplate.id)
   const dinnerPlans = await repos.mealPlans.listPlans(TENANT_ID, event.id, dinnerTemplate.id)
 
-  const day1Breakfast = breakfastPlans.find(p => p.day === eventStart)
-  const day1Lunch = lunchPlans.find(p => p.day === eventStart)
-  const day1Dinner = dinnerPlans.find(p => p.day === eventStart)
+  const day1Breakfast = breakfastPlans.find(p => p.day === day1)
+  const day2Breakfast = breakfastPlans.find(p => p.day === day2)
+  const day3Breakfast = breakfastPlans.find(p => p.day === day3)
+
+  const day1Lunch = lunchPlans.find(p => p.day === day1)
+  const day2Lunch = lunchPlans.find(p => p.day === day2)
+  const day3Lunch = lunchPlans.find(p => p.day === day3)
+
+  const day1Dinner = dinnerPlans.find(p => p.day === day1)
+  const day2Dinner = dinnerPlans.find(p => p.day === day2)
+  const day3Dinner = dinnerPlans.find(p => p.day === day3)
 
   if (day1Breakfast) {
     await repos.mealAttendance.upsertMealAttendance(
@@ -153,13 +174,52 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     )
   }
 
-  // 9. Accommodation intents
-  const night0 = eventStart
-  const night1 = addDays(eventStart, 1)
-  const night2 = addDays(eventStart, 2)
+  // Violet is not attending — mark NotGoing for all meals on all days
+  for (const plan of [day1Breakfast, day2Breakfast, day3Breakfast]) {
+    if (plan) {
+      await repos.mealAttendance.upsertMealAttendance(
+        TENANT_ID, event.id, breakfastTemplate.id, plan.id,
+        parrFamily.id, violet.id, 'NotGoing', false,
+      )
+    }
+  }
+  for (const plan of [day1Lunch, day2Lunch, day3Lunch]) {
+    if (plan) {
+      await repos.mealAttendance.upsertMealAttendance(
+        TENANT_ID, event.id, lunchTemplate.id, plan.id,
+        parrFamily.id, violet.id, 'NotGoing', false,
+      )
+    }
+  }
+  for (const plan of [day1Dinner, day2Dinner, day3Dinner]) {
+    if (plan) {
+      await repos.mealAttendance.upsertMealAttendance(
+        TENANT_ID, event.id, dinnerTemplate.id, plan.id,
+        parrFamily.id, violet.id, 'NotGoing', false,
+      )
+    }
+  }
 
+  // 10. Event attendance
+  // Parr family: all 3 days, Violet not going
+  for (const day of [day1, day2, day3]) {
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, parrFamily.id, bob.id, day, 'Going')
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, parrFamily.id, helen.id, day, 'Going')
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, parrFamily.id, violet.id, day, 'NotGoing')
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, parrFamily.id, dash.id, day, 'Going')
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, parrFamily.id, jackJack.id, day, 'Going')
+  }
+  // Frozone household: first two days (matches 2-night accommodation)
+  for (const day of [day1, day2]) {
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, frozoneHousehold.id, lucius.id, day, 'Going')
+    await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, frozoneHousehold.id, honey.id, day, 'Going')
+  }
+  // Edna: first day only (matches 1-night accommodation)
+  await repos.eventAttendance.upsertAttendance(TENANT_ID, event.id, ednaStudio.id, edna.id, day1, 'Going')
+
+  // 11. Accommodation intents
   // Bob: Cabin A, 3 nights — Confirmed/Approved, party of 5
-  for (const night of [night0, night1, night2]) {
+  for (const night of [day1, day2, day3]) {
     const intent = await repos.accommodationIntents.createIntent(
       TENANT_ID, property.id, cabinA.id, parrFamily.id, bob.id, night, 'Confirmed', null, 5,
     )
@@ -171,17 +231,17 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   // Lucius: RV Pad, 2 nights — Hold/Pending, party of 2
   await repos.accommodationIntents.createIntent(
     TENANT_ID, property.id, rvPad.id, frozoneHousehold.id, lucius.id,
-    night0, 'Hold', "Honey said RV or nothing. We'll see.", 2,
+    day1, 'Hold', "Honey said RV or nothing. We'll see.", 2,
   )
   await repos.accommodationIntents.createIntent(
     TENANT_ID, property.id, rvPad.id, frozoneHousehold.id, lucius.id,
-    night1, 'Hold', null, 2,
+    day2, 'Hold', null, 2,
   )
 
   // Edna: Cabin B, 1 night — Confirmed/Approved, party of 1
   const ednaIntent = await repos.accommodationIntents.createIntent(
     TENANT_ID, property.id, cabinB.id, ednaStudio.id, edna.id,
-    night0, 'Confirmed', 'Separate cabin. Non-negotiable.', 1,
+    day1, 'Confirmed', 'Separate cabin. Non-negotiable.', 1,
   )
   await repos.accommodationIntents.updateIntent(
     TENANT_ID, property.id, cabinB.id, ednaIntent.id,
