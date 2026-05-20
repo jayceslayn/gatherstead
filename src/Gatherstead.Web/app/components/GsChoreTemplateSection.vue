@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChoreTemplate } from '~/composables/useChoreTemplates'
+import type { ChoreTemplate } from '~/repositories/types'
 import { useChorePlanSection, choreSlotsFromFlags } from '~/composables/useChoreTemplates'
 import { useCurrentMemberStore } from '~/stores/member'
 

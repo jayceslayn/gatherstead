@@ -13,7 +13,6 @@ import {
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { ChoreTimeSlot, ChoreTemplate, ChorePlan, ChoreIntent }
 export { ALL_CHORE_SLOTS, choreSlotsFromFlags, CHORE_SLOT_FLAGS }
 
 export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {

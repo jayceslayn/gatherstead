@@ -3,7 +3,6 @@ import type { AttendanceStatus, AttendanceRecord } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { AttendanceStatus, AttendanceRecord }
 
 export function useEventAttendance(eventId: Ref<string>) {
   const tenantStore = useTenantStore()

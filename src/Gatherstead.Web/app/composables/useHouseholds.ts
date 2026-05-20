@@ -3,7 +3,6 @@ import type { HouseholdSummary } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { HouseholdSummary }
 
 export function useHouseholds() {
   const tenantStore = useTenantStore()

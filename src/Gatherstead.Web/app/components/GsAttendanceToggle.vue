@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AttendanceStatus } from '~/composables/useEventAttendance'
+import type { AttendanceStatus } from '~/repositories/types'
 
 const props = defineProps<{
   modelValue: AttendanceStatus | null

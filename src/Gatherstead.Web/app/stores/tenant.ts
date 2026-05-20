@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { TenantRole } from '~/composables/useTenants'
+import type { TenantRole } from '~/repositories/types'
 
 export const useTenantStore = defineStore('tenant', () => {
   const currentTenantId = ref<string | null>(null)

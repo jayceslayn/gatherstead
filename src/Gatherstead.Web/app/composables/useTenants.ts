@@ -1,7 +1,6 @@
 import type { TenantSummary, TenantRole } from '~/repositories/types'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { TenantSummary, TenantRole }
 
 export function useTenants() {
   const { tenants: repo } = useRepositories()

@@ -3,7 +3,6 @@ import type { HouseholdMember, HouseholdRole, DietaryProfile } from '~/repositor
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { HouseholdMember, HouseholdRole, DietaryProfile }
 
 export function useAllMembers() {
   const tenantStore = useTenantStore()

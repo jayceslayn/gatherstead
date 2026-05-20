@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { MealTemplate } from '~/composables/useMealPlans'
+import type { MealTemplate, AttendanceStatus } from '~/repositories/types'
 import { useMealPlanSection } from '~/composables/useMealPlans'
 import { useMealAttendance } from '~/composables/useMealAttendance'
-import type { AttendanceStatus } from '~/composables/useMealAttendance'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 
 const props = defineProps<{

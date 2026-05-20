@@ -13,7 +13,6 @@ import {
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { MealType, MealTemplate, MealPlan, MealIntent }
 export { ALL_MEAL_TYPES, mealTypesFromFlags, MEAL_TYPE_FLAGS }
 
 export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {

@@ -3,7 +3,6 @@ import type { MealAttendance, MealPlan, AttendanceStatus } from '~/repositories/
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { MealAttendance, AttendanceStatus }
 
 export function useMealAttendance(
   eventId: Ref<string>,

@@ -3,7 +3,6 @@ import type { PropertySummary } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { PropertySummary }
 
 export function useProperties() {
   const tenantStore = useTenantStore()

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTenantStore } from '~/stores/tenant'
-import type { HouseholdMember } from '~/composables/useHouseholdMembers'
+import type { HouseholdMember } from '~/repositories/types'
 import { useHousehold } from '~/composables/useHouseholds'
 import { useMember } from '~/composables/useHouseholdMembers'
 

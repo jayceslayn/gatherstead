@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
-import type { TenantRole } from '~/composables/useTenants'
+import type { TenantRole } from '~/repositories/types'
 
 const props = defineProps<{
   minRole: TenantRole

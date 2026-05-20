@@ -3,7 +3,6 @@ import type { EventSummary } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { EventSummary }
 
 export function useEvents() {
   const tenantStore = useTenantStore()

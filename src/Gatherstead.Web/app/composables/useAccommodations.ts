@@ -9,7 +9,6 @@ import type {
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export type { AccommodationSummary, AccommodationType, AccommodationIntent, AccommodationIntentStatus, AccommodationIntentDecision }
 
 export function useAccommodations(propertyId: Ref<string>) {
   const tenantStore = useTenantStore()
