@@ -1,0 +1,23 @@
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  sharp: true
+  vue-demi: true
+
+overrides:
+  serialize-javascript: ">=7.0.3"
+  node-forge: ">=1.4.0"
+  "picomatch@2": "^2.3.2"
+  "picomatch@4": "^4.0.4"
+  lodash: ">=4.17.24"
+  defu: ">=6.1.5"
+  vite: ">=7.3.2"
+  h3: ">=1.15.9"
+  srvx: ">=0.11.13"
+  unhead: ">=2.1.13"
+  postcss: ">=8.5.10"
+  simple-git: ">=3.36.0"
+  nitropack: ">=2.13.4"
+  devalue: ">=5.8.1"
+  "brace-expansion@5": ">=5.0.6"
+  ws: ">=8.20.1"
