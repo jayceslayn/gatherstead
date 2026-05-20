@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useMealTemplates } from '~/composables/useMealPlans'
 import { useChoreTemplates } from '~/composables/useChoreTemplates'
 import { useHouseholds } from '~/composables/useHouseholds'
 import { useAccommodations } from '~/composables/useAccommodations'
@@ -20,7 +19,6 @@ const { households } = useHouseholds()
 const eventId = computed(() => route.params.eventId as string)
 
 const { event, pending: eventPending } = useEvent(eventId)
-const { templates: mealTemplates, pending: mealTemplatesPending } = useMealTemplates(eventId)
 const { templates: choreTemplates, pending: choreTemplatesPending } = useChoreTemplates(eventId)
 
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
@@ -29,7 +27,6 @@ const { accommodations, pending: accommodationsPending } = useAccommodations(eve
 // Tab state
 const tabs: TabsItem[] = [
   { label: t('event.attendance'), value: 'attendance', slot: 'attendance'},
-  { label: t('event.meals'), value: 'meals', slot: 'meals'},
   { label: t('event.chores'), value: 'chores', slot: 'chores'},
   { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations'},
 ]
@@ -136,29 +133,6 @@ onMounted(() => {
               :days="eventDays"
               :household-id="selectedHouseholdId"
             />
-          </div>
-        </template>
-
-        <template #meals>
-          <div class="mt-4">
-            <div v-if="mealTemplatesPending" class="py-8 text-center text-sm text-muted">
-              {{ t('common.loading') }}
-            </div>
-            <GsEmptyState
-              v-else-if="!mealTemplates.length"
-              icon="i-heroicons-cake"
-              :title="t('event.meal.noTemplates')"
-              class="mt-4"
-            />
-            <div v-else class="space-y-4">
-              <GsMealTemplateSection
-                v-for="template in mealTemplates"
-                :key="template.id"
-                :template="template"
-                :event-id="eventId"
-                :household-id="selectedHouseholdId"
-              />
-            </div>
           </div>
         </template>
 

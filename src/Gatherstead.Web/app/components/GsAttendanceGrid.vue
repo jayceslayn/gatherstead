@@ -15,6 +15,7 @@ const props = defineProps<{
   totals: Record<string, { going: number, maybe: number }>
   updating: Record<string, boolean>
   loaded: boolean
+  hint?: string
 }>()
 
 const emit = defineEmits<{
@@ -35,6 +36,7 @@ const tableColumns = computed<TableColumn<HouseholdMember>[]>(() => [
 function cellKey(memberId: string, columnId: string) {
   return `${memberId}:${columnId}`
 }
+
 
 function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuItem[][] {
   return [[
@@ -58,7 +60,7 @@ function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuIt
     <template v-else>
       <p class="mb-2 text-xs text-muted flex items-center gap-1.5">
         <UIcon name="i-heroicons-information-circle" class="size-3.5 shrink-0" />
-        {{ t('event.attendanceGrid.hint') }}
+        {{ hint ?? t('event.attendanceGrid.hint') }}
       </p>
 
       <UTable
@@ -67,11 +69,11 @@ function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuIt
         :get-row-id="(row) => row.id"
         :initial-state="{ columnPinning: { left: [MEMBER_COLUMN_ID] } }"
         sticky
-        class="max-h-[30rem] rounded-lg border border-(--ui-border)"
+        class="max-h-[55dvh] sm:max-h-[30rem] rounded-lg border border-(--ui-border)"
         :ui="{
           base: 'border-separate border-spacing-0',
-          th: 'whitespace-nowrap',
-          td: 'whitespace-nowrap align-middle',
+          th: 'whitespace-nowrap bg-(--ui-bg) border-r border-b border-(--ui-border)',
+          td: 'whitespace-nowrap align-middle bg-(--ui-bg) border-r border-b border-(--ui-border)',
         }"
       >
         <template #[`${MEMBER_COLUMN_ID}-header`]>
@@ -79,8 +81,8 @@ function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuIt
         </template>
 
         <template #[`${MEMBER_COLUMN_ID}-cell`]="{ row }">
-          <div class="flex items-center justify-between gap-2 min-w-36">
-            <span class="font-medium text-default">{{ row.original.name }}</span>
+          <div class="flex items-center justify-between gap-2 min-w-20">
+            <span class="font-medium text-default leading-tight whitespace-normal">{{ row.original.name }}</span>
             <UDropdownMenu :items="bulkItems((status) => emit('set-row', row.original.id, status))">
               <UButton
                 size="xs"
@@ -94,7 +96,7 @@ function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuIt
         </template>
 
         <template #[`${MEMBER_COLUMN_ID}-footer`]>
-          <span class="font-semibold text-muted">{{ t('event.attendanceGrid.totals') }}</span>
+          <span class="font-semibold text-muted leading-tight whitespace-normal">{{ t('event.attendanceGrid.totals') }}</span>
         </template>
 
         <template
@@ -124,14 +126,23 @@ function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuIt
           :key="`cell-${col.id}`"
           #[`${col.id}-cell`]="{ row }"
         >
-          <div class="flex justify-center w-32 min-w-32">
-            <GsAttendanceToggle
-              :model-value="statusByMemberColumn[row.original.id]?.[col.id] ?? null"
-              :loading="updating[cellKey(row.original.id, col.id)]"
-              size="xs"
-              @update:model-value="emit('set-cell', row.original.id, col.id, $event)"
-            />
-          </div>
+          <slot
+            name="cell"
+            :member="row.original"
+            :column="col"
+            :status="statusByMemberColumn[row.original.id]?.[col.id] ?? null"
+            :loading="updating[cellKey(row.original.id, col.id)]"
+            :on-update="(status: AttendanceStatus) => emit('set-cell', row.original.id, col.id, status)"
+          >
+            <div class="flex justify-center w-32 min-w-32">
+              <GsAttendanceToggle
+                :model-value="statusByMemberColumn[row.original.id]?.[col.id] ?? null"
+                :loading="updating[cellKey(row.original.id, col.id)]"
+                size="xs"
+                @update:model-value="emit('set-cell', row.original.id, col.id, $event)"
+              />
+            </div>
+          </slot>
         </template>
 
         <template
@@ -141,11 +152,11 @@ function bulkItems(onSelect: (status: AttendanceStatus) => void): DropdownMenuIt
         >
           <div class="flex items-center justify-center gap-3 text-xs text-muted w-32 min-w-32">
             <span class="inline-flex items-center gap-1">
-              <UIcon name="i-heroicons-check" class="size-3.5 text-success" />
+              <UIcon name="i-heroicons-check-circle-20-solid" class="size-3.5 text-success" />
               <span class="tabular-nums">{{ totals[col.id]?.going ?? 0 }}</span>
             </span>
             <span class="inline-flex items-center gap-1">
-              <UIcon name="i-heroicons-question-mark-circle" class="size-3.5" />
+              <UIcon name="i-heroicons-question-mark-circle-20-solid" class="size-3.5 text-muted" />
               <span class="tabular-nums">{{ totals[col.id]?.maybe ?? 0 }}</span>
             </span>
           </div>
