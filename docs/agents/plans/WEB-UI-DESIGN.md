@@ -420,9 +420,14 @@ Event Detail update shipped with Phase 5:
 i18n additions: `property.{noProperties*, addProperty, accommodations, noAccommodations*, addAccommodation}`, `accommodation.{types.*, adults, children, intentCount, intents, noIntents, requestStay, updateStay, status, partySize, partySizeValue, promote, decline, nightOf, decision.*}` (en + es)
 
 ### Phase 6 — Management & Settings
-20. Full Attendance Manager grid (Manager+)
-21. Dietary Aggregation view
-22. Settings hub + roles page + danger zone
+21. Settings hub:
+  - Tenant
+      - User assignment
+      - Tenant and Household Roles
+      - Danger Zone
+   - Configuration
+    - Age bands
+    - Dietary tags
 
 ---
 
