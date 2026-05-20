@@ -1,5 +1,5 @@
 {
-  "name": "Gatherstead-Web",
+  "name": "gatherstead-web",
   "type": "module",
   "private": true,
   "scripts": {
