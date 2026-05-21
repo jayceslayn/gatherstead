@@ -29,8 +29,8 @@
     "featurePropertiesDesc": "Gestiona sedes, cabañas y espacios compartidos con habitaciones, espacios para casas rodantes y recursos para cada reunión.",
     "featureEvents": "Eventos",
     "featureEventsDesc": "Planifica reuniones con fechas, ubicaciones y gestión de asistentes.",
-    "featureLodging": "Alojamiento",
-    "featureLodgingDesc": "Gestiona habitaciones, espacios para casas rodantes e intenciones de estadía para que todos tengan un lugar.",
+    "featureAccommodation": "Alojamiento",
+    "featureAccommodationDesc": "Gestiona habitaciones, espacios para casas rodantes e intenciones de estadía para que todos tengan un lugar.",
     "viewOnGithub": "Ver en GitHub",
     "viewDocs": "Documentación",
     "tryDemo": "Probar la Demo"

@@ -10,7 +10,7 @@ const features = computed(() => [
   { title: t('landing.featureDirectory'), description: t('landing.featureDirectoryDesc'), icon: 'i-heroicons-user-group' },
   { title: t('landing.featureProperties'), description: t('landing.featurePropertiesDesc'), icon: 'i-heroicons-map-pin' },
   { title: t('landing.featureEvents'), description: t('landing.featureEventsDesc'), icon: 'i-heroicons-calendar-days' },
-  { title: t('landing.featureLodging'), description: t('landing.featureLodgingDesc'), icon: 'i-heroicons-building-office' },
+  { title: t('landing.featureAccommodation'), description: t('landing.featureAccommodationDesc'), icon: 'i-heroicons-building-office' },
 ])
 </script>
 
