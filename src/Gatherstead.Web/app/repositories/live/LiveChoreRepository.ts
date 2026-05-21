@@ -54,12 +54,14 @@ export class LiveChoreRepository implements IChoreRepository {
     eventId: string,
     name: string,
     timeSlots: number,
+    startDate: string | null,
+    endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
   ): Promise<ChoreTemplate> {
     const r = await $fetch<ApiResponse<ChoreTemplate>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates`,
-      { method: 'POST', body: { name, timeSlots, minimumAssignees, notes } },
+      { method: 'POST', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes } },
     )
     return r.entity
   }
@@ -70,12 +72,14 @@ export class LiveChoreRepository implements IChoreRepository {
     templateId: string,
     name: string,
     timeSlots: number,
+    startDate: string | null,
+    endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}`,
-      { method: 'PUT', body: { name, timeSlots, minimumAssignees, notes } },
+      { method: 'PUT', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes } },
     )
   }
 

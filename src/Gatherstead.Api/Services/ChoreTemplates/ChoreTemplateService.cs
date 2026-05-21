@@ -121,6 +121,9 @@ public class ChoreTemplateService : IChoreTemplateService
             return response;
         }
 
+        if (!ValidateDateRange(request.StartDate, request.EndDate, @event.StartDate, @event.EndDate, response))
+            return response;
+
         var template = new ChoreTemplate
         {
             Id = Guid.NewGuid(),
@@ -128,6 +131,8 @@ public class ChoreTemplateService : IChoreTemplateService
             EventId = eventId,
             Name = normalizedName,
             TimeSlots = request.TimeSlots,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
             MinimumAssignees = request.MinimumAssignees,
             Notes = request.Notes?.Trim(),
         };
@@ -183,14 +188,18 @@ public class ChoreTemplateService : IChoreTemplateService
             }
         }
 
-        var timeSlotsChanged = template.TimeSlots != request.TimeSlots;
+        var timeSlotsChanged  = template.TimeSlots  != request.TimeSlots;
+        var dateRangeChanged  = template.StartDate  != request.StartDate
+                             || template.EndDate    != request.EndDate;
 
         template.Name = normalizedName;
         template.TimeSlots = request.TimeSlots;
+        template.StartDate = request.StartDate;
+        template.EndDate = request.EndDate;
         template.MinimumAssignees = request.MinimumAssignees;
         template.Notes = request.Notes?.Trim();
 
-        if (timeSlotsChanged)
+        if (timeSlotsChanged || dateRangeChanged)
         {
             var @event = await _dbContext.Events
                 .AsNoTracking()
@@ -198,7 +207,12 @@ public class ChoreTemplateService : IChoreTemplateService
                 .SingleOrDefaultAsync(cancellationToken);
 
             if (@event is not null)
+            {
+                if (!ValidateDateRange(request.StartDate, request.EndDate, @event.StartDate, @event.EndDate, response))
+                    return response;
+
                 await _planSyncService.SyncChorePlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -242,6 +256,37 @@ public class ChoreTemplateService : IChoreTemplateService
     }
 
     private static ChoreTemplateDto MapToDto(ChoreTemplate t) => new(
-        t.Id, t.TenantId, t.EventId, t.Name, t.TimeSlots, t.MinimumAssignees, t.Notes,
+        t.Id, t.TenantId, t.EventId, t.Name, t.TimeSlots,
+        t.StartDate, t.EndDate,
+        t.MinimumAssignees, t.Notes,
         t.CreatedAt, t.UpdatedAt, t.IsDeleted, t.DeletedAt, t.DeletedByUserId);
+
+    private static bool ValidateDateRange(
+        DateOnly? startDate, DateOnly? endDate,
+        DateOnly eventStart, DateOnly eventEnd,
+        BaseEntityResponse<ChoreTemplateDto> response)
+    {
+        if (startDate is null && endDate is null)
+            return true;
+
+        if (startDate is null || endDate is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartDate and EndDate must both be set or both be null.");
+            return false;
+        }
+
+        if (startDate > endDate)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartDate must not be after EndDate.");
+            return false;
+        }
+
+        if (startDate < eventStart || endDate > eventEnd)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartDate and EndDate must fall within the event date range.");
+            return false;
+        }
+
+        return true;
+    }
 }

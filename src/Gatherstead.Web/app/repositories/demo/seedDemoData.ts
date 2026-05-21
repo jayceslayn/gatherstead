@@ -94,20 +94,24 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
 
   // 7. Chore templates — plans auto-generated per (day × timeSlot) by createTemplate
   await repos.chores.createTemplate(
-    TENANT_ID, event.id, 'Set Up', 0x01, null,
-    'Prepare the venue before the event.',
+    TENANT_ID, event.id, 'Set Up', 0x01,
+    eventStart, eventStart,
+    null, 'Prepare the venue before the event.',
   )
   await repos.chores.createTemplate(
-    TENANT_ID, event.id, 'Suit Inventory Check', 0x01, 1,
-    'Coordinate with Edna. Do NOT ask about capes.',
+    TENANT_ID, event.id, 'Suit Inventory Check', 0x01,
+    null, null,
+    1, 'Coordinate with Edna. Do NOT ask about capes.',
   )
   await repos.chores.createTemplate(
-    TENANT_ID, event.id, 'Keep Dash From Running', 0x08, 2,
-    'Two adults minimum. Past attempts with one have failed.',
+    TENANT_ID, event.id, 'Keep Dash From Running', 0x08,
+    null, null,
+    2, 'Two adults minimum. Past attempts with one have failed.',
   )
   await repos.chores.createTemplate(
-    TENANT_ID, event.id, 'Tear Down', 0x04, null,
-    'Clean up and close out the venue.',
+    TENANT_ID, event.id, 'Tear Down', 0x04,
+    eventEnd, eventEnd,
+    null, 'Clean up and close out the venue.',
   )
 
   // 8. Event days

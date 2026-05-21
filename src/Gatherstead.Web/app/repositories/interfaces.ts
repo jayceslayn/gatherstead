@@ -174,6 +174,8 @@ export interface IChoreRepository {
     eventId: string,
     name: string,
     timeSlots: number,
+    startDate: string | null,
+    endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
   ): Promise<ChoreTemplate>
@@ -183,6 +185,8 @@ export interface IChoreRepository {
     templateId: string,
     name: string,
     timeSlots: number,
+    startDate: string | null,
+    endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
   ): Promise<void>

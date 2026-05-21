@@ -58,6 +58,8 @@ export class DemoChoreRepository implements IChoreRepository {
     eventId: string,
     name: string,
     timeSlots: number,
+    startDate: string | null,
+    endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
   ): Promise<ChoreTemplate> {
@@ -65,12 +67,14 @@ export class DemoChoreRepository implements IChoreRepository {
     if (store.choreTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.choreTemplatesPerEvent) {
       throw new DemoLimitError('choreTemplatesPerEvent')
     }
-    const t: ChoreTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes }
+    const t: ChoreTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes, startDate, endDate }
     store.choreTemplates.value.push(t)
 
     const event = store.events.value.find(e => e.id === eventId)
     if (event) {
-      const days = enumDays(event.startDate, event.endDate)
+      const effectiveStart = startDate ?? event.startDate
+      const effectiveEnd = endDate ?? event.endDate
+      const days = enumDays(effectiveStart, effectiveEnd)
       for (const day of days) {
         for (const timeSlot of choreSlotsFromFlags(timeSlots)) {
           store.chorePlans.value.push({
@@ -98,6 +102,8 @@ export class DemoChoreRepository implements IChoreRepository {
     templateId: string,
     name: string,
     timeSlots: number,
+    startDate: string | null,
+    endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
   ): Promise<void> {
@@ -105,7 +111,8 @@ export class DemoChoreRepository implements IChoreRepository {
     const t = store.choreTemplates.value.find(x => x.id === templateId)
     if (!t) return
 
-    if (t.timeSlots !== timeSlots) {
+    const plansNeedRegen = t.timeSlots !== timeSlots || t.startDate !== startDate || t.endDate !== endDate
+    if (plansNeedRegen) {
       const affectedPlanIds = store.chorePlans.value
         .filter(p => p.templateId === templateId)
         .map(p => p.id)
@@ -114,7 +121,9 @@ export class DemoChoreRepository implements IChoreRepository {
 
       const event = store.events.value.find(e => e.id === eventId)
       if (event) {
-        const days = enumDays(event.startDate, event.endDate)
+        const effectiveStart = startDate ?? event.startDate
+        const effectiveEnd = endDate ?? event.endDate
+        const days = enumDays(effectiveStart, effectiveEnd)
         for (const day of days) {
           for (const timeSlot of choreSlotsFromFlags(timeSlots)) {
             store.chorePlans.value.push({
@@ -137,6 +146,8 @@ export class DemoChoreRepository implements IChoreRepository {
     t.timeSlots = timeSlots
     t.minimumAssignees = minimumAssignees
     t.notes = notes
+    t.startDate = startDate
+    t.endDate = endDate
     persistDemoStore()
   }
 

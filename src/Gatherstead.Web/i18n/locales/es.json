@@ -166,7 +166,9 @@
       "volunteered": "Inscrito",
       "noTemplates": "No se han configurado tareas para este evento.",
       "noPlans": "No hay detalles del plan de tareas disponibles.",
-      "minimumAssignees": "mín. {n}"
+      "minimumAssignees": "mín. {n}",
+      "dateRange": "{start} – {end}",
+      "oneOff": "Única vez"
     }
   },
   "property": {

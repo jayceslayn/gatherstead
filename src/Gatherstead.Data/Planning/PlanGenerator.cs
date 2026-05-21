@@ -31,15 +31,20 @@ public static class PlanGenerator
         ChoreTimeSlotFlags timeSlots,
         DateOnly start,
         DateOnly end,
-        IEnumerable<ChorePlan> existingPlans)
+        IEnumerable<ChorePlan> existingPlans,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
     {
+        var effectiveStart = startDate ?? start;
+        var effectiveEnd   = endDate   ?? end;
+
         var slots = ExpandSlots(timeSlots).ToList();
         var existing = existingPlans.ToList();
 
         var toAdd = new List<(DateOnly, ChoreTimeSlot)>();
         var toRestore = new List<ChorePlan>();
 
-        foreach (var day in GetDateRange(start, end))
+        foreach (var day in GetDateRange(effectiveStart, effectiveEnd))
         {
             foreach (var slot in slots)
             {
@@ -60,7 +65,7 @@ public static class PlanGenerator
             }
         }
 
-        var expectedKeys = GetDateRange(start, end)
+        var expectedKeys = GetDateRange(effectiveStart, effectiveEnd)
             .SelectMany(day => slots.Select(slot => (day, slot)))
             .ToHashSet();
 

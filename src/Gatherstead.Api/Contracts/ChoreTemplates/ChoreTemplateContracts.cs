@@ -10,6 +10,8 @@ public record ChoreTemplateDto(
     Guid EventId,
     string Name,
     ChoreTimeSlotFlags TimeSlots,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
     int? MinimumAssignees,
     string? Notes,
     DateTimeOffset CreatedAt,
@@ -29,6 +31,8 @@ public class CreateChoreTemplateRequest
     [Required]
     public ChoreTimeSlotFlags TimeSlots { get; init; }
 
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
     public int? MinimumAssignees { get; init; }
     public string? Notes { get; init; }
 }
@@ -42,6 +46,8 @@ public class UpdateChoreTemplateRequest
     [Required]
     public ChoreTimeSlotFlags TimeSlots { get; init; }
 
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
     public int? MinimumAssignees { get; init; }
     public string? Notes { get; init; }
 }

@@ -1,19 +1,11 @@
 import { useTenantStore } from '~/stores/tenant'
 import type {
-  ChoreTimeSlot,
   ChoreTemplate,
   ChorePlan,
   ChoreIntent,
 } from '~/repositories/types'
-import {
-  CHORE_SLOT_FLAGS,
-  ALL_CHORE_SLOTS,
-  choreSlotsFromFlags,
-} from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
-
-export { ALL_CHORE_SLOTS, choreSlotsFromFlags, CHORE_SLOT_FLAGS }
 
 export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
   const tenantStore = useTenantStore()
@@ -23,10 +15,10 @@ export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Pro
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createTemplate(name: string, timeSlots: number, minimumAssignees: number | null, notes: string | null) {
+  async function createTemplate(name: string, timeSlots: number, startDate: string | null = null, endDate: string | null = null, minimumAssignees: number | null = null, notes: string | null = null) {
     updating.value.push('new')
     try {
-      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, timeSlots, minimumAssignees, notes)
+      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, timeSlots, startDate, endDate, minimumAssignees, notes)
       await refresh()
     }
     catch (e) {
@@ -41,10 +33,10 @@ export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Pro
     }
   }
 
-  async function updateTemplate(templateId: string, name: string, timeSlots: number, minimumAssignees: number | null, notes: string | null) {
+  async function updateTemplate(templateId: string, name: string, timeSlots: number, startDate: string | null = null, endDate: string | null = null, minimumAssignees: number | null = null, notes: string | null = null) {
     updating.value.push(templateId)
     try {
-      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, timeSlots, minimumAssignees, notes)
+      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, timeSlots, startDate, endDate, minimumAssignees, notes)
       await refresh()
     }
     catch (e) {

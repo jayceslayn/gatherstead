@@ -166,7 +166,9 @@
       "volunteered": "Signed Up",
       "noTemplates": "No chores have been set up for this event.",
       "noPlans": "No chore plan details available.",
-      "minimumAssignees": "min. {n}"
+      "minimumAssignees": "min. {n}",
+      "dateRange": "{start} – {end}",
+      "oneOff": "One-off"
     }
   },
   "property": {

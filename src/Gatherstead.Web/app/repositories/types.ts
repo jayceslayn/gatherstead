@@ -104,6 +104,8 @@ export interface ChoreTemplate {
   eventId: string
   name: string
   timeSlots: number
+  startDate: string | null
+  endDate: string | null
   minimumAssignees: number | null
   notes: string | null
 }

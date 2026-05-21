@@ -26,6 +26,8 @@ public class ChoreTemplate : AuditableEntity
     public string Name { get; set; } = string.Empty;
 
     public ChoreTimeSlotFlags TimeSlots { get; set; }
+    public DateOnly? StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
     public int? MinimumAssignees { get; set; }
     public string? Notes { get; set; }
 

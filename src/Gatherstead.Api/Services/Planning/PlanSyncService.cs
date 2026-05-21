@@ -58,7 +58,7 @@ public class PlanSyncService
             .Where(p => p.TenantId == tenantId && p.TemplateId == template.Id)
             .ToListAsync(cancellationToken);
 
-        var diff = PlanGenerator.DiffChorePlans(template.TimeSlots, start, end, existing);
+        var diff = PlanGenerator.DiffChorePlans(template.TimeSlots, start, end, existing, template.StartDate, template.EndDate);
 
         foreach (var (day, slot) in diff.ToAdd)
         {

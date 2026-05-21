@@ -5,15 +5,8 @@ import type {
   MealPlan,
   MealIntent,
 } from '~/repositories/types'
-import {
-  MEAL_TYPE_FLAGS,
-  ALL_MEAL_TYPES,
-  mealTypesFromFlags,
-} from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
-
-export { ALL_MEAL_TYPES, mealTypesFromFlags, MEAL_TYPE_FLAGS }
 
 export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
   const tenantStore = useTenantStore()
