@@ -29,11 +29,11 @@ Gatherstead is organized around bounded contexts that align with the two core go
 #### Event-level
 - **Event**: A time-bounded gathering at a property, defining the date window for meal planning, chore coordination, and attendance tracking.【F:src/Gatherstead.Data/Entities/Event.cs】
 - **EventAttendance**: Per-member, per-day attendance record. Tracks `AttendanceStatus`, arrival/departure windows, and notes; drives meal and chore intent generation for the member.【F:src/Gatherstead.Data/Entities/EventAttendance.cs】
-- **MealTemplate**: Specifies which meal types (`MealTypeFlags`: Breakfast/Lunch/Dinner) to auto-generate across the event's date range.【F:src/Gatherstead.Data/Entities/MealTemplate.cs】
+- **MealTemplate**: Specifies which meal types (`MealTypeFlags`: Breakfast/Lunch/Dinner) to auto-generate. Optional `StartDate`/`EndDate` fields scope plan generation to a sub-window of the event; when absent, plans span the full event date range.【F:src/Gatherstead.Data/Entities/MealTemplate.cs】
 - **MealPlan**: A specific meal on a specific day. Supports exception marking (`IsException`) to suppress auto-generated entries.【F:src/Gatherstead.Data/Entities/MealPlan.cs】
 - **MealAttendance**: Member's attendance response for a specific `MealPlan`. Tracks `AttendanceStatus` (Going/Maybe/NotGoing), `BringOwnFood`, and optional `Notes`. Unique per `(MealPlanId, HouseholdMemberId)` — mirrors `EventAttendance` at the individual-meal level.【F:src/Gatherstead.Data/Entities/MealAttendance.cs】
 - **MealIntent**: Member's cook-volunteer record for a `MealPlan`. Tracks a single `Volunteered: bool` — parallel in shape to `ChoreIntent`.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
-- **ChoreTemplate**: Template for a recurring chore; specifies one or more time slots (`ChoreTimeSlotFlags`: Morning/Midday/Evening/Anytime) and drives automatic `ChorePlan` generation.【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
+- **ChoreTemplate**: Template for a recurring chore; specifies one or more time slots (`ChoreTimeSlotFlags`: Morning/Midday/Evening/Anytime) and drives automatic `ChorePlan` generation. Optional `StartDate`/`EndDate` fields scope plan generation to a sub-window of the event, enabling one-off or partial-event chores (e.g., setup on day 1 only).【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
 - **ChorePlan**: Dated chore instance for a specific day and time slot. Supports exception marking and completion tracking.【F:src/Gatherstead.Data/Entities/ChorePlan.cs】
 - **ChoreIntent**: Member's volunteer/assignment record for a `ChorePlan`.【F:src/Gatherstead.Data/Entities/ChoreIntent.cs】
 
