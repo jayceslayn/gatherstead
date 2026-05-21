@@ -5,11 +5,11 @@ using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Data.Planning;
 
-public record ChorePlanDiff
+public record TaskPlanDiff
 {
-    public IReadOnlyList<(DateOnly Day, ChoreTimeSlot Slot)> ToAdd { get; init; } = [];
-    public IReadOnlyList<ChorePlan> ToRestore { get; init; } = [];
-    public IReadOnlyList<ChorePlan> ToPrune { get; init; } = [];
+    public IReadOnlyList<(DateOnly Day, TaskTimeSlot Slot)> ToAdd { get; init; } = [];
+    public IReadOnlyList<TaskPlan> ToRestore { get; init; } = [];
+    public IReadOnlyList<TaskPlan> ToPrune { get; init; } = [];
 }
 
 public record MealPlanDiff
@@ -22,16 +22,16 @@ public record MealPlanDiff
 public static class PlanGenerator
 {
     /// <summary>
-    /// Computes which ChorePlan records need to be added, restored, or pruned to align the
+    /// Computes which TaskPlan records need to be added, restored, or pruned to align the
     /// existing collection with the template's slot configuration over the given date range.
     /// <paramref name="existingPlans"/> must include soft-deleted records so suppression
     /// markers (IsDeleted &amp;&amp; IsException) are honoured during generation.
     /// </summary>
-    public static ChorePlanDiff DiffChorePlans(
-        ChoreTimeSlotFlags timeSlots,
+    public static TaskPlanDiff DiffTaskPlans(
+        TaskTimeSlotFlags timeSlots,
         DateOnly start,
         DateOnly end,
-        IEnumerable<ChorePlan> existingPlans,
+        IEnumerable<TaskPlan> existingPlans,
         DateOnly? startDate = null,
         DateOnly? endDate = null)
     {
@@ -41,8 +41,8 @@ public static class PlanGenerator
         var slots = ExpandSlots(timeSlots).ToList();
         var existing = existingPlans.ToList();
 
-        var toAdd = new List<(DateOnly, ChoreTimeSlot)>();
-        var toRestore = new List<ChorePlan>();
+        var toAdd = new List<(DateOnly, TaskTimeSlot)>();
+        var toRestore = new List<TaskPlan>();
 
         foreach (var day in GetDateRange(effectiveStart, effectiveEnd))
         {
@@ -79,7 +79,7 @@ public static class PlanGenerator
                 !expectedKeys.Contains((p.Day, p.TimeSlot!.Value)))
             .ToList();
 
-        return new ChorePlanDiff
+        return new TaskPlanDiff
         {
             ToAdd = toAdd,
             ToRestore = toRestore,
@@ -152,20 +152,20 @@ public static class PlanGenerator
     }
 
     /// <summary>
-    /// Expands a <see cref="ChoreTimeSlotFlags"/> bitmask into individual <see cref="ChoreTimeSlot"/> values.
-    /// If <see cref="ChoreTimeSlotFlags.Anytime"/> is set it is returned alone; it cannot be combined.
+    /// Expands a <see cref="TaskTimeSlotFlags"/> bitmask into individual <see cref="TaskTimeSlot"/> values.
+    /// If <see cref="TaskTimeSlotFlags.Anytime"/> is set it is returned alone; it cannot be combined.
     /// </summary>
-    public static IEnumerable<ChoreTimeSlot> ExpandSlots(ChoreTimeSlotFlags flags)
+    public static IEnumerable<TaskTimeSlot> ExpandSlots(TaskTimeSlotFlags flags)
     {
-        if (flags.HasFlag(ChoreTimeSlotFlags.Anytime))
+        if (flags.HasFlag(TaskTimeSlotFlags.Anytime))
         {
-            yield return ChoreTimeSlot.Anytime;
+            yield return TaskTimeSlot.Anytime;
             yield break;
         }
 
-        if (flags.HasFlag(ChoreTimeSlotFlags.Morning)) yield return ChoreTimeSlot.Morning;
-        if (flags.HasFlag(ChoreTimeSlotFlags.Midday))  yield return ChoreTimeSlot.Midday;
-        if (flags.HasFlag(ChoreTimeSlotFlags.Evening)) yield return ChoreTimeSlot.Evening;
+        if (flags.HasFlag(TaskTimeSlotFlags.Morning)) yield return TaskTimeSlot.Morning;
+        if (flags.HasFlag(TaskTimeSlotFlags.Midday))  yield return TaskTimeSlot.Midday;
+        if (flags.HasFlag(TaskTimeSlotFlags.Evening)) yield return TaskTimeSlot.Evening;
     }
 
     /// <summary>

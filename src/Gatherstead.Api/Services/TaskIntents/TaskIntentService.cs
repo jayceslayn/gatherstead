@@ -1,4 +1,4 @@
-using Gatherstead.Api.Contracts.ChoreIntents;
+using Gatherstead.Api.Contracts.TaskIntents;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
@@ -6,17 +6,17 @@ using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Gatherstead.Api.Services.ChoreIntents;
+namespace Gatherstead.Api.Services.TaskIntents;
 
-public class ChoreIntentService : IChoreIntentService
+public class TaskIntentService : ITaskIntentService
 {
-    private const string EntityDisplayName = "Chore intent";
+    private const string EntityDisplayName = "Task intent";
 
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    public ChoreIntentService(
+    public TaskIntentService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService)
@@ -26,20 +26,20 @@ public class ChoreIntentService : IChoreIntentService
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
-    public async Task<BaseEntityResponse<IReadOnlyCollection<ChoreIntentDto>>> ListAsync(
+    public async Task<BaseEntityResponse<IReadOnlyCollection<TaskIntentDto>>> ListAsync(
         Guid tenantId,
         Guid planId,
         IEnumerable<Guid>? memberIds = null,
         CancellationToken cancellationToken = default)
     {
-        var response = new BaseEntityResponse<IReadOnlyCollection<ChoreIntentDto>>();
+        var response = new BaseEntityResponse<IReadOnlyCollection<TaskIntentDto>>();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var query = _dbContext.ChoreIntents
+        var query = _dbContext.TaskIntents
             .AsNoTracking()
-            .Where(i => i.TenantId == tenantId && i.ChorePlanId == planId);
+            .Where(i => i.TenantId == tenantId && i.TaskPlanId == planId);
 
         if (memberIds is not null)
         {
@@ -50,24 +50,24 @@ public class ChoreIntentService : IChoreIntentService
 
         var intents = await query.Select(i => MapToDto(i)).ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<ChoreIntentDto>>.SuccessfulResponse(intents);
+        return BaseEntityResponse<IReadOnlyCollection<TaskIntentDto>>.SuccessfulResponse(intents);
     }
 
-    public async Task<ChoreIntentResponse> GetAsync(
+    public async Task<TaskIntentResponse> GetAsync(
         Guid tenantId,
         Guid planId,
         Guid intentId,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreIntentResponse();
+        var response = new TaskIntentResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
         var intent = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChoreIntents.AsNoTracking()
-                .Where(i => i.TenantId == tenantId && i.ChorePlanId == planId && i.Id == intentId),
+            _dbContext.TaskIntents.AsNoTracking()
+                .Where(i => i.TenantId == tenantId && i.TaskPlanId == planId && i.Id == intentId),
             EntityDisplayName,
             cancellationToken);
 
@@ -77,46 +77,46 @@ public class ChoreIntentService : IChoreIntentService
         return response;
     }
 
-    public async Task<ChoreIntentResponse> UpsertAsync(
+    public async Task<TaskIntentResponse> UpsertAsync(
         Guid tenantId,
         Guid planId,
         Guid householdId,
-        UpsertChoreIntentRequest request,
+        UpsertTaskIntentRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreIntentResponse();
+        var response = new TaskIntentResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "upsert chore intent", response))
+        if (!ServiceGuards.RequireRequest(request, "upsert task intent", response))
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
 
-        var planExists = await _dbContext.ChorePlans
+        var planExists = await _dbContext.TaskPlans
             .AsNoTracking()
             .AnyAsync(p => p.TenantId == tenantId && p.Id == planId, cancellationToken);
 
         if (!planExists)
         {
-            response.AddResponseMessage(MessageType.ERROR, "Chore plan not found.");
+            response.AddResponseMessage(MessageType.ERROR, "Task plan not found.");
             return response;
         }
 
-        var existing = await _dbContext.ChoreIntents
-            .Where(i => i.TenantId == tenantId && i.ChorePlanId == planId && i.HouseholdMemberId == request.HouseholdMemberId)
+        var existing = await _dbContext.TaskIntents
+            .Where(i => i.TenantId == tenantId && i.TaskPlanId == planId && i.HouseholdMemberId == request.HouseholdMemberId)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (existing is null)
         {
-            existing = new ChoreIntent
+            existing = new TaskIntent
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,
-                ChorePlanId = planId,
+                TaskPlanId = planId,
                 HouseholdMemberId = request.HouseholdMemberId,
             };
-            _dbContext.ChoreIntents.Add(existing);
+            _dbContext.TaskIntents.Add(existing);
         }
         else if (existing.IsDeleted)
         {
@@ -131,21 +131,21 @@ public class ChoreIntentService : IChoreIntentService
         return response;
     }
 
-    public async Task<ChoreIntentResponse> DeleteAsync(
+    public async Task<TaskIntentResponse> DeleteAsync(
         Guid tenantId,
         Guid planId,
         Guid intentId,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreIntentResponse();
+        var response = new TaskIntentResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
         var intent = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChoreIntents
-                .Where(i => i.TenantId == tenantId && i.ChorePlanId == planId && i.Id == intentId),
+            _dbContext.TaskIntents
+                .Where(i => i.TenantId == tenantId && i.TaskPlanId == planId && i.Id == intentId),
             EntityDisplayName,
             cancellationToken);
 
@@ -167,7 +167,7 @@ public class ChoreIntentService : IChoreIntentService
         return response;
     }
 
-    private static ChoreIntentDto MapToDto(ChoreIntent i) => new(
-        i.Id, i.TenantId, i.ChorePlanId, i.HouseholdMemberId, i.Volunteered,
+    private static TaskIntentDto MapToDto(TaskIntent i) => new(
+        i.Id, i.TenantId, i.TaskPlanId, i.HouseholdMemberId, i.Volunteered,
         i.CreatedAt, i.UpdatedAt, i.IsDeleted, i.DeletedAt, i.DeletedByUserId);
 }

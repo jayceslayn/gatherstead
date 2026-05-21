@@ -31,7 +31,7 @@ app/
       LiveEventRepository.ts
       LiveEventAttendanceRepository.ts
       LiveMealPlanRepository.ts
-      LiveChoreRepository.ts
+      LiveTaskRepository.ts
     demo/
       DemoStore.ts                 ← shared reactive singleton + localStorage sync + limits
       DemoTenantRepository.ts
@@ -40,7 +40,7 @@ app/
       DemoEventRepository.ts
       DemoEventAttendanceRepository.ts
       DemoMealPlanRepository.ts
-      DemoChoreRepository.ts
+      DemoTaskRepository.ts
   composables/
     useRepositories.ts             ← inject() wrapper (new)
     useTenants.ts                  (updated — remove demoMode branch)
@@ -49,7 +49,7 @@ app/
     useEvents.ts                   (updated)
     useEventAttendance.ts          (updated)
     useMealPlans.ts                (updated)
-    useChoreTemplates.ts           (updated)
+    useTaskTemplates.ts           (updated)
     useAuth.ts                     (unchanged — auth identity is not data)
     useApiError.ts                 (unchanged)
     useTenantRole.ts               (unchanged)
@@ -91,7 +91,7 @@ Move all exported domain types here from their current composable files:
 - `EventSummary` ← `useEvents.ts`
 - `AttendanceStatus`, `AttendanceRecord` ← `useEventAttendance.ts`
 - `MealType`, `MealIntentStatus`, `MealTemplate`, `MealPlan`, `MealIntent` ← `useMealPlans.ts`
-- `ChoreTimeSlot`, `ChoreTemplate`, `ChorePlan`, `ChoreIntent` ← `useChoreTemplates.ts`
+- `TaskTimeSlot`, `TaskTemplate`, `TaskPlan`, `TaskIntent` ← `useTaskTemplates.ts`
 
 Composable files re-export them for backward compatibility so no page imports break.
 
@@ -128,11 +128,11 @@ export interface IMealPlanRepository {
   upsertIntent(tenantId: string, eventId: string, templateId: string, planId: string,
     householdId: string, memberId: string, status: MealIntentStatus, bringOwnFood: boolean): Promise<void>
 }
-export interface IChoreRepository {
-  listChoreTemplates(tenantId: string, eventId: string): Promise<ChoreTemplate[]>
-  listPlans(tenantId: string, eventId: string, templateId: string): Promise<ChorePlan[]>
+export interface ITaskRepository {
+  listTaskTemplates(tenantId: string, eventId: string): Promise<TaskTemplate[]>
+  listPlans(tenantId: string, eventId: string, templateId: string): Promise<TaskPlan[]>
   listIntentsForMember(tenantId: string, eventId: string, templateId: string,
-    planId: string, memberId: string): Promise<ChoreIntent[]>
+    planId: string, memberId: string): Promise<TaskIntent[]>
   upsertIntent(tenantId: string, eventId: string, templateId: string, planId: string,
     householdId: string, memberId: string, volunteered: boolean): Promise<void>
 }
@@ -143,7 +143,7 @@ export interface Repositories {
   events: IEventRepository
   eventAttendance: IEventAttendanceRepository
   mealPlans: IMealPlanRepository
-  chores: IChoreRepository
+  tasks: ITaskRepository
 }
 ```
 
@@ -172,7 +172,7 @@ export const DEMO_LIMITS = {
   events:                 1,
   eventMaxDays:           3,
   mealTemplatesPerEvent:  2,
-  choreTemplatesPerEvent: 2,
+  taskTemplatesPerEvent:  2,
 } as const
 
 export class DemoLimitError extends Error {
@@ -186,7 +186,7 @@ function seedState(): DemoState {
   // One "Demo Community" tenant (Owner), one "The Demo Family" household,
   // one adult "Demo User" member, one "Summer Gathering" event (3 days,
   // starting next weekend). Leaves room to add 2 more households, 3 more
-  // members, 2 meal templates, and 2 chore templates before hitting limits.
+  // members, 2 meal templates, and 2 task templates before hitting limits.
 }
 
 let _state: ReactiveState | null = null
@@ -244,9 +244,9 @@ Enforced limits by repository:
 | `DemoEventRepository.createEvent` | `events` | 1 |
 | `DemoEventRepository.createEvent` | `eventMaxDays` | 3 |
 | `DemoMealPlanRepository.createTemplate` | `mealTemplatesPerEvent` | 2 |
-| `DemoChoreRepository.createTemplate` | `choreTemplatesPerEvent` | 2 |
+| `DemoTaskRepository.createTemplate` | `taskTemplatesPerEvent` | 2 |
 
-Attendance, meal intent, and chore intent upserts have no limit (they toggle existing data).
+Attendance, meal intent, and task intent upserts have no limit (they toggle existing data).
 
 ### 6. `app/plugins/repositories.client.ts`
 ```typescript
@@ -263,7 +263,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         events:           new DemoEventRepository(),
         eventAttendance:  new DemoEventAttendanceRepository(),
         mealPlans:        new DemoMealPlanRepository(),
-        chores:           new DemoChoreRepository(),
+        tasks:            new DemoTaskRepository(),
       }
     : {
         tenants:          new LiveTenantRepository(),
@@ -272,7 +272,7 @@ export default defineNuxtPlugin((nuxtApp) => {
         events:           new LiveEventRepository(),
         eventAttendance:  new LiveEventAttendanceRepository(),
         mealPlans:        new LiveMealPlanRepository(),
-        chores:           new LiveChoreRepository(),
+        tasks:            new LiveTaskRepository(),
       }
 
   nuxtApp.vueApp.provide(REPOSITORIES_KEY, repos)
@@ -355,7 +355,7 @@ async function upsert(...) {
 4. `useEvents.ts`
 5. `useEventAttendance.ts`
 6. `useMealPlans.ts`
-7. `useChoreTemplates.ts`
+7. `useTaskTemplates.ts`
 
 ### 9. Middleware fix (`tenant.global.ts`)
 Add a demo short-circuit at the top of the middleware body before any API call:

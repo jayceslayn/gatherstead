@@ -1,7 +1,7 @@
-using Gatherstead.Api.Contracts.ChoreTemplates;
+using Gatherstead.Api.Contracts.TaskTemplates;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Security;
-using Gatherstead.Api.Services.ChoreTemplates;
+using Gatherstead.Api.Services.TaskTemplates;
 using Gatherstead.Api.Services.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,18 +11,18 @@ namespace Gatherstead.Api.Controllers;
 [ApiController]
 [Authorize]
 [RequireTenantAccess]
-[Route("api/tenants/{tenantId:guid}/events/{eventId:guid}/chore-templates")]
-public class ChoreTemplatesController : ControllerBase
+[Route("api/tenants/{tenantId:guid}/events/{eventId:guid}/task-templates")]
+public class TaskTemplatesController : ControllerBase
 {
-    private readonly IChoreTemplateService _choreTemplateService;
+    private readonly ITaskTemplateService _taskTemplateService;
 
-    public ChoreTemplatesController(IChoreTemplateService choreTemplateService)
+    public TaskTemplatesController(ITaskTemplateService taskTemplateService)
     {
-        _choreTemplateService = choreTemplateService ?? throw new ArgumentNullException(nameof(choreTemplateService));
+        _taskTemplateService = taskTemplateService ?? throw new ArgumentNullException(nameof(taskTemplateService));
     }
 
     [HttpGet]
-    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<ChoreTemplateDto>>>> GetChoreTemplates(
+    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<TaskTemplateDto>>>> GetTaskTemplates(
         Guid tenantId,
         Guid eventId,
         [FromQuery] string? ids,
@@ -35,13 +35,13 @@ public class ChoreTemplatesController : ControllerBase
             foreach (var segment in ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (!Guid.TryParse(segment, out var parsed))
-                    return BadRequest(new { error = $"Invalid chore template identifier: '{segment}'." });
+                    return BadRequest(new { error = $"Invalid task template identifier: '{segment}'." });
                 idList.Add(parsed);
             }
             parsedIds = idList;
         }
 
-        var response = await _choreTemplateService.ListAsync(tenantId, eventId, parsedIds, cancellationToken);
+        var response = await _taskTemplateService.ListAsync(tenantId, eventId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
@@ -50,13 +50,13 @@ public class ChoreTemplatesController : ControllerBase
     }
 
     [HttpGet("{templateId:guid}")]
-    public async Task<ActionResult<ChoreTemplateResponse>> GetChoreTemplate(
+    public async Task<ActionResult<TaskTemplateResponse>> GetTaskTemplate(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
         CancellationToken cancellationToken)
     {
-        var response = await _choreTemplateService.GetAsync(tenantId, eventId, templateId, cancellationToken);
+        var response = await _taskTemplateService.GetAsync(tenantId, eventId, templateId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
@@ -68,32 +68,32 @@ public class ChoreTemplatesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<ChoreTemplateResponse>> CreateChoreTemplate(
+    public async Task<ActionResult<TaskTemplateResponse>> CreateTaskTemplate(
         Guid tenantId,
         Guid eventId,
-        [FromBody] CreateChoreTemplateRequest request,
+        [FromBody] CreateTaskTemplateRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _choreTemplateService.CreateAsync(tenantId, eventId, request, cancellationToken);
+        var response = await _taskTemplateService.CreateAsync(tenantId, eventId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
 
         return CreatedAtAction(
-            nameof(GetChoreTemplate),
+            nameof(GetTaskTemplate),
             new { tenantId, eventId, templateId = response.Entity?.Id },
             response);
     }
 
     [HttpPut("{templateId:guid}")]
-    public async Task<ActionResult<ChoreTemplateResponse>> UpdateChoreTemplate(
+    public async Task<ActionResult<TaskTemplateResponse>> UpdateTaskTemplate(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
-        [FromBody] UpdateChoreTemplateRequest request,
+        [FromBody] UpdateTaskTemplateRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _choreTemplateService.UpdateAsync(tenantId, eventId, templateId, request, cancellationToken);
+        var response = await _taskTemplateService.UpdateAsync(tenantId, eventId, templateId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
@@ -105,13 +105,13 @@ public class ChoreTemplatesController : ControllerBase
     }
 
     [HttpDelete("{templateId:guid}")]
-    public async Task<ActionResult<ChoreTemplateResponse>> DeleteChoreTemplate(
+    public async Task<ActionResult<TaskTemplateResponse>> DeleteTaskTemplate(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
         CancellationToken cancellationToken)
     {
-        var response = await _choreTemplateService.DeleteAsync(tenantId, eventId, templateId, cancellationToken);
+        var response = await _taskTemplateService.DeleteAsync(tenantId, eventId, templateId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);

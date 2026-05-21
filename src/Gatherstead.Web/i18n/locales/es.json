@@ -116,7 +116,7 @@
     "startDate": "Fecha de Inicio",
     "endDate": "Fecha de Fin",
     "mealPlan": "Plan de Comidas",
-    "choreTemplate": "Plantilla de Tareas",
+    "taskTemplate": "Plantilla de Tareas",
     "attendance": "Asistencia",
     "attendanceGrid": {
       "totals": "Totales del Evento",
@@ -144,7 +144,7 @@
     "listView": "Vista de lista",
     "overview": "Resumen",
     "meals": "Comidas",
-    "chores": "Tareas",
+    "tasks": "Tareas",
     "accommodations": "Alojamiento",
     "myAttendance": "Mi Asistencia",
     "selectHousehold": "Seleccionar hogar",
@@ -160,7 +160,7 @@
       "dateRange": "{start} – {end}",
       "oneOff": "Única vez"
     },
-    "chore": {
+    "task": {
       "morning": "Mañana",
       "midday": "Mediodía",
       "evening": "Tarde/Noche",
@@ -177,7 +177,7 @@
   "property": {
     "title": "Propiedades",
     "name": "Nombre de la Propiedad",
-    "resources": "Recursos",
+    "equipment": "Equipo",
     "noProperties": "Aún no hay propiedades",
     "noPropertiesHintManager": "Agrega tu primera propiedad para comenzar.",
     "noPropertiesHintMember": "Aún no se han agregado propiedades.",
@@ -259,7 +259,7 @@
         "events": "Eventos activos",
         "eventMaxDays": "Duración máxima del evento (días)",
         "mealTemplatesPerEvent": "Plantillas de comida por evento",
-        "choreTemplatesPerEvent": "Plantillas de tareas por evento",
+        "taskTemplatesPerEvent": "Plantillas de tareas por evento",
         "propertiesPerTenant": "Propiedades por grupo",
         "accommodationsPerProperty": "Alojamientos por propiedad"
       },

@@ -26,7 +26,7 @@
     "featureDirectory": "Directory",
     "featureDirectoryDesc": "A shared family directory to organize members into households, with contact info, dietary profiles, and more.",
     "featureProperties": "Properties",
-    "featurePropertiesDesc": "Manage venues, cabins, and shared spaces with rooms, RV spots, and resources for every gathering.",
+    "featurePropertiesDesc": "Manage venues, cabins, and shared spaces with rooms, RV spots, and equipment for every gathering.",
     "featureEvents": "Events",
     "featureEventsDesc": "Plan gatherings with dates, locations, and attendee management.",
     "featureLodging": "Lodging",
@@ -57,7 +57,7 @@
     "upcomingEvents": "Upcoming Events",
     "viewAll": "View All",
     "myTasks": "My Tasks",
-    "tasksComingSoon": "Availability, meal intents, and chore sign-ups will appear here."
+    "tasksComingSoon": "Availability, meal intents, and task sign-ups will appear here."
   },
   "tenant": {
     "selectTitle": "Select a Group",
@@ -116,7 +116,7 @@
     "startDate": "Start Date",
     "endDate": "End Date",
     "mealPlan": "Meal Plan",
-    "choreTemplate": "Chore Template",
+    "taskTemplate": "Task Template",
     "attendance": "Attendance",
     "attendanceGrid": {
       "totals": "Event Totals",
@@ -144,7 +144,7 @@
     "listView": "List view",
     "overview": "Overview",
     "meals": "Meals",
-    "chores": "Chores",
+    "tasks": "Tasks",
     "accommodations": "Accommodations",
     "myAttendance": "My Attendance",
     "selectHousehold": "Select household",
@@ -160,15 +160,15 @@
       "dateRange": "{start} – {end}",
       "oneOff": "One-off"
     },
-    "chore": {
+    "task": {
       "morning": "Morning",
       "midday": "Midday",
       "evening": "Evening",
       "anytime": "Anytime",
       "volunteer": "Sign Up",
       "volunteered": "Signed Up",
-      "noTemplates": "No chores have been set up for this event.",
-      "noPlans": "No chore plan details available.",
+      "noTemplates": "No tasks have been set up for this event.",
+      "noPlans": "No task plan details available.",
       "minimumAssignees": "min. {n}",
       "dateRange": "{start} – {end}",
       "oneOff": "One-off"
@@ -177,7 +177,7 @@
   "property": {
     "title": "Properties",
     "name": "Property Name",
-    "resources": "Resources",
+    "equipment": "Equipment",
     "noProperties": "No properties yet",
     "noPropertiesHintManager": "Add your first property to get started.",
     "noPropertiesHintMember": "No properties have been added yet.",
@@ -259,7 +259,7 @@
         "events": "Active events",
         "eventMaxDays": "Max event length (days)",
         "mealTemplatesPerEvent": "Meal templates per event",
-        "choreTemplatesPerEvent": "Chore templates per event",
+        "taskTemplatesPerEvent": "Task templates per event",
         "propertiesPerTenant": "Properties per group",
         "accommodationsPerProperty": "Accommodations per property"
       },

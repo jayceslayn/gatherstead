@@ -10,9 +10,9 @@ import type {
   MealPlan,
   MealIntent,
   MealAttendance,
-  ChoreTemplate,
-  ChorePlan,
-  ChoreIntent,
+  TaskTemplate,
+  TaskPlan,
+  TaskIntent,
   PropertySummary,
   AccommodationSummary,
   AccommodationIntent,
@@ -26,7 +26,7 @@ export const DEMO_LIMITS = {
   events: 1,
   eventMaxDays: 3,
   mealTemplatesPerEvent: 3,
-  choreTemplatesPerEvent: 4,
+  taskTemplatesPerEvent: 4,
   propertiesPerTenant: 2,
   accommodationsPerProperty: 6,
 } as const
@@ -48,9 +48,9 @@ interface DemoState {
   mealPlans: MealPlan[]
   mealIntents: MealIntent[]
   mealAttendance: MealAttendance[]
-  choreTemplates: ChoreTemplate[]
-  chorePlans: ChorePlan[]
-  choreIntents: ChoreIntent[]
+  taskTemplates: TaskTemplate[]
+  taskPlans: TaskPlan[]
+  taskIntents: TaskIntent[]
   properties: PropertySummary[]
   accommodations: AccommodationSummary[]
   accommodationIntents: AccommodationIntent[]
@@ -66,9 +66,9 @@ export interface ReactiveState {
   mealPlans: Ref<MealPlan[]>
   mealIntents: Ref<MealIntent[]>
   mealAttendance: Ref<MealAttendance[]>
-  choreTemplates: Ref<ChoreTemplate[]>
-  chorePlans: Ref<ChorePlan[]>
-  choreIntents: Ref<ChoreIntent[]>
+  taskTemplates: Ref<TaskTemplate[]>
+  taskPlans: Ref<TaskPlan[]>
+  taskIntents: Ref<TaskIntent[]>
   properties: Ref<PropertySummary[]>
   accommodations: Ref<AccommodationSummary[]>
   accommodationIntents: Ref<AccommodationIntent[]>
@@ -87,9 +87,9 @@ function emptyState(): DemoState {
     mealPlans: [],
     mealIntents: [],
     mealAttendance: [],
-    choreTemplates: [],
-    chorePlans: [],
-    choreIntents: [],
+    taskTemplates: [],
+    taskPlans: [],
+    taskIntents: [],
     properties: [],
     accommodations: [],
     accommodationIntents: [],
@@ -118,9 +118,9 @@ function buildReactiveRefs(state: DemoState): ReactiveState {
     mealPlans: ref(state.mealPlans),
     mealIntents: ref(state.mealIntents),
     mealAttendance: ref(state.mealAttendance),
-    choreTemplates: ref(state.choreTemplates),
-    chorePlans: ref(state.chorePlans),
-    choreIntents: ref(state.choreIntents),
+    taskTemplates: ref(state.taskTemplates),
+    taskPlans: ref(state.taskPlans),
+    taskIntents: ref(state.taskIntents),
     properties: ref(state.properties),
     accommodations: ref(state.accommodations),
     accommodationIntents: ref(state.accommodationIntents),
@@ -138,9 +138,9 @@ function snapshot(state: ReactiveState): DemoState {
     mealPlans: state.mealPlans.value,
     mealIntents: state.mealIntents.value,
     mealAttendance: state.mealAttendance.value,
-    choreTemplates: state.choreTemplates.value,
-    chorePlans: state.chorePlans.value,
-    choreIntents: state.choreIntents.value,
+    taskTemplates: state.taskTemplates.value,
+    taskPlans: state.taskPlans.value,
+    taskIntents: state.taskIntents.value,
     properties: state.properties.value,
     accommodations: state.accommodations.value,
     accommodationIntents: state.accommodationIntents.value,
@@ -173,9 +173,9 @@ export function clearDemoStore(): void {
   _state.mealPlans.value = []
   _state.mealIntents.value = []
   _state.mealAttendance.value = []
-  _state.choreTemplates.value = []
-  _state.chorePlans.value = []
-  _state.choreIntents.value = []
+  _state.taskTemplates.value = []
+  _state.taskPlans.value = []
+  _state.taskIntents.value = []
   _state.properties.value = []
   _state.accommodations.value = []
   _state.accommodationIntents.value = []

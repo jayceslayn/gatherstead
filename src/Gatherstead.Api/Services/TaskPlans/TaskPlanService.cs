@@ -1,21 +1,21 @@
-using Gatherstead.Api.Contracts.ChorePlans;
+using Gatherstead.Api.Contracts.TaskPlans;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace Gatherstead.Api.Services.ChorePlans;
+namespace Gatherstead.Api.Services.TaskPlans;
 
-public class ChorePlanService : IChorePlanService
+public class TaskPlanService : ITaskPlanService
 {
-    private const string EntityDisplayName = "Chore plan";
+    private const string EntityDisplayName = "Task plan";
 
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    public ChorePlanService(
+    public TaskPlanService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService)
@@ -25,19 +25,19 @@ public class ChorePlanService : IChorePlanService
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
-    public async Task<BaseEntityResponse<IReadOnlyCollection<ChorePlanDto>>> ListAsync(
+    public async Task<BaseEntityResponse<IReadOnlyCollection<TaskPlanDto>>> ListAsync(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
         IEnumerable<Guid>? ids = null,
         CancellationToken cancellationToken = default)
     {
-        var response = new BaseEntityResponse<IReadOnlyCollection<ChorePlanDto>>();
+        var response = new BaseEntityResponse<IReadOnlyCollection<TaskPlanDto>>();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var query = _dbContext.ChorePlans
+        var query = _dbContext.TaskPlans
             .AsNoTracking()
             .Where(p => p.TenantId == tenantId && p.TemplateId == templateId);
 
@@ -50,23 +50,23 @@ public class ChorePlanService : IChorePlanService
 
         var plans = await query.Select(p => MapToDto(p)).ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<ChorePlanDto>>.SuccessfulResponse(plans);
+        return BaseEntityResponse<IReadOnlyCollection<TaskPlanDto>>.SuccessfulResponse(plans);
     }
 
-    public async Task<ChorePlanResponse> GetAsync(
+    public async Task<TaskPlanResponse> GetAsync(
         Guid tenantId,
         Guid templateId,
         Guid planId,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChorePlanResponse();
+        var response = new TaskPlanResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
         var plan = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChorePlans.AsNoTracking()
+            _dbContext.TaskPlans.AsNoTracking()
                 .Where(p => p.TenantId == tenantId && p.TemplateId == templateId && p.Id == planId),
             EntityDisplayName,
             cancellationToken);
@@ -77,25 +77,25 @@ public class ChorePlanService : IChorePlanService
         return response;
     }
 
-    public async Task<ChorePlanResponse> UpdateAsync(
+    public async Task<TaskPlanResponse> UpdateAsync(
         Guid tenantId,
         Guid templateId,
         Guid planId,
-        UpdateChorePlanRequest request,
+        UpdateTaskPlanRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChorePlanResponse();
+        var response = new TaskPlanResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "update chore plan", response))
+        if (!ServiceGuards.RequireRequest(request, "update task plan", response))
             return response;
         if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var plan = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChorePlans.Where(p => p.TenantId == tenantId && p.TemplateId == templateId && p.Id == planId),
+            _dbContext.TaskPlans.Where(p => p.TenantId == tenantId && p.TemplateId == templateId && p.Id == planId),
             EntityDisplayName,
             cancellationToken);
 
@@ -112,7 +112,7 @@ public class ChorePlanService : IChorePlanService
         return response;
     }
 
-    private static ChorePlanDto MapToDto(Data.Entities.ChorePlan p) => new(
+    private static TaskPlanDto MapToDto(Data.Entities.TaskPlan p) => new(
         p.Id, p.TenantId, p.TemplateId, p.Day, p.TimeSlot, p.Completed, p.Notes,
         p.IsException, p.ExceptionReason,
         p.CreatedAt, p.UpdatedAt, p.IsDeleted, p.DeletedAt, p.DeletedByUserId);

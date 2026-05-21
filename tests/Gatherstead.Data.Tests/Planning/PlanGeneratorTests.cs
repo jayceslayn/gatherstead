@@ -14,25 +14,25 @@ public class PlanGeneratorTests
     [Fact]
     public void ExpandSlots_SingleFlag_ReturnsSingleSlot()
     {
-        Assert.Equal([ChoreTimeSlot.Morning], PlanGenerator.ExpandSlots(ChoreTimeSlotFlags.Morning));
-        Assert.Equal([ChoreTimeSlot.Midday], PlanGenerator.ExpandSlots(ChoreTimeSlotFlags.Midday));
-        Assert.Equal([ChoreTimeSlot.Evening], PlanGenerator.ExpandSlots(ChoreTimeSlotFlags.Evening));
+        Assert.Equal([TaskTimeSlot.Morning], PlanGenerator.ExpandSlots(TaskTimeSlotFlags.Morning));
+        Assert.Equal([TaskTimeSlot.Midday], PlanGenerator.ExpandSlots(TaskTimeSlotFlags.Midday));
+        Assert.Equal([TaskTimeSlot.Evening], PlanGenerator.ExpandSlots(TaskTimeSlotFlags.Evening));
     }
 
     [Fact]
     public void ExpandSlots_MultipleFlags_ReturnsAllSlots()
     {
-        var slots = PlanGenerator.ExpandSlots(ChoreTimeSlotFlags.Morning | ChoreTimeSlotFlags.Evening).ToList();
+        var slots = PlanGenerator.ExpandSlots(TaskTimeSlotFlags.Morning | TaskTimeSlotFlags.Evening).ToList();
         Assert.Equal(2, slots.Count);
-        Assert.Contains(ChoreTimeSlot.Morning, slots);
-        Assert.Contains(ChoreTimeSlot.Evening, slots);
+        Assert.Contains(TaskTimeSlot.Morning, slots);
+        Assert.Contains(TaskTimeSlot.Evening, slots);
     }
 
     [Fact]
     public void ExpandSlots_AllCombinableFlags_ReturnsThreeSlots()
     {
         var slots = PlanGenerator.ExpandSlots(
-            ChoreTimeSlotFlags.Morning | ChoreTimeSlotFlags.Midday | ChoreTimeSlotFlags.Evening).ToList();
+            TaskTimeSlotFlags.Morning | TaskTimeSlotFlags.Midday | TaskTimeSlotFlags.Evening).ToList();
         Assert.Equal(3, slots.Count);
     }
 
@@ -40,8 +40,8 @@ public class PlanGeneratorTests
     public void ExpandSlots_Anytime_ReturnsSingletonAndIgnoresOtherBits()
     {
         // Anytime is standalone; combining with other bits still returns only Anytime
-        var slots = PlanGenerator.ExpandSlots(ChoreTimeSlotFlags.Anytime | ChoreTimeSlotFlags.Morning).ToList();
-        Assert.Equal([ChoreTimeSlot.Anytime], slots);
+        var slots = PlanGenerator.ExpandSlots(TaskTimeSlotFlags.Anytime | TaskTimeSlotFlags.Morning).ToList();
+        Assert.Equal([TaskTimeSlot.Anytime], slots);
     }
 
     // ── ExpandMealTypes ──────────────────────────────────────────────────────
@@ -85,16 +85,16 @@ public class PlanGeneratorTests
         Assert.Equal(end, days[2]);
     }
 
-    // ── DiffChorePlans ───────────────────────────────────────────────────────
+    // ── DiffTaskPlans ───────────────────────────────────────────────────────
 
     [Fact]
-    public void DiffChorePlans_NoExisting_AddsAllSlots()
+    public void DiffTaskPlans_NoExisting_AddsAllSlots()
     {
         var start = new DateOnly(2025, 7, 1);
         var end = new DateOnly(2025, 7, 3);
-        var flags = ChoreTimeSlotFlags.Morning | ChoreTimeSlotFlags.Evening;
+        var flags = TaskTimeSlotFlags.Morning | TaskTimeSlotFlags.Evening;
 
-        var diff = PlanGenerator.DiffChorePlans(flags, start, end, []);
+        var diff = PlanGenerator.DiffTaskPlans(flags, start, end, []);
 
         Assert.Equal(6, diff.ToAdd.Count);  // 3 days × 2 slots
         Assert.Empty(diff.ToRestore);
@@ -102,20 +102,20 @@ public class PlanGeneratorTests
     }
 
     [Fact]
-    public void DiffChorePlans_AllExistAndActive_NothingChanges()
+    public void DiffTaskPlans_AllExistAndActive_NothingChanges()
     {
         var start = new DateOnly(2025, 7, 1);
         var end = new DateOnly(2025, 7, 2);
         var existing = new[]
         {
-            MakeChorePlan(start, ChoreTimeSlot.Morning),
-            MakeChorePlan(start, ChoreTimeSlot.Evening),
-            MakeChorePlan(end,   ChoreTimeSlot.Morning),
-            MakeChorePlan(end,   ChoreTimeSlot.Evening),
+            MakeTaskPlan(start, TaskTimeSlot.Morning),
+            MakeTaskPlan(start, TaskTimeSlot.Evening),
+            MakeTaskPlan(end,   TaskTimeSlot.Morning),
+            MakeTaskPlan(end,   TaskTimeSlot.Evening),
         };
 
-        var diff = PlanGenerator.DiffChorePlans(
-            ChoreTimeSlotFlags.Morning | ChoreTimeSlotFlags.Evening, start, end, existing);
+        var diff = PlanGenerator.DiffTaskPlans(
+            TaskTimeSlotFlags.Morning | TaskTimeSlotFlags.Evening, start, end, existing);
 
         Assert.Empty(diff.ToAdd);
         Assert.Empty(diff.ToRestore);
@@ -123,12 +123,12 @@ public class PlanGeneratorTests
     }
 
     [Fact]
-    public void DiffChorePlans_SoftDeletedNonException_IsRestored()
+    public void DiffTaskPlans_SoftDeletedNonException_IsRestored()
     {
         var day = new DateOnly(2025, 7, 1);
-        var plan = MakeChorePlan(day, ChoreTimeSlot.Morning, isDeleted: true);
+        var plan = MakeTaskPlan(day, TaskTimeSlot.Morning, isDeleted: true);
 
-        var diff = PlanGenerator.DiffChorePlans(ChoreTimeSlotFlags.Morning, day, day, [plan]);
+        var diff = PlanGenerator.DiffTaskPlans(TaskTimeSlotFlags.Morning, day, day, [plan]);
 
         Assert.Empty(diff.ToAdd);
         Assert.Single(diff.ToRestore);
@@ -136,12 +136,12 @@ public class PlanGeneratorTests
     }
 
     [Fact]
-    public void DiffChorePlans_SuppressionMarker_IsSkipped()
+    public void DiffTaskPlans_SuppressionMarker_IsSkipped()
     {
         var day = new DateOnly(2025, 7, 1);
-        var tombstone = MakeChorePlan(day, ChoreTimeSlot.Morning, isDeleted: true, isException: true);
+        var tombstone = MakeTaskPlan(day, TaskTimeSlot.Morning, isDeleted: true, isException: true);
 
-        var diff = PlanGenerator.DiffChorePlans(ChoreTimeSlotFlags.Morning, day, day, [tombstone]);
+        var diff = PlanGenerator.DiffTaskPlans(TaskTimeSlotFlags.Morning, day, day, [tombstone]);
 
         // Neither added nor restored — suppression marker is honoured
         Assert.Empty(diff.ToAdd);
@@ -150,17 +150,17 @@ public class PlanGeneratorTests
     }
 
     [Fact]
-    public void DiffChorePlans_DayRemovedFromRange_PrunesEmptyPlan()
+    public void DiffTaskPlans_DayRemovedFromRange_PrunesEmptyPlan()
     {
         var inRange = new DateOnly(2025, 7, 1);
         var removed = new DateOnly(2025, 7, 2);
         var existing = new[]
         {
-            MakeChorePlan(inRange, ChoreTimeSlot.Morning),
-            MakeChorePlan(removed, ChoreTimeSlot.Morning),
+            MakeTaskPlan(inRange, TaskTimeSlot.Morning),
+            MakeTaskPlan(removed, TaskTimeSlot.Morning),
         };
 
-        var diff = PlanGenerator.DiffChorePlans(ChoreTimeSlotFlags.Morning, inRange, inRange, existing);
+        var diff = PlanGenerator.DiffTaskPlans(TaskTimeSlotFlags.Morning, inRange, inRange, existing);
 
         Assert.Empty(diff.ToAdd);
         Assert.Empty(diff.ToRestore);
@@ -169,58 +169,58 @@ public class PlanGeneratorTests
     }
 
     [Fact]
-    public void DiffChorePlans_CompletedPlanOutOfRange_NotPruned()
+    public void DiffTaskPlans_CompletedPlanOutOfRange_NotPruned()
     {
         var inRange = new DateOnly(2025, 7, 1);
         var removed = new DateOnly(2025, 7, 2);
-        var completedPlan = MakeChorePlan(removed, ChoreTimeSlot.Morning, completed: true);
+        var completedPlan = MakeTaskPlan(removed, TaskTimeSlot.Morning, completed: true);
 
-        var diff = PlanGenerator.DiffChorePlans(ChoreTimeSlotFlags.Morning, inRange, inRange, [completedPlan]);
+        var diff = PlanGenerator.DiffTaskPlans(TaskTimeSlotFlags.Morning, inRange, inRange, [completedPlan]);
 
         Assert.Empty(diff.ToPrune);
     }
 
     [Fact]
-    public void DiffChorePlans_ExceptionPlanOutOfRange_NotPruned()
+    public void DiffTaskPlans_ExceptionPlanOutOfRange_NotPruned()
     {
         var inRange = new DateOnly(2025, 7, 1);
         var removed = new DateOnly(2025, 7, 2);
-        var exceptionPlan = MakeChorePlan(removed, ChoreTimeSlot.Morning, isException: true);
+        var exceptionPlan = MakeTaskPlan(removed, TaskTimeSlot.Morning, isException: true);
 
-        var diff = PlanGenerator.DiffChorePlans(ChoreTimeSlotFlags.Morning, inRange, inRange, [exceptionPlan]);
+        var diff = PlanGenerator.DiffTaskPlans(TaskTimeSlotFlags.Morning, inRange, inRange, [exceptionPlan]);
 
         Assert.Empty(diff.ToPrune);
     }
 
     [Fact]
-    public void DiffChorePlans_PlanWithIntentsOutOfRange_NotPruned()
+    public void DiffTaskPlans_PlanWithIntentsOutOfRange_NotPruned()
     {
         var inRange = new DateOnly(2025, 7, 1);
         var removed = new DateOnly(2025, 7, 2);
-        var planWithIntent = MakeChorePlan(removed, ChoreTimeSlot.Morning, intentCount: 1);
+        var planWithIntent = MakeTaskPlan(removed, TaskTimeSlot.Morning, intentCount: 1);
 
-        var diff = PlanGenerator.DiffChorePlans(ChoreTimeSlotFlags.Morning, inRange, inRange, [planWithIntent]);
+        var diff = PlanGenerator.DiffTaskPlans(TaskTimeSlotFlags.Morning, inRange, inRange, [planWithIntent]);
 
         Assert.Empty(diff.ToPrune);
     }
 
     [Fact]
-    public void DiffChorePlans_TemplateSlotChange_AddsMissingSlots()
+    public void DiffTaskPlans_TemplateSlotChange_AddsMissingSlots()
     {
         // Existing plans only have Morning; template now covers Morning|Midday
         var start = new DateOnly(2025, 7, 1);
         var end = new DateOnly(2025, 7, 2);
         var existing = new[]
         {
-            MakeChorePlan(start, ChoreTimeSlot.Morning),
-            MakeChorePlan(end,   ChoreTimeSlot.Morning),
+            MakeTaskPlan(start, TaskTimeSlot.Morning),
+            MakeTaskPlan(end,   TaskTimeSlot.Morning),
         };
 
-        var diff = PlanGenerator.DiffChorePlans(
-            ChoreTimeSlotFlags.Morning | ChoreTimeSlotFlags.Midday, start, end, existing);
+        var diff = PlanGenerator.DiffTaskPlans(
+            TaskTimeSlotFlags.Morning | TaskTimeSlotFlags.Midday, start, end, existing);
 
         Assert.Equal(2, diff.ToAdd.Count);
-        Assert.All(diff.ToAdd, item => Assert.Equal(ChoreTimeSlot.Midday, item.Slot));
+        Assert.All(diff.ToAdd, item => Assert.Equal(TaskTimeSlot.Midday, item.Slot));
         Assert.Empty(diff.ToPrune);
     }
 
@@ -296,9 +296,9 @@ public class PlanGeneratorTests
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static ChorePlan MakeChorePlan(
+    private static TaskPlan MakeTaskPlan(
         DateOnly day,
-        ChoreTimeSlot slot,
+        TaskTimeSlot slot,
         bool isDeleted = false,
         bool isException = false,
         bool completed = false,
@@ -313,7 +313,7 @@ public class PlanGeneratorTests
         IsDeleted = isDeleted,
         IsException = isException,
         Intents = Enumerable.Range(0, intentCount)
-            .Select(_ => new ChoreIntent { Id = Guid.NewGuid(), TenantId = TenantId })
+            .Select(_ => new TaskIntent { Id = Guid.NewGuid(), TenantId = TenantId })
             .ToList(),
     };
 

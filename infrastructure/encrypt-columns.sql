@@ -30,7 +30,7 @@ ALTER TABLE dbo.HouseholdMembers
 GO
 
 -- Other tables with encrypted Notes
-ALTER TABLE dbo.Resources
+ALTER TABLE dbo.Equipment
     ALTER COLUMN Notes NVARCHAR(MAX) COLLATE Latin1_General_BIN2 NULL
     ENCRYPTED WITH (
         COLUMN_ENCRYPTION_KEY = [CEK_Default],
@@ -57,7 +57,7 @@ ALTER TABLE dbo.MealIntents
     );
 GO
 
-ALTER TABLE dbo.StayIntents
+ALTER TABLE dbo.AccommodationIntents
     ALTER COLUMN Notes NVARCHAR(MAX) COLLATE Latin1_General_BIN2 NULL
     ENCRYPTED WITH (
         COLUMN_ENCRYPTION_KEY = [CEK_Default],
@@ -66,7 +66,7 @@ ALTER TABLE dbo.StayIntents
     );
 GO
 
-ALTER TABLE dbo.ChoreTemplates
+ALTER TABLE dbo.TaskTemplates
     ALTER COLUMN Notes NVARCHAR(MAX) COLLATE Latin1_General_BIN2 NULL
     ENCRYPTED WITH (
         COLUMN_ENCRYPTION_KEY = [CEK_Default],
@@ -75,7 +75,7 @@ ALTER TABLE dbo.ChoreTemplates
     );
 GO
 
-ALTER TABLE dbo.ChoreTasks
+ALTER TABLE dbo.TaskPlans
     ALTER COLUMN Notes NVARCHAR(MAX) COLLATE Latin1_General_BIN2 NULL
     ENCRYPTED WITH (
         COLUMN_ENCRYPTION_KEY = [CEK_Default],

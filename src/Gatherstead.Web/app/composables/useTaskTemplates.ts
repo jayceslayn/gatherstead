@@ -1,15 +1,15 @@
 import { useTenantStore } from '~/stores/tenant'
 import type {
-  ChoreTemplate,
-  ChorePlan,
-  ChoreIntent,
+  TaskTemplate,
+  TaskPlan,
+  TaskIntent,
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
-export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
+export function useTaskTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
   const tenantStore = useTenantStore()
-  const { chores: repo } = useRepositories()
+  const { tasks: repo } = useRepositories()
   const toast = useToast()
   const { t } = useI18n()
   const { translateError } = useApiError()
@@ -64,37 +64,37 @@ export function useChoreTemplateActions(eventId: Ref<string>, refresh: () => Pro
   return { updating, createTemplate, updateTemplate, deleteTemplate }
 }
 
-export function useChoreTemplates(eventId: Ref<string>) {
+export function useTaskTemplates(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
-  const { chores: repo } = useRepositories()
+  const { tasks: repo } = useRepositories()
 
-  const { data, pending, error } = useAsyncData<ChoreTemplate[]>(
-    () => `chore-templates-${tenantStore.currentTenantId}-${eventId.value}`,
-    () => repo.listChoreTemplates(tenantStore.currentTenantId!, eventId.value),
+  const { data, pending, error } = useAsyncData<TaskTemplate[]>(
+    () => `task-templates-${tenantStore.currentTenantId}-${eventId.value}`,
+    () => repo.listTaskTemplates(tenantStore.currentTenantId!, eventId.value),
     { watch: [eventId] },
   )
 
   return { templates: computed(() => data.value ?? []), pending, error }
 }
 
-export function useChorePlanSection(
+export function useTaskPlanSection(
   eventId: Ref<string>,
   templateId: Ref<string>,
   memberId: Ref<string | null>,
   householdId: Ref<string | null>,
 ) {
   const tenantStore = useTenantStore()
-  const { chores: repo } = useRepositories()
+  const { tasks: repo } = useRepositories()
   const { t } = useI18n()
 
-  const { data: plansData, pending: plansPending } = useAsyncData<ChorePlan[]>(
-    () => `chore-plans-${tenantStore.currentTenantId}-${eventId.value}-${templateId.value}`,
+  const { data: plansData, pending: plansPending } = useAsyncData<TaskPlan[]>(
+    () => `task-plans-${tenantStore.currentTenantId}-${eventId.value}-${templateId.value}`,
     () => repo.listPlans(tenantStore.currentTenantId!, eventId.value, templateId.value),
     { watch: [eventId, templateId] },
   )
 
   const plans = computed(() => plansData.value ?? [])
-  const intentMap = ref<Record<string, ChoreIntent | null>>({})
+  const intentMap = ref<Record<string, TaskIntent | null>>({})
   const intentsPending = ref(false)
   const updating = ref<string[]>([])
 
@@ -111,10 +111,10 @@ export function useChorePlanSection(
             const intents = await repo.listIntentsForMember(
               tenantStore.currentTenantId!, eventId.value, templateId.value, plan.id, memberId.value!,
             )
-            return [plan.id, intents.find((i: ChoreIntent) => i.householdMemberId === memberId.value) ?? null] as [string, ChoreIntent | null]
+            return [plan.id, intents.find((i: TaskIntent) => i.householdMemberId === memberId.value) ?? null] as [string, TaskIntent | null]
           }
           catch {
-            return [plan.id, null] as [string, ChoreIntent | null]
+            return [plan.id, null] as [string, TaskIntent | null]
           }
         }),
       )
@@ -141,7 +141,7 @@ export function useChorePlanSection(
         const intents = await repo.listIntentsForMember(
           tenantStore.currentTenantId!, eventId.value, templateId.value, planId, memberId.value,
         )
-        intentMap.value[planId] = intents.find((i: ChoreIntent) => i.householdMemberId === memberId.value) ?? null
+        intentMap.value[planId] = intents.find((i: TaskIntent) => i.householdMemberId === memberId.value) ?? null
       }
       catch {
         intentMap.value[planId] = null

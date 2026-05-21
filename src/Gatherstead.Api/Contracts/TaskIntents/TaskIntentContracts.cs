@@ -1,12 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
 
-namespace Gatherstead.Api.Contracts.ChoreIntents;
+namespace Gatherstead.Api.Contracts.TaskIntents;
 
-public record ChoreIntentDto(
+public record TaskIntentDto(
     Guid Id,
     Guid TenantId,
-    Guid ChorePlanId,
+    Guid TaskPlanId,
     Guid HouseholdMemberId,
     bool Volunteered,
     DateTimeOffset CreatedAt,
@@ -15,9 +15,9 @@ public record ChoreIntentDto(
     DateTimeOffset? DeletedAt,
     Guid? DeletedByUserId);
 
-public class ChoreIntentResponse : BaseEntityResponse<ChoreIntentDto> { }
+public class TaskIntentResponse : BaseEntityResponse<TaskIntentDto> { }
 
-public class UpsertChoreIntentRequest
+public class UpsertTaskIntentRequest
 {
     [Required]
     public Guid HouseholdMemberId { get; init; }

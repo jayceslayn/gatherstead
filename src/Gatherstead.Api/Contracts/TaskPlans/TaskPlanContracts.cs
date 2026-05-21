@@ -1,14 +1,14 @@
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
-namespace Gatherstead.Api.Contracts.ChorePlans;
+namespace Gatherstead.Api.Contracts.TaskPlans;
 
-public record ChorePlanDto(
+public record TaskPlanDto(
     Guid Id,
     Guid TenantId,
     Guid TemplateId,
     DateOnly Day,
-    ChoreTimeSlot? TimeSlot,
+    TaskTimeSlot? TimeSlot,
     bool Completed,
     string? Notes,
     bool IsException,
@@ -19,9 +19,9 @@ public record ChorePlanDto(
     DateTimeOffset? DeletedAt,
     Guid? DeletedByUserId);
 
-public class ChorePlanResponse : BaseEntityResponse<ChorePlanDto> { }
+public class TaskPlanResponse : BaseEntityResponse<TaskPlanDto> { }
 
-public class UpdateChorePlanRequest
+public class UpdateTaskPlanRequest
 {
     public bool Completed { get; init; }
     public string? Notes { get; init; }

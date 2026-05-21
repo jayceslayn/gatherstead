@@ -79,7 +79,7 @@ export const DEMO_LIMITS = {
   events:                 1,   // single event; max 3 days duration
   eventMaxDays:           3,
   mealTemplatesPerEvent:  2,
-  choreTemplatesPerEvent: 2,
+  taskTemplatesPerEvent: 2,
 } as const
 ```
 
@@ -117,7 +117,7 @@ Locale keys to add under `demo.*` in `en.json` and `es.json`:
 | Households | 1: "The Demo Family" |
 | Members | 1 adult: "Demo User" |
 | Events | 1: "Summer Gathering" (3 days, starting next weekend) |
-| Meal / Chore Templates | None (visitor adds up to 2 of each) |
+| Meal / Task Templates | None (visitor adds up to 2 of each) |
 | Attendance / Intents | None (visitor toggles interactively) |
 
 ### Initialization

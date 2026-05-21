@@ -1,16 +1,16 @@
-import type { IChoreRepository } from '../interfaces'
-import type { ChoreTemplate, ChorePlan, ChoreIntent } from '../types'
-import { choreSlotsFromFlags } from '../types'
+import type { ITaskRepository } from '../interfaces'
+import type { TaskTemplate, TaskPlan, TaskIntent } from '../types'
+import { taskSlotsFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
 
-export class DemoChoreRepository implements IChoreRepository {
-  async listChoreTemplates(_tenantId: string, eventId: string): Promise<ChoreTemplate[]> {
-    return getDemoStore().choreTemplates.value.filter(t => t.eventId === eventId)
+export class DemoTaskRepository implements ITaskRepository {
+  async listTaskTemplates(_tenantId: string, eventId: string): Promise<TaskTemplate[]> {
+    return getDemoStore().taskTemplates.value.filter(t => t.eventId === eventId)
   }
 
-  async listPlans(_tenantId: string, _eventId: string, templateId: string): Promise<ChorePlan[]> {
-    return getDemoStore().chorePlans.value.filter(p => p.templateId === templateId)
+  async listPlans(_tenantId: string, _eventId: string, templateId: string): Promise<TaskPlan[]> {
+    return getDemoStore().taskPlans.value.filter(p => p.templateId === templateId)
   }
 
   async listIntentsForMember(
@@ -19,9 +19,9 @@ export class DemoChoreRepository implements IChoreRepository {
     _templateId: string,
     planId: string,
     memberId: string,
-  ): Promise<ChoreIntent[]> {
-    return getDemoStore().choreIntents.value.filter(
-      i => i.chorePlanId === planId && i.householdMemberId === memberId,
+  ): Promise<TaskIntent[]> {
+    return getDemoStore().taskIntents.value.filter(
+      i => i.taskPlanId === planId && i.householdMemberId === memberId,
     )
   }
 
@@ -35,17 +35,17 @@ export class DemoChoreRepository implements IChoreRepository {
     volunteered: boolean,
   ): Promise<void> {
     const store = getDemoStore()
-    const idx = store.choreIntents.value.findIndex(
-      i => i.chorePlanId === planId && i.householdMemberId === memberId,
+    const idx = store.taskIntents.value.findIndex(
+      i => i.taskPlanId === planId && i.householdMemberId === memberId,
     )
     if (idx >= 0) {
-      store.choreIntents.value[idx] = { ...store.choreIntents.value[idx]!, volunteered }
+      store.taskIntents.value[idx] = { ...store.taskIntents.value[idx]!, volunteered }
     }
     else {
-      store.choreIntents.value.push({
+      store.taskIntents.value.push({
         id: demoId(),
         tenantId,
-        chorePlanId: planId,
+        taskPlanId: planId,
         householdMemberId: memberId,
         volunteered,
       })
@@ -62,13 +62,13 @@ export class DemoChoreRepository implements IChoreRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
-  ): Promise<ChoreTemplate> {
+  ): Promise<TaskTemplate> {
     const store = getDemoStore()
-    if (store.choreTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.choreTemplatesPerEvent) {
-      throw new DemoLimitError('choreTemplatesPerEvent')
+    if (store.taskTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.taskTemplatesPerEvent) {
+      throw new DemoLimitError('taskTemplatesPerEvent')
     }
-    const t: ChoreTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes, startDate, endDate }
-    store.choreTemplates.value.push(t)
+    const t: TaskTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes, startDate, endDate }
+    store.taskTemplates.value.push(t)
 
     const event = store.events.value.find(e => e.id === eventId)
     if (event) {
@@ -76,8 +76,8 @@ export class DemoChoreRepository implements IChoreRepository {
       const effectiveEnd = endDate ?? event.endDate
       const days = enumDays(effectiveStart, effectiveEnd)
       for (const day of days) {
-        for (const timeSlot of choreSlotsFromFlags(timeSlots)) {
-          store.chorePlans.value.push({
+        for (const timeSlot of taskSlotsFromFlags(timeSlots)) {
+          store.taskPlans.value.push({
             id: demoId(),
             tenantId,
             templateId: t.id,
@@ -108,16 +108,16 @@ export class DemoChoreRepository implements IChoreRepository {
     notes: string | null,
   ): Promise<void> {
     const store = getDemoStore()
-    const t = store.choreTemplates.value.find(x => x.id === templateId)
+    const t = store.taskTemplates.value.find(x => x.id === templateId)
     if (!t) return
 
     const plansNeedRegen = t.timeSlots !== timeSlots || t.startDate !== startDate || t.endDate !== endDate
     if (plansNeedRegen) {
-      const affectedPlanIds = store.chorePlans.value
+      const affectedPlanIds = store.taskPlans.value
         .filter(p => p.templateId === templateId)
         .map(p => p.id)
-      store.choreIntents.value = store.choreIntents.value.filter(i => !affectedPlanIds.includes(i.chorePlanId))
-      store.chorePlans.value = store.chorePlans.value.filter(p => p.templateId !== templateId)
+      store.taskIntents.value = store.taskIntents.value.filter(i => !affectedPlanIds.includes(i.taskPlanId))
+      store.taskPlans.value = store.taskPlans.value.filter(p => p.templateId !== templateId)
 
       const event = store.events.value.find(e => e.id === eventId)
       if (event) {
@@ -125,8 +125,8 @@ export class DemoChoreRepository implements IChoreRepository {
         const effectiveEnd = endDate ?? event.endDate
         const days = enumDays(effectiveStart, effectiveEnd)
         for (const day of days) {
-          for (const timeSlot of choreSlotsFromFlags(timeSlots)) {
-            store.chorePlans.value.push({
+          for (const timeSlot of taskSlotsFromFlags(timeSlots)) {
+            store.taskPlans.value.push({
               id: demoId(),
               tenantId,
               templateId,
@@ -153,10 +153,10 @@ export class DemoChoreRepository implements IChoreRepository {
 
   async deleteTemplate(_tenantId: string, _eventId: string, templateId: string): Promise<void> {
     const store = getDemoStore()
-    const planIds = store.chorePlans.value.filter(p => p.templateId === templateId).map(p => p.id)
-    store.choreIntents.value = store.choreIntents.value.filter(i => !planIds.includes(i.chorePlanId))
-    store.chorePlans.value = store.chorePlans.value.filter(p => p.templateId !== templateId)
-    store.choreTemplates.value = store.choreTemplates.value.filter(t => t.id !== templateId)
+    const planIds = store.taskPlans.value.filter(p => p.templateId === templateId).map(p => p.id)
+    store.taskIntents.value = store.taskIntents.value.filter(i => !planIds.includes(i.taskPlanId))
+    store.taskPlans.value = store.taskPlans.value.filter(p => p.templateId !== templateId)
+    store.taskTemplates.value = store.taskTemplates.value.filter(t => t.id !== templateId)
     persistDemoStore()
   }
 
@@ -168,7 +168,7 @@ export class DemoChoreRepository implements IChoreRepository {
     intentId: string,
   ): Promise<void> {
     const store = getDemoStore()
-    store.choreIntents.value = store.choreIntents.value.filter(i => i.id !== intentId)
+    store.taskIntents.value = store.taskIntents.value.filter(i => i.id !== intentId)
     persistDemoStore()
   }
 }

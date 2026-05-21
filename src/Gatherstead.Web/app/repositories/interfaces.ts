@@ -11,9 +11,9 @@ import type {
   MealPlan,
   MealIntent,
   MealAttendance,
-  ChoreTemplate,
-  ChorePlan,
-  ChoreIntent,
+  TaskTemplate,
+  TaskPlan,
+  TaskIntent,
   PropertySummary,
   AccommodationSummary,
   AccommodationType,
@@ -154,16 +154,16 @@ export interface IMealPlanRepository {
   ): Promise<void>
 }
 
-export interface IChoreRepository {
-  listChoreTemplates(tenantId: string, eventId: string): Promise<ChoreTemplate[]>
-  listPlans(tenantId: string, eventId: string, templateId: string): Promise<ChorePlan[]>
+export interface ITaskRepository {
+  listTaskTemplates(tenantId: string, eventId: string): Promise<TaskTemplate[]>
+  listPlans(tenantId: string, eventId: string, templateId: string): Promise<TaskPlan[]>
   listIntentsForMember(
     tenantId: string,
     eventId: string,
     templateId: string,
     planId: string,
     memberId: string,
-  ): Promise<ChoreIntent[]>
+  ): Promise<TaskIntent[]>
   upsertIntent(
     tenantId: string,
     eventId: string,
@@ -182,7 +182,7 @@ export interface IChoreRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
-  ): Promise<ChoreTemplate>
+  ): Promise<TaskTemplate>
   updateTemplate(
     tenantId: string,
     eventId: string,
@@ -299,7 +299,7 @@ export interface Repositories {
   eventAttendance: IEventAttendanceRepository
   mealPlans: IMealPlanRepository
   mealAttendance: IMealAttendanceRepository
-  chores: IChoreRepository
+  tasks: ITaskRepository
   properties: IPropertyRepository
   accommodations: IAccommodationRepository
   accommodationIntents: IAccommodationIntentRepository

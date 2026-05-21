@@ -1,19 +1,19 @@
-import type { IChoreRepository } from '../interfaces'
-import type { ChoreTemplate, ChorePlan, ChoreIntent } from '../types'
+import type { ITaskRepository } from '../interfaces'
+import type { TaskTemplate, TaskPlan, TaskIntent } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
-export class LiveChoreRepository implements IChoreRepository {
-  async listChoreTemplates(tenantId: string, eventId: string): Promise<ChoreTemplate[]> {
-    const r = await $fetch<ApiResponse<ChoreTemplate[]>>(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates`,
+export class LiveTaskRepository implements ITaskRepository {
+  async listTaskTemplates(tenantId: string, eventId: string): Promise<TaskTemplate[]> {
+    const r = await $fetch<ApiResponse<TaskTemplate[]>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates`,
     )
     return r.entity ?? []
   }
 
-  async listPlans(tenantId: string, eventId: string, templateId: string): Promise<ChorePlan[]> {
-    const r = await $fetch<ApiResponse<ChorePlan[]>>(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}/plans`,
+  async listPlans(tenantId: string, eventId: string, templateId: string): Promise<TaskPlan[]> {
+    const r = await $fetch<ApiResponse<TaskPlan[]>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans`,
     )
     return r.entity ?? []
   }
@@ -24,9 +24,9 @@ export class LiveChoreRepository implements IChoreRepository {
     templateId: string,
     planId: string,
     memberId: string,
-  ): Promise<ChoreIntent[]> {
-    const r = await $fetch<ApiResponse<ChoreIntent[]>>(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}/plans/${planId}/intents?memberIds=${encodeURIComponent(memberId)}`,
+  ): Promise<TaskIntent[]> {
+    const r = await $fetch<ApiResponse<TaskIntent[]>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}/intents?memberIds=${encodeURIComponent(memberId)}`,
     )
     return r.entity ?? []
   }
@@ -41,7 +41,7 @@ export class LiveChoreRepository implements IChoreRepository {
     volunteered: boolean,
   ): Promise<void> {
     await $fetch(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}/plans/${planId}/intents?householdId=${encodeURIComponent(householdId)}`,
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}/intents?householdId=${encodeURIComponent(householdId)}`,
       {
         method: 'PUT',
         body: { householdMemberId: memberId, volunteered },
@@ -58,9 +58,9 @@ export class LiveChoreRepository implements IChoreRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
-  ): Promise<ChoreTemplate> {
-    const r = await $fetch<ApiResponse<ChoreTemplate>>(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates`,
+  ): Promise<TaskTemplate> {
+    const r = await $fetch<ApiResponse<TaskTemplate>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates`,
       { method: 'POST', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes } },
     )
     return r.entity
@@ -78,14 +78,14 @@ export class LiveChoreRepository implements IChoreRepository {
     notes: string | null,
   ): Promise<void> {
     await $fetch(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}`,
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}`,
       { method: 'PUT', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes } },
     )
   }
 
   async deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void> {
     await $fetch(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}`,
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}`,
       { method: 'DELETE' },
     )
   }
@@ -98,7 +98,7 @@ export class LiveChoreRepository implements IChoreRepository {
     intentId: string,
   ): Promise<void> {
     await $fetch(
-      `/api/proxy/tenants/${tenantId}/events/${eventId}/chore-templates/${templateId}/plans/${planId}/intents/${intentId}`,
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}/intents/${intentId}`,
       { method: 'DELETE' },
     )
   }

@@ -75,7 +75,7 @@ The "Create Event" entry point moves from the Events index to the Property detai
     index.vue                       Event detail hub / tabs (unchanged — deep-link target)
     attendance.vue                  Attendance grid (unchanged)
     meals/…                         (unchanged)
-    chores/…                        (unchanged)
+    tasks/…                        (unchanged)
     ~~create.vue~~                  REMOVED — moves under properties
     ~~edit.vue~~                    REMOVED — moves under properties
 

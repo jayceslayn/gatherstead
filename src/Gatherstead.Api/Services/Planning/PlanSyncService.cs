@@ -16,13 +16,13 @@ public class PlanSyncService
 
     public async Task SyncEventPlansAsync(Guid tenantId, Event @event, CancellationToken cancellationToken)
     {
-        var choreTemplates = await _dbContext.ChoreTemplates
+        var taskTemplates = await _dbContext.TaskTemplates
             .AsNoTracking()
             .Where(t => t.TenantId == tenantId && t.EventId == @event.Id)
             .ToListAsync(cancellationToken);
 
-        foreach (var template in choreTemplates)
-            await ApplyChorePlanDiffAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
+        foreach (var template in taskTemplates)
+            await ApplyTaskPlanDiffAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
 
         var mealTemplates = await _dbContext.MealTemplates
             .AsNoTracking()
@@ -33,9 +33,9 @@ public class PlanSyncService
             await ApplyMealPlanDiffAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
     }
 
-    public async Task SyncChorePlanAsync(Guid tenantId, ChoreTemplate template, DateOnly start, DateOnly end, CancellationToken cancellationToken)
+    public async Task SyncTaskPlanAsync(Guid tenantId, TaskTemplate template, DateOnly start, DateOnly end, CancellationToken cancellationToken)
     {
-        await ApplyChorePlanDiffAsync(tenantId, template, start, end, cancellationToken);
+        await ApplyTaskPlanDiffAsync(tenantId, template, start, end, cancellationToken);
     }
 
     public async Task SyncMealPlanAsync(Guid tenantId, MealTemplate template, DateOnly start, DateOnly end, CancellationToken cancellationToken)
@@ -43,26 +43,26 @@ public class PlanSyncService
         await ApplyMealPlanDiffAsync(tenantId, template, start, end, cancellationToken);
     }
 
-    private async Task ApplyChorePlanDiffAsync(
+    private async Task ApplyTaskPlanDiffAsync(
         Guid tenantId,
-        ChoreTemplate template,
+        TaskTemplate template,
         DateOnly start,
         DateOnly end,
         CancellationToken cancellationToken)
     {
         // IgnoreQueryFilters() includes soft-deleted rows so PlanGenerator can detect
         // suppression markers (IsDeleted && IsException) and avoid re-generating them.
-        var existing = await _dbContext.ChorePlans
+        var existing = await _dbContext.TaskPlans
             .IgnoreQueryFilters()
             .Include(p => p.Intents)
             .Where(p => p.TenantId == tenantId && p.TemplateId == template.Id)
             .ToListAsync(cancellationToken);
 
-        var diff = PlanGenerator.DiffChorePlans(template.TimeSlots, start, end, existing, template.StartDate, template.EndDate);
+        var diff = PlanGenerator.DiffTaskPlans(template.TimeSlots, start, end, existing, template.StartDate, template.EndDate);
 
         foreach (var (day, slot) in diff.ToAdd)
         {
-            _dbContext.ChorePlans.Add(new ChorePlan
+            _dbContext.TaskPlans.Add(new TaskPlan
             {
                 Id = Guid.NewGuid(),
                 TenantId = tenantId,

@@ -1,4 +1,4 @@
-using Gatherstead.Api.Contracts.ChoreTemplates;
+using Gatherstead.Api.Contracts.TaskTemplates;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Planning;
@@ -7,18 +7,18 @@ using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Gatherstead.Api.Services.ChoreTemplates;
+namespace Gatherstead.Api.Services.TaskTemplates;
 
-public class ChoreTemplateService : IChoreTemplateService
+public class TaskTemplateService : ITaskTemplateService
 {
-    private const string EntityDisplayName = "Chore template";
+    private const string EntityDisplayName = "Task template";
 
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly PlanSyncService _planSyncService;
 
-    public ChoreTemplateService(
+    public TaskTemplateService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService,
@@ -30,18 +30,18 @@ public class ChoreTemplateService : IChoreTemplateService
         _planSyncService = planSyncService ?? throw new ArgumentNullException(nameof(planSyncService));
     }
 
-    public async Task<BaseEntityResponse<IReadOnlyCollection<ChoreTemplateDto>>> ListAsync(
+    public async Task<BaseEntityResponse<IReadOnlyCollection<TaskTemplateDto>>> ListAsync(
         Guid tenantId,
         Guid eventId,
         IEnumerable<Guid>? ids = null,
         CancellationToken cancellationToken = default)
     {
-        var response = new BaseEntityResponse<IReadOnlyCollection<ChoreTemplateDto>>();
+        var response = new BaseEntityResponse<IReadOnlyCollection<TaskTemplateDto>>();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        var query = _dbContext.ChoreTemplates
+        var query = _dbContext.TaskTemplates
             .AsNoTracking()
             .Where(t => t.TenantId == tenantId && t.EventId == eventId);
 
@@ -54,23 +54,23 @@ public class ChoreTemplateService : IChoreTemplateService
 
         var templates = await query.Select(t => MapToDto(t)).ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<ChoreTemplateDto>>.SuccessfulResponse(templates);
+        return BaseEntityResponse<IReadOnlyCollection<TaskTemplateDto>>.SuccessfulResponse(templates);
     }
 
-    public async Task<ChoreTemplateResponse> GetAsync(
+    public async Task<TaskTemplateResponse> GetAsync(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreTemplateResponse();
+        var response = new TaskTemplateResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
         var template = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChoreTemplates.AsNoTracking()
+            _dbContext.TaskTemplates.AsNoTracking()
                 .Where(t => t.TenantId == tenantId && t.EventId == eventId && t.Id == templateId),
             EntityDisplayName,
             cancellationToken);
@@ -81,17 +81,17 @@ public class ChoreTemplateService : IChoreTemplateService
         return response;
     }
 
-    public async Task<ChoreTemplateResponse> CreateAsync(
+    public async Task<TaskTemplateResponse> CreateAsync(
         Guid tenantId,
         Guid eventId,
-        CreateChoreTemplateRequest request,
+        CreateTaskTemplateRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreTemplateResponse();
+        var response = new TaskTemplateResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "create chore template", response))
+        if (!ServiceGuards.RequireRequest(request, "create task template", response))
             return response;
         if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
@@ -111,20 +111,20 @@ public class ChoreTemplateService : IChoreTemplateService
             return response;
         }
 
-        var duplicateExists = await _dbContext.ChoreTemplates
+        var duplicateExists = await _dbContext.TaskTemplates
             .AsNoTracking()
             .AnyAsync(t => t.TenantId == tenantId && t.EventId == eventId && t.Name == normalizedName, cancellationToken);
 
         if (duplicateExists)
         {
-            response.AddResponseMessage(MessageType.ERROR, $"A chore template named '{normalizedName}' already exists for this event.");
+            response.AddResponseMessage(MessageType.ERROR, $"A task template named '{normalizedName}' already exists for this event.");
             return response;
         }
 
         if (!ValidateDateRange(request.StartDate, request.EndDate, @event.StartDate, @event.EndDate, response))
             return response;
 
-        var template = new ChoreTemplate
+        var template = new TaskTemplate
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
@@ -137,28 +137,28 @@ public class ChoreTemplateService : IChoreTemplateService
             Notes = request.Notes?.Trim(),
         };
 
-        _dbContext.ChoreTemplates.Add(template);
+        _dbContext.TaskTemplates.Add(template);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await _planSyncService.SyncChorePlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
+        await _planSyncService.SyncTaskPlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(template));
         return response;
     }
 
-    public async Task<ChoreTemplateResponse> UpdateAsync(
+    public async Task<TaskTemplateResponse> UpdateAsync(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
-        UpdateChoreTemplateRequest request,
+        UpdateTaskTemplateRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreTemplateResponse();
+        var response = new TaskTemplateResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "update chore template", response))
+        if (!ServiceGuards.RequireRequest(request, "update task template", response))
             return response;
         if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
@@ -169,7 +169,7 @@ public class ChoreTemplateService : IChoreTemplateService
 
         var template = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChoreTemplates.Where(t => t.TenantId == tenantId && t.EventId == eventId && t.Id == templateId),
+            _dbContext.TaskTemplates.Where(t => t.TenantId == tenantId && t.EventId == eventId && t.Id == templateId),
             EntityDisplayName,
             cancellationToken);
 
@@ -177,13 +177,13 @@ public class ChoreTemplateService : IChoreTemplateService
 
         if (!string.Equals(template.Name, normalizedName, StringComparison.Ordinal))
         {
-            var duplicateExists = await _dbContext.ChoreTemplates
+            var duplicateExists = await _dbContext.TaskTemplates
                 .AsNoTracking()
                 .AnyAsync(t => t.TenantId == tenantId && t.EventId == eventId && t.Name == normalizedName && t.Id != templateId, cancellationToken);
 
             if (duplicateExists)
             {
-                response.AddResponseMessage(MessageType.ERROR, $"A chore template named '{normalizedName}' already exists for this event.");
+                response.AddResponseMessage(MessageType.ERROR, $"A task template named '{normalizedName}' already exists for this event.");
                 return response;
             }
         }
@@ -210,7 +210,7 @@ public class ChoreTemplateService : IChoreTemplateService
                 if (!ValidateDateRange(request.StartDate, request.EndDate, @event.StartDate, @event.EndDate, response))
                     return response;
 
-                await _planSyncService.SyncChorePlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
+                await _planSyncService.SyncTaskPlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
             }
         }
 
@@ -220,13 +220,13 @@ public class ChoreTemplateService : IChoreTemplateService
         return response;
     }
 
-    public async Task<ChoreTemplateResponse> DeleteAsync(
+    public async Task<TaskTemplateResponse> DeleteAsync(
         Guid tenantId,
         Guid eventId,
         Guid templateId,
         CancellationToken cancellationToken = default)
     {
-        var response = new ChoreTemplateResponse();
+        var response = new TaskTemplateResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
@@ -235,7 +235,7 @@ public class ChoreTemplateService : IChoreTemplateService
 
         var template = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ChoreTemplates.Where(t => t.TenantId == tenantId && t.EventId == eventId && t.Id == templateId),
+            _dbContext.TaskTemplates.Where(t => t.TenantId == tenantId && t.EventId == eventId && t.Id == templateId),
             EntityDisplayName,
             cancellationToken);
 
@@ -254,7 +254,7 @@ public class ChoreTemplateService : IChoreTemplateService
         return response;
     }
 
-    private static ChoreTemplateDto MapToDto(ChoreTemplate t) => new(
+    private static TaskTemplateDto MapToDto(TaskTemplate t) => new(
         t.Id, t.TenantId, t.EventId, t.Name, t.TimeSlots,
         t.StartDate, t.EndDate,
         t.MinimumAssignees, t.Notes,
@@ -263,7 +263,7 @@ public class ChoreTemplateService : IChoreTemplateService
     private static bool ValidateDateRange(
         DateOnly? startDate, DateOnly? endDate,
         DateOnly eventStart, DateOnly eventEnd,
-        BaseEntityResponse<ChoreTemplateDto> response)
+        BaseEntityResponse<TaskTemplateDto> response)
     {
         if (startDate is null && endDate is null)
             return true;

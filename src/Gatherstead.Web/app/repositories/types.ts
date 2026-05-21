@@ -98,9 +98,9 @@ export interface MealAttendance {
   notes: string | null
 }
 
-export type ChoreTimeSlot = 'Morning' | 'Midday' | 'Evening' | 'Anytime'
+export type TaskTimeSlot = 'Morning' | 'Midday' | 'Evening' | 'Anytime'
 
-export interface ChoreTemplate {
+export interface TaskTemplate {
   id: string
   tenantId: string
   eventId: string
@@ -112,22 +112,22 @@ export interface ChoreTemplate {
   notes: string | null
 }
 
-export interface ChorePlan {
+export interface TaskPlan {
   id: string
   tenantId: string
   templateId: string
   day: string
-  timeSlot: ChoreTimeSlot | null
+  timeSlot: TaskTimeSlot | null
   completed: boolean
   notes: string | null
   isException: boolean
   exceptionReason: string | null
 }
 
-export interface ChoreIntent {
+export interface TaskIntent {
   id: string
   tenantId: string
-  chorePlanId: string
+  taskPlanId: string
   householdMemberId: string
   volunteered: boolean
 }
@@ -178,15 +178,15 @@ export function mealTypesFromFlags(flags: number): MealType[] {
   return ALL_MEAL_TYPES.filter(t => (flags & MEAL_TYPE_FLAGS[t]) !== 0)
 }
 
-export const CHORE_SLOT_FLAGS: Record<ChoreTimeSlot, number> = {
+export const TASK_SLOT_FLAGS: Record<TaskTimeSlot, number> = {
   Morning: 0x01,
   Midday: 0x02,
   Evening: 0x04,
   Anytime: 0x08,
 }
 
-export const ALL_CHORE_SLOTS: ChoreTimeSlot[] = ['Morning', 'Midday', 'Evening', 'Anytime']
+export const ALL_TASK_SLOTS: TaskTimeSlot[] = ['Morning', 'Midday', 'Evening', 'Anytime']
 
-export function choreSlotsFromFlags(flags: number): ChoreTimeSlot[] {
-  return ALL_CHORE_SLOTS.filter(s => (flags & CHORE_SLOT_FLAGS[s]) !== 0)
+export function taskSlotsFromFlags(flags: number): TaskTimeSlot[] {
+  return ALL_TASK_SLOTS.filter(s => (flags & TASK_SLOT_FLAGS[s]) !== 0)
 }

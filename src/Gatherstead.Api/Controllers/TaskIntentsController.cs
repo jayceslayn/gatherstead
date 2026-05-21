@@ -1,7 +1,7 @@
-using Gatherstead.Api.Contracts.ChoreIntents;
+using Gatherstead.Api.Contracts.TaskIntents;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Security;
-using Gatherstead.Api.Services.ChoreIntents;
+using Gatherstead.Api.Services.TaskIntents;
 using Gatherstead.Api.Services.Validation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,18 +11,18 @@ namespace Gatherstead.Api.Controllers;
 [ApiController]
 [Authorize]
 [RequireTenantAccess]
-[Route("api/tenants/{tenantId:guid}/events/{eventId:guid}/chore-templates/{templateId:guid}/plans/{planId:guid}/intents")]
-public class ChoreIntentsController : ControllerBase
+[Route("api/tenants/{tenantId:guid}/events/{eventId:guid}/task-templates/{templateId:guid}/plans/{planId:guid}/intents")]
+public class TaskIntentsController : ControllerBase
 {
-    private readonly IChoreIntentService _choreIntentService;
+    private readonly ITaskIntentService _taskIntentService;
 
-    public ChoreIntentsController(IChoreIntentService choreIntentService)
+    public TaskIntentsController(ITaskIntentService taskIntentService)
     {
-        _choreIntentService = choreIntentService ?? throw new ArgumentNullException(nameof(choreIntentService));
+        _taskIntentService = taskIntentService ?? throw new ArgumentNullException(nameof(taskIntentService));
     }
 
     [HttpGet]
-    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<ChoreIntentDto>>>> GetChoreIntents(
+    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<TaskIntentDto>>>> GetTaskIntents(
         Guid tenantId,
         Guid planId,
         [FromQuery] string? memberIds,
@@ -41,7 +41,7 @@ public class ChoreIntentsController : ControllerBase
             parsedMemberIds = idList;
         }
 
-        var response = await _choreIntentService.ListAsync(tenantId, planId, parsedMemberIds, cancellationToken);
+        var response = await _taskIntentService.ListAsync(tenantId, planId, parsedMemberIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
@@ -50,13 +50,13 @@ public class ChoreIntentsController : ControllerBase
     }
 
     [HttpGet("{intentId:guid}")]
-    public async Task<ActionResult<ChoreIntentResponse>> GetChoreIntent(
+    public async Task<ActionResult<TaskIntentResponse>> GetTaskIntent(
         Guid tenantId,
         Guid planId,
         Guid intentId,
         CancellationToken cancellationToken)
     {
-        var response = await _choreIntentService.GetAsync(tenantId, planId, intentId, cancellationToken);
+        var response = await _taskIntentService.GetAsync(tenantId, planId, intentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
@@ -68,14 +68,14 @@ public class ChoreIntentsController : ControllerBase
     }
 
     [HttpPut]
-    public async Task<ActionResult<ChoreIntentResponse>> UpsertChoreIntent(
+    public async Task<ActionResult<TaskIntentResponse>> UpsertTaskIntent(
         Guid tenantId,
         Guid planId,
         [FromQuery] Guid householdId,
-        [FromBody] UpsertChoreIntentRequest request,
+        [FromBody] UpsertTaskIntentRequest request,
         CancellationToken cancellationToken)
     {
-        var response = await _choreIntentService.UpsertAsync(tenantId, planId, householdId, request, cancellationToken);
+        var response = await _taskIntentService.UpsertAsync(tenantId, planId, householdId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
@@ -84,13 +84,13 @@ public class ChoreIntentsController : ControllerBase
     }
 
     [HttpDelete("{intentId:guid}")]
-    public async Task<ActionResult<ChoreIntentResponse>> DeleteChoreIntent(
+    public async Task<ActionResult<TaskIntentResponse>> DeleteTaskIntent(
         Guid tenantId,
         Guid planId,
         Guid intentId,
         CancellationToken cancellationToken)
     {
-        var response = await _choreIntentService.DeleteAsync(tenantId, planId, intentId, cancellationToken);
+        var response = await _taskIntentService.DeleteAsync(tenantId, planId, intentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);

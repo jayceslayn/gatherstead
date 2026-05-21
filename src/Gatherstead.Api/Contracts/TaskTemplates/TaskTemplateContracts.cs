@@ -2,14 +2,14 @@ using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
-namespace Gatherstead.Api.Contracts.ChoreTemplates;
+namespace Gatherstead.Api.Contracts.TaskTemplates;
 
-public record ChoreTemplateDto(
+public record TaskTemplateDto(
     Guid Id,
     Guid TenantId,
     Guid EventId,
     string Name,
-    ChoreTimeSlotFlags TimeSlots,
+    TaskTimeSlotFlags TimeSlots,
     DateOnly? StartDate,
     DateOnly? EndDate,
     int? MinimumAssignees,
@@ -20,16 +20,16 @@ public record ChoreTemplateDto(
     DateTimeOffset? DeletedAt,
     Guid? DeletedByUserId);
 
-public class ChoreTemplateResponse : BaseEntityResponse<ChoreTemplateDto> { }
+public class TaskTemplateResponse : BaseEntityResponse<TaskTemplateDto> { }
 
-public class CreateChoreTemplateRequest
+public class CreateTaskTemplateRequest
 {
     [Required]
     [StringLength(200)]
     public string Name { get; init; } = string.Empty;
 
     [Required]
-    public ChoreTimeSlotFlags TimeSlots { get; init; }
+    public TaskTimeSlotFlags TimeSlots { get; init; }
 
     public DateOnly? StartDate { get; init; }
     public DateOnly? EndDate { get; init; }
@@ -37,14 +37,14 @@ public class CreateChoreTemplateRequest
     public string? Notes { get; init; }
 }
 
-public class UpdateChoreTemplateRequest
+public class UpdateTaskTemplateRequest
 {
     [Required]
     [StringLength(200)]
     public string Name { get; init; } = string.Empty;
 
     [Required]
-    public ChoreTimeSlotFlags TimeSlots { get; init; }
+    public TaskTimeSlotFlags TimeSlots { get; init; }
 
     public DateOnly? StartDate { get; init; }
     public DateOnly? EndDate { get; init; }

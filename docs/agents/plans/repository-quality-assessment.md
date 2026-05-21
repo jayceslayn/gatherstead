@@ -40,7 +40,7 @@ All planned bounded contexts are now implemented:
 | **Shared Foundation** | Tenants, SecurityEvents |
 | **Family Directory** | Households, HouseholdMembers, Addresses, ContactMethods, DietaryProfiles, MemberAttributes, MemberRelationships |
 | **Properties** | Properties, Accommodations, AccommodationIntents |
-| **Gathering Planning** | Events, ChoreTemplates, ChorePlans, ChoreIntents, MealTemplates, MealPlans, MealIntents, EventAttendance |
+| **Gathering Planning** | Events, TaskTemplates, TaskPlans, TaskIntents, MealTemplates, MealPlans, MealIntents, EventAttendance |
 
 Each controller follows the established pattern: `[Authorize]`, `[RequireTenantAccess]`, full CRUD, `CancellationToken` propagation, `BaseEntityResponse<T>` wrappers.
 
@@ -143,7 +143,7 @@ Public API methods have no `<summary>` XML docs, so Swagger UI shows raw paramet
 
 **Effort:** 1-2 days
 
-Coverage collection is in place (coverlet + Codecov). The next step is filling the gaps it reveals. The new domain services (AccommodationService, MealTemplateService, MealPlanService, EventAttendanceService, ChoreTemplateService, etc.) have no direct unit tests. Target 70%+ line coverage overall, 100% for tenant isolation and RBAC paths.
+Coverage collection is in place (coverlet + Codecov). The next step is filling the gaps it reveals. The new domain services (AccommodationService, MealTemplateService, MealPlanService, EventAttendanceService, TaskTemplateService, etc.) have no direct unit tests. Target 70%+ line coverage overall, 100% for tenant isolation and RBAC paths.
 
 ### Priority 2: Dockerfile
 
@@ -170,7 +170,7 @@ Optional: `docker-compose.yml` with API + SQL Server for local dev.
 **Effort:** 3-5 days
 
 Implement at minimum 2-3 more page flows to demonstrate the domain:
-- **Event detail page**: Shows attendance, meal plans, chore assignments
+- **Event detail page**: Shows attendance, meal plans, task assignments
 - **Household member profile**: Shows dietary profile, contact methods, attributes
 - **Property/accommodation list**: Shows inventory management
 

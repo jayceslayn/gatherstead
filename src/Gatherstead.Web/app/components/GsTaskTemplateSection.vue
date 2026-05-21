@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ChoreTemplate } from '~/repositories/types'
-import { useChorePlanSection } from '~/composables/useChoreTemplates'
-import { choreSlotsFromFlags } from '~/repositories/types'
+import type { TaskTemplate } from '~/repositories/types'
+import { useTaskPlanSection } from '~/composables/useTaskTemplates'
+import { taskSlotsFromFlags } from '~/repositories/types'
 import { useCurrentMemberStore } from '~/stores/member'
 
 const props = defineProps<{
-  template: ChoreTemplate
+  template: TaskTemplate
   eventId: string
 }>()
 
@@ -17,7 +17,7 @@ const templateId = computed(() => props.template.id)
 const memberId = computed(() => memberStore.linkedMemberId)
 const householdId = computed(() => memberStore.linkedHouseholdId)
 
-const { plans, intentMap, pending, updating, toggle } = useChorePlanSection(
+const { plans, intentMap, pending, updating, toggle } = useTaskPlanSection(
   eventId,
   templateId,
   memberId,
@@ -25,7 +25,7 @@ const { plans, intentMap, pending, updating, toggle } = useChorePlanSection(
 )
 
 const days = computed(() => [...new Set(plans.value.map(p => p.day))].sort())
-const templateSlots = computed(() => choreSlotsFromFlags(props.template.timeSlots))
+const templateSlots = computed(() => taskSlotsFromFlags(props.template.timeSlots))
 
 function formatDate(dateStr: string) {
   return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(
@@ -37,7 +37,7 @@ const dateRangeLabel = computed(() => {
   const { startDate, endDate } = props.template
   if (!startDate || !endDate) return null
   if (startDate === endDate) return formatDate(startDate)
-  return t('event.chore.dateRange', { start: formatDate(startDate), end: formatDate(endDate) })
+  return t('event.task.dateRange', { start: formatDate(startDate), end: formatDate(endDate) })
 })
 
 const planGrid = computed(() => {
@@ -63,7 +63,7 @@ const dayRows = computed(() =>
 const slotCols = computed(() =>
   templateSlots.value.map(s => ({
     id: s,
-    label: t(`event.chore.${s.toLowerCase()}`),
+    label: t(`event.task.${s.toLowerCase()}`),
   })),
 )
 
@@ -87,7 +87,7 @@ function isUpdating(planId: string): boolean {
         <p class="font-semibold">{{ template.name }}</p>
         <span v-if="dateRangeLabel" class="text-xs text-muted">{{ dateRangeLabel }}</span>
         <span v-if="template.minimumAssignees" class="text-xs text-muted">
-          {{ t('event.chore.minimumAssignees', { n: template.minimumAssignees }) }}
+          {{ t('event.task.minimumAssignees', { n: template.minimumAssignees }) }}
         </span>
       </div>
       <p v-if="template.notes" class="text-sm text-muted mt-0.5">{{ template.notes }}</p>
@@ -98,7 +98,7 @@ function isUpdating(planId: string): boolean {
     </div>
 
     <p v-else-if="!plans.length" class="text-sm text-muted">
-      {{ t('event.chore.noPlans') }}
+      {{ t('event.task.noPlans') }}
     </p>
 
     <GsDayIntentGrid
@@ -115,7 +115,7 @@ function isUpdating(planId: string): boolean {
           :loading="isUpdating(cellPlanId(row.id, column.id)!)"
           @click="toggle(cellPlanId(row.id, column.id)!)"
         >
-          {{ isVolunteered(cellPlanId(row.id, column.id)!) ? t('event.chore.volunteered') : t('event.chore.volunteer') }}
+          {{ isVolunteered(cellPlanId(row.id, column.id)!) ? t('event.task.volunteered') : t('event.task.volunteer') }}
         </UButton>
         <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span v-else-if="cellPlanId(row.id, column.id)" class="text-xs text-muted">—</span>

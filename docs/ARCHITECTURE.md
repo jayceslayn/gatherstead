@@ -27,21 +27,21 @@ Gatherstead is organized around bounded contexts that align with the two core go
 - **AccommodationIntent**: Member's request to occupy an accommodation on a given night, with status (`Intent`/`Hold`/`Confirmed`) and a decision field for offline arbitration. Not scoped to an event; nights may fall outside any formal gathering.【F:src/Gatherstead.Data/Entities/AccommodationIntent.cs】
 
 #### Event-level
-- **Event**: A time-bounded gathering at a property, defining the date window for meal planning, chore coordination, and attendance tracking.【F:src/Gatherstead.Data/Entities/Event.cs】
-- **EventAttendance**: Per-member, per-day attendance record. Tracks `AttendanceStatus`, arrival/departure windows, and notes; drives meal and chore intent generation for the member.【F:src/Gatherstead.Data/Entities/EventAttendance.cs】
+- **Event**: A time-bounded gathering at a property, defining the date window for meal planning, task coordination, and attendance tracking.【F:src/Gatherstead.Data/Entities/Event.cs】
+- **EventAttendance**: Per-member, per-day attendance record. Tracks `AttendanceStatus`, arrival/departure windows, and notes; drives meal and task intent generation for the member.【F:src/Gatherstead.Data/Entities/EventAttendance.cs】
 - **MealTemplate**: Specifies which meal types (`MealTypeFlags`: Breakfast/Lunch/Dinner) to auto-generate. Optional `StartDate`/`EndDate` fields scope plan generation to a sub-window of the event; when absent, plans span the full event date range.【F:src/Gatherstead.Data/Entities/MealTemplate.cs】
 - **MealPlan**: A specific meal on a specific day. Supports exception marking (`IsException`) to suppress auto-generated entries.【F:src/Gatherstead.Data/Entities/MealPlan.cs】
 - **MealAttendance**: Member's attendance response for a specific `MealPlan`. Tracks `AttendanceStatus` (Going/Maybe/NotGoing), `BringOwnFood`, and optional `Notes`. Unique per `(MealPlanId, HouseholdMemberId)` — mirrors `EventAttendance` at the individual-meal level.【F:src/Gatherstead.Data/Entities/MealAttendance.cs】
-- **MealIntent**: Member's cook-volunteer record for a `MealPlan`. Tracks a single `Volunteered: bool` — parallel in shape to `ChoreIntent`.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
-- **ChoreTemplate**: Template for a recurring chore; specifies one or more time slots (`ChoreTimeSlotFlags`: Morning/Midday/Evening/Anytime) and drives automatic `ChorePlan` generation. Optional `StartDate`/`EndDate` fields scope plan generation to a sub-window of the event, enabling one-off or partial-event chores (e.g., setup on day 1 only).【F:src/Gatherstead.Data/Entities/ChoreTemplate.cs】
-- **ChorePlan**: Dated chore instance for a specific day and time slot. Supports exception marking and completion tracking.【F:src/Gatherstead.Data/Entities/ChorePlan.cs】
-- **ChoreIntent**: Member's volunteer/assignment record for a `ChorePlan`.【F:src/Gatherstead.Data/Entities/ChoreIntent.cs】
+- **MealIntent**: Member's cook-volunteer record for a `MealPlan`. Tracks a single `Volunteered: bool` — parallel in shape to `TaskIntent`.【F:src/Gatherstead.Data/Entities/MealIntent.cs】
+- **TaskTemplate**: Template for a recurring task; specifies one or more time slots (`TaskTimeSlotFlags`: Morning/Midday/Evening/Anytime) and drives automatic `TaskPlan` generation. Optional `StartDate`/`EndDate` fields scope plan generation to a sub-window of the event, enabling one-off or partial-event tasks (e.g., setup on day 1 only).【F:src/Gatherstead.Data/Entities/TaskTemplate.cs】
+- **TaskPlan**: Dated task instance for a specific day and time slot. Supports exception marking and completion tracking.【F:src/Gatherstead.Data/Entities/TaskPlan.cs】
+- **TaskIntent**: Member's volunteer/assignment record for a `TaskPlan`.【F:src/Gatherstead.Data/Entities/TaskIntent.cs】
 
 ## Entity Hierarchy
 
 The verified ownership hierarchy, derived from FK relationships in the EF Core entities. Solid arrows represent FK ownership (parent → child); dashed arrows represent cross-context references.
 
-> **Future work:** A separate `Resource` / `ResourceIntent` entity pair is planned for shared equipment and facilities (e.g., kayaks, communal tools) that members can reserve without a lodging connotation.
+> **Future work:** A separate `Equipment` / `EquipmentIntent` entity pair is planned for shared equipment and facilities (e.g., kayaks, communal tools) that members can reserve without an accomodation connotation.
 
 ### Ownership flowchart
 
@@ -61,13 +61,13 @@ flowchart TD
     Property --> Event
     Event --> MealTemplate --> MealPlan --> MealIntent
     MealPlan --> MealAttendance
-    Event --> ChoreTemplate --> ChorePlan --> ChoreIntent
+    Event --> TaskTemplate --> TaskPlan --> TaskIntent
     Event --> EventAttendance
 
     HouseholdMember -.->|HouseholdMemberId| AccommodationIntent
     HouseholdMember -.->|HouseholdMemberId| MealIntent
     HouseholdMember -.->|HouseholdMemberId| MealAttendance
-    HouseholdMember -.->|HouseholdMemberId| ChoreIntent
+    HouseholdMember -.->|HouseholdMemberId| TaskIntent
     HouseholdMember -.->|HouseholdMemberId| EventAttendance
 ```
 
@@ -98,10 +98,10 @@ erDiagram
     MealPlan        ||--o{ MealIntent : ""
     HouseholdMember ||--o{ MealAttendance : ""
     HouseholdMember ||--o{ MealIntent : ""
-    Event           ||--o{ ChoreTemplate : ""
-    ChoreTemplate   ||--o{ ChorePlan : ""
-    ChorePlan       ||--o{ ChoreIntent : ""
-    HouseholdMember ||--o{ ChoreIntent : ""
+    Event           ||--o{ TaskTemplate : ""
+    TaskTemplate    ||--o{ TaskPlan : ""
+    TaskPlan        ||--o{ TaskIntent : ""
+    HouseholdMember ||--o{ TaskIntent : ""
     Event           ||--o{ EventAttendance : ""
     HouseholdMember ||--o{ EventAttendance : ""
 ```

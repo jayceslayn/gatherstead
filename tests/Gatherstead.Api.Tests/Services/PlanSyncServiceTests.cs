@@ -142,72 +142,72 @@ public class PlanSyncServiceTests : IAsyncLifetime
         Assert.Empty(activePlans); // no new plan created either
     }
 
-    // ── SyncChorePlanAsync ───────────────────────────────────────────────────
+    // ── SyncTaskPlanAsync ───────────────────────────────────────────────────
 
     [Fact]
-    public async Task SyncChorePlanAsync_CreatesOnePlanPerDayPerTimeSlot()
+    public async Task SyncTaskPlanAsync_CreatesOnePlanPerDayPerTimeSlot()
     {
-        var template = new ChoreTemplate
+        var template = new TaskTemplate
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId,
-            Name = "Chores", TimeSlots = ChoreTimeSlotFlags.Morning | ChoreTimeSlotFlags.Evening,
+            Name = "Tasks", TimeSlots = TaskTimeSlotFlags.Morning | TaskTimeSlotFlags.Evening,
         };
-        _dbContext.ChoreTemplates.Add(template);
+        _dbContext.TaskTemplates.Add(template);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        await _planSyncService.SyncChorePlanAsync(_tenantId, template, Jan1, Jan2, TestContext.Current.CancellationToken);
+        await _planSyncService.SyncTaskPlanAsync(_tenantId, template, Jan1, Jan2, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var plans = await _dbContext.ChorePlans.ToListAsync(TestContext.Current.CancellationToken);
+        var plans = await _dbContext.TaskPlans.ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(4, plans.Count); // 2 days × 2 slots
-        Assert.Contains(plans, p => p.Day == Jan1 && p.TimeSlot == ChoreTimeSlot.Morning);
-        Assert.Contains(plans, p => p.Day == Jan1 && p.TimeSlot == ChoreTimeSlot.Evening);
-        Assert.Contains(plans, p => p.Day == Jan2 && p.TimeSlot == ChoreTimeSlot.Morning);
-        Assert.Contains(plans, p => p.Day == Jan2 && p.TimeSlot == ChoreTimeSlot.Evening);
+        Assert.Contains(plans, p => p.Day == Jan1 && p.TimeSlot == TaskTimeSlot.Morning);
+        Assert.Contains(plans, p => p.Day == Jan1 && p.TimeSlot == TaskTimeSlot.Evening);
+        Assert.Contains(plans, p => p.Day == Jan2 && p.TimeSlot == TaskTimeSlot.Morning);
+        Assert.Contains(plans, p => p.Day == Jan2 && p.TimeSlot == TaskTimeSlot.Evening);
     }
 
     [Fact]
-    public async Task SyncChorePlanAsync_DoesNotRestoreExceptionMarker()
+    public async Task SyncTaskPlanAsync_DoesNotRestoreExceptionMarker()
     {
-        var template = new ChoreTemplate
+        var template = new TaskTemplate
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId,
-            Name = "Chores", TimeSlots = ChoreTimeSlotFlags.Morning,
+            Name = "Tasks", TimeSlots = TaskTimeSlotFlags.Morning,
         };
-        _dbContext.ChoreTemplates.Add(template);
-        var exceptionPlan = new ChorePlan
+        _dbContext.TaskTemplates.Add(template);
+        var exceptionPlan = new TaskPlan
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, TemplateId = template.Id,
-            Day = Jan1, TimeSlot = ChoreTimeSlot.Morning, IsDeleted = true, IsException = true,
+            Day = Jan1, TimeSlot = TaskTimeSlot.Morning, IsDeleted = true, IsException = true,
         };
-        _dbContext.ChorePlans.Add(exceptionPlan);
+        _dbContext.TaskPlans.Add(exceptionPlan);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        await _planSyncService.SyncChorePlanAsync(_tenantId, template, Jan1, Jan1, TestContext.Current.CancellationToken);
+        await _planSyncService.SyncTaskPlanAsync(_tenantId, template, Jan1, Jan1, TestContext.Current.CancellationToken);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         Assert.True(exceptionPlan.IsDeleted);
-        var activePlans = await _dbContext.ChorePlans.ToListAsync(TestContext.Current.CancellationToken);
+        var activePlans = await _dbContext.TaskPlans.ToListAsync(TestContext.Current.CancellationToken);
         Assert.Empty(activePlans);
     }
 
     // ── SyncEventPlansAsync ──────────────────────────────────────────────────
 
     [Fact]
-    public async Task SyncEventPlansAsync_ProcessesAllMealAndChoreTemplates()
+    public async Task SyncEventPlansAsync_ProcessesAllMealAndTaskTemplates()
     {
         var mealTemplate = new MealTemplate
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId,
             Name = "Meals", MealTypes = MealTypeFlags.Lunch,
         };
-        var choreTemplate = new ChoreTemplate
+        var taskTemplate = new TaskTemplate
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId,
-            Name = "Chores", TimeSlots = ChoreTimeSlotFlags.Anytime,
+            Name = "Tasks", TimeSlots = TaskTimeSlotFlags.Anytime,
         };
         _dbContext.MealTemplates.Add(mealTemplate);
-        _dbContext.ChoreTemplates.Add(choreTemplate);
+        _dbContext.TaskTemplates.Add(taskTemplate);
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var @event = await _dbContext.Events.FindAsync([_eventId], TestContext.Current.CancellationToken);
@@ -215,9 +215,9 @@ public class PlanSyncServiceTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var mealPlans = await _dbContext.MealPlans.ToListAsync(TestContext.Current.CancellationToken);
-        var chorePlans = await _dbContext.ChorePlans.ToListAsync(TestContext.Current.CancellationToken);
+        var taskPlans = await _dbContext.TaskPlans.ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(2, mealPlans.Count);  // Jan1 + Jan2, Lunch
-        Assert.Equal(2, chorePlans.Count); // Jan1 + Jan2, Anytime
+        Assert.Equal(2, taskPlans.Count); // Jan1 + Jan2, Anytime
     }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useChoreTemplates } from '~/composables/useChoreTemplates'
+import { useTaskTemplates } from '~/composables/useTaskTemplates'
 import { useHouseholds } from '~/composables/useHouseholds'
 import { useAccommodations } from '~/composables/useAccommodations'
 import { useCurrentMemberStore } from '~/stores/member'
@@ -19,7 +19,7 @@ const { households } = useHouseholds()
 const eventId = computed(() => route.params.eventId as string)
 
 const { event, pending: eventPending } = useEvent(eventId)
-const { templates: choreTemplates, pending: choreTemplatesPending } = useChoreTemplates(eventId)
+const { templates: taskTemplates, pending: taskTemplatesPending } = useTaskTemplates(eventId)
 
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
 const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
@@ -27,7 +27,7 @@ const { accommodations, pending: accommodationsPending } = useAccommodations(eve
 // Tab state
 const tabs: TabsItem[] = [
   { label: t('event.attendance'), value: 'attendance', slot: 'attendance'},
-  { label: t('event.chores'), value: 'chores', slot: 'chores'},
+  { label: t('event.tasks'), value: 'tasks', slot: 'tasks'},
   { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations'},
 ]
 
@@ -136,20 +136,20 @@ onMounted(() => {
           </div>
         </template>
 
-        <template #chores>
+        <template #tasks>
           <div class="mt-4">
-            <div v-if="choreTemplatesPending" class="py-8 text-center text-sm text-muted">
+            <div v-if="taskTemplatesPending" class="py-8 text-center text-sm text-muted">
               {{ t('common.loading') }}
             </div>
             <GsEmptyState
-              v-else-if="!choreTemplates.length"
+              v-else-if="!taskTemplates.length"
               icon="i-heroicons-clipboard-document-list"
-              :title="t('event.chore.noTemplates')"
+              :title="t('event.task.noTemplates')"
               class="mt-4"
             />
             <div v-else class="space-y-4">
-              <GsChoreTemplateSection
-                v-for="template in choreTemplates"
+              <GsTaskTemplateSection
+                v-for="template in taskTemplates"
                 :key="template.id"
                 :template="template"
                 :event-id="eventId"

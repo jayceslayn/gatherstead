@@ -7,7 +7,7 @@ import { LiveEventRepository } from '~/repositories/live/LiveEventRepository'
 import { LiveEventAttendanceRepository } from '~/repositories/live/LiveEventAttendanceRepository'
 import { LiveMealPlanRepository } from '~/repositories/live/LiveMealPlanRepository'
 import { LiveMealAttendanceRepository } from '~/repositories/live/LiveMealAttendanceRepository'
-import { LiveChoreRepository } from '~/repositories/live/LiveChoreRepository'
+import { LiveTaskRepository } from '~/repositories/live/LiveTaskRepository'
 import { LivePropertyRepository } from '~/repositories/live/LivePropertyRepository'
 import { LiveAccommodationRepository } from '~/repositories/live/LiveAccommodationRepository'
 import { LiveAccommodationIntentRepository } from '~/repositories/live/LiveAccommodationIntentRepository'
@@ -18,7 +18,7 @@ import { DemoEventRepository } from '~/repositories/demo/DemoEventRepository'
 import { DemoEventAttendanceRepository } from '~/repositories/demo/DemoEventAttendanceRepository'
 import { DemoMealPlanRepository } from '~/repositories/demo/DemoMealPlanRepository'
 import { DemoMealAttendanceRepository } from '~/repositories/demo/DemoMealAttendanceRepository'
-import { DemoChoreRepository } from '~/repositories/demo/DemoChoreRepository'
+import { DemoTaskRepository } from '~/repositories/demo/DemoTaskRepository'
 import { DemoPropertyRepository } from '~/repositories/demo/DemoPropertyRepository'
 import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodationRepository'
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
@@ -38,7 +38,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         eventAttendance: new DemoEventAttendanceRepository(),
         mealPlans: new DemoMealPlanRepository(),
         mealAttendance: new DemoMealAttendanceRepository(),
-        chores: new DemoChoreRepository(),
+        tasks: new DemoTaskRepository(),
         properties: new DemoPropertyRepository(),
         accommodations: new DemoAccommodationRepository(),
         accommodationIntents: new DemoAccommodationIntentRepository(),
@@ -51,7 +51,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         eventAttendance: new LiveEventAttendanceRepository(),
         mealPlans: new LiveMealPlanRepository(),
         mealAttendance: new LiveMealAttendanceRepository(),
-        chores: new LiveChoreRepository(),
+        tasks: new LiveTaskRepository(),
         properties: new LivePropertyRepository(),
         accommodations: new LiveAccommodationRepository(),
         accommodationIntents: new LiveAccommodationIntentRepository(),

@@ -38,7 +38,7 @@ public enum AccommodationIntentDecision
     Declined
 }
 
-public enum ChoreTimeSlot
+public enum TaskTimeSlot
 {
     Morning,
     Midday,
@@ -47,7 +47,7 @@ public enum ChoreTimeSlot
 }
 
 [Flags]
-public enum ChoreTimeSlotFlags
+public enum TaskTimeSlotFlags
 {
     Morning = 0x01,
     Midday  = 0x02,

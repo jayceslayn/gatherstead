@@ -12,7 +12,7 @@ public interface IEventService
     Task<EventResponse> DeleteAsync(Guid tenantId, Guid eventId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Regenerates ChorePlan and MealPlan records for all templates on the event,
+    /// Regenerates TaskPlan and MealPlan records for all templates on the event,
     /// reconciling the full event date range. Useful after template configuration changes.
     /// </summary>
     Task<EventResponse> SyncPlansAsync(Guid tenantId, Guid eventId, CancellationToken cancellationToken = default);

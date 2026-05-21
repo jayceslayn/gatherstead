@@ -100,8 +100,8 @@ SSR should remain disabled for all authenticated routes via `routeRules: { '/app
     meals/
       index.vue                          Meal plan view
       [templateId]/index.vue             Template detail + daily intents
-    chores/
-      index.vue                          Chore plan view
+    tasks/
+      index.vue                          Task plan view
       [templateId]/index.vue             Template detail + signup grid
     edit.vue                             Edit event (Manager+)
 
@@ -139,7 +139,7 @@ SSR should remain disabled for all authenticated routes via `routeRules: { '/app
 
 **Center** — Personal calendar: FullCalendar `listWeek` scoped to events where the user's linked member has attendance data. Small, orientation-focused, not full planning.
 
-**Right** — My tasks: unanswered meal intents, open chore slots, accommodation status.
+**Right** — My tasks: unanswered meal intents, open task slots, accommodation status.
 
 **Manager+ additions** (below the 3-column strip): tenant-wide headcount for next event, dietary restriction alert with link to aggregation view, quick "Manage event" link.
 
@@ -165,7 +165,7 @@ Four-tab layout via `UTabs`:
 
 **Meals** — Meal plan view. List of MealTemplates (collapsible), each showing a day × meal-type grid. Members see "My response" toggle per cell. Manager+ sees all member responses and exception controls.
 
-**Chores** — Chore plan view. List of ChoreTemplates (collapsible), each showing a day × time-slot grid. Members see "Sign up" button. Manager+ sees volunteer list per slot.
+**Tasks** — Task plan view. List of TaskTemplates (collapsible), each showing a day × time-slot grid. Members see "Sign up" button. Manager+ sees volunteer list per slot.
 
 **Accommodations** — Read-only cross-reference: who is staying where during this event. Links to full intent management under Properties.
 
@@ -215,20 +215,20 @@ Inner left-nav within the content area (not in sidebar). Sections:
 
 A consistent icon + color system applied across the calendar, day-intent grids, and cards so users can parse coverage and status at a glance — without reading labels. Color is never used as the *only* differentiator (accessibility).
 
-### Coverage States (MealPlan, ChorePlan)
+### Coverage States (MealPlan, TaskPlan)
 
 Applied to `GsDayIntentGrid` cells and calendar event blocks:
 
 | State | Color token | Icon | Meaning |
 |---|---|---|---|
-| **Covered** | `success` (sage green) | `i-heroicons-check-circle` | Enough Going intents to meet the plan (or ≥ MinimumAssignees for chores) |
+| **Covered** | `success` (sage green) | `i-heroicons-check-circle` | Enough Going intents to meet the plan (or ≥ MinimumAssignees for tasks) |
 | **Partial** | `secondary` (harvest orange) | `i-heroicons-clock` | Some responses but below the threshold, or mix of Going + Maybe |
 | **Open** | `neutral` (warmstone, muted) | `i-heroicons-question-mark-circle` | No responses yet — needs attention |
-| **Exception** | `primary` (forest, outlined) | `i-heroicons-x-circle` | Manager has flagged this plan as an exception (meal cancelled, chore reassigned, etc.) |
+| **Exception** | `primary` (forest, outlined) | `i-heroicons-x-circle` | Manager has flagged this plan as an exception (meal cancelled, task reassigned, etc.) |
 
-For chores specifically, a small volunteer count badge (e.g. "2/3") overlays the cell so Managers can see coverage numerically.
+For tasks specifically, a small volunteer count badge (e.g. "2/3") overlays the cell so Managers can see coverage numerically.
 
-### Attendance States (EventAttendance, MealIntent, ChoreIntent)
+### Attendance States (EventAttendance, MealIntent, TaskIntent)
 
 Applied to toggle buttons, table cells, and dashboard task chips:
 
@@ -279,7 +279,7 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 | `GsAttendanceToggle` | Three-button Going/Maybe/NotGoing toggle group | `UButton` |
 | `GsDietaryTags` | Allergy chips (`harvest`) + restriction chips (`sage`) | `UBadge` |
 | `GsPageHeader` | Standardized h1 + optional subtitle + right-side action slot | Tailwind |
-| `GsDayIntentGrid` | Date-range × slot matrix for meal and chore plan views; coverage state per cell | `UTable` or CSS grid |
+| `GsDayIntentGrid` | Date-range × slot matrix for meal and task plan views; coverage state per cell | `UTable` or CSS grid |
 | `GsAccommodationCard` | Accommodation card with type, capacity, intent status | `UCard`, `GsStatusBadge` |
 
 ---
@@ -309,7 +309,7 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 - Tables that are too wide for mobile use horizontal scroll with `overflow-x-auto` wrapper, or collapse to a card-per-row layout.
 - The Event Detail tab bar (`UTabs`) must scroll horizontally on mobile if all four tabs don't fit.
 - Forms are already single-column — no extra work needed.
-- The `GsDayIntentGrid` (meal/chore matrix) is the trickiest mobile case: it will likely need a separate mobile layout that stacks days vertically rather than showing a wide matrix.
+- The `GsDayIntentGrid` (meal/task matrix) is the trickiest mobile case: it will likely need a separate mobile layout that stacks days vertically rather than showing a wide matrix.
 
 ---
 
@@ -327,7 +327,7 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 
 **FullCalendar**: Wrap in `<ClientOnly>` to be safe (all tenant routes are already client-only). Pass `useI18n().locale` to FullCalendar's `locale` option. `@fullcalendar/daygrid` and `@fullcalendar/list` packages must be added to `package.json`.
 
-**i18n gaps to fill**: `en.json` needs new top-level keys for `directory`, `dashboard`, `attendance`, `meals`, `chores`, `accommodation`, `settings`, `reports`. Existing `nav`, `household`, `member`, `event`, `property` keys are already in place.
+**i18n gaps to fill**: `en.json` needs new top-level keys for `directory`, `dashboard`, `attendance`, `meals`, `tasks`, `accommodation`, `settings`, `reports`. Existing `nav`, `household`, `member`, `event`, `property` keys are already in place.
 
 ---
 
@@ -372,21 +372,21 @@ New composables shipped with Phase 3:
 
 i18n additions: `household.noHouseholds*`, `member.adult/child/identity/addMember/editMember/dietaryProfile/preferredDiet/allergies/restrictions/noDietaryProfile/dietaryTags*`, `common.notes/unsavedChanges`
 
-### Phase 4 — Meal & Chore Plans ✅ COMPLETE (2026-04-22)
+### Phase 4 — Meal & Task Plans ✅ COMPLETE (2026-04-22)
 17. ✅ Meal Plan View — Meals tab in event detail replaced with live `GsMealTemplateSection` per template; `useMealTemplates(eventId)` fetches templates, `useMealPlanSection(eventId, templateId, memberId, householdId)` fetches plans + member intents in parallel (Promise.all per plan), upserts via PUT
-18. ✅ Chore Plan View — Chores tab replaced with live `GsChoreTemplateSection`; `useChoreTemplates(eventId)` + `useChorePlanSection(…)` follow same pattern; volunteer toggle (boolean) replaces status enum
+18. ✅ Task Plan View — Tasks tab replaced with live `GsTaskTemplateSection`; `useTaskTemplates(eventId)` + `useTaskPlanSection(…)` follow same pattern; volunteer toggle (boolean) replaces status enum
 19. ✅ `GsDayIntentGrid` — desktop scrollable table + mobile day-stacked layout via `sm:` breakpoint; generic scoped `#cell` slot so parent controls cell content
 
 New composables shipped with Phase 4:
 - ✅ `useMealPlans.ts` — `useMealTemplates(eventId)`, `useMealPlanSection(eventId, templateId, memberId, householdId)`; exports `MealTemplate`, `MealPlan`, `MealIntent`, `MealIntentStatus`, `mealTypesFromFlags(flags)`
-- ✅ `useChoreTemplates.ts` — `useChoreTemplates(eventId)`, `useChorePlanSection(eventId, templateId, memberId, householdId)`; exports `ChoreTemplate`, `ChorePlan`, `ChoreIntent`, `choreSlotsFromFlags(flags)`
+- ✅ `useTaskTemplates.ts` — `useTaskTemplates(eventId)`, `useTaskPlanSection(eventId, templateId, memberId, householdId)`; exports `TaskTemplate`, `TaskPlan`, `TaskIntent`, `taskSlotsFromFlags(flags)`
 
 New components shipped with Phase 4:
 - ✅ `GsDayIntentGrid.vue` — generic `rows/columns` props, `#cell` scoped slot; desktop table / mobile stack
 - ✅ `GsMealTemplateSection.vue` — UCard per template; fetches plans + member intents; renders `GsDayIntentGrid` with `GsAttendanceToggle` (reuses Going/Maybe/NotGoing — same enum values as `MealIntentStatus`)
-- ✅ `GsChoreTemplateSection.vue` — UCard per template; fetches plans + member intents; renders `GsDayIntentGrid` with Sign Up / Signed Up `UButton` (success color when volunteered)
+- ✅ `GsTaskTemplateSection.vue` — UCard per template; fetches plans + member intents; renders `GsDayIntentGrid` with Sign Up / Signed Up `UButton` (success color when volunteered)
 
-i18n additions: `event.meal.{breakfast,lunch,dinner,noTemplates,noPlans}`, `event.chore.{morning,midday,evening,anytime,volunteer,volunteered,noTemplates,noPlans,minimumAssignees}` (en + es)
+i18n additions: `event.meal.{breakfast,lunch,dinner,noTemplates,noPlans}`, `event.task.{morning,midday,evening,anytime,volunteer,volunteered,noTemplates,noPlans,minimumAssignees}` (en + es)
 
 ### Data Layer Refactor (planned, before or alongside Phase 5)
 See **[REPOSITORY-PATTERN.md](REPOSITORY-PATTERN.md)** for the full plan. Summary:
@@ -453,4 +453,4 @@ After implementation:
    - Navigate to Directory → household list → member detail → dietary tags visible
    - Navigate to Properties → accommodation card grid with intent status badges
    - As Member: Settings link absent; Manager+ controls not visible; status icons/colors render correctly
-   - As Manager: Settings link present, create/edit buttons visible, coverage badges on meal/chore grids
+   - As Manager: Settings link present, create/edit buttons visible, coverage badges on meal/task grids
