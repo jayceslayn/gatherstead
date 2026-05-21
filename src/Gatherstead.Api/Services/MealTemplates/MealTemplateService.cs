@@ -121,6 +121,9 @@ public class MealTemplateService : IMealTemplateService
             return response;
         }
 
+        if (!ValidateDateRange(request.StartDate, request.EndDate, @event.StartDate, @event.EndDate, response))
+            return response;
+
         var template = new MealTemplate
         {
             Id = Guid.NewGuid(),
@@ -128,6 +131,8 @@ public class MealTemplateService : IMealTemplateService
             EventId = eventId,
             Name = normalizedName,
             MealTypes = request.MealTypes,
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
             Notes = request.Notes?.Trim(),
         };
 
@@ -183,12 +188,15 @@ public class MealTemplateService : IMealTemplateService
         }
 
         var mealTypesChanged = template.MealTypes != request.MealTypes;
+        var dateRangeChanged = template.StartDate != request.StartDate || template.EndDate != request.EndDate;
 
         template.Name = normalizedName;
         template.MealTypes = request.MealTypes;
+        template.StartDate = request.StartDate;
+        template.EndDate = request.EndDate;
         template.Notes = request.Notes?.Trim();
 
-        if (mealTypesChanged)
+        if (mealTypesChanged || dateRangeChanged)
         {
             var @event = await _dbContext.Events
                 .AsNoTracking()
@@ -196,7 +204,12 @@ public class MealTemplateService : IMealTemplateService
                 .SingleOrDefaultAsync(cancellationToken);
 
             if (@event is not null)
+            {
+                if (!ValidateDateRange(request.StartDate, request.EndDate, @event.StartDate, @event.EndDate, response))
+                    return response;
+
                 await _planSyncService.SyncMealPlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -240,6 +253,37 @@ public class MealTemplateService : IMealTemplateService
     }
 
     private static MealTemplateDto MapToDto(MealTemplate t) => new(
-        t.Id, t.TenantId, t.EventId, t.Name, t.MealTypes, t.Notes,
+        t.Id, t.TenantId, t.EventId, t.Name, t.MealTypes,
+        t.StartDate, t.EndDate,
+        t.Notes,
         t.CreatedAt, t.UpdatedAt, t.IsDeleted, t.DeletedAt, t.DeletedByUserId);
+
+    private static bool ValidateDateRange(
+        DateOnly? startDate, DateOnly? endDate,
+        DateOnly eventStart, DateOnly eventEnd,
+        BaseEntityResponse<MealTemplateDto> response)
+    {
+        if (startDate is null && endDate is null)
+            return true;
+
+        if (startDate is null || endDate is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartDate and EndDate must both be set or both be null.");
+            return false;
+        }
+
+        if (startDate > endDate)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartDate must not be after EndDate.");
+            return false;
+        }
+
+        if (startDate < eventStart || endDate > eventEnd)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartDate and EndDate must fall within the event date range.");
+            return false;
+        }
+
+        return true;
+    }
 }

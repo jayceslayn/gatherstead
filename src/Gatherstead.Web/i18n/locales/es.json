@@ -155,7 +155,9 @@
       "volunteer": "Voluntario Cocinero",
       "volunteered": "Voluntario",
       "noTemplates": "No se han configurado planes de comida para este evento.",
-      "noPlans": "No hay detalles del plan de comida disponibles."
+      "noPlans": "No hay detalles del plan de comida disponibles.",
+      "dateRange": "{start} – {end}",
+      "oneOff": "Única vez"
     },
     "chore": {
       "morning": "Mañana",

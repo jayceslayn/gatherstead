@@ -58,18 +58,22 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     eventId: string,
     name: string,
     mealTypes: number,
+    startDate: string | null,
+    endDate: string | null,
     notes: string | null,
   ): Promise<MealTemplate> {
     const store = getDemoStore()
     if (store.mealTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.mealTemplatesPerEvent) {
       throw new DemoLimitError('mealTemplatesPerEvent')
     }
-    const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, notes }
+    const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, startDate, endDate, notes }
     store.mealTemplates.value.push(t)
 
     const event = store.events.value.find(e => e.id === eventId)
     if (event) {
-      const days = enumDays(event.startDate, event.endDate)
+      const effectiveStart = startDate ?? event.startDate
+      const effectiveEnd = endDate ?? event.endDate
+      const days = enumDays(effectiveStart, effectiveEnd)
       for (const day of days) {
         for (const mealType of mealTypesFromFlags(mealTypes)) {
           store.mealPlans.value.push({
@@ -96,13 +100,16 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     templateId: string,
     name: string,
     mealTypes: number,
+    startDate: string | null,
+    endDate: string | null,
     notes: string | null,
   ): Promise<void> {
     const store = getDemoStore()
     const t = store.mealTemplates.value.find(x => x.id === templateId)
     if (!t) return
 
-    if (t.mealTypes !== mealTypes) {
+    const plansNeedRegen = t.mealTypes !== mealTypes || t.startDate !== startDate || t.endDate !== endDate
+    if (plansNeedRegen) {
       const affectedPlanIds = store.mealPlans.value
         .filter(p => p.mealTemplateId === templateId)
         .map(p => p.id)
@@ -112,7 +119,9 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
 
       const event = store.events.value.find(e => e.id === eventId)
       if (event) {
-        const days = enumDays(event.startDate, event.endDate)
+        const effectiveStart = startDate ?? event.startDate
+        const effectiveEnd = endDate ?? event.endDate
+        const days = enumDays(effectiveStart, effectiveEnd)
         for (const day of days) {
           for (const mealType of mealTypesFromFlags(mealTypes)) {
             store.mealPlans.value.push({
@@ -132,6 +141,8 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
 
     t.name = name
     t.mealTypes = mealTypes
+    t.startDate = startDate
+    t.endDate = endDate
     t.notes = notes
     persistDemoStore()
   }

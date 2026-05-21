@@ -10,6 +10,8 @@ public record MealTemplateDto(
     Guid EventId,
     string Name,
     MealTypeFlags MealTypes,
+    DateOnly? StartDate,
+    DateOnly? EndDate,
     string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
@@ -28,6 +30,8 @@ public class CreateMealTemplateRequest
     [Required]
     public MealTypeFlags MealTypes { get; init; }
 
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
     public string? Notes { get; init; }
 }
 
@@ -40,5 +44,7 @@ public class UpdateMealTemplateRequest
     [Required]
     public MealTypeFlags MealTypes { get; init; }
 
+    public DateOnly? StartDate { get; init; }
+    public DateOnly? EndDate { get; init; }
     public string? Notes { get; init; }
 }

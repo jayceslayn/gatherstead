@@ -83,13 +83,13 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
 
   // 6. Meal templates — plans auto-generated per (day × mealType) by createTemplate
   const breakfastTemplate = await repos.mealPlans.createTemplate(
-    TENANT_ID, event.id, 'Breakfast', 0x01, null,
+    TENANT_ID, event.id, 'Breakfast', 0x01, null, null, null,
   )
   const lunchTemplate = await repos.mealPlans.createTemplate(
-    TENANT_ID, event.id, 'Lunch', 0x02, null,
+    TENANT_ID, event.id, 'Lunch', 0x02, null, null, null,
   )
   const dinnerTemplate = await repos.mealPlans.createTemplate(
-    TENANT_ID, event.id, 'Dinner', 0x04, null,
+    TENANT_ID, event.id, 'Dinner', 0x04, null, null, null,
   )
 
   // 7. Chore templates — plans auto-generated per (day × timeSlot) by createTemplate

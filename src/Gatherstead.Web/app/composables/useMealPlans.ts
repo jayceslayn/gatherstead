@@ -1,6 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
 import type {
-  MealType,
   MealTemplate,
   MealPlan,
   MealIntent,
@@ -16,10 +15,10 @@ export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Prom
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createTemplate(name: string, mealTypes: number, notes: string | null) {
+  async function createTemplate(name: string, mealTypes: number, startDate: string | null = null, endDate: string | null = null, notes: string | null = null) {
     updating.value.push('new')
     try {
-      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, mealTypes, notes)
+      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, mealTypes, startDate, endDate, notes)
       await refresh()
     }
     catch (e) {
@@ -34,10 +33,10 @@ export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Prom
     }
   }
 
-  async function updateTemplate(templateId: string, name: string, mealTypes: number, notes: string | null) {
+  async function updateTemplate(templateId: string, name: string, mealTypes: number, startDate: string | null = null, endDate: string | null = null, notes: string | null = null) {
     updating.value.push(templateId)
     try {
-      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, mealTypes, notes)
+      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, mealTypes, startDate, endDate, notes)
       await refresh()
     }
     catch (e) {

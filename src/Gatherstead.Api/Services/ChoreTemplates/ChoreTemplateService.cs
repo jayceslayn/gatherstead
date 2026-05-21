@@ -188,9 +188,8 @@ public class ChoreTemplateService : IChoreTemplateService
             }
         }
 
-        var timeSlotsChanged  = template.TimeSlots  != request.TimeSlots;
-        var dateRangeChanged  = template.StartDate  != request.StartDate
-                             || template.EndDate    != request.EndDate;
+        var timeSlotsChanged = template.TimeSlots != request.TimeSlots;
+        var dateRangeChanged = template.StartDate != request.StartDate || template.EndDate != request.EndDate;
 
         template.Name = normalizedName;
         template.TimeSlots = request.TimeSlots;

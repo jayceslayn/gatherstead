@@ -130,6 +130,8 @@ export interface IMealPlanRepository {
     eventId: string,
     name: string,
     mealTypes: number,
+    startDate: string | null,
+    endDate: string | null,
     notes: string | null,
   ): Promise<MealTemplate>
   updateTemplate(
@@ -138,6 +140,8 @@ export interface IMealPlanRepository {
     templateId: string,
     name: string,
     mealTypes: number,
+    startDate: string | null,
+    endDate: string | null,
     notes: string | null,
   ): Promise<void>
   deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>

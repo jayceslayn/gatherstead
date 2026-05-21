@@ -14,6 +14,19 @@ const { t } = useI18n()
 const eventId = computed(() => props.eventId)
 const templateId = computed(() => props.template.id)
 
+function formatDate(dateStr: string) {
+  return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(
+    new Date(dateStr + 'T00:00:00'),
+  )
+}
+
+const dateRangeLabel = computed(() => {
+  const { startDate, endDate } = props.template
+  if (!startDate || !endDate) return null
+  if (startDate === endDate) return formatDate(startDate)
+  return t('event.meal.dateRange', { start: formatDate(startDate), end: formatDate(endDate) })
+})
+
 const { plans, pending: plansPending } = useMealPlanSection(
   eventId,
   templateId,
@@ -99,7 +112,10 @@ async function setColumn(planId: string, status: AttendanceStatus) {
 <template>
   <UCard>
     <template #header>
-      <p class="font-semibold">{{ template.name }}</p>
+      <div class="flex items-center gap-2 flex-wrap">
+        <p class="font-semibold">{{ template.name }}</p>
+        <span v-if="dateRangeLabel" class="text-xs text-muted">{{ dateRangeLabel }}</span>
+      </div>
       <p v-if="template.notes" class="text-sm text-muted mt-0.5">{{ template.notes }}</p>
     </template>
 

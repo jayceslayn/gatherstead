@@ -155,7 +155,9 @@
       "volunteer": "Cook Volunteer",
       "volunteered": "Volunteering",
       "noTemplates": "No meal plans have been set up for this event.",
-      "noPlans": "No meal plan details available."
+      "noPlans": "No meal plan details available.",
+      "dateRange": "{start} – {end}",
+      "oneOff": "One-off"
     },
     "chore": {
       "morning": "Morning",

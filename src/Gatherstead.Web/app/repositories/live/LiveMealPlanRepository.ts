@@ -54,11 +54,13 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     eventId: string,
     name: string,
     mealTypes: number,
+    startDate: string | null,
+    endDate: string | null,
     notes: string | null,
   ): Promise<MealTemplate> {
     const r = await $fetch<ApiResponse<MealTemplate>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates`,
-      { method: 'POST', body: { name, mealTypes, notes } },
+      { method: 'POST', body: { name, mealTypes, startDate, endDate, notes } },
     )
     return r.entity
   }
@@ -69,11 +71,13 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     templateId: string,
     name: string,
     mealTypes: number,
+    startDate: string | null,
+    endDate: string | null,
     notes: string | null,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}`,
-      { method: 'PUT', body: { name, mealTypes, notes } },
+      { method: 'PUT', body: { name, mealTypes, startDate, endDate, notes } },
     )
   }
 

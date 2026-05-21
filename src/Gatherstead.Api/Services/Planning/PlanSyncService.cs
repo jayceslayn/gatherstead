@@ -93,7 +93,7 @@ public class PlanSyncService
             .Where(p => p.TenantId == tenantId && p.MealTemplateId == template.Id)
             .ToListAsync(cancellationToken);
 
-        var diff = PlanGenerator.DiffMealPlans(template.MealTypes, start, end, existing);
+        var diff = PlanGenerator.DiffMealPlans(template.MealTypes, start, end, existing, template.StartDate, template.EndDate);
 
         foreach (var (day, mealType) in diff.ToAdd)
         {

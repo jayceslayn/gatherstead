@@ -26,6 +26,8 @@ public class MealTemplate : AuditableEntity
     public string Name { get; set; } = string.Empty;
 
     public MealTypeFlags MealTypes { get; set; }
+    public DateOnly? StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }
     public string? Notes { get; set; }
 
     public ICollection<MealPlan> Plans { get; set; } = new List<MealPlan>();

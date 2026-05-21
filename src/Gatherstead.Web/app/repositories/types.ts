@@ -64,6 +64,8 @@ export interface MealTemplate {
   eventId: string
   name: string
   mealTypes: number
+  startDate: string | null
+  endDate: string | null
   notes: string | null
 }
 

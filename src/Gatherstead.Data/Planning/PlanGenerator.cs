@@ -97,15 +97,20 @@ public static class PlanGenerator
         MealTypeFlags mealTypes,
         DateOnly start,
         DateOnly end,
-        IEnumerable<MealPlan> existingPlans)
+        IEnumerable<MealPlan> existingPlans,
+        DateOnly? startDate = null,
+        DateOnly? endDate = null)
     {
+        var effectiveStart = startDate ?? start;
+        var effectiveEnd   = endDate   ?? end;
+
         var types = ExpandMealTypes(mealTypes).ToList();
         var existing = existingPlans.ToList();
 
         var toAdd = new List<(DateOnly, MealType)>();
         var toRestore = new List<MealPlan>();
 
-        foreach (var day in GetDateRange(start, end))
+        foreach (var day in GetDateRange(effectiveStart, effectiveEnd))
         {
             foreach (var mealType in types)
             {
@@ -126,7 +131,7 @@ public static class PlanGenerator
             }
         }
 
-        var expectedKeys = GetDateRange(start, end)
+        var expectedKeys = GetDateRange(effectiveStart, effectiveEnd)
             .SelectMany(day => types.Select(t => (day, t)))
             .ToHashSet();
 
