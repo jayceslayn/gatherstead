@@ -117,6 +117,7 @@ function isUpdating(planId: string): boolean {
         >
           {{ isVolunteered(cellPlanId(row.id, column.id)!) ? t('event.chore.volunteered') : t('event.chore.volunteer') }}
         </UButton>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span v-else-if="cellPlanId(row.id, column.id)" class="text-xs text-muted">—</span>
       </template>
     </GsDayIntentGrid>

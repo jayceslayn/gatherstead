@@ -136,6 +136,7 @@
       "bulkContextRow": "{name} — all event days",
       "bulkContextColumn": "All members — {day}"
     },
+    "dateRange": "{start} – {end}",
     "noEvents": "No events planned yet",
     "noEventsHintManager": "Create your first event to get started.",
     "noEventsHintMember": "Check back soon — events will appear here.",

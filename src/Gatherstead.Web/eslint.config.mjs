@@ -1,8 +1,8 @@
 // @ts-check
 import vueI18n from '@intlify/eslint-plugin-vue-i18n'
+import withNuxt from './.nuxt/eslint.config.mjs'
 
-export default [
-  { ignores: ['.nuxt/**', '.output/**'] },
+export default withNuxt(
   ...vueI18n.configs['flat/recommended'],
   {
     rules: {
@@ -14,4 +14,4 @@ export default [
       },
     },
   },
-]
+)

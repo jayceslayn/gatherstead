@@ -42,6 +42,7 @@ const MEAL_LETTER: Record<string, string> = { Breakfast: 'B', Lunch: 'L', Dinner
         <UIcon :name="statusIcon[dayStatus]" :class="['size-4', statusClass[dayStatus]]" />
       </template>
       <template v-else>
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span class="text-xs text-muted/50">—</span>
       </template>
     </div>
@@ -55,6 +56,7 @@ const MEAL_LETTER: Record<string, string> = { Breakfast: 'B', Lunch: 'L', Dinner
       >
         <span class="text-[9px] font-medium leading-none">{{ MEAL_LETTER[plan.mealType] ?? plan.mealType[0] }}</span>
         <UIcon v-if="mealStatuses[plan.id]" :name="statusIcon[mealStatuses[plan.id]!]" class="size-3" />
+        <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
         <span v-else class="text-[9px] leading-none">—</span>
       </div>
     </div>

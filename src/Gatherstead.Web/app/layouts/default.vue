@@ -87,7 +87,7 @@ function isActive(path: string) {
       <aside class="hidden md:flex w-64 border-r border-(--ui-border) p-4 flex-col shrink-0">
         <NuxtLink to="/app" class="mb-1">
           <picture>
-            <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png" />
+            <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png">
             <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-12 w-auto" />
           </picture>
         </NuxtLink>

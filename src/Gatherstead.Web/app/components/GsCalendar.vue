@@ -23,6 +23,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   events: () => [],
   initialView: 'dayGridMonth',
+  initialDate: undefined,
   height: 'auto',
   compact: false,
 })

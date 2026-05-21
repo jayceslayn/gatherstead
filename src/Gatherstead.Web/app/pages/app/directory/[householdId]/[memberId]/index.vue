@@ -40,11 +40,13 @@ function formatDate(date: string | null) {
     </div>
 
     <template v-else-if="member">
-      <GsBreadcrumb :items="[
-        { label: t('household.title'), to: '/app/directory' },
-        { label: household?.name ?? '…', to: `/app/directory/${householdId}` },
-        { label: member.name },
-      ]" />
+      <GsBreadcrumb
+        :items="[
+          { label: t('household.title'), to: '/app/directory' },
+          { label: household?.name ?? '…', to: `/app/directory/${householdId}` },
+          { label: member.name },
+        ]"
+      />
 
       <GsPageHeader :title="member.name">
         <UButton

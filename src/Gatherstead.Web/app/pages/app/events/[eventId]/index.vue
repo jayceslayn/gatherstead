@@ -109,7 +109,7 @@ onMounted(() => {
 
       <div class="flex items-center gap-2 text-sm text-muted mb-4">
         <UIcon name="i-heroicons-calendar-days" class="size-4 shrink-0" />
-        <span>{{ formatHeader(event.startDate) }} – {{ formatHeader(event.endDate) }}</span>
+        <span>{{ t('event.dateRange', { start: formatHeader(event.startDate), end: formatHeader(event.endDate) }) }}</span>
       </div>
 
       <div v-if="manageableHouseholds.length > 1" class="flex items-center gap-3 mb-6">
@@ -123,8 +123,8 @@ onMounted(() => {
       </div>
 
       <UTabs
-        :items="tabs"
         v-model="activeTab"
+        :items="tabs"
       >
         <template #attendance>
           <div class="mt-4">

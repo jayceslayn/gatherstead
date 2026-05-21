@@ -4,12 +4,13 @@ const { loggedIn, logout } = useAuth()
 const config = useRuntimeConfig()
 </script>
 
+<!-- eslint-disable vue/no-multiple-template-root -->
 <template>
   <DemoBanner />
   <UHeader to="/" :toggle="!config.public.demoMode">
     <template #title>
       <picture>
-        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_wide.png" />
+        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_wide.png">
         <NuxtImg src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-10 w-auto" />
       </picture>
     </template>

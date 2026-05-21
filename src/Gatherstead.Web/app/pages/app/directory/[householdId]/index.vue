@@ -25,10 +25,12 @@ const pending = computed(() => householdPending.value || membersPending.value)
     </div>
 
     <template v-else-if="household">
-      <GsBreadcrumb :items="[
-        { label: t('household.title'), to: '/app/directory' },
-        { label: household.name },
-      ]" />
+      <GsBreadcrumb
+        :items="[
+          { label: t('household.title'), to: '/app/directory' },
+          { label: household.name },
+        ]"
+      />
 
       <GsPageHeader :title="household.name">
         <GsRoleGate min-role="Manager">
@@ -68,6 +70,7 @@ const pending = computed(() => householdPending.value || membersPending.value)
                   <span class="text-sm text-muted">
                     {{ member.isAdult ? t('member.adult') : t('member.child') }}
                   </span>
+                  <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
                   <span v-if="member.ageBand" class="text-sm text-muted">· {{ member.ageBand }}</span>
                 </div>
               </div>

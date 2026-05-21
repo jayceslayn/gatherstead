@@ -11,7 +11,7 @@ defineProps<{
     <table class="w-full text-sm">
       <thead>
         <tr>
-          <th class="text-left py-2 pr-4 text-muted font-medium w-32 min-w-[8rem]"></th>
+          <th class="text-left py-2 pr-4 text-muted font-medium w-32 min-w-[8rem]" />
           <th
             v-for="col in columns"
             :key="col.id"

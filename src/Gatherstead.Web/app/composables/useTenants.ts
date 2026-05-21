@@ -1,4 +1,4 @@
-import type { TenantSummary, TenantRole } from '~/repositories/types'
+import type { TenantSummary } from '~/repositories/types'
 import { useRepositories } from '~/composables/useRepositories'
 
 
