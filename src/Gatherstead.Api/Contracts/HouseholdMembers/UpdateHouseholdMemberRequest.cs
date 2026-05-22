@@ -24,12 +24,4 @@ public class UpdateHouseholdMemberRequest
     public string? DietaryNotes { get; init; }
 
     public string[]? DietaryTags { get; init; }
-
-    /// <summary>
-    /// Optional User ID to link this household member to an authenticated user.
-    /// Tenant Owner/Manager can set any valid UserId.
-    /// Household Manager can set any valid UserId within their household.
-    /// Regular members can only set their own UserId on an unlinked member.
-    /// </summary>
-    public Guid? UserId { get; init; }
 }

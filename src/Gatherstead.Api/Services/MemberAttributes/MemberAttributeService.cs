@@ -52,6 +52,8 @@ public class MemberAttributeService : IMemberAttributeService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
 
         var query = _dbContext.MemberAttributes
             .AsNoTracking()
@@ -83,6 +85,8 @@ public class MemberAttributeService : IMemberAttributeService
         var response = new MemberAttributeResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
         var attribute = await ServiceGuards.LoadOrNotFoundAsync(

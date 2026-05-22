@@ -13,6 +13,37 @@ namespace Gatherstead.Api.Services.Validation;
 /// </summary>
 public static class ServiceGuards
 {
+    public static async Task<bool> AuthorizeSensitiveReadAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        Guid tenantId,
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        var scope = await authorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
+        if (!scope.CanReadSensitive(householdId))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to read sensitive details for this household.");
+            return false;
+        }
+        return true;
+    }
+
+    public static async Task<bool> AuthorizeGlobalSensitiveReadAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        var scope = await authorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
+        if (!scope.IsGlobal)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to read sensitive details across this tenant.");
+            return false;
+        }
+        return true;
+    }
+
     /// <summary>
     /// Validates that the acting user's own TenantRole is at least as privileged as the role
     /// they are trying to grant. Prevents privilege escalation in role-assignment operations.

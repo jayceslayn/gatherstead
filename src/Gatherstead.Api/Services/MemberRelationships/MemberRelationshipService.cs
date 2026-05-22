@@ -54,6 +54,8 @@ public class MemberRelationshipService : IMemberRelationshipService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
 
         var query = _dbContext.MemberRelationships
             .AsNoTracking()
@@ -85,6 +87,8 @@ public class MemberRelationshipService : IMemberRelationshipService
         var response = new MemberRelationshipResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
         var relationship = await ServiceGuards.LoadOrNotFoundAsync(

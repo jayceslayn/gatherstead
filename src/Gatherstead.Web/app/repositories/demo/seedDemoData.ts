@@ -43,34 +43,34 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
 
   // 4. Members
   const bob = await repos.householdMembers.createMember(
-    TENANT_ID, parrFamily.id, 'Bob Parr', true, null, null, 'Admin',
+    TENANT_ID, parrFamily.id, 'Bob Parr', true, null, null,
     'Large portions — saving the world burns a lot of calories.', [],
   )
   const helen = await repos.householdMembers.createMember(
-    TENANT_ID, parrFamily.id, 'Helen Parr', true, null, null, 'Admin', null, [],
+    TENANT_ID, parrFamily.id, 'Helen Parr', true, null, null, null, [],
   )
   const violet = await repos.householdMembers.createMember(
-    TENANT_ID, parrFamily.id, 'Violet Parr', false, '13-17', null, 'Member',
+    TENANT_ID, parrFamily.id, 'Violet Parr', false, '13-17', null,
     'Will not eat anything if people are watching.', [],
   )
   const dash = await repos.householdMembers.createMember(
-    TENANT_ID, parrFamily.id, 'Dash Parr', false, '8-12', null, 'Member',
+    TENANT_ID, parrFamily.id, 'Dash Parr', false, '8-12', null,
     'Eats at top speed. Food must be secured to the plate.', [],
   )
   const jackJack = await repos.householdMembers.createMember(
-    TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, '0-3', null, 'Member',
+    TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, '0-3', null,
     'Baby food only. Keep away from raccoons.', [],
   )
 
   const lucius = await repos.householdMembers.createMember(
-    TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, null, null, 'Admin', null, [],
+    TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, null, null, null, [],
   )
   const honey = await repos.householdMembers.createMember(
-    TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, null, 'Member', null, [],
+    TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, null, null, [],
   )
 
   const edna = await repos.householdMembers.createMember(
-    TENANT_ID, ednaStudio.id, 'Edna Mode', true, null, null, 'Admin',
+    TENANT_ID, ednaStudio.id, 'Edna Mode', true, null, null,
     'No capes. Also no gluten.', ['Gluten-Free'],
   )
 

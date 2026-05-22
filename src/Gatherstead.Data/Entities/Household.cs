@@ -18,4 +18,5 @@ public class Household : AuditableEntity
     public string Name { get; set; } = string.Empty;
 
     public ICollection<HouseholdMember> Members { get; set; } = new List<HouseholdMember>();
+    public ICollection<HouseholdUser> HouseholdUsers { get; set; } = new List<HouseholdUser>();
 }

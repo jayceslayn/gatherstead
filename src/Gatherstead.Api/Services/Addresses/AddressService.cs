@@ -57,6 +57,8 @@ public class AddressService : IAddressService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
 
         var query = _dbContext.Addresses
             .AsNoTracking()
@@ -88,6 +90,8 @@ public class AddressService : IAddressService
         var response = new AddressResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
         var address = await ServiceGuards.LoadOrNotFoundAsync(

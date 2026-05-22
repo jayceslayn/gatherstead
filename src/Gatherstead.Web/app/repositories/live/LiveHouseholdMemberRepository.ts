@@ -1,5 +1,5 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, HouseholdRole, DietaryProfile } from '../types'
+import type { HouseholdMember, DietaryProfile } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -37,13 +37,12 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
-    householdRole: HouseholdRole,
     dietaryNotes: string | null,
     dietaryTags: string[],
   ): Promise<HouseholdMember> {
     const r = await $fetch<ApiResponse<HouseholdMember>>(
       `/api/proxy/tenants/${tenantId}/households/${householdId}/members`,
-      { method: 'POST', body: { name, isAdult, ageBand, birthDate, householdRole, dietaryNotes, dietaryTags } },
+      { method: 'POST', body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags } },
     )
     return r.entity
   }
@@ -56,13 +55,12 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
-    householdRole: HouseholdRole,
     dietaryNotes: string | null,
     dietaryTags: string[],
   ): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/households/${householdId}/members/${memberId}`, {
       method: 'PUT',
-      body: { name, isAdult, ageBand, birthDate, householdRole, dietaryNotes, dietaryTags },
+      body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags },
     })
   }
 

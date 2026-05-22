@@ -12,7 +12,7 @@ export interface HouseholdSummary {
   name: string
 }
 
-export type HouseholdRole = 'Admin' | 'Member'
+export type HouseholdRole = 'Manager' | 'Member'
 
 export interface HouseholdMember {
   id: string
@@ -24,7 +24,6 @@ export interface HouseholdMember {
   birthDate: string | null
   dietaryNotes: string | null
   dietaryTags: string[]
-  householdRole: HouseholdRole
 }
 
 export interface DietaryProfile {

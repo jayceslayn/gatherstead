@@ -60,7 +60,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         await _dbContext.SaveChangesAsync();
     }
 
-    private async Task SeedHouseholdMemberAsync(Guid memberId, Guid householdId, HouseholdRole householdRole)
+    private async Task SeedHouseholdMemberAsync(Guid memberId, Guid householdId)
     {
         if (!_dbContext.Households.Local.Any(h => h.Id == householdId))
             _dbContext.Households.Add(new Household { Id = householdId, TenantId = _tenantId, Name = $"Household {householdId}" });
@@ -70,9 +70,30 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
             Id = memberId,
             TenantId = _tenantId,
             HouseholdId = householdId,
-            UserId = _userId,
             Name = "Test Member",
-            HouseholdRole = householdRole,
+        });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task SeedLinkedMemberAsync(Guid memberId)
+    {
+        var tenantUser = await _dbContext.TenantUsers.FindAsync(_tenantId, _userId)
+            ?? throw new InvalidOperationException("TenantUser must be seeded before calling SeedLinkedMemberAsync.");
+        tenantUser.LinkedMemberId = memberId;
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task SeedHouseholdUserAsync(Guid householdId, HouseholdRole role)
+    {
+        if (!_dbContext.Households.Local.Any(h => h.Id == householdId))
+            _dbContext.Households.Add(new Household { Id = householdId, TenantId = _tenantId, Name = $"Household {householdId}" });
+
+        _dbContext.HouseholdUsers.Add(new HouseholdUser
+        {
+            TenantId = _tenantId,
+            HouseholdId = householdId,
+            UserId = _userId,
+            Role = role,
         });
         await _dbContext.SaveChangesAsync();
     }
@@ -104,9 +125,10 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     }
 
     [Theory]
+    [InlineData(TenantRole.Coordinator)]
     [InlineData(TenantRole.Member)]
     [InlineData(TenantRole.Guest)]
-    public async Task CanManageTenantAsync_MemberOrGuest_ReturnsFalse(TenantRole role)
+    public async Task CanManageTenantAsync_CoordinatorOrBelow_ReturnsFalse(TenantRole role)
     {
         await SeedTenantUserAsync(role);
         var service = CreateService(_userId);
@@ -118,6 +140,29 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     {
         var service = CreateService(_userId);
         Assert.False(await service.CanManageTenantAsync(_tenantId, TestContext.Current.CancellationToken));
+    }
+
+    // ── CanManageEventAsync ──────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(TenantRole.Owner)]
+    [InlineData(TenantRole.Manager)]
+    [InlineData(TenantRole.Coordinator)]
+    public async Task CanManageEventAsync_CoordinatorOrAbove_ReturnsTrue(TenantRole role)
+    {
+        await SeedTenantUserAsync(role);
+        var service = CreateService(_userId);
+        Assert.True(await service.CanManageEventAsync(_tenantId, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(TenantRole.Member)]
+    [InlineData(TenantRole.Guest)]
+    public async Task CanManageEventAsync_MemberOrGuest_ReturnsFalse(TenantRole role)
+    {
+        await SeedTenantUserAsync(role);
+        var service = CreateService(_userId);
+        Assert.False(await service.CanManageEventAsync(_tenantId, TestContext.Current.CancellationToken));
     }
 
     // ── CanEditMemberAsync ───────────────────────────────────────────────────
@@ -151,30 +196,29 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     {
         var memberId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(memberId, _householdId, HouseholdRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
 
         var service = CreateService(_userId);
         Assert.True(await service.CanEditMemberAsync(_tenantId, _householdId, memberId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task CanEditMemberAsync_HouseholdAdmin_CanEditMemberInSameHousehold()
+    public async Task CanEditMemberAsync_HouseholdManager_CanEditMemberInSameHousehold()
     {
-        var adminMemberId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(adminMemberId, _householdId, HouseholdRole.Manager);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.True(await service.CanEditMemberAsync(_tenantId, _householdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task CanEditMemberAsync_HouseholdAdmin_CannotEditMemberInDifferentHousehold()
+    public async Task CanEditMemberAsync_HouseholdManager_CannotEditMemberInDifferentHousehold()
     {
-        var adminMemberId = Guid.NewGuid();
         var otherHouseholdId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(adminMemberId, _householdId, HouseholdRole.Manager);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanEditMemberAsync(_tenantId, otherHouseholdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
@@ -215,33 +259,106 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CanManageHouseholdAsync_HouseholdAdmin_ReturnsTrue()
+    public async Task CanManageHouseholdAsync_HouseholdManager_ReturnsTrue()
     {
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(Guid.NewGuid(), _householdId, HouseholdRole.Manager);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.True(await service.CanManageHouseholdAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task CanManageHouseholdAsync_RegularMember_ReturnsFalse()
+    public async Task CanManageHouseholdAsync_HouseholdMember_ReturnsFalse()
     {
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(Guid.NewGuid(), _householdId, HouseholdRole.Member);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Member);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanManageHouseholdAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public async Task CanManageHouseholdAsync_AdminInDifferentHousehold_ReturnsFalse()
+    public async Task CanManageHouseholdAsync_ManagerInDifferentHousehold_ReturnsFalse()
     {
         var otherHouseholdId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(Guid.NewGuid(), otherHouseholdId, HouseholdRole.Manager);
+        await SeedHouseholdUserAsync(otherHouseholdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanManageHouseholdAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
+    }
+
+    // ── GetSensitiveReadScopeAsync ───────────────────────────────────────────
+
+    [Fact]
+    public async Task GetSensitiveReadScopeAsync_AppAdmin_ReturnsGlobal()
+    {
+        var service = CreateService(_userId, isAppAdmin: true);
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
+        Assert.True(scope.IsGlobal);
+        Assert.True(scope.CanReadSensitive(_householdId));
+    }
+
+    [Theory]
+    [InlineData(TenantRole.Owner)]
+    [InlineData(TenantRole.Manager)]
+    [InlineData(TenantRole.Coordinator)]
+    [InlineData(TenantRole.Member)]
+    public async Task GetSensitiveReadScopeAsync_TenantMemberOrAbove_ReturnsGlobal(TenantRole role)
+    {
+        await SeedTenantUserAsync(role);
+        var service = CreateService(_userId);
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
+        Assert.True(scope.IsGlobal);
+        Assert.True(scope.CanReadSensitive(_householdId));
+        Assert.True(scope.CanReadSensitive(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetSensitiveReadScopeAsync_GuestWithHouseholdManagerRole_ReturnsForHouseholds()
+    {
+        await SeedTenantUserAsync(TenantRole.Guest);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Manager);
+
+        var service = CreateService(_userId);
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
+        Assert.False(scope.IsGlobal);
+        Assert.True(scope.CanReadSensitive(_householdId));
+        Assert.False(scope.CanReadSensitive(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetSensitiveReadScopeAsync_GuestWithHouseholdMemberRole_ReturnsForHouseholds()
+    {
+        await SeedTenantUserAsync(TenantRole.Guest);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Member);
+
+        var service = CreateService(_userId);
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
+        Assert.False(scope.IsGlobal);
+        Assert.True(scope.CanReadSensitive(_householdId));
+        Assert.False(scope.CanReadSensitive(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetSensitiveReadScopeAsync_GuestWithNoHouseholdUser_ReturnsNone()
+    {
+        await SeedTenantUserAsync(TenantRole.Guest);
+
+        var service = CreateService(_userId);
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
+        Assert.False(scope.IsGlobal);
+        Assert.False(scope.CanReadSensitive(_householdId));
+        Assert.False(scope.CanReadSensitive(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetSensitiveReadScopeAsync_Unauthenticated_ReturnsNone()
+    {
+        var service = CreateService(userId: null);
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
+        Assert.False(scope.IsGlobal);
+        Assert.False(scope.CanReadSensitive(_householdId));
     }
 }

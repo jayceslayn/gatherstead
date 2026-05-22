@@ -17,11 +17,7 @@ public class HouseholdMember : AuditableEntity
     [ForeignKey(nameof(HouseholdId))]
     public Household? Household { get; set; }
 
-    public Guid? UserId { get; set; }
-    [ForeignKey(nameof(UserId))]
-    public User? User { get; set; }
-
-    public HouseholdRole HouseholdRole { get; set; } = HouseholdRole.Member;
+    public TenantUser? LinkedTenantUser { get; set; }
 
     public bool IsAdult { get; set; }
     [MaxLength(64)]

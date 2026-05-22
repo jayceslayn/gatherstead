@@ -36,4 +36,12 @@ public interface IMemberAuthorizationService
     /// Returns true if: App Admin, or tenant Owner/Manager/Coordinator.
     /// </summary>
     Task<bool> CanManageEventAsync(Guid tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the caller's sensitive read scope for household member data.
+    /// Global  — TenantRole.Member+ or App Admin: can read all sensitive fields across the tenant.
+    /// ForHouseholds — TenantRole.Guest with HouseholdUser entries: sensitive fields only for those households.
+    /// None    — TenantRole.Guest with no HouseholdUser entries: public fields only; 403 on sub-entity endpoints.
+    /// </summary>
+    Task<SensitiveReadScope> GetSensitiveReadScopeAsync(Guid tenantId, CancellationToken ct = default);
 }

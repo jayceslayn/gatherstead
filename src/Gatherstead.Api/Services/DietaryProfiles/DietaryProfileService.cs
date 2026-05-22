@@ -52,6 +52,8 @@ public class DietaryProfileService : IDietaryProfileService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
+        if (!await ServiceGuards.AuthorizeGlobalSensitiveReadAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
 
         var query = _dbContext.DietaryProfiles
             .AsNoTracking()
@@ -82,6 +84,8 @@ public class DietaryProfileService : IDietaryProfileService
         var response = new DietaryProfileResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
         var profile = await ServiceGuards.LoadOrNotFoundAsync(

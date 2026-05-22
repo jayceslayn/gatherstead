@@ -3,6 +3,7 @@ import type { Repositories } from '~/repositories/interfaces'
 import { LiveTenantRepository } from '~/repositories/live/LiveTenantRepository'
 import { LiveHouseholdRepository } from '~/repositories/live/LiveHouseholdRepository'
 import { LiveHouseholdMemberRepository } from '~/repositories/live/LiveHouseholdMemberRepository'
+import { LiveTenantUserRepository } from '~/repositories/live/LiveTenantUserRepository'
 import { LiveEventRepository } from '~/repositories/live/LiveEventRepository'
 import { LiveEventAttendanceRepository } from '~/repositories/live/LiveEventAttendanceRepository'
 import { LiveMealPlanRepository } from '~/repositories/live/LiveMealPlanRepository'
@@ -14,6 +15,7 @@ import { LiveAccommodationIntentRepository } from '~/repositories/live/LiveAccom
 import { DemoTenantRepository } from '~/repositories/demo/DemoTenantRepository'
 import { DemoHouseholdRepository } from '~/repositories/demo/DemoHouseholdRepository'
 import { DemoHouseholdMemberRepository } from '~/repositories/demo/DemoHouseholdMemberRepository'
+import { DemoTenantUserRepository } from '~/repositories/demo/DemoTenantUserRepository'
 import { DemoEventRepository } from '~/repositories/demo/DemoEventRepository'
 import { DemoEventAttendanceRepository } from '~/repositories/demo/DemoEventAttendanceRepository'
 import { DemoMealPlanRepository } from '~/repositories/demo/DemoMealPlanRepository'
@@ -34,6 +36,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         tenants: new DemoTenantRepository(),
         households: new DemoHouseholdRepository(),
         householdMembers: new DemoHouseholdMemberRepository(),
+        tenantUsers: new DemoTenantUserRepository(),
         events: new DemoEventRepository(),
         eventAttendance: new DemoEventAttendanceRepository(),
         mealPlans: new DemoMealPlanRepository(),
@@ -47,6 +50,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         tenants: new LiveTenantRepository(),
         households: new LiveHouseholdRepository(),
         householdMembers: new LiveHouseholdMemberRepository(),
+        tenantUsers: new LiveTenantUserRepository(),
         events: new LiveEventRepository(),
         eventAttendance: new LiveEventAttendanceRepository(),
         mealPlans: new LiveMealPlanRepository(),

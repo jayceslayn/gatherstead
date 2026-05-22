@@ -16,8 +16,8 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     private readonly ILogger<MemberAuthorizationService> _logger;
     private readonly ISecurityEventLogger _securityEventLogger;
 
-    private const string CacheKey_TenantRole = "MemberAuth_TenantRole";
-    private const string CacheKey_LinkedMembers = "MemberAuth_LinkedMembers";
+    private const string CacheKey_TenantUserInfo = "MemberAuth_TenantUserInfo";
+    private const string CacheKey_HouseholdUsers = "MemberAuth_HouseholdUsers";
 
     public MemberAuthorizationService(
         GathersteadDbContext dbContext,
@@ -40,37 +40,20 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         var userId = _currentUserContext.UserId;
         if (!userId.HasValue) return false;
 
-        // App Admins can edit anything
         if (await _appAdminContext.IsAppAdminAsync(ct) == true)
             return true;
 
-        // 1. Tenant Owner/Manager can edit anything
-        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
-        if (role.HasValue && role.Value <= TenantRole.Manager)
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        if (info?.Role <= TenantRole.Manager)
             return true;
 
-        // 2-3. Check Self and Household Admin
-        var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
-        if (linkedMembers.Count == 0)
-        {
-            _logger.LogWarning(
-                "Member edit denied: no linked members. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
-                tenantId, memberId, userId.Value);
-            GathersteadMetrics.RecordAuthzDenied("NoLinkedMembers", tenantId);
-            await _securityEventLogger.LogAsync(
-                SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
-                resource: $"HouseholdMember:{memberId}",
-                detail: "{\"reason\":\"NoLinkedMembers\"}",
-                tenantId: tenantId, userId: userId, cancellationToken: ct);
-            return false;
-        }
-
-        // Self check
-        if (linkedMembers.Any(m => m.Id == memberId))
+        // Self check — linked member in this tenant
+        if (info?.LinkedMemberId == memberId)
             return true;
 
-        // Household Admin check
-        if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Manager))
+        // Household Manager check
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        if (householdUsers.Any(hu => hu.HouseholdId == householdId && hu.Role == HouseholdRole.Manager))
             return true;
 
         _logger.LogWarning(
@@ -85,30 +68,6 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         return false;
     }
 
-    public async Task<bool> CanManageTenantAsync(Guid tenantId, CancellationToken ct = default)
-    {
-        var userId = _currentUserContext.UserId;
-        if (!userId.HasValue) return false;
-
-        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
-            return true;
-
-        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
-        return role.HasValue && role.Value <= TenantRole.Manager;
-    }
-
-    public async Task<bool> CanManageEventAsync(Guid tenantId, CancellationToken ct = default)
-    {
-        var userId = _currentUserContext.UserId;
-        if (!userId.HasValue) return false;
-
-        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
-            return true;
-
-        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
-        return role.HasValue && role.Value <= TenantRole.Coordinator;
-    }
-
     public async Task<bool> CanAssignIntentForMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default)
     {
         var userId = _currentUserContext.UserId;
@@ -117,29 +76,17 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (await _appAdminContext.IsAppAdminAsync(ct) == true)
             return true;
 
-        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
-        if (role.HasValue && role.Value <= TenantRole.Coordinator)
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        if (info?.Role <= TenantRole.Coordinator)
             return true;
 
-        var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
-        if (linkedMembers.Count == 0)
-        {
-            _logger.LogWarning(
-                "Intent assign denied: no linked members. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
-                tenantId, memberId, userId.Value);
-            GathersteadMetrics.RecordAuthzDenied("NoLinkedMembers", tenantId);
-            await _securityEventLogger.LogAsync(
-                SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
-                resource: $"HouseholdMember:{memberId}",
-                detail: "{\"reason\":\"NoLinkedMembers\"}",
-                tenantId: tenantId, userId: userId, cancellationToken: ct);
-            return false;
-        }
-
-        if (linkedMembers.Any(m => m.Id == memberId))
+        // Self check — linked member in this tenant
+        if (info?.LinkedMemberId == memberId)
             return true;
 
-        if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Manager))
+        // Household Manager check
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        if (householdUsers.Any(hu => hu.HouseholdId == householdId && hu.Role == HouseholdRole.Manager))
             return true;
 
         _logger.LogWarning(
@@ -159,51 +106,93 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         var userId = _currentUserContext.UserId;
         if (!userId.HasValue) return false;
 
-        // App Admins can manage anything
         if (await _appAdminContext.IsAppAdminAsync(ct) == true)
             return true;
 
-        // Tenant Owner/Manager can manage any household
-        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
-        if (role.HasValue && role.Value <= TenantRole.Manager)
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        if (info?.Role <= TenantRole.Manager)
             return true;
 
-        // Household Admin check
-        var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
-        return linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Manager);
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        return householdUsers.Any(hu => hu.HouseholdId == householdId && hu.Role == HouseholdRole.Manager);
     }
 
-    private async Task<TenantRole?> GetTenantRoleAsync(Guid tenantId, Guid userId, CancellationToken ct)
+    public async Task<bool> CanManageTenantAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return false;
+
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
+
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        return info?.Role <= TenantRole.Manager;
+    }
+
+    public async Task<bool> CanManageEventAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return false;
+
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
+
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        return info?.Role <= TenantRole.Coordinator;
+    }
+
+    public async Task<SensitiveReadScope> GetSensitiveReadScopeAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return SensitiveReadScope.None;
+
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return SensitiveReadScope.Global;
+
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        if (info?.Role <= TenantRole.Member)
+            return SensitiveReadScope.Global;
+
+        // Guest: scope to household(s) where the user has any HouseholdUser entry
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        if (householdUsers.Count > 0)
+            return SensitiveReadScope.ForHouseholds(householdUsers.Select(hu => hu.HouseholdId));
+
+        return SensitiveReadScope.None;
+    }
+
+    private async Task<TenantUserInfo?> GetTenantUserInfoAsync(Guid tenantId, Guid userId, CancellationToken ct)
     {
         var items = _httpContextAccessor.HttpContext?.Items;
-        if (items != null && items.TryGetValue(CacheKey_TenantRole, out var cached))
-            return (TenantRole?)cached;
+        if (items != null && items.TryGetValue(CacheKey_TenantUserInfo, out var cached))
+            return (TenantUserInfo?)cached;
 
-        var tenantUser = await _dbContext.TenantUsers
+        var info = await _dbContext.TenantUsers
             .AsNoTracking()
             .Where(tu => tu.TenantId == tenantId && tu.UserId == userId)
-            .Select(tu => (TenantRole?)tu.Role)
+            .Select(tu => new TenantUserInfo(tu.Role, tu.LinkedMemberId))
             .FirstOrDefaultAsync(ct);
 
-        items?.TryAdd(CacheKey_TenantRole, tenantUser);
-        return tenantUser;
+        items?.TryAdd(CacheKey_TenantUserInfo, info);
+        return info;
     }
 
-    private async Task<List<LinkedMemberInfo>> GetLinkedMembersAsync(Guid tenantId, Guid userId, CancellationToken ct)
+    private async Task<List<HouseholdUserInfo>> GetHouseholdUserRolesAsync(Guid tenantId, Guid userId, CancellationToken ct)
     {
         var items = _httpContextAccessor.HttpContext?.Items;
-        if (items != null && items.TryGetValue(CacheKey_LinkedMembers, out var cached))
-            return (List<LinkedMemberInfo>)cached!;
+        if (items != null && items.TryGetValue(CacheKey_HouseholdUsers, out var cached))
+            return (List<HouseholdUserInfo>)cached!;
 
-        var members = await _dbContext.HouseholdMembers
+        var householdUsers = await _dbContext.HouseholdUsers
             .AsNoTracking()
-            .Where(hm => hm.TenantId == tenantId && hm.UserId == userId)
-            .Select(hm => new LinkedMemberInfo(hm.Id, hm.HouseholdId, hm.HouseholdRole))
+            .Where(hu => hu.TenantId == tenantId && hu.UserId == userId)
+            .Select(hu => new HouseholdUserInfo(hu.HouseholdId, hu.Role))
             .ToListAsync(ct);
 
-        items?.TryAdd(CacheKey_LinkedMembers, members);
-        return members;
+        items?.TryAdd(CacheKey_HouseholdUsers, householdUsers);
+        return householdUsers;
     }
 
-    private sealed record LinkedMemberInfo(Guid Id, Guid HouseholdId, HouseholdRole HouseholdRole);
+    private sealed record TenantUserInfo(TenantRole Role, Guid? LinkedMemberId);
+    private sealed record HouseholdUserInfo(Guid HouseholdId, HouseholdRole Role);
 }

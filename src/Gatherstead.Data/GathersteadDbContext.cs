@@ -30,6 +30,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
     public DbSet<Household> Households => Set<Household>();
+    public DbSet<HouseholdUser> HouseholdUsers => Set<HouseholdUser>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<Property> Properties => Set<Property>();
     public DbSet<Accommodation> Accommodations => Set<Accommodation>();
@@ -112,10 +113,23 @@ public class GathersteadDbContext : DbContext
                 .HasDatabaseName("IX_RevokedToken_TenantUser");
         });
 
-        modelBuilder.Entity<HouseholdMember>(b =>
+        modelBuilder.Entity<HouseholdUser>(b =>
         {
-            b.HasIndex(hm => new { hm.TenantId, hm.UserId })
-                .HasDatabaseName("IX_HouseholdMember_TenantUser");
+            b.HasIndex(hu => new { hu.TenantId, hu.UserId })
+                .HasDatabaseName("IX_HouseholdUser_TenantUser");
+        });
+
+        modelBuilder.Entity<TenantUser>(b =>
+        {
+            b.HasOne(tu => tu.LinkedMember)
+                .WithOne(hm => hm.LinkedTenantUser)
+                .HasForeignKey<TenantUser>(tu => tu.LinkedMemberId)
+                .IsRequired(false);
+
+            b.HasIndex(tu => tu.LinkedMemberId)
+                .IsUnique()
+                .HasFilter("[LinkedMemberId] IS NOT NULL")
+                .HasDatabaseName("IX_TenantUser_LinkedMemberId");
         });
 
         // Configure MemberRelationship to HouseholdMember relationship

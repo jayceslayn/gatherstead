@@ -12,8 +12,9 @@ Gatherstead is organized around bounded contexts that align with the two core go
 
 ### Family Directory Context
 - **Household**: A family grouping. Can evolve as families split or merge.【F:src/Gatherstead.Data/Entities/Household.cs】
-- **HouseholdMember**: Person-centric record storing name, birth date, dietary notes/tags, and adult/child markers, with Always Encrypted columns for sensitive data. Members may optionally be linked to a **User** (Entra login), enabling "Self" edit permissions. Each member carries a **HouseholdRole** (`Admin` or `Member`) to control household-level management authority.【F:src/Gatherstead.Data/Entities/HouseholdMember.cs】
-- **MemberRelationship**: Parent/child/sibling/spouse/guardian links with type and notes, flexible enough to span households for split-family scenarios. Relationship types are informational; edit permissions derive from `HouseholdRole` and `UserId` linkage, not from relationship entries.【F:src/Gatherstead.Data/Entities/MemberRelationship.cs】
+- **HouseholdUser**: Join entity that ties a **User** to a **Household** with a `HouseholdRole` (`Manager` or `Member`), mirroring `TenantUser`. Household management authority (edit members, manage household) derives from this record, not from any `HouseholdMember` field. PK `(HouseholdId, UserId)`; carries `TenantId` for global-filter isolation.【F:src/Gatherstead.Data/Entities/HouseholdUser.cs】
+- **HouseholdMember**: Person-centric record storing name, birth date, dietary notes/tags, and adult/child markers, with Always Encrypted columns for sensitive data. A member may be linked to a login via `TenantUser.LinkedMemberId` (the FK lives on `TenantUser`, not here), enabling "Self" edit permissions and profile-name access. The link is per-tenant, so a user in multiple tenants has a distinct self-profile in each. Household-level management authority is held by `HouseholdUser`, not by this record.【F:src/Gatherstead.Data/Entities/HouseholdMember.cs】
+- **MemberRelationship**: Parent/child/sibling/spouse/guardian links with type and notes, flexible enough to span households for split-family scenarios. Relationship types are informational; edit permissions derive from `HouseholdRole` and the `TenantUser.LinkedMemberId` Self link, not from relationship entries.【F:src/Gatherstead.Data/Entities/MemberRelationship.cs】
 - **Address**: Mailing addresses per member. At most one can be designated primary, enforced by a filtered unique index.【F:src/Gatherstead.Data/Entities/Address.cs】
 - **ContactMethod**: Email, phone, or other contact entries per member, with a primary-contact designation mirroring the address pattern.【F:src/Gatherstead.Data/Entities/ContactMethod.cs】
 - **MemberAttribute**: Extensible key-value pairs for custom metadata (e.g., t-shirt size, accessibility needs), with a unique constraint on key per member.【F:src/Gatherstead.Data/Entities/MemberAttribute.cs】
@@ -49,7 +50,8 @@ The verified ownership hierarchy, derived from FK relationships in the EF Core e
 flowchart TD
     Tenant -->|"M:N via TenantUser\n(TenantRole)"| User
     Tenant --> Household --> HouseholdMember
-    HouseholdMember -.->|"optional UserId"| User
+    Household -->|"M:N via HouseholdUser\n(HouseholdRole)"| User
+    TenantUser -.->|"optional LinkedMemberId\n(Self profile)"| HouseholdMember
     HouseholdMember --> MemberRelationship
     HouseholdMember --> Address
     HouseholdMember --> ContactMethod
@@ -75,11 +77,13 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    Tenant ||--o{ TenantUser : "role"
-    User   ||--o{ TenantUser : ""
-    Tenant ||--o{ Household : ""
+    Tenant    ||--o{ TenantUser    : "role"
+    User      ||--o{ TenantUser    : ""
+    TenantUser |o--o| HouseholdMember : "LinkedMemberId (self)"
+    Tenant    ||--o{ Household     : ""
+    Household ||--o{ HouseholdUser : "role"
+    User      ||--o{ HouseholdUser : ""
     Household ||--o{ HouseholdMember : ""
-    User   |o--o{ HouseholdMember : "optional"
     HouseholdMember ||--o{ MemberRelationship : "source"
     HouseholdMember ||--o{ MemberRelationship : "related"
     HouseholdMember |o--o| DietaryProfile : ""
@@ -123,8 +127,8 @@ erDiagram
 ### Backend
 - Use ASP.NET Core dependency injection, nullable reference types, and async APIs. Prefer minimal APIs or controllers consistent with existing style, and keep DTOs separate from EF entities.
 - Favor Entity Framework Core migrations for schema changes; keep migrations deterministic and seed data idempotent.
-- Validate inputs (model validation attributes/FluentValidation), enforce authorization at three tiers, and log audit events for sensitive operations. Platform-level App Admin authorization uses `RequireAppAdminAttribute` and `IAppAdminContext`. Tenant-level authorization uses `RequireTenantAccessAttribute` (which App Admins bypass). Resource-level authorization (Self, Household Admin) is enforced at the service layer via `IMemberAuthorizationService` (which also short-circuits for App Admins).
-- **Guard composition**: Service methods use `ServiceGuards` (a static helper class) for composable async guards — `RequireRequest`, `LoadOrNotFoundAsync`, `AuthorizeTenantManageAsync` (Owner/Manager required for event-management writes), `AuthorizeMemberEditAsync`, `AuthorizeHouseholdManageAsync`, and `RequireMemberExistsAsync`. Each guard mutates the shared `BaseEntityResponse<T>` on failure and returns `false`/`null` to short-circuit the method. Validation ordering is: tenant context → request null-check → authorization → field normalization → existence checks → entity load.
+- Validate inputs (model validation attributes/FluentValidation), enforce authorization at three tiers, and log audit events for sensitive operations. Platform-level App Admin authorization uses `RequireAppAdminAttribute` and `IAppAdminContext`. Tenant-level authorization uses `RequireTenantAccessAttribute` (which App Admins bypass). Resource-level authorization (Self, Household Admin) is enforced at the service layer via `IMemberAuthorizationService` (which also short-circuits for App Admins). The **Self** check is tenant-scoped: `TenantUser.LinkedMemberId` identifies a user's person-record within a given tenant, so users who belong to multiple tenants each have an independent self-profile per tenant.
+- **Guard composition**: Service methods use `ServiceGuards` (a static helper class) for composable async guards. Each guard mutates the shared `BaseEntityResponse<T>` on failure and returns `false`/`null` to short-circuit the method. Available guards: `RequireRequest`, `LoadOrNotFoundAsync`, `AuthorizeTenantManageAsync` (Owner/Manager), `AuthorizeEventManageAsync` (Coordinator+), `AuthorizeMemberEditAsync`, `AuthorizeIntentAssignAsync`, `AuthorizeHouseholdManageAsync`, `AuthorizeSensitiveReadAsync` (household-scoped sensitive read — returns 403 for Guest users without a `HouseholdUser` entry for that household), `AuthorizeGlobalSensitiveReadAsync` (tenant-wide sensitive read — requires Member+ or App Admin), `RequireNonEscalatingRole`, `RequireMemberExistsAsync`. Validation ordering is: tenant context → request null-check → authorization → field normalization → existence checks → entity load.
 - **API endpoint design**: List/read endpoints should support batch filtering via query parameters (e.g., `?ids=aaa,bbb`) to reduce client round-trips. Keep create, update, and delete endpoints singular; introduce workflow-specific batch write endpoints only when concrete use cases demand them (e.g., bulk event setup).
 - **Composable global query filters**: `GathersteadDbContext` applies a single global query filter per entity that combines soft-delete exclusion (`IsDeleted`) and tenant isolation (`TenantId`). The soft-delete clause is conditionally toggled via a `_includeDeleted` field on the DbContext instance, which EF Core re-evaluates per query. Tenant isolation is always enforced and cannot be bypassed. This avoids the need to call `IgnoreQueryFilters()` (which removes all filters) and manually reconstruct tenant filtering.
 - **Querying deleted entities**: List/read endpoints accept an optional `?includeDeleted=true` query parameter. This is RBAC-gated to `TenantRole.Manager` or higher in `RequireTenantAccessAttribute`; for lower-role users, the flag is silently ignored. The authorization decision flows via `HttpContext.Items` to `IIncludeDeletedContext`, which the DbContext reads at construction time—ensuring the raw query parameter alone cannot bypass RBAC.

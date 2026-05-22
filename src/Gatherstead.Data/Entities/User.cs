@@ -16,5 +16,5 @@ public class User : AuditableEntity
     public bool IsAppAdmin { get; set; }
 
     public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();
-    public ICollection<HouseholdMember> HouseholdMembers { get; set; } = new List<HouseholdMember>();
+    public ICollection<HouseholdUser> HouseholdUsers { get; set; } = new List<HouseholdUser>();
 }

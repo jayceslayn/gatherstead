@@ -1,5 +1,5 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, HouseholdRole, DietaryProfile } from '../types'
+import type { HouseholdMember, DietaryProfile } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 
 export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository {
@@ -24,7 +24,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
-    householdRole: HouseholdRole,
     dietaryNotes: string | null,
     dietaryTags: string[],
   ): Promise<HouseholdMember> {
@@ -42,7 +41,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       birthDate,
       dietaryNotes,
       dietaryTags,
-      householdRole,
     }
     store.members.value.push(m)
     persistDemoStore()
@@ -57,7 +55,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
-    householdRole: HouseholdRole,
     dietaryNotes: string | null,
     dietaryTags: string[],
   ): Promise<void> {
@@ -68,7 +65,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     m.isAdult = isAdult
     m.ageBand = ageBand
     m.birthDate = birthDate
-    m.householdRole = householdRole
     m.dietaryNotes = dietaryNotes
     m.dietaryTags = dietaryTags
     persistDemoStore()

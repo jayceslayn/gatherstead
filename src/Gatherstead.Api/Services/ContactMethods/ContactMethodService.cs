@@ -53,6 +53,8 @@ public class ContactMethodService : IContactMethodService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
 
         var query = _dbContext.ContactMethods
             .AsNoTracking()
@@ -84,6 +86,8 @@ public class ContactMethodService : IContactMethodService
         var response = new ContactMethodResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
         var contact = await ServiceGuards.LoadOrNotFoundAsync(

@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { HouseholdMember, HouseholdRole, DietaryProfile } from '~/repositories/types'
+import type { HouseholdMember, DietaryProfile } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
@@ -78,7 +78,6 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
-    householdRole: HouseholdRole,
     dietaryNotes: string | null,
     dietaryTags: string[],
   ) {
@@ -86,7 +85,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     try {
       await repo.createMember(
         tenantStore.currentTenantId!, householdId.value,
-        name, isAdult, ageBand, birthDate, householdRole, dietaryNotes, dietaryTags,
+        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags,
       )
       await refresh()
     }
@@ -108,7 +107,6 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
-    householdRole: HouseholdRole,
     dietaryNotes: string | null,
     dietaryTags: string[],
   ) {
@@ -116,7 +114,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     try {
       await repo.updateMember(
         tenantStore.currentTenantId!, householdId.value, memberId,
-        name, isAdult, ageBand, birthDate, householdRole, dietaryNotes, dietaryTags,
+        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags,
       )
       await refresh()
     }

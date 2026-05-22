@@ -6,8 +6,6 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
-
 namespace Gatherstead.Api.Services.HouseholdMembers;
 
 public class HouseholdMemberService : IHouseholdMemberService
@@ -15,24 +13,6 @@ public class HouseholdMemberService : IHouseholdMemberService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
-
-    private static readonly Expression<Func<HouseholdMember, HouseholdMemberDto>> MapToDtoExpression =
-        member => new HouseholdMemberDto(
-            member.Id,
-            member.TenantId,
-            member.HouseholdId,
-            member.Name,
-            member.IsAdult,
-            member.AgeBand,
-            member.BirthDate,
-            member.DietaryNotes,
-            member.DietaryTags,
-            member.HouseholdRole,
-            member.CreatedAt,
-            member.UpdatedAt,
-            member.IsDeleted,
-            member.DeletedAt,
-            member.DeletedByUserId);
 
     public HouseholdMemberService(
         GathersteadDbContext dbContext,
@@ -58,6 +38,8 @@ public class HouseholdMemberService : IHouseholdMemberService
             return response;
         }
 
+        var scope = await _memberAuthorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
+
         var query = _dbContext.HouseholdMembers
             .AsNoTracking()
             .Where(m => m.TenantId == tenantId && m.HouseholdId == householdId);
@@ -71,11 +53,11 @@ public class HouseholdMemberService : IHouseholdMemberService
             }
         }
 
-        var members = await query
-            .Select(MapToDtoExpression)
-            .ToListAsync(cancellationToken);
+        var members = await query.ToListAsync(cancellationToken);
+        var canReadSensitive = scope.CanReadSensitive(householdId);
+        var dtos = members.Select(m => MapToDto(m, canReadSensitive)).ToList();
 
-        return BaseEntityResponse<IReadOnlyCollection<HouseholdMemberDto>>.SuccessfulResponse(members);
+        return BaseEntityResponse<IReadOnlyCollection<HouseholdMemberDto>>.SuccessfulResponse(dtos);
     }
 
     public async Task<HouseholdMemberResponse> GetAsync(
@@ -92,6 +74,8 @@ public class HouseholdMemberService : IHouseholdMemberService
             return response;
         }
 
+        var scope = await _memberAuthorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
+
         var member = await _dbContext.HouseholdMembers
             .AsNoTracking()
             .Where(m => m.TenantId == tenantId && m.HouseholdId == householdId && m.Id == memberId)
@@ -103,7 +87,7 @@ public class HouseholdMemberService : IHouseholdMemberService
             return response;
         }
 
-        response.SetSuccess(MapToDto(member));
+        response.SetSuccess(MapToDto(member, scope.CanReadSensitive(householdId)));
         return response;
     }
 
@@ -156,14 +140,13 @@ public class HouseholdMemberService : IHouseholdMemberService
             BirthDate = request.BirthDate,
             DietaryNotes = request.DietaryNotes?.Trim(),
             DietaryTags = request.DietaryTags ?? Array.Empty<string>(),
-            UserId = request.UserId,
         };
 
         _dbContext.HouseholdMembers.Add(member);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordMemberCreated(tenantId, householdId);
-        response.SetSuccess(MapToDto(member));
+        response.SetSuccess(MapToDto(member, canReadSensitive: true));
         return response;
     }
 
@@ -213,23 +196,9 @@ public class HouseholdMemberService : IHouseholdMemberService
         member.DietaryNotes = request.DietaryNotes?.Trim();
         member.DietaryTags = request.DietaryTags ?? Array.Empty<string>();
 
-        // Only Tenant Owner/Manager or Household Manager can link a User to a HouseholdMember
-        if (request.UserId != member.UserId)
-        {
-            if (await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
-            {
-                member.UserId = request.UserId;
-            }
-            else if (request.UserId is not null)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "You do not have permission to link a user to this member.");
-                return response;
-            }
-        }
-
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(member));
+        response.SetSuccess(MapToDto(member, canReadSensitive: true));
         return response;
     }
 
@@ -274,21 +243,20 @@ public class HouseholdMemberService : IHouseholdMemberService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordSoftDelete("HouseholdMember", tenantId);
-        response.SetSuccess(MapToDto(member));
+        response.SetSuccess(MapToDto(member, canReadSensitive: true));
         return response;
     }
 
-    private static HouseholdMemberDto MapToDto(HouseholdMember member) => new(
+    private static HouseholdMemberDto MapToDto(HouseholdMember member, bool canReadSensitive) => new(
         member.Id,
         member.TenantId,
         member.HouseholdId,
         member.Name,
         member.IsAdult,
         member.AgeBand,
-        member.BirthDate,
-        member.DietaryNotes,
-        member.DietaryTags,
-        member.HouseholdRole,
+        canReadSensitive ? member.BirthDate : null,
+        canReadSensitive ? member.DietaryNotes : null,
+        canReadSensitive ? member.DietaryTags : [],
         member.CreatedAt,
         member.UpdatedAt,
         member.IsDeleted,
