@@ -2,10 +2,11 @@ namespace Gatherstead.Data.Entities;
 
 public enum TenantRole
 {
-    Owner,
-    Manager,
-    Member,
-    Guest
+    Owner = 0,
+    Manager = 1,
+    Coordinator = 2,
+    Member = 3,
+    Guest = 4
 }
 
 public enum AccommodationType
@@ -89,8 +90,8 @@ public enum AttendanceStatus
 
 public enum HouseholdRole
 {
-    Admin,
-    Member
+    Manager = 0,
+    Member = 1
 }
 
 public enum SecurityEventType

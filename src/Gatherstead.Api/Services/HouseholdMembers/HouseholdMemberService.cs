@@ -213,7 +213,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         member.DietaryNotes = request.DietaryNotes?.Trim();
         member.DietaryTags = request.DietaryTags ?? Array.Empty<string>();
 
-        // Only Tenant Owner/Manager or Household Admin can link a User to a HouseholdMember
+        // Only Tenant Owner/Manager or Household Manager can link a User to a HouseholdMember
         if (request.UserId != member.UserId)
         {
             if (await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))

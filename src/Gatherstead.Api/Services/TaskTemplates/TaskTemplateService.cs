@@ -93,7 +93,7 @@ public class TaskTemplateService : ITaskTemplateService
             return response;
         if (!ServiceGuards.RequireRequest(request, "create task template", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Template name", response, out string normalizedName);
@@ -160,7 +160,7 @@ public class TaskTemplateService : ITaskTemplateService
             return response;
         if (!ServiceGuards.RequireRequest(request, "update task template", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Template name", response, out string normalizedName);
@@ -230,7 +230,7 @@ public class TaskTemplateService : ITaskTemplateService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var template = await ServiceGuards.LoadOrNotFoundAsync(

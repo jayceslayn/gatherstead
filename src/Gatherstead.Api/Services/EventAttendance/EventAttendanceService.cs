@@ -91,7 +91,7 @@ public class EventAttendanceService : IEventAttendanceService
             return response;
         if (!ServiceGuards.RequireRequest(request, "upsert event attendance", response))
             return response;
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
 
         var eventExists = await _dbContext.Events
@@ -158,7 +158,7 @@ public class EventAttendanceService : IEventAttendanceService
 
         if (attendance is null) return response;
 
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, attendance.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, attendance.HouseholdMemberId, cancellationToken))
             return response;
 
         if (attendance.IsDeleted)

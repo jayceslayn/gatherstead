@@ -90,7 +90,7 @@ public class AccommodationIntentService : IAccommodationIntentService
             return response;
         if (!ServiceGuards.RequireRequest(request, "create accommodation intent", response))
             return response;
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
 
         var accommodationExists = await _dbContext.Accommodations
@@ -156,7 +156,7 @@ public class AccommodationIntentService : IAccommodationIntentService
 
         if (intent is null) return response;
 
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
             return response;
 
         intent.Status = request.Status;
@@ -191,7 +191,7 @@ public class AccommodationIntentService : IAccommodationIntentService
 
         if (intent is null) return response;
 
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
             return response;
 
         if (intent.IsDeleted)

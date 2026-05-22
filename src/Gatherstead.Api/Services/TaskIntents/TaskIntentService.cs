@@ -90,7 +90,7 @@ public class TaskIntentService : ITaskIntentService
             return response;
         if (!ServiceGuards.RequireRequest(request, "upsert task intent", response))
             return response;
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
 
         var planExists = await _dbContext.TaskPlans
@@ -151,7 +151,7 @@ public class TaskIntentService : ITaskIntentService
 
         if (intent is null) return response;
 
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
             return response;
 
         if (intent.IsDeleted)

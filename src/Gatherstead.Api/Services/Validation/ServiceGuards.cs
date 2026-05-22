@@ -1,6 +1,7 @@
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Data;
+using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Api.Services.Validation;
@@ -12,6 +13,24 @@ namespace Gatherstead.Api.Services.Validation;
 /// </summary>
 public static class ServiceGuards
 {
+    /// <summary>
+    /// Validates that the acting user's own TenantRole is at least as privileged as the role
+    /// they are trying to grant. Prevents privilege escalation in role-assignment operations.
+    /// A user may only grant roles at or below their own level (lower numeric value = higher privilege).
+    /// </summary>
+    public static bool RequireNonEscalatingRole<T>(
+        BaseEntityResponse<T> response,
+        TenantRole actorRole,
+        TenantRole roleBeingGranted)
+    {
+        if (roleBeingGranted < actorRole)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You cannot grant a role more privileged than your own.");
+            return false;
+        }
+        return true;
+    }
+
     public static bool RequireRequest<TRequest, T>(
         TRequest? request,
         string operationDescription,
@@ -51,6 +70,36 @@ public static class ServiceGuards
         if (!await authorizationService.CanManageTenantAsync(tenantId, cancellationToken))
         {
             response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage this tenant's resources.");
+            return false;
+        }
+        return true;
+    }
+
+    public static async Task<bool> AuthorizeEventManageAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        if (!await authorizationService.CanManageEventAsync(tenantId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage events for this tenant.");
+            return false;
+        }
+        return true;
+    }
+
+    public static async Task<bool> AuthorizeIntentAssignAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        Guid tenantId,
+        Guid householdId,
+        Guid memberId,
+        CancellationToken cancellationToken)
+    {
+        if (!await authorizationService.CanAssignIntentForMemberAsync(tenantId, householdId, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to assign intents for this member.");
             return false;
         }
         return true;

@@ -91,7 +91,7 @@ public class EventService : IEventService
             return response;
         if (!ServiceGuards.RequireRequest(request, "create event", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Event name", response, out string normalizedName);
@@ -129,7 +129,7 @@ public class EventService : IEventService
             return response;
         if (!ServiceGuards.RequireRequest(request, "update event", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Event name", response, out string normalizedName);
@@ -170,7 +170,7 @@ public class EventService : IEventService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var @event = await ServiceGuards.LoadOrNotFoundAsync(
@@ -203,7 +203,7 @@ public class EventService : IEventService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var @event = await ServiceGuards.LoadOrNotFoundAsync(

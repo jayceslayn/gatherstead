@@ -256,6 +256,20 @@ public class TenantService : ITenantService
         return response;
     }
 
+    /// <summary>
+    /// Returns true when the tenant has more than one Owner — i.e., removing or demoting the
+    /// specified user would not leave the tenant without an Owner.
+    /// Call before any operation that demotes or removes a TenantUser with Role == Owner.
+    /// </summary>
+    private async Task<bool> HasOtherOwnerAsync(Guid tenantId, Guid userId, CancellationToken ct)
+    {
+        return await _dbContext.TenantUsers
+            .AsNoTracking()
+            .AnyAsync(tu => tu.TenantId == tenantId
+                         && tu.UserId != userId
+                         && tu.Role == TenantRole.Owner, ct);
+    }
+
     private static TenantDto MapToDto(Tenant tenant) => new(
         tenant.Id,
         tenant.Name,

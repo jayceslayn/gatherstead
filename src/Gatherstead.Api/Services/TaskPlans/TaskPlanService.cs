@@ -90,7 +90,7 @@ public class TaskPlanService : ITaskPlanService
             return response;
         if (!ServiceGuards.RequireRequest(request, "update task plan", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var plan = await ServiceGuards.LoadOrNotFoundAsync(

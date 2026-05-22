@@ -91,7 +91,7 @@ public class MealAttendanceService : IMealAttendanceService
             return response;
         if (!ServiceGuards.RequireRequest(request, "upsert meal attendance", response))
             return response;
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
 
         var planExists = await _dbContext.MealPlans
@@ -154,7 +154,7 @@ public class MealAttendanceService : IMealAttendanceService
 
         if (attendance is null) return response;
 
-        if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, attendance.HouseholdMemberId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, attendance.HouseholdMemberId, cancellationToken))
             return response;
 
         if (attendance.IsDeleted)

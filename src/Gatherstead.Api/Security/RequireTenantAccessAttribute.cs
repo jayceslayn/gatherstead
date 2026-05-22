@@ -139,12 +139,12 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
 
     /// <summary>
     /// Determines if the user's role meets the minimum required role.
-    /// Role hierarchy: Owner > Manager > Member > Guest
+    /// Role hierarchy: Owner > Manager > Coordinator > Member > Guest
     /// </summary>
     private static bool HasRequiredRole(TenantRole userRole, TenantRole requiredRole)
     {
         // Lower numeric value = higher privilege
-        // Owner = 0, Manager = 1, Member = 2, Guest = 3
+        // Owner = 0, Manager = 1, Coordinator = 2, Member = 3, Guest = 4
         return userRole <= requiredRole;
     }
 }

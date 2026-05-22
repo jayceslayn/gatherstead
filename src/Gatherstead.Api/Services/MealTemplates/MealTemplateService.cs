@@ -93,7 +93,7 @@ public class MealTemplateService : IMealTemplateService
             return response;
         if (!ServiceGuards.RequireRequest(request, "create meal template", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Template name", response, out string normalizedName);
@@ -159,7 +159,7 @@ public class MealTemplateService : IMealTemplateService
             return response;
         if (!ServiceGuards.RequireRequest(request, "update meal template", response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Name, "Template name", response, out string normalizedName);
@@ -228,7 +228,7 @@ public class MealTemplateService : IMealTemplateService
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var template = await ServiceGuards.LoadOrNotFoundAsync(

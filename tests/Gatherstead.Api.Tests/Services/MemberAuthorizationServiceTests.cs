@@ -162,7 +162,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     {
         var adminMemberId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(adminMemberId, _householdId, HouseholdRole.Admin);
+        await SeedHouseholdMemberAsync(adminMemberId, _householdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.True(await service.CanEditMemberAsync(_tenantId, _householdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
@@ -174,7 +174,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         var adminMemberId = Guid.NewGuid();
         var otherHouseholdId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(adminMemberId, _householdId, HouseholdRole.Admin);
+        await SeedHouseholdMemberAsync(adminMemberId, _householdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanEditMemberAsync(_tenantId, otherHouseholdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
@@ -218,7 +218,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     public async Task CanManageHouseholdAsync_HouseholdAdmin_ReturnsTrue()
     {
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(Guid.NewGuid(), _householdId, HouseholdRole.Admin);
+        await SeedHouseholdMemberAsync(Guid.NewGuid(), _householdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.True(await service.CanManageHouseholdAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
@@ -239,7 +239,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     {
         var otherHouseholdId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
-        await SeedHouseholdMemberAsync(Guid.NewGuid(), otherHouseholdId, HouseholdRole.Admin);
+        await SeedHouseholdMemberAsync(Guid.NewGuid(), otherHouseholdId, HouseholdRole.Manager);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanManageHouseholdAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));

@@ -3,22 +3,37 @@ namespace Gatherstead.Api.Services.Authorization;
 public interface IMemberAuthorizationService
 {
     /// <summary>
-    /// Determines if the current user can edit the specified household member.
-    /// Returns true if any of: tenant Owner/Manager, Self, household Admin, or Guardian (Parent/Guardian relationship).
+    /// Determines if the current user can edit the specified household member's profile data
+    /// (name, contact info, addresses, dietary profile, attributes, relationships).
+    /// Returns true if any of: App Admin, tenant Owner/Manager, Self, or household Manager.
     /// </summary>
     Task<bool> CanEditMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default);
 
     /// <summary>
+    /// Determines if the current user can assign intent/attendance records for the specified member
+    /// (EventAttendance, MealAttendance, MealIntent, TaskIntent, AccommodationIntent, and future EquipmentIntent).
+    /// Returns true if any of: App Admin, tenant Owner/Manager/Coordinator, Self, or household Manager.
+    /// </summary>
+    Task<bool> CanAssignIntentForMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default);
+
+    /// <summary>
     /// Determines if the current user can manage the specified household
     /// (add/remove members, edit household details, delete household).
-    /// Returns true if: tenant Owner/Manager, or household Admin.
+    /// Returns true if: App Admin, tenant Owner/Manager, or household Manager.
     /// </summary>
     Task<bool> CanManageHouseholdAsync(Guid tenantId, Guid householdId, CancellationToken ct = default);
 
     /// <summary>
-    /// Determines if the current user can manage tenant-level resources
-    /// (events, properties, templates, accommodations).
+    /// Determines if the current user can manage tenant-level structural resources
+    /// (Properties, Accommodations, Households, Users). Excludes Coordinator — use CanManageEventAsync for events.
     /// Returns true if: App Admin, or tenant Owner/Manager.
     /// </summary>
     Task<bool> CanManageTenantAsync(Guid tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Determines if the current user can manage event-level resources
+    /// (Events, MealTemplates, TaskTemplates, MealPlans, TaskPlans).
+    /// Returns true if: App Admin, or tenant Owner/Manager/Coordinator.
+    /// </summary>
+    Task<bool> CanManageEventAsync(Guid tenantId, CancellationToken ct = default);
 }

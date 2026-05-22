@@ -70,7 +70,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
             return true;
 
         // Household Admin check
-        if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Admin))
+        if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Manager))
             return true;
 
         _logger.LogWarning(
@@ -97,6 +97,63 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         return role.HasValue && role.Value <= TenantRole.Manager;
     }
 
+    public async Task<bool> CanManageEventAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return false;
+
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
+
+        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
+        return role.HasValue && role.Value <= TenantRole.Coordinator;
+    }
+
+    public async Task<bool> CanAssignIntentForMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return false;
+
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return true;
+
+        var role = await GetTenantRoleAsync(tenantId, userId.Value, ct);
+        if (role.HasValue && role.Value <= TenantRole.Coordinator)
+            return true;
+
+        var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
+        if (linkedMembers.Count == 0)
+        {
+            _logger.LogWarning(
+                "Intent assign denied: no linked members. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
+                tenantId, memberId, userId.Value);
+            GathersteadMetrics.RecordAuthzDenied("NoLinkedMembers", tenantId);
+            await _securityEventLogger.LogAsync(
+                SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
+                resource: $"HouseholdMember:{memberId}",
+                detail: "{\"reason\":\"NoLinkedMembers\"}",
+                tenantId: tenantId, userId: userId, cancellationToken: ct);
+            return false;
+        }
+
+        if (linkedMembers.Any(m => m.Id == memberId))
+            return true;
+
+        if (linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Manager))
+            return true;
+
+        _logger.LogWarning(
+            "Intent assign denied: insufficient role. TenantId: {TenantId}, MemberId: {MemberId}, UserId: {UserId}",
+            tenantId, memberId, userId.Value);
+        GathersteadMetrics.RecordAuthzDenied("InsufficientHouseholdRole", tenantId);
+        await _securityEventLogger.LogAsync(
+            SecurityEventType.AuthzDenial, SecurityEventSeverity.Warning,
+            resource: $"HouseholdMember:{memberId}",
+            detail: "{\"reason\":\"InsufficientHouseholdRole\"}",
+            tenantId: tenantId, userId: userId, cancellationToken: ct);
+        return false;
+    }
+
     public async Task<bool> CanManageHouseholdAsync(Guid tenantId, Guid householdId, CancellationToken ct = default)
     {
         var userId = _currentUserContext.UserId;
@@ -113,7 +170,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
 
         // Household Admin check
         var linkedMembers = await GetLinkedMembersAsync(tenantId, userId.Value, ct);
-        return linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Admin);
+        return linkedMembers.Any(m => m.HouseholdId == householdId && m.HouseholdRole == HouseholdRole.Manager);
     }
 
     private async Task<TenantRole?> GetTenantRoleAsync(Guid tenantId, Guid userId, CancellationToken ct)
