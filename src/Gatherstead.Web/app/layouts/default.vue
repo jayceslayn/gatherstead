@@ -18,7 +18,10 @@ const primaryNavItems = computed(() => [[
 ]])
 
 const managementNavItems = computed(() => isManagerOrAbove.value
-  ? [[{ label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' }]]
+  ? [[
+      { label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' },
+      { label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' },
+    ]]
   : [],
 )
 
@@ -40,14 +43,6 @@ const accountMenuItems = computed(() => {
     ],
   ]
 
-  if (isManagerOrAbove.value) {
-    groups.push([{
-      label: t('nav.settings'),
-      icon: 'i-heroicons-cog-6-tooth',
-      to: '/app/settings',
-    }])
-  }
-
   if (!config.public.demoMode) {
     groups.push([{
       label: t('common.signOut'),
@@ -64,12 +59,18 @@ const displayName = computed(() => {
   return name ?? t('common.appName')
 })
 
-const mobileNavItems = computed(() => [
-  { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
-  { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
-  { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
-  { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
-])
+const mobileNavItems = computed(() => {
+  const items = [
+    { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
+    { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
+    { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
+    { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
+  ]
+  if (isManagerOrAbove.value) {
+    items.push({ label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' })
+  }
+  return items
+})
 
 const route = useRoute()
 function isActive(path: string) {

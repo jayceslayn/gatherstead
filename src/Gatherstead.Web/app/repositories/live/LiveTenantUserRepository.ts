@@ -23,6 +23,13 @@ export class LiveTenantUserRepository implements ITenantUserRepository {
     )
   }
 
+  async listUserHouseholdAccess(tenantId: string, userId: string): Promise<HouseholdUserSummary[]> {
+    const response = await $fetch<{ entity: HouseholdUserSummary[] }>(
+      `/api/proxy/tenants/${tenantId}/users/${userId}/household-access`,
+    )
+    return response.entity ?? []
+  }
+
   async listHouseholdUsers(tenantId: string, householdId: string): Promise<HouseholdUserSummary[]> {
     const response = await $fetch<{ entity: HouseholdUserSummary[] }>(
       `/api/proxy/tenants/${tenantId}/households/${householdId}/users`,

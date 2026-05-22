@@ -1,3 +1,4 @@
+using Gatherstead.Api.Contracts.HouseholdUsers;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.TenantUsers;
 using Gatherstead.Api.Security;
@@ -220,6 +221,33 @@ public class TenantUserService : ITenantUserService
         await _dbContext.SaveChangesAsync(cancellationToken);
         response.SetSuccess(MapToDto(tenantUser));
         return response;
+    }
+
+    public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>> ListUserHouseholdAccessAsync(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>();
+        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return response;
+
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
+
+        var householdUsers = await _dbContext.HouseholdUsers
+            .AsNoTracking()
+            .Include(hu => hu.User)
+            .Where(hu => hu.TenantId == tenantId && hu.UserId == userId)
+            .ToListAsync(cancellationToken);
+
+        var dtos = householdUsers
+            .Select(hu => new HouseholdUserDto(hu.UserId, hu.TenantId, hu.HouseholdId, hu.Role, hu.User?.ExternalId ?? string.Empty))
+            .ToList();
+
+        return BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>.SuccessfulResponse(dtos);
     }
 
     private static TenantUserDto MapToDto(TenantUser tu) =>

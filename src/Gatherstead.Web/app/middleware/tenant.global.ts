@@ -1,5 +1,6 @@
 import { useTenantStore } from '~/stores/tenant'
 import type { TenantRole } from '~/repositories/types'
+import { DEMO_TENANT } from '~/repositories/demo/DemoStore'
 
 interface TenantsApiResponse {
   entity: Array<{ id: string; name: string; userRole: TenantRole | null }>
@@ -22,7 +23,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (config.public.demoMode) {
     if (!tenantStore.currentTenantId) {
-      tenantStore.setTenant('demo-tenant', 'Demo Community', 'Owner')
+      tenantStore.setTenant(DEMO_TENANT.id, DEMO_TENANT.name, DEMO_TENANT.userRole)
     }
     return
   }

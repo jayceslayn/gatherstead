@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useTenantUserList, useTenantUserActions } from '~/composables/useTenantUsers'
+import { useTenantUserList } from '~/composables/useTenantUsers'
+import { useAllMembers } from '~/composables/useHouseholdMembers'
 import type { TenantRole } from '~/repositories/types'
 
 definePageMeta({
@@ -7,8 +8,10 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const { tenantUsers, pending, refresh } = useTenantUserList()
-const { updateRole, updating } = useTenantUserActions(refresh)
+const { tenantUsers, pending } = useTenantUserList()
+const { memberMap } = useAllMembers()
+
+const ROLE_ORDER: TenantRole[] = ['Owner', 'Manager', 'Coordinator', 'Member', 'Guest']
 
 const search = ref('')
 const filtered = computed(() => {
@@ -17,13 +20,11 @@ const filtered = computed(() => {
   return tenantUsers.value.filter(u => u.externalId.toLowerCase().includes(q))
 })
 
-const roleOptions: { label: string, value: TenantRole }[] = [
-  { label: t('tenantUser.roles.Owner'), value: 'Owner' },
-  { label: t('tenantUser.roles.Manager'), value: 'Manager' },
-  { label: t('tenantUser.roles.Coordinator'), value: 'Coordinator' },
-  { label: t('tenantUser.roles.Member'), value: 'Member' },
-  { label: t('tenantUser.roles.Guest'), value: 'Guest' },
-]
+const grouped = computed(() =>
+  ROLE_ORDER
+    .map(role => ({ role, users: filtered.value.filter(u => u.role === role) }))
+    .filter(g => g.users.length > 0),
+)
 </script>
 
 <template>
@@ -57,30 +58,28 @@ const roleOptions: { label: string, value: TenantRole }[] = [
       :title="t('common.noResults')"
     />
 
-    <div v-else class="flex flex-col gap-2">
-      <UCard v-for="user in filtered" :key="user.userId">
-        <div class="flex items-center gap-3 flex-wrap">
-          <div class="min-w-0 flex-1">
-            <p class="font-mono text-sm truncate">{{ user.externalId }}</p>
-            <p class="text-xs text-muted">{{ t('tenantUser.linkedMemberLabel') }} {{ user.linkedMemberId ?? t('tenantUser.noLinkedMember') }}</p>
-          </div>
-
-          <div class="flex items-center gap-2 shrink-0">
-            <USelectMenu
-              :model-value="user.role"
-              :options="roleOptions"
-              value-attribute="value"
-              option-attribute="label"
-              :disabled="updating.includes(user.userId)"
-              class="w-36"
-              @update:model-value="(v) => updateRole(user.userId, (v as { value: TenantRole }).value)"
-            />
-            <NuxtLink :to="`/app/settings/users/${user.userId}`">
-              <UButton icon="i-heroicons-pencil-square" variant="ghost" size="sm" />
-            </NuxtLink>
-          </div>
+    <div v-else class="flex flex-col gap-6">
+      <div v-for="group in grouped" :key="group.role">
+        <p class="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
+          {{ t(`tenantUser.roles.${group.role}`) }}
+        </p>
+        <div class="flex flex-col gap-2">
+          <UCard v-for="user in group.users" :key="user.userId">
+            <div class="flex items-center gap-3 flex-wrap">
+              <div class="min-w-0 flex-1">
+                <p class="font-mono text-sm truncate">{{ user.externalId }}</p>
+                <p class="text-xs text-muted">
+                  {{ t('tenantUser.linkedMemberLabel') }}
+                  {{ user.linkedMemberId ? (memberMap.get(user.linkedMemberId)?.name ?? user.linkedMemberId) : t('tenantUser.noLinkedMember') }}
+                </p>
+              </div>
+              <NuxtLink :to="`/app/settings/users/${user.userId}`">
+                <UButton icon="i-heroicons-pencil-square" variant="ghost" size="sm" />
+              </NuxtLink>
+            </div>
+          </UCard>
         </div>
-      </UCard>
+      </div>
     </div>
   </div>
 </template>

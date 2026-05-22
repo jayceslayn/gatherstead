@@ -51,6 +51,20 @@ public class TenantUsersController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("{userId:guid}/household-access")]
+    public async Task<IActionResult> ListUserHouseholdAccess(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _tenantUserService.ListUserHouseholdAccessAsync(tenantId, userId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        return Ok(response);
+    }
+
     [HttpPut("{userId:guid}/linked-member")]
     public async Task<ActionResult<TenantUserResponse>> SetLinkedMember(
         Guid tenantId,

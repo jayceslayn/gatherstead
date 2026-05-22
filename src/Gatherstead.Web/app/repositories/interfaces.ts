@@ -79,6 +79,7 @@ export interface ITenantUserRepository {
   listTenantUsers(tenantId: string): Promise<TenantUserSummary[]>
   updateRole(tenantId: string, userId: string, role: TenantRole): Promise<void>
   listHouseholdUsers(tenantId: string, householdId: string): Promise<HouseholdUserSummary[]>
+  listUserHouseholdAccess(tenantId: string, userId: string): Promise<HouseholdUserSummary[]>
   upsertHouseholdUser(tenantId: string, householdId: string, userId: string, role: HouseholdRole): Promise<void>
   deleteHouseholdUser(tenantId: string, householdId: string, userId: string): Promise<void>
 }

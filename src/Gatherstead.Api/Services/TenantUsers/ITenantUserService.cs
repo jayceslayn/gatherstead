@@ -1,3 +1,4 @@
+using Gatherstead.Api.Contracts.HouseholdUsers;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.TenantUsers;
 
@@ -19,5 +20,10 @@ public interface ITenantUserService
         Guid tenantId,
         Guid userId,
         SetLinkedMemberRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>> ListUserHouseholdAccessAsync(
+        Guid tenantId,
+        Guid userId,
         CancellationToken cancellationToken = default);
 }

@@ -4,6 +4,8 @@ import type {
   TenantSummary,
   HouseholdSummary,
   HouseholdMember,
+  HouseholdUserSummary,
+  TenantUserSummary,
   EventSummary,
   AttendanceRecord,
   MealTemplate,
@@ -19,6 +21,27 @@ import type {
 } from '../types'
 
 const STORAGE_KEY = 'gs-demo-store'
+
+export const DEMO_TENANT: TenantSummary = {
+  id: 'demo-tenant',
+  name: 'The Super Families Network',
+  userRole: 'Owner',
+}
+
+export const DEMO_USER: TenantUserSummary = {
+  userId: 'demo-user',
+  tenantId: 'demo-tenant',
+  role: 'Owner',
+  linkedMemberId: null,
+  externalId: 'demo@example.com',
+}
+
+export const DEMO_USER_DISPLAY_NAME = 'Demo User'
+
+// Convenience aliases kept for backward compatibility
+export const DEMO_TENANT_ID = DEMO_TENANT.id
+export const DEMO_USER_ID = DEMO_USER.userId
+export const DEMO_USER_EXTERNAL_ID = DEMO_USER.externalId
 
 export const DEMO_LIMITS = {
   householdsPerTenant: 3,
@@ -40,6 +63,8 @@ export class DemoLimitError extends Error {
 
 interface DemoState {
   tenants: TenantSummary[]
+  tenantUsers: TenantUserSummary[]
+  householdUsers: HouseholdUserSummary[]
   households: HouseholdSummary[]
   members: HouseholdMember[]
   events: EventSummary[]
@@ -58,6 +83,8 @@ interface DemoState {
 
 export interface ReactiveState {
   tenants: Ref<TenantSummary[]>
+  tenantUsers: Ref<TenantUserSummary[]>
+  householdUsers: Ref<HouseholdUserSummary[]>
   households: Ref<HouseholdSummary[]>
   members: Ref<HouseholdMember[]>
   events: Ref<EventSummary[]>
@@ -76,9 +103,9 @@ export interface ReactiveState {
 
 function emptyState(): DemoState {
   return {
-    tenants: [
-      { id: 'demo-tenant', name: 'The Super Families Network', userRole: 'Owner' },
-    ],
+    tenants: [{ ...DEMO_TENANT }],
+    tenantUsers: [{ ...DEMO_USER }],
+    householdUsers: [],
     households: [],
     members: [],
     events: [],
@@ -110,6 +137,8 @@ function tryParseLocalStorage(): DemoState | null {
 function buildReactiveRefs(state: DemoState): ReactiveState {
   return {
     tenants: ref(state.tenants),
+    tenantUsers: ref(state.tenantUsers ?? emptyState().tenantUsers),
+    householdUsers: ref(state.householdUsers ?? []),
     households: ref(state.households),
     members: ref(state.members),
     events: ref(state.events),
@@ -130,6 +159,8 @@ function buildReactiveRefs(state: DemoState): ReactiveState {
 function snapshot(state: ReactiveState): DemoState {
   return {
     tenants: state.tenants.value,
+    tenantUsers: state.tenantUsers.value,
+    householdUsers: state.householdUsers.value,
     households: state.households.value,
     members: state.members.value,
     events: state.events.value,
@@ -163,8 +194,9 @@ export function persistDemoStore(): void {
 
 export function clearDemoStore(): void {
   if (!_state) return
-  const tenant = _state.tenants.value[0]!
-  _state.tenants.value = [tenant]
+  _state.tenants.value = [{ ...DEMO_TENANT }]
+  _state.tenantUsers.value = emptyState().tenantUsers
+  _state.householdUsers.value = []
   _state.households.value = []
   _state.members.value = []
   _state.events.value = []
