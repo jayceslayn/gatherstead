@@ -272,5 +272,35 @@
       "title": "Límite de Demo Alcanzado",
       "description": "Has alcanzado el límite para esta función en el modo de demostración. Regístrate para continuar."
     }
+  },
+  "settings": {
+    "title": "Configuración",
+    "users": "Gestión de Usuarios"
+  },
+  "tenantUser": {
+    "title": "Usuarios",
+    "listTitle": "Miembros del Grupo",
+    "role": "Rol",
+    "linkedMember": "Miembro Vinculado",
+    "linkedMemberLabel": "Miembro Vinculado:",
+    "noLinkedMember": "Sin vincular",
+    "updateRole": "Actualizar Rol",
+    "householdAccess": "Acceso a Hogar",
+    "addHouseholdAccess": "Agregar acceso a hogar",
+    "removeAccess": "Quitar acceso",
+    "noHouseholdAccess": "Sin acceso a hogares",
+    "noUsers": "Todavía no hay usuarios en este grupo.",
+    "externalId": "Identidad",
+    "roles": {
+      "Owner": "Propietario",
+      "Manager": "Administrador",
+      "Coordinator": "Coordinador",
+      "Member": "Miembro",
+      "Guest": "Invitado"
+    },
+    "householdRoles": {
+      "Manager": "Administrador",
+      "Member": "Miembro"
+    }
   }
 }

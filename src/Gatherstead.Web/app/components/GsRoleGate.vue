@@ -11,8 +11,9 @@ const { role } = useTenantRole()
 const roleOrder: Record<TenantRole, number> = {
   Guest: 0,
   Member: 1,
-  Manager: 2,
-  Owner: 3,
+  Coordinator: 2,
+  Manager: 3,
+  Owner: 4,
 }
 
 const hasAccess = computed(() => {

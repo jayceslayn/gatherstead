@@ -6,4 +6,5 @@ public record TenantUserDto(
     Guid UserId,
     Guid TenantId,
     TenantRole Role,
-    Guid? LinkedMemberId);
+    Guid? LinkedMemberId,
+    string ExternalId);

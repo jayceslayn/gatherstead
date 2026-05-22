@@ -272,5 +272,35 @@
       "title": "Demo Limit Reached",
       "description": "You've reached the limit for this feature in demo mode. Sign up to continue."
     }
+  },
+  "settings": {
+    "title": "Settings",
+    "users": "User Management"
+  },
+  "tenantUser": {
+    "title": "Users",
+    "listTitle": "Tenant Members",
+    "role": "Role",
+    "linkedMember": "Linked Member",
+    "linkedMemberLabel": "Linked Member:",
+    "noLinkedMember": "Not linked",
+    "updateRole": "Update Role",
+    "householdAccess": "Household Access",
+    "addHouseholdAccess": "Add household access",
+    "removeAccess": "Remove access",
+    "noHouseholdAccess": "No household access",
+    "noUsers": "No users in this tenant yet.",
+    "externalId": "Identity",
+    "roles": {
+      "Owner": "Owner",
+      "Manager": "Manager",
+      "Coordinator": "Coordinator",
+      "Member": "Member",
+      "Guest": "Guest"
+    },
+    "householdRoles": {
+      "Manager": "Manager",
+      "Member": "Member"
+    }
   }
 }

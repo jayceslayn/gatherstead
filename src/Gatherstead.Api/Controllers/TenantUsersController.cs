@@ -20,6 +20,37 @@ public class TenantUsersController : ControllerBase
         _tenantUserService = tenantUserService ?? throw new ArgumentNullException(nameof(tenantUserService));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> ListUsers(
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _tenantUserService.ListAsync(tenantId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        return Ok(response);
+    }
+
+    [HttpPut("{userId:guid}/role")]
+    public async Task<ActionResult<TenantUserResponse>> UpdateRole(
+        Guid tenantId,
+        Guid userId,
+        [FromBody] UpdateTenantUserRoleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _tenantUserService.UpdateRoleAsync(tenantId, userId, request, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        if (response.Entity is null)
+            return NotFound(response);
+
+        return Ok(response);
+    }
+
     [HttpPut("{userId:guid}/linked-member")]
     public async Task<ActionResult<TenantUserResponse>> SetLinkedMember(
         Guid tenantId,

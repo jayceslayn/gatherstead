@@ -6,7 +6,8 @@ export function useTenantRole() {
 
   const isOwner = computed(() => role.value === 'Owner')
   const isManagerOrAbove = computed(() => role.value === 'Owner' || role.value === 'Manager')
+  const isCoordinatorOrAbove = computed(() => role.value === 'Owner' || role.value === 'Manager' || role.value === 'Coordinator')
   const isMemberOrAbove = computed(() => role.value !== null && role.value !== 'Guest')
 
-  return { role, isOwner, isManagerOrAbove, isMemberOrAbove }
+  return { role, isOwner, isManagerOrAbove, isCoordinatorOrAbove, isMemberOrAbove }
 }

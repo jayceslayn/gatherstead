@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.TenantUsers;
+using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -12,16 +13,121 @@ public class TenantUserService : ITenantUserService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly ICurrentUserContext _currentUserContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAppAdminContext _appAdminContext;
 
     public TenantUserService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        ICurrentUserContext currentUserContext,
+        IMemberAuthorizationService memberAuthorizationService,
+        IAppAdminContext appAdminContext)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
+    }
+
+    public async Task<BaseEntityResponse<IReadOnlyCollection<TenantUserDto>>> ListAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<IReadOnlyCollection<TenantUserDto>>();
+        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return response;
+
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
+
+        var users = await _dbContext.TenantUsers
+            .AsNoTracking()
+            .Include(tu => tu.User)
+            .Where(tu => tu.TenantId == tenantId)
+            .ToListAsync(cancellationToken);
+
+        var dtos = users.Select(MapToDto).ToList();
+        return BaseEntityResponse<IReadOnlyCollection<TenantUserDto>>.SuccessfulResponse(dtos);
+    }
+
+    public async Task<TenantUserResponse> UpdateRoleAsync(
+        Guid tenantId,
+        Guid userId,
+        UpdateTenantUserRoleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new TenantUserResponse();
+        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
+
+        if (!ServiceGuards.RequireRequest(request, "update tenant user role", response))
+            return response;
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return response;
+
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
+
+        var isAppAdmin = await _appAdminContext.IsAppAdminAsync(cancellationToken) == true;
+
+        if (!isAppAdmin)
+        {
+            var actorUserId = _currentUserContext.UserId;
+            if (!actorUserId.HasValue)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "Unable to determine acting user.");
+                return response;
+            }
+
+            var actorTenantUser = await _dbContext.TenantUsers
+                .AsNoTracking()
+                .Where(tu => tu.TenantId == tenantId && tu.UserId == actorUserId.Value)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (actorTenantUser is null)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "Acting user is not a member of this tenant.");
+                return response;
+            }
+
+            if (!ServiceGuards.RequireNonEscalatingRole(response, actorTenantUser.Role, request.Role))
+                return response;
+        }
+
+        var tenantUser = await _dbContext.TenantUsers
+            .Include(tu => tu.User)
+            .Where(tu => tu.TenantId == tenantId && tu.UserId == userId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (tenantUser is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "User is not a member of this tenant.");
+            return response;
+        }
+
+        // Protect against demoting the last Owner (App Admins bypass this)
+        if (!isAppAdmin && tenantUser.Role == TenantRole.Owner && request.Role != TenantRole.Owner)
+        {
+            var otherOwnerExists = await _dbContext.TenantUsers
+                .AsNoTracking()
+                .AnyAsync(tu => tu.TenantId == tenantId && tu.UserId != userId && tu.Role == TenantRole.Owner, cancellationToken);
+
+            if (!otherOwnerExists)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "Cannot demote the last Owner of this tenant.");
+                return response;
+            }
+        }
+
+        tenantUser.Role = request.Role;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        response.SetSuccess(MapToDto(tenantUser));
+        return response;
     }
 
     public async Task<TenantUserResponse> SetLinkedMemberAsync(
@@ -44,6 +150,7 @@ public class TenantUserService : ITenantUserService
 
         var tenantUser = await _dbContext.TenantUsers
             .Include(tu => tu.LinkedMember)
+            .Include(tu => tu.User)
             .Where(tu => tu.TenantId == tenantId && tu.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -116,5 +223,5 @@ public class TenantUserService : ITenantUserService
     }
 
     private static TenantUserDto MapToDto(TenantUser tu) =>
-        new(tu.UserId, tu.TenantId, tu.Role, tu.LinkedMemberId);
+        new(tu.UserId, tu.TenantId, tu.Role, tu.LinkedMemberId, tu.User?.ExternalId ?? string.Empty);
 }

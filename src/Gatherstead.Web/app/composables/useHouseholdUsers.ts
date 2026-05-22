@@ -1,28 +1,29 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useRepositories } from '~/composables/useRepositories'
-import type { TenantRole } from '~/repositories/types'
+import type { HouseholdRole } from '~/repositories/types'
 
-export function useTenantUserList() {
+export function useHouseholdUsers(householdId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { tenantUsers: repo } = useRepositories()
   const { data, pending, error, refresh } = useAsyncData(
-    () => `tenant-users-${tenantStore.currentTenantId}`,
-    () => repo.listTenantUsers(tenantStore.currentTenantId!),
+    () => `household-users-${tenantStore.currentTenantId}-${householdId.value}`,
+    () => repo.listHouseholdUsers(tenantStore.currentTenantId!, householdId.value),
+    { watch: [householdId] },
   )
-  return { tenantUsers: computed(() => data.value ?? []), pending, error, refresh }
+  return { householdUsers: computed(() => data.value ?? []), pending, error, refresh }
 }
 
-export function useTenantUserActions(refresh?: () => Promise<void>) {
+export function useHouseholdUserActions(householdId: Ref<string>, refresh?: () => Promise<void>) {
   const tenantStore = useTenantStore()
   const { tenantUsers: repo } = useRepositories()
   const toast = useToast()
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function setLinkedMember(userId: string, memberId: string | null) {
+  async function upsertHouseholdUser(userId: string, role: HouseholdRole) {
     updating.value.push(userId)
     try {
-      await repo.setLinkedMember(tenantStore.currentTenantId!, userId, memberId)
+      await repo.upsertHouseholdUser(tenantStore.currentTenantId!, householdId.value, userId, role)
       await refresh?.()
     }
     catch (e) {
@@ -33,10 +34,10 @@ export function useTenantUserActions(refresh?: () => Promise<void>) {
     }
   }
 
-  async function updateRole(userId: string, role: TenantRole) {
+  async function deleteHouseholdUser(userId: string) {
     updating.value.push(userId)
     try {
-      await repo.updateRole(tenantStore.currentTenantId!, userId, role)
+      await repo.deleteHouseholdUser(tenantStore.currentTenantId!, householdId.value, userId)
       await refresh?.()
     }
     catch (e) {
@@ -47,5 +48,5 @@ export function useTenantUserActions(refresh?: () => Promise<void>) {
     }
   }
 
-  return { updating, setLinkedMember, updateRole }
+  return { updating, upsertHouseholdUser, deleteHouseholdUser }
 }

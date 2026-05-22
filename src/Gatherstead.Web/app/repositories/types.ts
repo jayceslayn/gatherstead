@@ -1,4 +1,4 @@
-export type TenantRole = 'Owner' | 'Manager' | 'Member' | 'Guest'
+export type TenantRole = 'Owner' | 'Manager' | 'Coordinator' | 'Member' | 'Guest'
 
 export interface TenantSummary {
   id: string
@@ -13,6 +13,22 @@ export interface HouseholdSummary {
 }
 
 export type HouseholdRole = 'Manager' | 'Member'
+
+export interface TenantUserSummary {
+  userId: string
+  tenantId: string
+  role: TenantRole
+  linkedMemberId: string | null
+  externalId: string
+}
+
+export interface HouseholdUserSummary {
+  userId: string
+  tenantId: string
+  householdId: string
+  role: HouseholdRole
+  externalId: string
+}
 
 export interface HouseholdMember {
   id: string
