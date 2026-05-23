@@ -64,20 +64,24 @@ const grouped = computed(() =>
           {{ t(`tenantUser.roles.${group.role}`) }}
         </p>
         <div class="flex flex-col gap-2">
-          <UCard v-for="user in group.users" :key="user.userId">
-            <div class="flex items-center gap-3 flex-wrap">
-              <div class="min-w-0 flex-1">
-                <p class="font-mono text-sm truncate">{{ user.externalId }}</p>
-                <p class="text-xs text-muted">
-                  {{ t('tenantUser.linkedMemberLabel') }}
-                  {{ user.linkedMemberId ? (memberMap.get(user.linkedMemberId)?.name ?? user.linkedMemberId) : t('tenantUser.noLinkedMember') }}
-                </p>
+          <NuxtLink
+            v-for="user in group.users"
+            :key="user.userId"
+            :to="`/app/settings/users/${user.userId}`"
+          >
+            <UCard class="hover:ring-1 hover:ring-primary transition-all cursor-pointer">
+              <div class="flex items-center gap-3">
+                <div class="min-w-0 flex-1">
+                  <p class="font-mono text-sm truncate">{{ user.externalId }}</p>
+                  <p class="text-xs text-muted">
+                    {{ t('tenantUser.linkedMemberLabel') }}
+                    {{ user.linkedMemberId ? (memberMap.get(user.linkedMemberId)?.name ?? user.linkedMemberId) : t('tenantUser.noLinkedMember') }}
+                  </p>
+                </div>
+                <UIcon name="i-heroicons-chevron-right" class="size-5 text-muted shrink-0" />
               </div>
-              <NuxtLink :to="`/app/settings/users/${user.userId}`">
-                <UButton icon="i-heroicons-pencil-square" variant="ghost" size="sm" />
-              </NuxtLink>
-            </div>
-          </UCard>
+            </UCard>
+          </NuxtLink>
         </div>
       </div>
     </div>

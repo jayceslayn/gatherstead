@@ -2,7 +2,7 @@
 import { inject } from 'vue'
 import { REPOSITORIES_KEY } from '~/repositories/interfaces'
 import type { Repositories } from '~/repositories/interfaces'
-import { DEMO_LIMITS, clearDemoStore, getDemoStore } from '~/repositories/demo/DemoStore'
+import { DEMO_LIMITS, clearDemoStore } from '~/repositories/demo/DemoStore'
 import { seedDemoData } from '~/repositories/demo/seedDemoData'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useEventStore } from '~/stores/event'

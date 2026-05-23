@@ -24,9 +24,8 @@ import { DemoTaskRepository } from '~/repositories/demo/DemoTaskRepository'
 import { DemoPropertyRepository } from '~/repositories/demo/DemoPropertyRepository'
 import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodationRepository'
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
-import { getDemoStore, DEMO_USER } from '~/repositories/demo/DemoStore'
+import { getDemoStore } from '~/repositories/demo/DemoStore'
 import { seedDemoData } from '~/repositories/demo/seedDemoData'
-import { useCurrentMemberStore } from '~/stores/member'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   const config = useRuntimeConfig()
@@ -67,17 +66,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     const store = getDemoStore()
     if (store.properties.value.length === 0) {
       await seedDemoData(repos)
-    }
-
-    const memberStore = useCurrentMemberStore()
-    if (!memberStore.linkedMemberId) {
-      const demoUser = store.tenantUsers.value.find(u => u.userId === DEMO_USER.userId)
-      if (demoUser?.linkedMemberId) {
-        const linkedMember = store.members.value.find(m => m.id === demoUser.linkedMemberId)
-        if (linkedMember) {
-          memberStore.setLinkedMember(linkedMember.id, linkedMember.householdId)
-        }
-      }
     }
   }
 })

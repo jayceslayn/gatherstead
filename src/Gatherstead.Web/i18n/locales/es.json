@@ -286,6 +286,7 @@
     "linkedMember": "Miembro Vinculado",
     "linkedMemberLabel": "Miembro Vinculado:",
     "noLinkedMember": "Sin vincular",
+    "linkedMemberSessionNote": "Es posible que el usuario afectado deba actualizar su página o cerrar e iniciar sesión nuevamente para que este cambio surta efecto.",
     "updateRole": "Actualizar Rol",
     "householdAccess": "Acceso a Hogar",
     "addHouseholdAccess": "Agregar acceso a hogar",

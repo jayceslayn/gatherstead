@@ -286,6 +286,7 @@
     "linkedMember": "Linked Member",
     "linkedMemberLabel": "Linked Member:",
     "noLinkedMember": "Not linked",
+    "linkedMemberSessionNote": "The affected user may need to refresh their page or log out and back in before this change takes effect.",
     "updateRole": "Update Role",
     "householdAccess": "Household Access",
     "addHouseholdAccess": "Add household access",

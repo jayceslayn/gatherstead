@@ -250,6 +250,47 @@ public class TenantUserService : ITenantUserService
         return BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>.SuccessfulResponse(dtos);
     }
 
+    public async Task<BaseEntityResponse<TenantUserMeDto>> GetCurrentTenantUserAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<TenantUserMeDto>();
+        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return response;
+
+        var currentUserId = _currentUserContext.UserId;
+        if (!currentUserId.HasValue)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Unable to determine current user.");
+            return response;
+        }
+
+        var tenantUser = await _dbContext.TenantUsers
+            .AsNoTracking()
+            .Include(tu => tu.User)
+            .Include(tu => tu.LinkedMember)
+            .Where(tu => tu.TenantId == tenantId && tu.UserId == currentUserId.Value)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (tenantUser is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Current user is not a member of this tenant.");
+            return response;
+        }
+
+        var dto = new TenantUserMeDto(
+            tenantUser.UserId,
+            tenantUser.TenantId,
+            tenantUser.Role,
+            tenantUser.LinkedMemberId,
+            tenantUser.LinkedMember?.HouseholdId,
+            tenantUser.User?.ExternalId ?? string.Empty);
+
+        return BaseEntityResponse<TenantUserMeDto>.SuccessfulResponse(dto);
+    }
+
     private static TenantUserDto MapToDto(TenantUser tu) =>
         new(tu.UserId, tu.TenantId, tu.Role, tu.LinkedMemberId, tu.User?.ExternalId ?? string.Empty);
 }

@@ -26,4 +26,8 @@ public interface ITenantUserService
         Guid tenantId,
         Guid userId,
         CancellationToken cancellationToken = default);
+
+    Task<BaseEntityResponse<TenantUserMeDto>> GetCurrentTenantUserAsync(
+        Guid tenantId,
+        CancellationToken cancellationToken = default);
 }

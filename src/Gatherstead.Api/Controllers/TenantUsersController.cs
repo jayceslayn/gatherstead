@@ -82,4 +82,20 @@ public class TenantUsersController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpGet("me")]
+    public async Task<IActionResult> GetCurrentUser(
+        Guid tenantId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _tenantUserService.GetCurrentTenantUserAsync(tenantId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        if (response.Entity is null)
+            return NotFound(response);
+
+        return Ok(response);
+    }
 }

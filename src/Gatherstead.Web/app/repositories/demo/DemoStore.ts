@@ -23,8 +23,8 @@ import type {
 const STORAGE_KEY = 'gs-demo-store'
 
 export const DEMO_USER_DISPLAY_NAME = 'Demo User'
-export const DEMO_TENANT_ID = demoId()
-export const DEMO_USER_ID = demoId()
+export const DEMO_TENANT_ID = 'demo-tenant'
+export const DEMO_USER_ID = 'demo-user'
 export const DEMO_USER_EXTERNAL_ID = "demo@example.com"
 
 export const DEMO_TENANT: TenantSummary = {

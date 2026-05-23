@@ -186,6 +186,9 @@ const memberPickerOptions = computed(() =>
             >
               {{ t('tenantUser.removeAccess') }}
             </UButton>
+            <UTooltip :text="t('tenantUser.linkedMemberSessionNote')">
+              <UIcon name="i-heroicons-information-circle" class="text-muted cursor-help" />
+            </UTooltip>
           </div>
           <p v-if="targetUser.linkedMemberId" class="text-xs text-muted font-mono">
             {{ targetUser.linkedMemberId }}
