@@ -27,6 +27,7 @@ public class Accommodation : AuditableEntity
     public AccommodationType Type { get; set; }
     public int? CapacityAdults { get; set; }
     public int? CapacityChildren { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 
     public ICollection<AccommodationIntent> AccommodationIntents { get; set; } = new List<AccommodationIntent>();

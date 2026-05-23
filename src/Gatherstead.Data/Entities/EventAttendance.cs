@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,5 +32,6 @@ public class EventAttendance : AuditableEntity
     public DateTimeOffset? ArrivalWindowEnd { get; set; }
     public DateTimeOffset? DepartureWindowStart { get; set; }
     public DateTimeOffset? DepartureWindowEnd { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 }

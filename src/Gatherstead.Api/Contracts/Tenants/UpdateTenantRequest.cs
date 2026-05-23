@@ -13,4 +13,7 @@ public class UpdateTenantRequest
         get => _name;
         init => _name = (value ?? string.Empty).Trim();
     }
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
 }

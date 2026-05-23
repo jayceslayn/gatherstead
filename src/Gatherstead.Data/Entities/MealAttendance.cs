@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,5 +25,6 @@ public class MealAttendance : AuditableEntity
 
     public AttendanceStatus Status { get; set; }
     public bool BringOwnFood { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 }

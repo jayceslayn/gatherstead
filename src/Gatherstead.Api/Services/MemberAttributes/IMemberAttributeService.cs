@@ -3,38 +3,38 @@ using Gatherstead.Api.Contracts.Responses;
 
 namespace Gatherstead.Api.Services.MemberAttributes;
 
-public interface IMemberAttributeService
+public interface IHouseholdMemberAttributeService
 {
-    Task<BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>> ListAsync(
+    Task<BaseEntityResponse<IReadOnlyCollection<HouseholdMemberAttributeDto>>> ListAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         IEnumerable<Guid>? ids = null,
         CancellationToken cancellationToken = default);
 
-    Task<MemberAttributeResponse> GetAsync(
+    Task<HouseholdMemberAttributeResponse> GetAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         Guid attributeId,
         CancellationToken cancellationToken = default);
 
-    Task<MemberAttributeResponse> CreateAsync(
+    Task<HouseholdMemberAttributeResponse> CreateAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
-        CreateMemberAttributeRequest request,
+        CreateHouseholdMemberAttributeRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<MemberAttributeResponse> UpdateAsync(
+    Task<HouseholdMemberAttributeResponse> UpdateAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         Guid attributeId,
-        UpdateMemberAttributeRequest request,
+        UpdateHouseholdMemberAttributeRequest request,
         CancellationToken cancellationToken = default);
 
-    Task<MemberAttributeResponse> DeleteAsync(
+    Task<HouseholdMemberAttributeResponse> DeleteAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,

@@ -13,4 +13,7 @@ public class CreateTenantRequest
     /// </summary>
     [Required]
     public Guid OwnerUserId { get; init; }
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
 }

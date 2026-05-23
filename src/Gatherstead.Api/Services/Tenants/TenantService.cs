@@ -19,6 +19,7 @@ public class TenantService : ITenantService
     private static readonly Expression<Func<Tenant, TenantDto>> MapToDtoExpression = tenant => new TenantDto(
         tenant.Id,
         tenant.Name,
+        tenant.Notes,
         tenant.CreatedAt,
         tenant.UpdatedAt,
         tenant.IsDeleted,
@@ -160,6 +161,7 @@ public class TenantService : ITenantService
         {
             Id = Guid.NewGuid(),
             Name = normalizedName,
+            Notes = request.Notes?.Trim(),
         };
 
         var tenantUser = new TenantUser
@@ -211,6 +213,7 @@ public class TenantService : ITenantService
         }
 
         tenant.Name = normalizedName;
+        tenant.Notes = request.Notes?.Trim();
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -273,6 +276,7 @@ public class TenantService : ITenantService
     private static TenantDto MapToDto(Tenant tenant) => new(
         tenant.Id,
         tenant.Name,
+        tenant.Notes,
         tenant.CreatedAt,
         tenant.UpdatedAt,
         tenant.IsDeleted,

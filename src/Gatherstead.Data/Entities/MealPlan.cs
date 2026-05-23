@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,7 @@ public class MealPlan : AuditableEntity
 
     public DateOnly Day { get; set; }
     public MealType MealType { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
     public bool IsException { get; set; }
     public string? ExceptionReason { get; set; }

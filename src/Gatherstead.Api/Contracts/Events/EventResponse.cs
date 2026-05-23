@@ -13,6 +13,7 @@ public record EventDto(
     string Name,
     DateOnly StartDate,
     DateOnly EndDate,
+    string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,

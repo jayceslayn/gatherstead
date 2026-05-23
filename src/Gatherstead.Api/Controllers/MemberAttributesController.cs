@@ -12,17 +12,17 @@ namespace Gatherstead.Api.Controllers;
 [Authorize]
 [RequireTenantAccess]
 [Route("api/tenants/{tenantId:guid}/households/{householdId:guid}/members/{memberId:guid}/attributes")]
-public class MemberAttributesController : ControllerBase
+public class HouseholdMemberAttributesController : ControllerBase
 {
-    private readonly IMemberAttributeService _memberAttributeService;
+    private readonly IHouseholdMemberAttributeService _attributeService;
 
-    public MemberAttributesController(IMemberAttributeService memberAttributeService)
+    public HouseholdMemberAttributesController(IHouseholdMemberAttributeService attributeService)
     {
-        _memberAttributeService = memberAttributeService ?? throw new ArgumentNullException(nameof(memberAttributeService));
+        _attributeService = attributeService ?? throw new ArgumentNullException(nameof(attributeService));
     }
 
     [HttpGet]
-    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>>> GetAttributes(
+    public async Task<ActionResult<BaseEntityResponse<IReadOnlyCollection<HouseholdMemberAttributeDto>>>> GetAttributes(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
@@ -36,51 +36,41 @@ public class MemberAttributesController : ControllerBase
             foreach (var segment in ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 if (!Guid.TryParse(segment, out var parsed))
-                {
                     return BadRequest(new { error = $"Invalid attribute identifier: '{segment}'." });
-                }
                 idList.Add(parsed);
             }
             parsedIds = idList;
         }
 
-        var response = await _memberAttributeService.ListAsync(tenantId, householdId, memberId, parsedIds, cancellationToken);
+        var response = await _attributeService.ListAsync(tenantId, householdId, memberId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return BadRequest(response);
-        }
 
         return Ok(response);
     }
 
     [HttpGet("{attributeId:guid}")]
-    public async Task<ActionResult<MemberAttributeResponse>> GetAttribute(Guid tenantId, Guid householdId, Guid memberId, Guid attributeId, CancellationToken cancellationToken)
+    public async Task<ActionResult<HouseholdMemberAttributeResponse>> GetAttribute(Guid tenantId, Guid householdId, Guid memberId, Guid attributeId, CancellationToken cancellationToken)
     {
-        var response = await _memberAttributeService.GetAsync(tenantId, householdId, memberId, attributeId, cancellationToken);
+        var response = await _attributeService.GetAsync(tenantId, householdId, memberId, attributeId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return BadRequest(response);
-        }
 
         if (response.Entity is null)
-        {
             return NotFound(response);
-        }
 
         return Ok(response);
     }
 
     [HttpPost]
-    public async Task<ActionResult<MemberAttributeResponse>> CreateAttribute(Guid tenantId, Guid householdId, Guid memberId, [FromBody] CreateMemberAttributeRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<HouseholdMemberAttributeResponse>> CreateAttribute(Guid tenantId, Guid householdId, Guid memberId, [FromBody] CreateHouseholdMemberAttributeRequest request, CancellationToken cancellationToken)
     {
-        var response = await _memberAttributeService.CreateAsync(tenantId, householdId, memberId, request, cancellationToken);
+        var response = await _attributeService.CreateAsync(tenantId, householdId, memberId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return BadRequest(response);
-        }
 
         return CreatedAtAction(
             nameof(GetAttribute),
@@ -89,37 +79,29 @@ public class MemberAttributesController : ControllerBase
     }
 
     [HttpPut("{attributeId:guid}")]
-    public async Task<ActionResult<MemberAttributeResponse>> UpdateAttribute(Guid tenantId, Guid householdId, Guid memberId, Guid attributeId, [FromBody] UpdateMemberAttributeRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<HouseholdMemberAttributeResponse>> UpdateAttribute(Guid tenantId, Guid householdId, Guid memberId, Guid attributeId, [FromBody] UpdateHouseholdMemberAttributeRequest request, CancellationToken cancellationToken)
     {
-        var response = await _memberAttributeService.UpdateAsync(tenantId, householdId, memberId, attributeId, request, cancellationToken);
+        var response = await _attributeService.UpdateAsync(tenantId, householdId, memberId, attributeId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return BadRequest(response);
-        }
 
         if (response.Entity is null)
-        {
             return NotFound(response);
-        }
 
         return Ok(response);
     }
 
     [HttpDelete("{attributeId:guid}")]
-    public async Task<ActionResult<MemberAttributeResponse>> DeleteAttribute(Guid tenantId, Guid householdId, Guid memberId, Guid attributeId, CancellationToken cancellationToken)
+    public async Task<ActionResult<HouseholdMemberAttributeResponse>> DeleteAttribute(Guid tenantId, Guid householdId, Guid memberId, Guid attributeId, CancellationToken cancellationToken)
     {
-        var response = await _memberAttributeService.DeleteAsync(tenantId, householdId, memberId, attributeId, cancellationToken);
+        var response = await _attributeService.DeleteAsync(tenantId, householdId, memberId, attributeId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return BadRequest(response);
-        }
 
         if (response.Entity is null)
-        {
             return NotFound(response);
-        }
 
         return Ok(response);
     }

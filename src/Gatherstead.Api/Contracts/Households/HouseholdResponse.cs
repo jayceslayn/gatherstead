@@ -10,6 +10,7 @@ public record HouseholdDto(
     Guid Id,
     Guid TenantId,
     string Name,
+    string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,

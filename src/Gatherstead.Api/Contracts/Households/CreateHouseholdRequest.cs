@@ -7,4 +7,7 @@ public class CreateHouseholdRequest
     [Required]
     [StringLength(200)]
     public string Name { get; init; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
 }

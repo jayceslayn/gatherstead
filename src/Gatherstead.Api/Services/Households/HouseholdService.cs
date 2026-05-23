@@ -19,6 +19,7 @@ public class HouseholdService : IHouseholdService
         household.Id,
         household.TenantId,
         household.Name,
+        household.Notes,
         household.CreatedAt,
         household.UpdatedAt,
         household.IsDeleted,
@@ -128,6 +129,7 @@ public class HouseholdService : IHouseholdService
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             Name = normalizedName,
+            Notes = request.Notes?.Trim(),
         };
 
         _dbContext.Households.Add(household);
@@ -180,6 +182,7 @@ public class HouseholdService : IHouseholdService
         }
 
         household.Name = normalizedName;
+        household.Notes = request.Notes?.Trim();
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -238,6 +241,7 @@ public class HouseholdService : IHouseholdService
         household.Id,
         household.TenantId,
         household.Name,
+        household.Notes,
         household.CreatedAt,
         household.UpdatedAt,
         household.IsDeleted,

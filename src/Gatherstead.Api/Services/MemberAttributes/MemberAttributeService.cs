@@ -6,32 +6,18 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Gatherstead.Api.Services.MemberAttributes;
 
-public class MemberAttributeService : IMemberAttributeService
+public class HouseholdMemberAttributeService : IHouseholdMemberAttributeService
 {
-    private const string EntityDisplayName = "Member attribute";
+    private const string EntityDisplayName = "Household member attribute";
 
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    private static readonly Expression<Func<MemberAttribute, MemberAttributeDto>> MapToDtoExpression =
-        attr => new MemberAttributeDto(
-            attr.Id,
-            attr.TenantId,
-            attr.HouseholdMemberId,
-            attr.Key,
-            attr.Value,
-            attr.CreatedAt,
-            attr.UpdatedAt,
-            attr.IsDeleted,
-            attr.DeletedAt,
-            attr.DeletedByUserId);
-
-    public MemberAttributeService(
+    public HouseholdMemberAttributeService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService)
@@ -41,21 +27,24 @@ public class MemberAttributeService : IMemberAttributeService
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
-    public async Task<BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>> ListAsync(
+    public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdMemberAttributeDto>>> ListAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         IEnumerable<Guid>? ids = null,
         CancellationToken cancellationToken = default)
     {
-        var response = new BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>();
+        var response = new BaseEntityResponse<IReadOnlyCollection<HouseholdMemberAttributeDto>>();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
-        var query = _dbContext.MemberAttributes
+        var callerTenantRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        var callerHouseholdRole = await _memberAuthorizationService.GetCallerHouseholdRoleAsync(tenantId, householdId, cancellationToken);
+
+        var query = _dbContext.HouseholdMemberAttributes
             .AsNoTracking()
             .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId);
 
@@ -63,35 +52,39 @@ public class MemberAttributeService : IMemberAttributeService
         {
             var idList = ids.ToList();
             if (idList.Count > 0)
-            {
                 query = query.Where(a => idList.Contains(a.Id));
-            }
         }
 
-        var attributes = await query
-            .Select(MapToDtoExpression)
-            .ToListAsync(cancellationToken);
+        var attributes = await query.ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<MemberAttributeDto>>.SuccessfulResponse(attributes);
+        var visible = attributes
+            .Where(a => IsVisible(a.TenantMinRole, a.HouseholdMinRole, callerTenantRole, callerHouseholdRole))
+            .Select(MapToDto)
+            .ToList();
+
+        return BaseEntityResponse<IReadOnlyCollection<HouseholdMemberAttributeDto>>.SuccessfulResponse(visible);
     }
 
-    public async Task<MemberAttributeResponse> GetAsync(
+    public async Task<HouseholdMemberAttributeResponse> GetAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         Guid attributeId,
         CancellationToken cancellationToken = default)
     {
-        var response = new MemberAttributeResponse();
+        var response = new HouseholdMemberAttributeResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
 
+        var callerTenantRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        var callerHouseholdRole = await _memberAuthorizationService.GetCallerHouseholdRoleAsync(tenantId, householdId, cancellationToken);
+
         var attribute = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.MemberAttributes
+            _dbContext.HouseholdMemberAttributes
                 .AsNoTracking()
                 .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId),
             EntityDisplayName,
@@ -99,22 +92,28 @@ public class MemberAttributeService : IMemberAttributeService
 
         if (attribute is null) return response;
 
+        if (!IsVisible(attribute.TenantMinRole, attribute.HouseholdMinRole, callerTenantRole, callerHouseholdRole))
+        {
+            response.AddResponseMessage(MessageType.ERROR, $"{EntityDisplayName} not found.");
+            return response;
+        }
+
         response.SetSuccess(MapToDto(attribute));
         return response;
     }
 
-    public async Task<MemberAttributeResponse> CreateAsync(
+    public async Task<HouseholdMemberAttributeResponse> CreateAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
-        CreateMemberAttributeRequest request,
+        CreateHouseholdMemberAttributeRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new MemberAttributeResponse();
+        var response = new HouseholdMemberAttributeResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "create member attribute", response))
+        if (!ServiceGuards.RequireRequest(request, "create household member attribute", response))
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
@@ -126,7 +125,7 @@ public class MemberAttributeService : IMemberAttributeService
         if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
-        var duplicateExists = await _dbContext.MemberAttributes
+        var duplicateExists = await _dbContext.HouseholdMemberAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Key == normalizedKey, cancellationToken);
 
@@ -136,35 +135,37 @@ public class MemberAttributeService : IMemberAttributeService
             return response;
         }
 
-        var attribute = new MemberAttribute
+        var attribute = new HouseholdMemberAttribute
         {
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             HouseholdMemberId = memberId,
             Key = normalizedKey,
             Value = normalizedValue,
+            TenantMinRole = request.TenantMinRole,
+            HouseholdMinRole = request.HouseholdMinRole,
         };
 
-        _dbContext.MemberAttributes.Add(attribute);
+        _dbContext.HouseholdMemberAttributes.Add(attribute);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(attribute));
         return response;
     }
 
-    public async Task<MemberAttributeResponse> UpdateAsync(
+    public async Task<HouseholdMemberAttributeResponse> UpdateAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         Guid attributeId,
-        UpdateMemberAttributeRequest request,
+        UpdateHouseholdMemberAttributeRequest request,
         CancellationToken cancellationToken = default)
     {
-        var response = new MemberAttributeResponse();
+        var response = new HouseholdMemberAttributeResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "update member attribute", response))
+        if (!ServiceGuards.RequireRequest(request, "update household member attribute", response))
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
@@ -176,7 +177,7 @@ public class MemberAttributeService : IMemberAttributeService
 
         var attribute = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.MemberAttributes
+            _dbContext.HouseholdMemberAttributes
                 .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId),
             EntityDisplayName,
             cancellationToken);
@@ -185,7 +186,7 @@ public class MemberAttributeService : IMemberAttributeService
 
         if (!string.Equals(attribute.Key, normalizedKey, StringComparison.Ordinal))
         {
-            var duplicateExists = await _dbContext.MemberAttributes
+            var duplicateExists = await _dbContext.HouseholdMemberAttributes
                 .AsNoTracking()
                 .AnyAsync(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Key == normalizedKey && a.Id != attributeId, cancellationToken);
 
@@ -198,6 +199,8 @@ public class MemberAttributeService : IMemberAttributeService
 
         attribute.Key = normalizedKey;
         attribute.Value = normalizedValue;
+        attribute.TenantMinRole = request.TenantMinRole;
+        attribute.HouseholdMinRole = request.HouseholdMinRole;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -205,14 +208,14 @@ public class MemberAttributeService : IMemberAttributeService
         return response;
     }
 
-    public async Task<MemberAttributeResponse> DeleteAsync(
+    public async Task<HouseholdMemberAttributeResponse> DeleteAsync(
         Guid tenantId,
         Guid householdId,
         Guid memberId,
         Guid attributeId,
         CancellationToken cancellationToken = default)
     {
-        var response = new MemberAttributeResponse();
+        var response = new HouseholdMemberAttributeResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
@@ -221,7 +224,7 @@ public class MemberAttributeService : IMemberAttributeService
 
         var attribute = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.MemberAttributes
+            _dbContext.HouseholdMemberAttributes
                 .Where(a => a.TenantId == tenantId && a.HouseholdMemberId == memberId && a.Id == attributeId),
             EntityDisplayName,
             cancellationToken);
@@ -238,17 +241,23 @@ public class MemberAttributeService : IMemberAttributeService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        GathersteadMetrics.RecordSoftDelete("MemberAttribute", tenantId);
+        GathersteadMetrics.RecordSoftDelete("HouseholdMemberAttribute", tenantId);
         response.SetSuccess(MapToDto(attribute));
         return response;
     }
 
-    private static MemberAttributeDto MapToDto(MemberAttribute attr) => new(
+    private static bool IsVisible(byte tenantMinRole, byte? householdMinRole, TenantRole? callerTenantRole, HouseholdRole? callerHouseholdRole)
+        => (callerTenantRole.HasValue && callerTenantRole.Value <= (TenantRole)tenantMinRole)
+        || (householdMinRole.HasValue && callerHouseholdRole.HasValue && callerHouseholdRole.Value <= (HouseholdRole)householdMinRole.Value);
+
+    private static HouseholdMemberAttributeDto MapToDto(HouseholdMemberAttribute attr) => new(
         attr.Id,
         attr.TenantId,
         attr.HouseholdMemberId,
         attr.Key,
         attr.Value,
+        attr.TenantMinRole,
+        attr.HouseholdMinRole,
         attr.CreatedAt,
         attr.UpdatedAt,
         attr.IsDeleted,

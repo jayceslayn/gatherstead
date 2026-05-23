@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,7 @@ public class AccommodationIntent : AuditableEntity
 
     public DateOnly Night { get; set; }
     public AccommodationIntentStatus Status { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 
     public AccommodationIntentDecision Decision { get; set; }

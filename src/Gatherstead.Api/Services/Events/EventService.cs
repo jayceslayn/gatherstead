@@ -108,6 +108,7 @@ public class EventService : IEventService
             Name = normalizedName,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
+            Notes = request.Notes?.Trim(),
         };
 
         _dbContext.Events.Add(@event);
@@ -151,6 +152,7 @@ public class EventService : IEventService
         @event.Name = normalizedName;
         @event.StartDate = request.StartDate;
         @event.EndDate = request.EndDate;
+        @event.Notes = request.Notes?.Trim();
 
         if (datesChanged)
             await _planSyncService.SyncEventPlansAsync(tenantId, @event, cancellationToken);
@@ -228,6 +230,7 @@ public class EventService : IEventService
         @event.Name,
         @event.StartDate,
         @event.EndDate,
+        @event.Notes,
         @event.CreatedAt,
         @event.UpdatedAt,
         @event.IsDeleted,

@@ -39,9 +39,21 @@ public interface IMemberAuthorizationService
 
     /// <summary>
     /// Returns the caller's sensitive read scope for household member data.
-    /// Global  — TenantRole.Member+ or App Admin: can read all sensitive fields across the tenant.
+    /// Global  — TenantRole.Member+: can read all sensitive fields across the tenant.
     /// ForHouseholds — TenantRole.Guest with HouseholdUser entries: sensitive fields only for those households.
-    /// None    — TenantRole.Guest with no HouseholdUser entries: public fields only; 403 on sub-entity endpoints.
+    /// None    — App Admin, TenantRole.Guest with no HouseholdUser entries: public fields only; 403 on sub-entity endpoints.
     /// </summary>
     Task<SensitiveReadScope> GetSensitiveReadScopeAsync(Guid tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the caller's TenantRole within the tenant. Returns null for App Admins (who have no
+    /// tenant membership) and for unauthenticated callers. Used for attribute-level visibility filtering.
+    /// </summary>
+    Task<TenantRole?> GetCallerTenantRoleAsync(Guid tenantId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the caller's HouseholdRole within a specific household, or null if they have no
+    /// HouseholdUser entry for that household. Used for household-attribute visibility filtering.
+    /// </summary>
+    Task<HouseholdRole?> GetCallerHouseholdRoleAsync(Guid tenantId, Guid householdId, CancellationToken ct = default);
 }

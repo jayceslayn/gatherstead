@@ -29,6 +29,7 @@ public class TaskTemplate : AuditableEntity
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
     public int? MinimumAssignees { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 
     public ICollection<TaskPlan> Plans { get; set; } = new List<TaskPlan>();

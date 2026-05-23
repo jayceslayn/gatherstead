@@ -47,7 +47,16 @@ public class GathersteadDbContext : DbContext
     public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<ContactMethod> ContactMethods => Set<ContactMethod>();
-    public DbSet<MemberAttribute> MemberAttributes => Set<MemberAttribute>();
+    public DbSet<HouseholdMemberAttribute> HouseholdMemberAttributes => Set<HouseholdMemberAttribute>();
+    public DbSet<Equipment> Equipment => Set<Equipment>();
+    public DbSet<TenantAttribute> TenantAttributes => Set<TenantAttribute>();
+    public DbSet<PropertyAttribute> PropertyAttributes => Set<PropertyAttribute>();
+    public DbSet<AccommodationAttribute> AccommodationAttributes => Set<AccommodationAttribute>();
+    public DbSet<HouseholdAttribute> HouseholdAttributes => Set<HouseholdAttribute>();
+    public DbSet<EventAttribute> EventAttributes => Set<EventAttribute>();
+    public DbSet<MealTemplateAttribute> MealTemplateAttributes => Set<MealTemplateAttribute>();
+    public DbSet<TaskTemplateAttribute> TaskTemplateAttributes => Set<TaskTemplateAttribute>();
+    public DbSet<EquipmentAttribute> EquipmentAttributes => Set<EquipmentAttribute>();
     public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
     public DbSet<DietaryProfile> DietaryProfiles => Set<DietaryProfile>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();

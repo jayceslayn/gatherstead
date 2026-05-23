@@ -7,7 +7,7 @@ namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(HouseholdMemberId))]
 [Index(nameof(TenantId), nameof(HouseholdMemberId), nameof(Key), IsUnique = true)]
-public class MemberAttribute : AuditableEntity
+public class HouseholdMemberAttribute : AuditableEntity
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }
@@ -21,10 +21,13 @@ public class MemberAttribute : AuditableEntity
     public HouseholdMember? HouseholdMember { get; set; }
 
     [Required]
-    [MaxLength(100)]
+    [MaxLength(50)]
     public string Key { get; set; } = string.Empty;
 
     [Required]
-    [MaxLength(500)]
+    [MaxLength(255)]
     public string Value { get; set; } = string.Empty;
+
+    public byte TenantMinRole { get; set; } = (byte)TenantRole.Member;
+    public byte? HouseholdMinRole { get; set; }
 }

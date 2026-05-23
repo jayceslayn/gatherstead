@@ -9,6 +9,7 @@ public class TenantResponse : BaseEntityResponse<TenantDto>
 public record TenantDto(
     Guid Id,
     string Name,
+    string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,

@@ -140,6 +140,7 @@ public class HouseholdMemberService : IHouseholdMemberService
             BirthDate = request.BirthDate,
             DietaryNotes = request.DietaryNotes?.Trim(),
             DietaryTags = request.DietaryTags ?? Array.Empty<string>(),
+            Notes = request.Notes?.Trim(),
         };
 
         _dbContext.HouseholdMembers.Add(member);
@@ -195,6 +196,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         member.BirthDate = request.BirthDate;
         member.DietaryNotes = request.DietaryNotes?.Trim();
         member.DietaryTags = request.DietaryTags ?? Array.Empty<string>();
+        member.Notes = request.Notes?.Trim();
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -257,6 +259,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         canReadSensitive ? member.BirthDate : null,
         canReadSensitive ? member.DietaryNotes : null,
         canReadSensitive ? member.DietaryTags : [],
+        canReadSensitive ? member.Notes : null,
         member.CreatedAt,
         member.UpdatedAt,
         member.IsDeleted,

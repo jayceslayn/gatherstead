@@ -109,6 +109,7 @@ public class PropertyService : IPropertyService
             Id = Guid.NewGuid(),
             TenantId = tenantId,
             Name = normalizedName,
+            Notes = request.Notes?.Trim(),
         };
 
         _dbContext.Properties.Add(property);
@@ -159,6 +160,7 @@ public class PropertyService : IPropertyService
         }
 
         property.Name = normalizedName;
+        property.Notes = request.Notes?.Trim();
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(property));
@@ -202,6 +204,7 @@ public class PropertyService : IPropertyService
         p.Id,
         p.TenantId,
         p.Name,
+        p.Notes,
         p.CreatedAt,
         p.UpdatedAt,
         p.IsDeleted,

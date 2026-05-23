@@ -17,4 +17,7 @@ public class CreateEventRequest
 
     [Required]
     public DateOnly EndDate { get; init; }
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
 }

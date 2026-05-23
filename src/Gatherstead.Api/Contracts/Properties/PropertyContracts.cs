@@ -7,6 +7,7 @@ public record PropertyDto(
     Guid Id,
     Guid TenantId,
     string Name,
+    string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
@@ -20,6 +21,9 @@ public class CreatePropertyRequest
     [Required]
     [StringLength(200)]
     public string Name { get; init; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
 }
 
 public class UpdatePropertyRequest
@@ -27,4 +31,7 @@ public class UpdatePropertyRequest
     [Required]
     [StringLength(200)]
     public string Name { get; init; } = string.Empty;
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
 }

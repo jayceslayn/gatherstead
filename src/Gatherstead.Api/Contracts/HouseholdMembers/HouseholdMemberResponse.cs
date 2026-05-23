@@ -16,6 +16,7 @@ public record HouseholdMemberDto(
     DateOnly? BirthDate,
     string? DietaryNotes,
     string[] DietaryTags,
+    string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
