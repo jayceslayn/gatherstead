@@ -94,7 +94,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
         toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
         return
       }
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== 'new')
@@ -119,7 +119,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== memberId)
@@ -133,7 +133,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== memberId)

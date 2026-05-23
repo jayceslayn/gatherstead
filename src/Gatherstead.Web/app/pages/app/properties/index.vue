@@ -6,7 +6,9 @@ definePageMeta({ layout: 'default' })
 
 const { t } = useI18n()
 const { isManagerOrAbove } = useTenantRole()
-const { properties, pending } = useProperties()
+const { properties, pending, refresh } = useProperties()
+
+const showCreate = ref(false)
 </script>
 
 <template>
@@ -14,11 +16,11 @@ const { properties, pending } = useProperties()
     <GsPageHeader :title="t('property.title')">
       <GsRoleGate min-role="Manager">
         <UButton
-          to="/app/properties/create"
           icon="i-heroicons-plus"
           size="sm"
+          @click="showCreate = true"
         >
-          {{ t('property.addProperty') }}
+          {{ t('property.createTitle') }}
         </UButton>
       </GsRoleGate>
     </GsPageHeader>
@@ -33,8 +35,8 @@ const { properties, pending } = useProperties()
       :title="t('property.noProperties')"
       :description="isManagerOrAbove ? t('property.noPropertiesHintManager') : t('property.noPropertiesHintMember')"
     >
-      <UButton v-if="isManagerOrAbove" to="/app/properties/create" icon="i-heroicons-plus">
-        {{ t('property.addProperty') }}
+      <UButton v-if="isManagerOrAbove" icon="i-heroicons-plus" @click="showCreate = true">
+        {{ t('property.createTitle') }}
       </UButton>
     </GsEmptyState>
 
@@ -58,5 +60,7 @@ const { properties, pending } = useProperties()
         </UCard>
       </NuxtLink>
     </div>
+
+    <GsCreatePropertyModal v-model:open="showCreate" :refresh="refresh" />
   </div>
 </template>

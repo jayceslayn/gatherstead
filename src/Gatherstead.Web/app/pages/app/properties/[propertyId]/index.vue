@@ -73,7 +73,7 @@ function typeLabel(type: AccommodationType): string {
           :to="`/app/properties/${property.id}/accommodations/create`"
           icon="i-heroicons-plus"
         >
-          {{ t('property.addAccommodation') }}
+          {{ t('property.createAccommodation') }}
         </UButton>
       </GsEmptyState>
 
@@ -93,7 +93,7 @@ function typeLabel(type: AccommodationType): string {
                 size="xs"
                 icon="i-heroicons-plus"
               >
-                {{ t('property.addAccommodation') }}
+                {{ t('property.createAccommodation') }}
               </UButton>
             </GsRoleGate>
           </div>

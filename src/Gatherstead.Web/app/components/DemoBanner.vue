@@ -24,11 +24,7 @@ async function resetDemoData() {
   isResetting.value = true
   clearDemoStore()
   await seedDemoData(repos)
-  const store = getDemoStore()
-  const firstMember = store.members.value[0]
-  if (firstMember) {
-    memberStore.setLinkedMember(firstMember.id, firstMember.householdId)
-  }
+  memberStore.clear()
   eventStore.clear()
   open.value = false
   await navigateTo('/app')

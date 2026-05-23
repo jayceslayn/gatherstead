@@ -83,7 +83,7 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
         toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
         return
       }
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== 'new')
@@ -106,7 +106,7 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== accommodationId)
@@ -120,7 +120,7 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== accommodationId)
@@ -166,7 +166,7 @@ export function useAccommodationIntentActions(
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== key)
@@ -195,7 +195,7 @@ export function useAccommodationIntentActions(
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== intentId)
@@ -214,7 +214,7 @@ export function useAccommodationIntentActions(
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== intentId)

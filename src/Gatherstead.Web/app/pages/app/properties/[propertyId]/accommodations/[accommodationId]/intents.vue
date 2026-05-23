@@ -190,7 +190,7 @@ async function submitRequest() {
           </UButton>
         </div>
 
-        <div class="space-y-2">
+        <div class="flex flex-col gap-3">
           <UCard
             v-for="intent in group"
             :key="intent.id"

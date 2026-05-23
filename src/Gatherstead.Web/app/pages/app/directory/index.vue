@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { HouseholdMember } from '~/repositories/types'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useHouseholds } from '~/composables/useHouseholds'
+import { useAllMembers } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
   layout: 'default',
@@ -8,14 +10,29 @@ definePageMeta({
 
 const { t } = useI18n()
 const { isManagerOrAbove } = useTenantRole()
-const { households, pending } = useHouseholds()
+const { households, pending, refresh } = useHouseholds()
+const { memberMap, pending: membersPending } = useAllMembers()
 
 const search = ref('')
+const showCreate = ref(false)
+
+const membersByHousehold = computed(() => {
+  const map = new Map<string, HouseholdMember[]>()
+  for (const member of memberMap.value.values()) {
+    const list = map.get(member.householdId)
+    if (list) list.push(member)
+    else map.set(member.householdId, [member])
+  }
+  return map
+})
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
   if (!q) return households.value
-  return households.value.filter(h => h.name.toLowerCase().includes(q))
+  return households.value.filter((h) => {
+    if (h.name.toLowerCase().includes(q)) return true
+    return (membersByHousehold.value.get(h.id) ?? []).some(m => m.name.toLowerCase().includes(q))
+  })
 })
 </script>
 
@@ -23,7 +40,7 @@ const filtered = computed(() => {
   <div>
     <GsPageHeader :title="t('household.title')">
       <GsRoleGate min-role="Manager">
-        <UButton to="/app/directory/create" icon="i-heroicons-plus" size="sm">
+        <UButton icon="i-heroicons-plus" size="sm" @click="showCreate = true">
           {{ t('household.createTitle') }}
         </UButton>
       </GsRoleGate>
@@ -48,7 +65,7 @@ const filtered = computed(() => {
       :title="t('household.noHouseholds')"
       :description="isManagerOrAbove ? t('household.noHouseholdsHintManager') : t('household.noHouseholdsHintMember')"
     >
-      <UButton v-if="isManagerOrAbove" to="/app/directory/create" icon="i-heroicons-plus">
+      <UButton v-if="isManagerOrAbove" icon="i-heroicons-plus" @click="showCreate = true">
         {{ t('household.createTitle') }}
       </UButton>
     </GsEmptyState>
@@ -66,15 +83,20 @@ const filtered = computed(() => {
         :to="`/app/directory/${household.id}`"
       >
         <UCard class="hover:ring-1 hover:ring-primary transition-all cursor-pointer h-full">
-          <div class="flex items-center gap-3">
-            <GsMemberAvatar :name="household.name" size="md" />
+          <div class="flex items-start gap-3">
+            <GsMemberAvatar :name="household.name" size="md" class="shrink-0 mt-0.5" />
             <div class="min-w-0 flex-1">
               <p class="font-semibold truncate">{{ household.name }}</p>
+              <p class="text-sm text-muted mt-0.5 line-clamp-2">
+                {{ membersByHousehold.get(household.id)?.map(m => m.name).join(', ') || (!membersPending ? t('member.noMembers') : '') }}
+              </p>
             </div>
-            <UIcon name="i-heroicons-chevron-right" class="size-5 text-muted shrink-0" />
+            <UIcon name="i-heroicons-chevron-right" class="size-5 text-muted shrink-0 mt-0.5" />
           </div>
         </UCard>
       </NuxtLink>
     </div>
+
+    <GsCreateHouseholdModal v-model:open="showCreate" :refresh="refresh" />
   </div>
 </template>

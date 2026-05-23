@@ -71,6 +71,8 @@
     "title": "Households",
     "createTitle": "Create Household",
     "editTitle": "Edit Household",
+    "deleteTitle": "Delete Household",
+    "deleteConfirm": "This will permanently remove all members of this household. This cannot be undone.",
     "name": "Household Name",
     "memberCount": "{count} member | {count} members",
     "searchPlaceholder": "Search households…",
@@ -94,7 +96,7 @@
     "ageBand": "Age Band",
     "ageBandPlaceholder": "e.g. Teen, Senior",
     "identity": "Identity",
-    "addMember": "Add Member",
+    "createMember": "Create Member",
     "editMember": "Edit Member",
     "savedSuccessfully": "Member saved",
     "noMembers": "No members yet",
@@ -177,15 +179,15 @@
   "property": {
     "title": "Properties",
     "name": "Property Name",
+    "createTitle": "Create Property",
     "equipment": "Equipment",
     "noProperties": "No properties yet",
-    "noPropertiesHintManager": "Add your first property to get started.",
+    "noPropertiesHintManager": "Create your first property to get started.",
     "noPropertiesHintMember": "No properties have been added yet.",
-    "addProperty": "Add Property",
     "accommodations": "Accommodations",
     "noAccommodations": "No accommodations added yet.",
-    "noAccommodationsHintManager": "Add the first accommodation to this property.",
-    "addAccommodation": "Add Accommodation"
+    "noAccommodationsHintManager": "Create the first accommodation for this property.",
+    "createAccommodation": "Create Accommodation"
   },
   "accommodation": {
     "types": {

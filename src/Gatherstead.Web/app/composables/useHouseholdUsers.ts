@@ -38,7 +38,7 @@ export function useHouseholdUserActions(refresh?: () => Promise<void>) {
       await refresh?.()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== userId)
@@ -52,7 +52,7 @@ export function useHouseholdUserActions(refresh?: () => Promise<void>) {
       await refresh?.()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== userId)

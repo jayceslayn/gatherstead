@@ -71,6 +71,8 @@
     "title": "Hogares",
     "createTitle": "Crear Hogar",
     "editTitle": "Editar Hogar",
+    "deleteTitle": "Eliminar Hogar",
+    "deleteConfirm": "Esto eliminará permanentemente a todos los miembros de este hogar. Esta acción no se puede deshacer.",
     "name": "Nombre del Hogar",
     "memberCount": "{count} miembro | {count} miembros",
     "searchPlaceholder": "Buscar hogares…",
@@ -94,7 +96,7 @@
     "ageBand": "Rango de Edad",
     "ageBandPlaceholder": "p. ej. Adolescente, Mayor",
     "identity": "Identidad",
-    "addMember": "Agregar Miembro",
+    "createMember": "Crear Miembro",
     "editMember": "Editar Miembro",
     "savedSuccessfully": "Miembro guardado",
     "noMembers": "Aún no hay miembros",
@@ -177,15 +179,15 @@
   "property": {
     "title": "Propiedades",
     "name": "Nombre de la Propiedad",
+    "createTitle": "Crear Propiedad",
     "equipment": "Equipo",
     "noProperties": "Aún no hay propiedades",
-    "noPropertiesHintManager": "Agrega tu primera propiedad para comenzar.",
+    "noPropertiesHintManager": "Crea tu primera propiedad para comenzar.",
     "noPropertiesHintMember": "Aún no se han agregado propiedades.",
-    "addProperty": "Agregar Propiedad",
     "accommodations": "Alojamientos",
     "noAccommodations": "Aún no se han agregado alojamientos.",
-    "noAccommodationsHintManager": "Agrega el primer alojamiento a esta propiedad.",
-    "addAccommodation": "Agregar Alojamiento"
+    "noAccommodationsHintManager": "Crea el primer alojamiento para esta propiedad.",
+    "createAccommodation": "Crear Alojamiento"
   },
   "accommodation": {
     "types": {

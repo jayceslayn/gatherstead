@@ -26,15 +26,17 @@ const managementNavItems = computed(() => isManagerOrAbove.value
 )
 
 const accountMenuItems = computed(() => {
-  const groups: Array<Array<{ label: string; icon: string; to?: string; onSelect?: () => void; disabled?: boolean }>> = [
-    [
-      {
+  const profileItem = (currentMemberStore.linkedMemberId && currentMemberStore.linkedHouseholdId)
+    ? [{
         label: t('nav.yourProfile'),
         icon: 'i-heroicons-user-circle',
-        ...(currentMemberStore.linkedMemberId && currentMemberStore.linkedHouseholdId
-          ? { to: `/app/directory/${currentMemberStore.linkedHouseholdId}/${currentMemberStore.linkedMemberId}` }
-          : { disabled: true }),
-      },
+        to: `/app/directory/${currentMemberStore.linkedHouseholdId}/${currentMemberStore.linkedMemberId}`,
+      }]
+    : []
+
+  const groups: Array<Array<{ label: string; icon: string; to?: string; onSelect?: () => void }>> = [
+    [
+      ...profileItem,
       {
         label: t('nav.switchGroup'),
         icon: 'i-heroicons-arrow-path',

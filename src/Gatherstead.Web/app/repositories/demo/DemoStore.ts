@@ -22,26 +22,24 @@ import type {
 
 const STORAGE_KEY = 'gs-demo-store'
 
+export const DEMO_USER_DISPLAY_NAME = 'Demo User'
+export const DEMO_TENANT_ID = demoId()
+export const DEMO_USER_ID = demoId()
+export const DEMO_USER_EXTERNAL_ID = "demo@example.com"
+
 export const DEMO_TENANT: TenantSummary = {
-  id: 'demo-tenant',
+  id: DEMO_TENANT_ID,
   name: 'The Super Families Network',
   userRole: 'Owner',
 }
 
 export const DEMO_USER: TenantUserSummary = {
-  userId: 'demo-user',
-  tenantId: 'demo-tenant',
+  userId: DEMO_USER_ID,
+  tenantId: DEMO_TENANT_ID,
   role: 'Owner',
   linkedMemberId: null,
-  externalId: 'demo@example.com',
+  externalId: DEMO_USER_EXTERNAL_ID,
 }
-
-export const DEMO_USER_DISPLAY_NAME = 'Demo User'
-
-// Convenience aliases kept for backward compatibility
-export const DEMO_TENANT_ID = DEMO_TENANT.id
-export const DEMO_USER_ID = DEMO_USER.userId
-export const DEMO_USER_EXTERNAL_ID = DEMO_USER.externalId
 
 export const DEMO_LIMITS = {
   householdsPerTenant: 3,

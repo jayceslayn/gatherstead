@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
-import { useHousehold } from '~/composables/useHouseholds'
+import { useHousehold, useHouseholdActions } from '~/composables/useHouseholds'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
@@ -9,6 +9,7 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const { isManagerOrAbove } = useTenantRole()
 
 const householdId = computed(() => route.params.householdId as string)
@@ -16,6 +17,17 @@ const { household, pending: householdPending } = useHousehold(householdId)
 const { members, pending: membersPending } = useHouseholdMembers(householdId)
 
 const pending = computed(() => householdPending.value || membersPending.value)
+
+const showDeleteConfirm = ref(false)
+const { updating, deleteHousehold } = useHouseholdActions(async () => {
+  await router.push('/app/directory')
+})
+const deleting = computed(() => updating.value.includes(householdId.value))
+
+async function confirmDelete() {
+  showDeleteConfirm.value = false
+  await deleteHousehold(householdId.value)
+}
 </script>
 
 <template>
@@ -35,11 +47,11 @@ const pending = computed(() => householdPending.value || membersPending.value)
       <GsPageHeader :title="household.name">
         <GsRoleGate min-role="Manager">
           <UButton
-            :to="`/app/directory/${household.id}/add-member`"
+            :to="`/app/directory/${household.id}/create-member`"
             size="sm"
             icon="i-heroicons-plus"
           >
-            {{ t('member.addMember') }}
+            {{ t('member.createMember') }}
           </UButton>
         </GsRoleGate>
       </GsPageHeader>
@@ -50,12 +62,12 @@ const pending = computed(() => householdPending.value || membersPending.value)
         :title="t('member.noMembers')"
         :description="isManagerOrAbove ? t('member.noMembersHintManager') : t('member.noMembersHintMember')"
       >
-        <UButton v-if="isManagerOrAbove" :to="`/app/directory/${household.id}/add-member`" icon="i-heroicons-plus">
-          {{ t('member.addMember') }}
+        <UButton v-if="isManagerOrAbove" :to="`/app/directory/${household.id}/create-member`" icon="i-heroicons-plus">
+          {{ t('member.createMember') }}
         </UButton>
       </GsEmptyState>
 
-      <div v-else class="space-y-2">
+      <div v-else class="flex flex-col gap-3">
         <NuxtLink
           v-for="member in members"
           :key="member.id"
@@ -80,12 +92,35 @@ const pending = computed(() => householdPending.value || membersPending.value)
           </UCard>
         </NuxtLink>
       </div>
+
+      <GsRoleGate min-role="Manager">
+        <div class="mt-12 pt-6 border-t border-default">
+          <UButton
+            color="error"
+            variant="ghost"
+            icon="i-heroicons-trash"
+            :loading="deleting"
+            @click="showDeleteConfirm = true"
+          >
+            {{ t('household.deleteTitle') }}
+          </UButton>
+        </div>
+      </GsRoleGate>
     </template>
 
     <GsEmptyState
       v-else
       icon="i-heroicons-exclamation-triangle"
       :title="t('error.notFound')"
+    />
+
+    <GsConfirmModal
+      v-model:open="showDeleteConfirm"
+      :title="t('household.deleteTitle')"
+      :description="t('household.deleteConfirm')"
+      :confirm-label="t('common.delete')"
+      danger
+      @confirm="confirmDelete"
     />
   </div>
 </template>

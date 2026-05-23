@@ -97,7 +97,7 @@ function formatDate(date: string) {
         @event-click="onEventClick"
       />
 
-      <div v-else class="space-y-2">
+      <div v-else class="flex flex-col gap-3">
         <NuxtLink
           v-for="event in events"
           :key="event.id"

@@ -68,14 +68,15 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     if (store.properties.value.length === 0) {
       await seedDemoData(repos)
     }
+
     const memberStore = useCurrentMemberStore()
     if (!memberStore.linkedMemberId) {
       const demoUser = store.tenantUsers.value.find(u => u.userId === DEMO_USER.userId)
-      const linkedMember = demoUser?.linkedMemberId
-        ? store.members.value.find(m => m.id === demoUser.linkedMemberId)
-        : store.members.value[0]
-      if (linkedMember) {
-        memberStore.setLinkedMember(linkedMember.id, linkedMember.householdId)
+      if (demoUser?.linkedMemberId) {
+        const linkedMember = store.members.value.find(m => m.id === demoUser.linkedMemberId)
+        if (linkedMember) {
+          memberStore.setLinkedMember(linkedMember.id, linkedMember.householdId)
+        }
       }
     }
   }

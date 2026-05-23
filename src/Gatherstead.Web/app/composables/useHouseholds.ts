@@ -38,18 +38,20 @@ export function useHouseholdActions(refresh: () => Promise<void>) {
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createHousehold(name: string) {
+  async function createHousehold(name: string): Promise<boolean> {
     updating.value.push('new')
     try {
       await repo.createHousehold(tenantStore.currentTenantId!, name)
       await refresh()
+      return true
     }
     catch (e) {
       if (e instanceof DemoLimitError) {
         toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
-        return
+        return false
       }
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== 'new')
@@ -63,7 +65,7 @@ export function useHouseholdActions(refresh: () => Promise<void>) {
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== householdId)
@@ -77,7 +79,7 @@ export function useHouseholdActions(refresh: () => Promise<void>) {
       await refresh()
     }
     catch (e) {
-      toast.add({ title: translateError(e as { code: string }), color: 'error' })
+      toast.add({ title: translateError(e), color: 'error' })
     }
     finally {
       updating.value = updating.value.filter(k => k !== householdId)

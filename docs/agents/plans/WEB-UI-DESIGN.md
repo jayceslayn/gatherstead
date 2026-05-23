@@ -106,8 +106,7 @@ SSR should remain disabled for all authenticated routes via `routeRules: { '/app
     edit.vue                             Edit event (Manager+)
 
 /app/properties/
-  index.vue                              Property list
-  create.vue                             Create property (Manager+)
+  index.vue                              Property list (create via modal, Manager+)
   [propertyId]/
     index.vue                            Property detail + accommodation grid
     edit.vue                             Edit property (Manager+)
@@ -179,7 +178,7 @@ Four-tab layout via `UTabs`:
 
 ### Family Directory
 
-**Household List** (`directory/index.vue`): search bar + card grid. Each card: household name, member count badge, avatar stack (initials), "View" button. Manager+ sees "+ Create Household."
+**Household List** (`directory/index.vue`): search bar + card grid. Each card: household name, member names listed below. Search matches both household names and member names. Manager+ sees "+ Create Household" which opens a `UModal`. Members are loaded via `useAllMembers()` and grouped by household client-side.
 
 **Household Detail** (`directory/[householdId]/index.vue`): member `UTable` (Name, Age band, Primary contact, Dietary flag icon). Clicking a row → member detail.
 
@@ -319,6 +318,12 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 
 **Security — client-side role state cannot escalate API privileges**: The Pinia role store is purely a UI rendering concern. The .NET API never trusts role values from the client. Every authorization decision uses a server-side DB lookup via `RequireTenantAccessAttribute` (reads `TenantUsers` table) and `MemberAuthorizationService` (reads `TenantUsers` and `HouseholdMembers`). The Nuxt proxy forwards only the Bearer JWT token, which contains only the user's external ID (`sub` claim) — no role claims. Tampering with Pinia state will break the UI but cannot elevate what the API will actually permit. The role stored in Pinia must be fetched from the API on tenant entry — it is display state, not an authorization token.
 
+**Create actions**: Simple single-field creates (Household, Property) use a `UModal` opened from the list page's "Create" button rather than a dedicated route. The modal accepts a `refresh` prop from the parent page and calls `useXxxActions(refresh)` directly. On success it closes; on error the composable shows a toast. Complex multi-field creates (Event, Member) use dedicated sub-route pages (`create.vue`, `create-member`) with `UForm` + Zod schemas. The `create.vue` entries in the route map only apply to the latter group; the `create.vue` for properties is not implemented.
+
+**Delete actions**: All destructive deletes require explicit user confirmation via `GsConfirmModal` (with `danger: true`) before the action is dispatched. No entity should be deleted on a single click. The confirm modal must describe what will be destroyed (e.g., "This will permanently remove all members of this household").
+
+**Nomenclature — "Create" vs "Add"**: Prefer "Create [Entity]" for actions that create a new entity from scratch (Create Household, Create Property, Create Event). Reserve "Add" only for actions that associate an existing thing (e.g., "Add Household Access" — linking an existing household to a user, not creating one).
+
 **Forms**: `UForm` + Zod schemas in `app/schemas/`. `UFormField name` prop wires automatic error display. All validation messages use i18n keys.
 
 **API calls**: `$fetch('/api/proxy/tenants/{tenantId}/...')` through the existing proxy, where `tenantId` comes from `useTenantStore().currentTenantId`. The `useAsyncData` key must include the tenantId value to prevent cross-tenant cache collisions when a user switches groups.
@@ -370,7 +375,7 @@ New composables shipped with Phase 3:
 - ✅ `useHouseholds()` + `useHousehold(householdId)` — tenant-scoped household fetch with reactive keys
 - ✅ `useHouseholdMembers(householdId)` + `useMember(householdId, memberId)` + `useDietaryProfile(householdId, memberId)` — member and dietary profile fetch; dietary profile silently returns null on 404
 
-i18n additions: `household.noHouseholds*`, `member.adult/child/identity/addMember/editMember/dietaryProfile/preferredDiet/allergies/restrictions/noDietaryProfile/dietaryTags*`, `common.notes/unsavedChanges`
+i18n additions: `household.noHouseholds*`, `member.adult/child/identity/createMember/editMember/dietaryProfile/preferredDiet/allergies/restrictions/noDietaryProfile/dietaryTags*`, `common.notes/unsavedChanges`
 
 ### Phase 4 — Meal & Task Plans ✅ COMPLETE (2026-04-22)
 17. ✅ Meal Plan View — Meals tab in event detail replaced with live `GsMealTemplateSection` per template; `useMealTemplates(eventId)` fetches templates, `useMealPlanSection(eventId, templateId, memberId, householdId)` fetches plans + member intents in parallel (Promise.all per plan), upserts via PUT
@@ -417,7 +422,7 @@ Repository layer shipped with Phase 5:
 Event Detail update shipped with Phase 5:
 - ✅ Accommodations tab in `events/[eventId]/index.vue` — replaced placeholder with live `GsAccommodationCard` grid for the event's property, each card links to the intents page
 
-i18n additions: `property.{noProperties*, addProperty, accommodations, noAccommodations*, addAccommodation}`, `accommodation.{types.*, adults, children, intentCount, intents, noIntents, requestStay, updateStay, status, partySize, partySizeValue, promote, decline, nightOf, decision.*}` (en + es)
+i18n additions: `property.{noProperties*, createTitle, accommodations, noAccommodations*, createAccommodation}`, `accommodation.{types.*, adults, children, intentCount, intents, noIntents, requestStay, updateStay, status, partySize, partySizeValue, promote, decline, nightOf, decision.*}` (en + es)
 
 ### Phase 6 — Management & Settings
 21. Settings hub:
