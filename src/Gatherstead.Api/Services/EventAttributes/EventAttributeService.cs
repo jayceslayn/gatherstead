@@ -114,6 +114,15 @@ public class EventAttributeService : IEventAttributeService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        var eventExists = await _dbContext.Events
+            .AsNoTracking()
+            .AnyAsync(e => e.TenantId == tenantId && e.Id == eventId, cancellationToken);
+        if (!eventExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Event not found.");
+            return response;
+        }
+
         var duplicateExists = await _dbContext.EventAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.EventId == eventId && a.Key == normalizedKey, cancellationToken);

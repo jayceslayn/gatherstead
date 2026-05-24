@@ -114,6 +114,15 @@ public class TaskTemplateAttributeService : ITaskTemplateAttributeService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        var taskTemplateExists = await _dbContext.TaskTemplates
+            .AsNoTracking()
+            .AnyAsync(t => t.TenantId == tenantId && t.Id == taskTemplateId, cancellationToken);
+        if (!taskTemplateExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Task template not found.");
+            return response;
+        }
+
         var duplicateExists = await _dbContext.TaskTemplateAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.TaskTemplateId == taskTemplateId && a.Key == normalizedKey, cancellationToken);

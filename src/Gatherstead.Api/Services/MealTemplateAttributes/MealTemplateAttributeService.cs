@@ -114,6 +114,15 @@ public class MealTemplateAttributeService : IMealTemplateAttributeService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        var mealTemplateExists = await _dbContext.MealTemplates
+            .AsNoTracking()
+            .AnyAsync(m => m.TenantId == tenantId && m.Id == mealTemplateId, cancellationToken);
+        if (!mealTemplateExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Meal template not found.");
+            return response;
+        }
+
         var duplicateExists = await _dbContext.MealTemplateAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.MealTemplateId == mealTemplateId && a.Key == normalizedKey, cancellationToken);

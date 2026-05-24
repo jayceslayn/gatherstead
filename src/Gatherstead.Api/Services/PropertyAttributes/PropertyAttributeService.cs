@@ -114,6 +114,15 @@ public class PropertyAttributeService : IPropertyAttributeService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        var propertyExists = await _dbContext.Properties
+            .AsNoTracking()
+            .AnyAsync(p => p.TenantId == tenantId && p.Id == propertyId, cancellationToken);
+        if (!propertyExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Property not found.");
+            return response;
+        }
+
         var duplicateExists = await _dbContext.PropertyAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.PropertyId == propertyId && a.Key == normalizedKey, cancellationToken);

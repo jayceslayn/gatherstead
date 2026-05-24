@@ -114,6 +114,15 @@ public class EquipmentAttributeService : IEquipmentAttributeService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        var equipmentExists = await _dbContext.Equipment
+            .AsNoTracking()
+            .AnyAsync(e => e.TenantId == tenantId && e.Id == equipmentId, cancellationToken);
+        if (!equipmentExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Equipment not found.");
+            return response;
+        }
+
         var duplicateExists = await _dbContext.EquipmentAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.EquipmentId == equipmentId && a.Key == normalizedKey, cancellationToken);

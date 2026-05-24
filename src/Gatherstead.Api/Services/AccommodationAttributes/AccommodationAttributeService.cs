@@ -114,6 +114,15 @@ public class AccommodationAttributeService : IAccommodationAttributeService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        var accommodationExists = await _dbContext.Accommodations
+            .AsNoTracking()
+            .AnyAsync(a => a.TenantId == tenantId && a.Id == accommodationId, cancellationToken);
+        if (!accommodationExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Accommodation not found.");
+            return response;
+        }
+
         var duplicateExists = await _dbContext.AccommodationAttributes
             .AsNoTracking()
             .AnyAsync(a => a.TenantId == tenantId && a.AccommodationId == accommodationId && a.Key == normalizedKey, cancellationToken);
