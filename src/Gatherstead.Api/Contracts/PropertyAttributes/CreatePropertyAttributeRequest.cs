@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.PropertyAttributes;
 
-public class CreatePropertyAttributeRequest
+public class CreatePropertyAttributeRequest : IAttributeWriteRequest
 {
     [Required]
     [StringLength(50)]

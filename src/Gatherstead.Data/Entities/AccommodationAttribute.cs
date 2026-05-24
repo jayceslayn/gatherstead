@@ -7,7 +7,7 @@ namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(AccommodationId))]
 [Index(nameof(TenantId), nameof(AccommodationId), nameof(Key), IsUnique = true)]
-public class AccommodationAttribute : AuditableEntity
+public class AccommodationAttribute : AuditableEntity, IParentScopedAttribute
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }

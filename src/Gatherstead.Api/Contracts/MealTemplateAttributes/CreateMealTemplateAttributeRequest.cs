@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.MealTemplateAttributes;
 
-public class CreateMealTemplateAttributeRequest
+public class CreateMealTemplateAttributeRequest : IAttributeWriteRequest
 {
     [Required]
     [StringLength(50)]

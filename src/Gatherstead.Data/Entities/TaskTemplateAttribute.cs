@@ -7,7 +7,7 @@ namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(TaskTemplateId))]
 [Index(nameof(TenantId), nameof(TaskTemplateId), nameof(Key), IsUnique = true)]
-public class TaskTemplateAttribute : AuditableEntity
+public class TaskTemplateAttribute : AuditableEntity, IParentScopedAttribute
 {
     public Guid Id { get; set; }
     public Guid TenantId { get; set; }

@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.AccommodationAttributes;
 
-public class CreateAccommodationAttributeRequest
+public class CreateAccommodationAttributeRequest : IAttributeWriteRequest
 {
     [Required]
     [StringLength(50)]

@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.EventAttributes;
 
-public class CreateEventAttributeRequest
+public class CreateEventAttributeRequest : IAttributeWriteRequest
 {
     [Required]
     [StringLength(50)]

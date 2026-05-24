@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.TaskTemplateAttributes;
 
-public class CreateTaskTemplateAttributeRequest
+public class CreateTaskTemplateAttributeRequest : IAttributeWriteRequest
 {
     [Required]
     [StringLength(50)]

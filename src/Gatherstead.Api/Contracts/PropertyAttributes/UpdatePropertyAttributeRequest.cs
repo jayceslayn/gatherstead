@@ -1,9 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.PropertyAttributes;
 
-public class UpdatePropertyAttributeRequest
+public class UpdatePropertyAttributeRequest : IAttributeWriteRequest
 {
     private string _key = string.Empty;
     private string _value = string.Empty;

@@ -1,3 +1,4 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 
 namespace Gatherstead.Api.Contracts.HouseholdAttributes;
@@ -18,4 +19,4 @@ public record HouseholdAttributeDto(
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
     DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    Guid? DeletedByUserId) : IAttributeDto;
