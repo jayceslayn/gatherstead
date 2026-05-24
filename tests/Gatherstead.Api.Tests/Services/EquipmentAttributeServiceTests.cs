@@ -20,7 +20,7 @@ public class EquipmentAttributeServiceTests : IAsyncLifetime
         _dbContext = TestDbContextFactory.Create(tenantId: _tenantId);
         _dbContext.Tenants.Add(new Tenant { Id = _tenantId, Name = "Test Tenant" });
         _dbContext.Equipment.Add(new Equipment { Id = _equipmentId, TenantId = _tenantId, Name = "Test Equipment" });
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     public ValueTask DisposeAsync()
@@ -55,7 +55,7 @@ public class EquipmentAttributeServiceTests : IAsyncLifetime
             TenantMinRole = tenantMinRole,
         };
         _dbContext.EquipmentAttributes.Add(attr);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         return attr;
     }
 
@@ -260,7 +260,7 @@ public class EquipmentAttributeServiceTests : IAsyncLifetime
             Value = "V",
             IsDeleted = true,
         });
-        await ctx.SaveChangesAsync();
+        await ctx.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId);
         var auth = Mock.Of<IMemberAuthorizationService>(a =>
