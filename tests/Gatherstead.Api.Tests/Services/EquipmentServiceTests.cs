@@ -1,0 +1,146 @@
+using Gatherstead.Api.Contracts.Equipment;
+using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Equipment;
+using Gatherstead.Api.Tests.Fixtures;
+using Gatherstead.Data;
+using Gatherstead.Data.Entities;
+using Moq;
+
+namespace Gatherstead.Api.Tests.Services;
+
+public class EquipmentServiceTests : IAsyncLifetime
+{
+    private GathersteadDbContext _dbContext = null!;
+    private readonly Guid _tenantId = Guid.NewGuid();
+    private readonly Guid _propertyId = Guid.NewGuid();
+
+    public async ValueTask InitializeAsync()
+    {
+        _dbContext = TestDbContextFactory.Create(tenantId: _tenantId);
+        _dbContext.Tenants.Add(new Tenant { Id = _tenantId, Name = "Test Tenant" });
+        _dbContext.Properties.Add(new Property { Id = _propertyId, TenantId = _tenantId, Name = "Test Property" });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _dbContext.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    private EquipmentService CreateService(bool canManage = false, Guid? contextTenantId = null)
+    {
+        var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == (contextTenantId ?? _tenantId));
+        var auth = Mock.Of<IMemberAuthorizationService>(a =>
+            a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManage));
+        return new EquipmentService(_dbContext, tenantContext, auth);
+    }
+
+    // ── ValidateTenantContext ─────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_TenantContextMismatch_ReturnsError()
+    {
+        var request = new CreateEquipmentRequest { Name = "Ladder" };
+        var result = await CreateService(canManage: true, contextTenantId: Guid.NewGuid())
+            .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+
+    // ── CreateAsync ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task CreateAsync_Unauthorized_ReturnsError()
+    {
+        var request = new CreateEquipmentRequest { Name = "Ladder" };
+        var result = await CreateService(canManage: false)
+            .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NullPropertyId_CreatesEquipment()
+    {
+        var request = new CreateEquipmentRequest { Name = "Portable Generator", PropertyId = null };
+        var result = await CreateService(canManage: true)
+            .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+        Assert.True(result.Successful);
+        Assert.Null(result.Entity!.PropertyId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ValidPropertyId_CreatesEquipment()
+    {
+        var request = new CreateEquipmentRequest { Name = "Lawn Mower", PropertyId = _propertyId };
+        var result = await CreateService(canManage: true)
+            .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+        Assert.True(result.Successful);
+        Assert.Equal(_propertyId, result.Entity!.PropertyId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_PropertyIdNotFound_ReturnsError()
+    {
+        var request = new CreateEquipmentRequest { Name = "Ladder", PropertyId = Guid.NewGuid() };
+        var result = await CreateService(canManage: true)
+            .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DuplicateName_ReturnsError()
+    {
+        _dbContext.Equipment.Add(new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Tractor" });
+        await _dbContext.SaveChangesAsync();
+
+        var request = new CreateEquipmentRequest { Name = "Tractor" };
+        var result = await CreateService(canManage: true)
+            .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+
+    // ── UpdateAsync ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UpdateAsync_ValidPropertyId_UpdatesEquipment()
+    {
+        var equipId = Guid.NewGuid();
+        _dbContext.Equipment.Add(new Equipment { Id = equipId, TenantId = _tenantId, Name = "Old Name" });
+        await _dbContext.SaveChangesAsync();
+
+        var request = new UpdateEquipmentRequest { Name = "New Name", PropertyId = _propertyId };
+        var result = await CreateService(canManage: true)
+            .UpdateAsync(_tenantId, equipId, request, TestContext.Current.CancellationToken);
+        Assert.True(result.Successful);
+        Assert.Equal(_propertyId, result.Entity!.PropertyId);
+        Assert.Equal("New Name", result.Entity.Name);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PropertyIdNotFound_ReturnsError()
+    {
+        var equipId = Guid.NewGuid();
+        _dbContext.Equipment.Add(new Equipment { Id = equipId, TenantId = _tenantId, Name = "Ladder" });
+        await _dbContext.SaveChangesAsync();
+
+        var request = new UpdateEquipmentRequest { Name = "Ladder", PropertyId = Guid.NewGuid() };
+        var result = await CreateService(canManage: true)
+            .UpdateAsync(_tenantId, equipId, request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NotFound_ReturnsError()
+    {
+        var request = new UpdateEquipmentRequest { Name = "Ghost" };
+        var result = await CreateService(canManage: true)
+            .UpdateAsync(_tenantId, Guid.NewGuid(), request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+}

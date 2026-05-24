@@ -172,6 +172,16 @@ public class EquipmentAttributeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateAsync_EquipmentNotFound_ReturnsError()
+    {
+        var request = new CreateEquipmentAttributeRequest { Key = "Color", Value = "Red", TenantMinRole = (byte)TenantRole.Member };
+        var result = await CreateService(TenantRole.Manager, canManage: true)
+            .CreateAsync(_tenantId, Guid.NewGuid(), request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+
+    [Fact]
     public async Task CreateAsync_DuplicateKey_ReturnsError()
     {
         await SeedAttributeAsync(key: "Color");

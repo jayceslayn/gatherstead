@@ -183,6 +183,16 @@ public class HouseholdAttributeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateAsync_HouseholdNotFound_ReturnsError()
+    {
+        var request = new CreateHouseholdAttributeRequest { Key = "Color", Value = "Red", TenantMinRole = (byte)TenantRole.Member };
+        var result = await CreateService(TenantRole.Member, canManageHousehold: true)
+            .CreateAsync(_tenantId, Guid.NewGuid(), request, TestContext.Current.CancellationToken);
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
+    }
+
+    [Fact]
     public async Task CreateAsync_Unauthorized_ReturnsError()
     {
         var request = new CreateHouseholdAttributeRequest { Key = "Color", Value = "Red" };
