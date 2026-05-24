@@ -111,6 +111,15 @@ public class HouseholdAttributeService : IHouseholdAttributeService
         if (!await ServiceGuards.AuthorizeHouseholdManageAsync(response, _memberAuthorizationService, tenantId, householdId, "You do not have permission to manage this household.", cancellationToken))
             return response;
 
+        var householdExists = await _dbContext.Households
+            .AsNoTracking()
+            .AnyAsync(h => h.TenantId == tenantId && h.Id == householdId, cancellationToken);
+        if (!householdExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Household not found.");
+            return response;
+        }
+
         ServiceValidationHelper.TryNormalizeString(request.Key, "Attribute key", response, out string normalizedKey);
         ServiceValidationHelper.TryNormalizeString(request.Value, "Attribute value", response, out string normalizedValue);
         if (ServiceValidationHelper.HasErrors(response))

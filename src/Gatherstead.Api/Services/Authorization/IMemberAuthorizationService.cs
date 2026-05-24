@@ -1,3 +1,5 @@
+using Gatherstead.Data.Entities;
+
 namespace Gatherstead.Api.Services.Authorization;
 
 public interface IMemberAuthorizationService

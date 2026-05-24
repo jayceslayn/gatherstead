@@ -95,6 +95,18 @@ public class EquipmentService : IEquipmentService
         if (ServiceValidationHelper.HasErrors(response))
             return response;
 
+        if (request.PropertyId.HasValue)
+        {
+            var propertyExists = await _dbContext.Properties
+                .AsNoTracking()
+                .AnyAsync(p => p.TenantId == tenantId && p.Id == request.PropertyId.Value, cancellationToken);
+            if (!propertyExists)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "The specified property does not exist.");
+                return response;
+            }
+        }
+
         var duplicateExists = await _dbContext.Equipment
             .AsNoTracking()
             .AnyAsync(e => e.TenantId == tenantId && e.PropertyId == request.PropertyId && e.Name == normalizedName, cancellationToken);
@@ -147,6 +159,18 @@ public class EquipmentService : IEquipmentService
             cancellationToken);
 
         if (equipment is null) return response;
+
+        if (request.PropertyId.HasValue)
+        {
+            var propertyExists = await _dbContext.Properties
+                .AsNoTracking()
+                .AnyAsync(p => p.TenantId == tenantId && p.Id == request.PropertyId.Value, cancellationToken);
+            if (!propertyExists)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "The specified property does not exist.");
+                return response;
+            }
+        }
 
         if (!string.Equals(equipment.Name, normalizedName, StringComparison.Ordinal) || equipment.PropertyId != request.PropertyId)
         {
