@@ -20,7 +20,7 @@ public class EquipmentServiceTests : IAsyncLifetime
         _dbContext = TestDbContextFactory.Create(tenantId: _tenantId);
         _dbContext.Tenants.Add(new Tenant { Id = _tenantId, Name = "Test Tenant" });
         _dbContext.Properties.Add(new Property { Id = _propertyId, TenantId = _tenantId, Name = "Test Property" });
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     public ValueTask DisposeAsync()
@@ -94,7 +94,7 @@ public class EquipmentServiceTests : IAsyncLifetime
     public async Task CreateAsync_DuplicateName_ReturnsError()
     {
         _dbContext.Equipment.Add(new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Tractor" });
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var request = new CreateEquipmentRequest { Name = "Tractor" };
         var result = await CreateService(canManage: true)
@@ -110,7 +110,7 @@ public class EquipmentServiceTests : IAsyncLifetime
     {
         var equipId = Guid.NewGuid();
         _dbContext.Equipment.Add(new Equipment { Id = equipId, TenantId = _tenantId, Name = "Old Name" });
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var request = new UpdateEquipmentRequest { Name = "New Name", PropertyId = _propertyId };
         var result = await CreateService(canManage: true)
@@ -125,7 +125,7 @@ public class EquipmentServiceTests : IAsyncLifetime
     {
         var equipId = Guid.NewGuid();
         _dbContext.Equipment.Add(new Equipment { Id = equipId, TenantId = _tenantId, Name = "Ladder" });
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var request = new UpdateEquipmentRequest { Name = "Ladder", PropertyId = Guid.NewGuid() };
         var result = await CreateService(canManage: true)
