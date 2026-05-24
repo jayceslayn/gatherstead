@@ -23,6 +23,15 @@ import type {
   HouseholdRole,
   TenantUserSummary,
   HouseholdUserSummary,
+  EquipmentSummary,
+  TenantAttribute,
+  PropertyAttribute,
+  AccommodationAttribute,
+  HouseholdAttribute,
+  EventAttribute,
+  MealTemplateAttribute,
+  TaskTemplateAttribute,
+  EquipmentAttribute,
 } from './types'
 
 export const REPOSITORIES_KEY = Symbol('repositories')
@@ -41,8 +50,8 @@ export interface ITenantRepository {
 export interface IHouseholdRepository {
   listHouseholds(tenantId: string): Promise<HouseholdSummary[]>
   getHousehold(tenantId: string, householdId: string): Promise<HouseholdSummary | null>
-  createHousehold(tenantId: string, name: string): Promise<HouseholdSummary>
-  updateHousehold(tenantId: string, householdId: string, name: string): Promise<void>
+  createHousehold(tenantId: string, name: string, notes?: string | null): Promise<HouseholdSummary>
+  updateHousehold(tenantId: string, householdId: string, name: string, notes?: string | null): Promise<void>
   deleteHousehold(tenantId: string, householdId: string): Promise<void>
 }
 
@@ -93,6 +102,7 @@ export interface IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
   ): Promise<EventSummary>
   updateEvent(
     tenantId: string,
@@ -100,6 +110,7 @@ export interface IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
   ): Promise<void>
   deleteEvent(tenantId: string, eventId: string): Promise<void>
 }
@@ -240,8 +251,8 @@ export interface IMealAttendanceRepository {
 export interface IPropertyRepository {
   listProperties(tenantId: string): Promise<PropertySummary[]>
   getProperty(tenantId: string, propertyId: string): Promise<PropertySummary | null>
-  createProperty(tenantId: string, name: string): Promise<PropertySummary>
-  updateProperty(tenantId: string, propertyId: string, name: string): Promise<void>
+  createProperty(tenantId: string, name: string, notes?: string | null): Promise<PropertySummary>
+  updateProperty(tenantId: string, propertyId: string, name: string, notes?: string | null): Promise<void>
   deleteProperty(tenantId: string, propertyId: string): Promise<void>
 }
 
@@ -302,6 +313,78 @@ export interface IAccommodationIntentRepository {
   ): Promise<void>
 }
 
+export interface IEquipmentRepository {
+  listEquipment(tenantId: string): Promise<EquipmentSummary[]>
+  getEquipment(tenantId: string, equipmentId: string): Promise<EquipmentSummary | null>
+  createEquipment(tenantId: string, name: string, propertyId: string | null, notes: string | null): Promise<EquipmentSummary>
+  updateEquipment(tenantId: string, equipmentId: string, name: string, propertyId: string | null, notes: string | null): Promise<void>
+  deleteEquipment(tenantId: string, equipmentId: string): Promise<void>
+}
+
+export interface ITenantAttributeRepository {
+  listAttributes(tenantId: string): Promise<TenantAttribute[]>
+  getAttribute(tenantId: string, attributeId: string): Promise<TenantAttribute | null>
+  createAttribute(tenantId: string, key: string, value: string, tenantMinRole: number): Promise<TenantAttribute>
+  updateAttribute(tenantId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, attributeId: string): Promise<void>
+}
+
+export interface IPropertyAttributeRepository {
+  listAttributes(tenantId: string, propertyId: string): Promise<PropertyAttribute[]>
+  getAttribute(tenantId: string, propertyId: string, attributeId: string): Promise<PropertyAttribute | null>
+  createAttribute(tenantId: string, propertyId: string, key: string, value: string, tenantMinRole: number): Promise<PropertyAttribute>
+  updateAttribute(tenantId: string, propertyId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, propertyId: string, attributeId: string): Promise<void>
+}
+
+export interface IAccommodationAttributeRepository {
+  listAttributes(tenantId: string, accommodationId: string): Promise<AccommodationAttribute[]>
+  getAttribute(tenantId: string, accommodationId: string, attributeId: string): Promise<AccommodationAttribute | null>
+  createAttribute(tenantId: string, accommodationId: string, key: string, value: string, tenantMinRole: number): Promise<AccommodationAttribute>
+  updateAttribute(tenantId: string, accommodationId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, accommodationId: string, attributeId: string): Promise<void>
+}
+
+export interface IHouseholdAttributeRepository {
+  listAttributes(tenantId: string, householdId: string): Promise<HouseholdAttribute[]>
+  getAttribute(tenantId: string, householdId: string, attributeId: string): Promise<HouseholdAttribute | null>
+  createAttribute(tenantId: string, householdId: string, key: string, value: string, tenantMinRole: number, householdMinRole: number | null): Promise<HouseholdAttribute>
+  updateAttribute(tenantId: string, householdId: string, attributeId: string, key: string, value: string, tenantMinRole: number, householdMinRole: number | null): Promise<void>
+  deleteAttribute(tenantId: string, householdId: string, attributeId: string): Promise<void>
+}
+
+export interface IEventAttributeRepository {
+  listAttributes(tenantId: string, eventId: string): Promise<EventAttribute[]>
+  getAttribute(tenantId: string, eventId: string, attributeId: string): Promise<EventAttribute | null>
+  createAttribute(tenantId: string, eventId: string, key: string, value: string, tenantMinRole: number): Promise<EventAttribute>
+  updateAttribute(tenantId: string, eventId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, eventId: string, attributeId: string): Promise<void>
+}
+
+export interface IMealTemplateAttributeRepository {
+  listAttributes(tenantId: string, mealTemplateId: string): Promise<MealTemplateAttribute[]>
+  getAttribute(tenantId: string, mealTemplateId: string, attributeId: string): Promise<MealTemplateAttribute | null>
+  createAttribute(tenantId: string, mealTemplateId: string, key: string, value: string, tenantMinRole: number): Promise<MealTemplateAttribute>
+  updateAttribute(tenantId: string, mealTemplateId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, mealTemplateId: string, attributeId: string): Promise<void>
+}
+
+export interface ITaskTemplateAttributeRepository {
+  listAttributes(tenantId: string, taskTemplateId: string): Promise<TaskTemplateAttribute[]>
+  getAttribute(tenantId: string, taskTemplateId: string, attributeId: string): Promise<TaskTemplateAttribute | null>
+  createAttribute(tenantId: string, taskTemplateId: string, key: string, value: string, tenantMinRole: number): Promise<TaskTemplateAttribute>
+  updateAttribute(tenantId: string, taskTemplateId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, taskTemplateId: string, attributeId: string): Promise<void>
+}
+
+export interface IEquipmentAttributeRepository {
+  listAttributes(tenantId: string, equipmentId: string): Promise<EquipmentAttribute[]>
+  getAttribute(tenantId: string, equipmentId: string, attributeId: string): Promise<EquipmentAttribute | null>
+  createAttribute(tenantId: string, equipmentId: string, key: string, value: string, tenantMinRole: number): Promise<EquipmentAttribute>
+  updateAttribute(tenantId: string, equipmentId: string, attributeId: string, key: string, value: string, tenantMinRole: number): Promise<void>
+  deleteAttribute(tenantId: string, equipmentId: string, attributeId: string): Promise<void>
+}
+
 export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
@@ -315,4 +398,13 @@ export interface Repositories {
   properties: IPropertyRepository
   accommodations: IAccommodationRepository
   accommodationIntents: IAccommodationIntentRepository
+  equipment: IEquipmentRepository
+  tenantAttributes: ITenantAttributeRepository
+  propertyAttributes: IPropertyAttributeRepository
+  accommodationAttributes: IAccommodationAttributeRepository
+  householdAttributes: IHouseholdAttributeRepository
+  eventAttributes: IEventAttributeRepository
+  mealTemplateAttributes: IMealTemplateAttributeRepository
+  taskTemplateAttributes: ITaskTemplateAttributeRepository
+  equipmentAttributes: IEquipmentAttributeRepository
 }

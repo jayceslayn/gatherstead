@@ -16,18 +16,18 @@ export class LiveHouseholdRepository implements IHouseholdRepository {
     return r.entity ?? null
   }
 
-  async createHousehold(tenantId: string, name: string): Promise<HouseholdSummary> {
+  async createHousehold(tenantId: string, name: string, notes?: string | null): Promise<HouseholdSummary> {
     const r = await $fetch<ApiResponse<HouseholdSummary>>(
       `/api/proxy/tenants/${tenantId}/households`,
-      { method: 'POST', body: { name } },
+      { method: 'POST', body: { name, notes: notes ?? null } },
     )
     return r.entity
   }
 
-  async updateHousehold(tenantId: string, householdId: string, name: string): Promise<void> {
+  async updateHousehold(tenantId: string, householdId: string, name: string, notes?: string | null): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/households/${householdId}`, {
       method: 'PUT',
-      body: { name },
+      body: { name, notes: notes ?? null },
     })
   }
 

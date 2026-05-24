@@ -10,6 +10,7 @@ export interface HouseholdSummary {
   id: string
   tenantId: string
   name: string
+  notes: string | null
 }
 
 export type HouseholdRole = 'Manager' | 'Member'
@@ -59,6 +60,7 @@ export interface EventSummary {
   name: string
   startDate: string
   endDate: string
+  notes: string | null
 }
 
 export type AttendanceStatus = 'Going' | 'Maybe' | 'NotGoing'
@@ -155,6 +157,7 @@ export interface PropertySummary {
   id: string
   tenantId: string
   name: string
+  notes: string | null
 }
 
 export interface AccommodationSummary {
@@ -180,6 +183,41 @@ export interface AccommodationIntent {
   partySize: number | null
   priority: number | null
 }
+
+export interface EquipmentSummary {
+  id: string
+  tenantId: string
+  propertyId: string | null
+  name: string
+  notes: string | null
+}
+
+export interface AttributeEntry {
+  id: string
+  tenantId: string
+  parentId: string
+  key: string
+  value: string
+  tenantMinRole: number
+  householdMinRole: number | null
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TenantAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface PropertyAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface AccommodationAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface HouseholdAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface EventAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface MealTemplateAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TaskTemplateAttribute extends AttributeEntry {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface EquipmentAttribute extends AttributeEntry {}
 
 export const MEAL_TYPE_FLAGS: Record<MealType, number> = {
   Breakfast: 0x01,

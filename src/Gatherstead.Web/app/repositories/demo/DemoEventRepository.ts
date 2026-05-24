@@ -19,6 +19,7 @@ export class DemoEventRepository implements IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
   ): Promise<EventSummary> {
     const store = getDemoStore()
     if (store.events.value.filter(e => e.tenantId === tenantId).length >= DEMO_LIMITS.events) {
@@ -30,7 +31,7 @@ export class DemoEventRepository implements IEventRepository {
     if (days > DEMO_LIMITS.eventMaxDays) {
       throw new DemoLimitError('eventMaxDays')
     }
-    const e: EventSummary = { id: demoId(), tenantId, propertyId, name, startDate, endDate }
+    const e: EventSummary = { id: demoId(), tenantId, propertyId, name, startDate, endDate, notes: notes ?? null }
     store.events.value.push(e)
     persistDemoStore()
     return e
@@ -42,6 +43,7 @@ export class DemoEventRepository implements IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
   ): Promise<void> {
     const store = getDemoStore()
     const e = store.events.value.find(x => x.id === eventId)
@@ -49,6 +51,7 @@ export class DemoEventRepository implements IEventRepository {
     e.name = name
     e.startDate = startDate
     e.endDate = endDate
+    e.notes = notes ?? null
     persistDemoStore()
   }
 

@@ -20,10 +20,11 @@ export class LiveEventRepository implements IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
   ): Promise<EventSummary> {
     const r = await $fetch<ApiResponse<EventSummary>>(
       `/api/proxy/tenants/${tenantId}/events`,
-      { method: 'POST', body: { propertyId, name, startDate, endDate } },
+      { method: 'POST', body: { propertyId, name, startDate, endDate, notes: notes ?? null } },
     )
     return r.entity
   }
@@ -34,10 +35,11 @@ export class LiveEventRepository implements IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
   ): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/events/${eventId}`, {
       method: 'PUT',
-      body: { name, startDate, endDate },
+      body: { name, startDate, endDate, notes: notes ?? null },
     })
   }
 

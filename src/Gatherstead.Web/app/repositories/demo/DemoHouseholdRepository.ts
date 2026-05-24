@@ -13,22 +13,23 @@ export class DemoHouseholdRepository implements IHouseholdRepository {
     ) ?? null
   }
 
-  async createHousehold(tenantId: string, name: string): Promise<HouseholdSummary> {
+  async createHousehold(tenantId: string, name: string, notes?: string | null): Promise<HouseholdSummary> {
     const store = getDemoStore()
     if (store.households.value.filter(h => h.tenantId === tenantId).length >= DEMO_LIMITS.householdsPerTenant) {
       throw new DemoLimitError('householdsPerTenant')
     }
-    const h: HouseholdSummary = { id: demoId(), tenantId, name }
+    const h: HouseholdSummary = { id: demoId(), tenantId, name, notes: notes ?? null }
     store.households.value.push(h)
     persistDemoStore()
     return h
   }
 
-  async updateHousehold(_tenantId: string, householdId: string, name: string): Promise<void> {
+  async updateHousehold(_tenantId: string, householdId: string, name: string, notes?: string | null): Promise<void> {
     const store = getDemoStore()
     const h = store.households.value.find(x => x.id === householdId)
     if (!h) return
     h.name = name
+    h.notes = notes ?? null
     persistDemoStore()
   }
 

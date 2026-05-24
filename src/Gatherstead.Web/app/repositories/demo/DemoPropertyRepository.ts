@@ -13,22 +13,23 @@ export class DemoPropertyRepository implements IPropertyRepository {
     ) ?? null
   }
 
-  async createProperty(tenantId: string, name: string): Promise<PropertySummary> {
+  async createProperty(tenantId: string, name: string, notes?: string | null): Promise<PropertySummary> {
     const store = getDemoStore()
     if (store.properties.value.filter(p => p.tenantId === tenantId).length >= DEMO_LIMITS.propertiesPerTenant) {
       throw new DemoLimitError('propertiesPerTenant')
     }
-    const p: PropertySummary = { id: demoId(), tenantId, name }
+    const p: PropertySummary = { id: demoId(), tenantId, name, notes: notes ?? null }
     store.properties.value.push(p)
     persistDemoStore()
     return p
   }
 
-  async updateProperty(_tenantId: string, propertyId: string, name: string): Promise<void> {
+  async updateProperty(_tenantId: string, propertyId: string, name: string, notes?: string | null): Promise<void> {
     const store = getDemoStore()
     const p = store.properties.value.find(x => x.id === propertyId)
     if (!p) return
     p.name = name
+    p.notes = notes ?? null
     persistDemoStore()
   }
 
