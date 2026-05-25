@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
@@ -17,7 +18,8 @@ public record AccommodationDto(
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
     DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    Guid? DeletedByUserId,
+    IReadOnlyList<AttributeDto> Attributes);
 
 public class AccommodationResponse : BaseEntityResponse<AccommodationDto> { }
 
@@ -33,6 +35,7 @@ public class CreateAccommodationRequest
     public int? CapacityAdults { get; init; }
     public int? CapacityChildren { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }
 
 public class UpdateAccommodationRequest
@@ -47,4 +50,5 @@ public class UpdateAccommodationRequest
     public int? CapacityAdults { get; init; }
     public int? CapacityChildren { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

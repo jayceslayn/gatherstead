@@ -30,4 +30,5 @@ public class Event : AuditableEntity
     public ICollection<MealTemplate> MealTemplates { get; set; } = new List<MealTemplate>();
     public ICollection<TaskTemplate> TaskTemplates { get; set; } = new List<TaskTemplate>();
     public ICollection<EventAttendance> Attendances { get; set; } = new List<EventAttendance>();
+    public ICollection<EventAttribute> Attributes { get; set; } = new List<EventAttribute>();
 }

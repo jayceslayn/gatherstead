@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 
 namespace Gatherstead.Api.Contracts.Equipment;
 
@@ -12,4 +13,6 @@ public class CreateEquipmentRequest
 
     [StringLength(500)]
     public string? Notes { get; init; }
+
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

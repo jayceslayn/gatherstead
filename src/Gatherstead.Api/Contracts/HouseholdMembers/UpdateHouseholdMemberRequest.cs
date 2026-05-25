@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 
 namespace Gatherstead.Api.Contracts.HouseholdMembers;
 
@@ -27,4 +28,6 @@ public class UpdateHouseholdMemberRequest
 
     [StringLength(500)]
     public string? Notes { get; init; } = null;
+
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

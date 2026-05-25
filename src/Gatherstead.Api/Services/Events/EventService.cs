@@ -1,5 +1,7 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Events;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Attributes;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Planning;
 using Gatherstead.Api.Services.Validation;
@@ -51,11 +53,10 @@ public class EventService : IEventService
                 query = query.Where(e => idList.Contains(e.Id));
         }
 
-        var events = await query
-            .Select(e => MapToDto(e))
-            .ToListAsync(cancellationToken);
+        var events = await query.ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<EventDto>>.SuccessfulResponse(events);
+        return BaseEntityResponse<IReadOnlyCollection<EventDto>>.SuccessfulResponse(
+            events.Select(e => MapToDto(e, [])).ToList());
     }
 
     public async Task<EventResponse> GetAsync(
@@ -70,13 +71,16 @@ public class EventService : IEventService
 
         var @event = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.Events.AsNoTracking().Where(e => e.TenantId == tenantId && e.Id == eventId),
+            _dbContext.Events.AsNoTracking()
+                .Include(e => e.Attributes)
+                .Where(e => e.TenantId == tenantId && e.Id == eventId),
             EntityDisplayName,
             cancellationToken);
 
         if (@event is null) return response;
 
-        response.SetSuccess(MapToDto(@event));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        response.SetSuccess(MapToDto(@event, VisibleAttributes(@event.Attributes, callerRole)));
         return response;
     }
 
@@ -114,7 +118,28 @@ public class EventService : IEventService
         _dbContext.Events.Add(@event);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(@event));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        List<AttributeDto> attrs = [];
+
+        if (request.Attributes is { Count: > 0 })
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.EventAttributes.Where(a => a.EventId == @event.Id),
+                _dbContext.EventAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new EventAttribute { TenantId = tenantId, EventId = @event.Id },
+                applyExtra: null,
+                cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var savedAttrs = await _dbContext.EventAttributes.AsNoTracking()
+                .Where(a => a.EventId == @event.Id).ToListAsync(cancellationToken);
+            attrs = VisibleAttributes(savedAttrs, callerRole);
+        }
+
+        response.SetSuccess(MapToDto(@event, attrs));
         return response;
     }
 
@@ -157,9 +182,26 @@ public class EventService : IEventService
         if (datesChanged)
             await _planSyncService.SyncEventPlansAsync(tenantId, @event, cancellationToken);
 
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
+        if (request.Attributes is not null)
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.EventAttributes.Where(a => a.EventId == eventId),
+                _dbContext.EventAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new EventAttribute { TenantId = tenantId, EventId = eventId },
+                applyExtra: null,
+                cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(@event));
+        var savedAttrs = await _dbContext.EventAttributes.AsNoTracking()
+            .Where(a => a.EventId == eventId).ToListAsync(cancellationToken);
+        response.SetSuccess(MapToDto(@event, VisibleAttributes(savedAttrs, callerRole)));
         return response;
     }
 
@@ -190,9 +232,15 @@ public class EventService : IEventService
         }
 
         @event.IsDeleted = true;
+
+        var childAttrs = await _dbContext.EventAttributes
+            .Where(a => a.EventId == eventId).ToListAsync(cancellationToken);
+        foreach (var attr in childAttrs)
+            attr.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(@event));
+        response.SetSuccess(MapToDto(@event, []));
         return response;
     }
 
@@ -219,11 +267,19 @@ public class EventService : IEventService
         await _planSyncService.SyncEventPlansAsync(tenantId, @event, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(@event));
+        response.SetSuccess(MapToDto(@event, []));
         return response;
     }
 
-    private static EventDto MapToDto(Event @event) => new(
+    private static List<AttributeDto> VisibleAttributes(
+        IEnumerable<EventAttribute> attrs, TenantRole? callerRole)
+        => attrs
+            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
+            .OrderBy(a => a.Key)
+            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
+            .ToList();
+
+    private static EventDto MapToDto(Event @event, IReadOnlyList<AttributeDto> attributes) => new(
         @event.Id,
         @event.TenantId,
         @event.PropertyId,
@@ -235,5 +291,6 @@ public class EventService : IEventService
         @event.UpdatedAt,
         @event.IsDeleted,
         @event.DeletedAt,
-        @event.DeletedByUserId);
+        @event.DeletedByUserId,
+        attributes);
 }

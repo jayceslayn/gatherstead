@@ -7,7 +7,6 @@ using Gatherstead.Api.Services.ContactMethods;
 using Gatherstead.Api.Services.DietaryProfiles;
 using Gatherstead.Api.Services.HouseholdMembers;
 using Gatherstead.Api.Services.Households;
-using Gatherstead.Api.Services.MemberAttributes;
 using Gatherstead.Api.Services.AccommodationIntents;
 using Gatherstead.Api.Services.Accommodations;
 using Gatherstead.Api.Services.TaskIntents;
@@ -27,14 +26,6 @@ using Gatherstead.Api.Services.HouseholdUsers;
 using Gatherstead.Api.Services.TenantUsers;
 using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Services.Equipment;
-using Gatherstead.Api.Services.TenantAttributes;
-using Gatherstead.Api.Services.PropertyAttributes;
-using Gatherstead.Api.Services.AccommodationAttributes;
-using Gatherstead.Api.Services.HouseholdAttributes;
-using Gatherstead.Api.Services.EventAttributes;
-using Gatherstead.Api.Services.MealTemplateAttributes;
-using Gatherstead.Api.Services.TaskTemplateAttributes;
-using Gatherstead.Api.Services.EquipmentAttributes;
 using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
@@ -63,7 +54,6 @@ builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
 builder.Services.AddScoped<IDietaryProfileService, DietaryProfileService>();
 builder.Services.AddScoped<IHouseholdMemberService, HouseholdMemberService>();
 builder.Services.AddScoped<IHouseholdService, HouseholdService>();
-builder.Services.AddScoped<IHouseholdMemberAttributeService, HouseholdMemberAttributeService>();
 builder.Services.AddScoped<IMemberRelationshipService, MemberRelationshipService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITenantUserService, TenantUserService>();
@@ -84,14 +74,6 @@ builder.Services.AddScoped<IAccommodationIntentService, AccommodationIntentServi
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 builder.Services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
-builder.Services.AddScoped<ITenantAttributeService, TenantAttributeService>();
-builder.Services.AddScoped<IPropertyAttributeService, PropertyAttributeService>();
-builder.Services.AddScoped<IAccommodationAttributeService, AccommodationAttributeService>();
-builder.Services.AddScoped<IHouseholdAttributeService, HouseholdAttributeService>();
-builder.Services.AddScoped<IEventAttributeService, EventAttributeService>();
-builder.Services.AddScoped<IMealTemplateAttributeService, MealTemplateAttributeService>();
-builder.Services.AddScoped<ITaskTemplateAttributeService, TaskTemplateAttributeService>();
-builder.Services.AddScoped<IEquipmentAttributeService, EquipmentAttributeService>();
 
 // Configure JWT Bearer authentication with external identity provider (Entra External ID / Azure AD B2C)
 // Note: Consider PASETO migration when ecosystem support improves (broader library/provider adoption).

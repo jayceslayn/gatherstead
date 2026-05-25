@@ -31,4 +31,5 @@ public class Accommodation : AuditableEntity
     public string? Notes { get; set; }
 
     public ICollection<AccommodationIntent> AccommodationIntents { get; set; } = new List<AccommodationIntent>();
+    public ICollection<AccommodationAttribute> Attributes { get; set; } = new List<AccommodationAttribute>();
 }

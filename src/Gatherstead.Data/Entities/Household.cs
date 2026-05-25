@@ -22,4 +22,5 @@ public class Household : AuditableEntity
 
     public ICollection<HouseholdMember> Members { get; set; } = new List<HouseholdMember>();
     public ICollection<HouseholdUser> HouseholdUsers { get; set; } = new List<HouseholdUser>();
+    public ICollection<HouseholdAttribute> Attributes { get; set; } = new List<HouseholdAttribute>();
 }

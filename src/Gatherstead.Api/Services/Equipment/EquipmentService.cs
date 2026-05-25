@@ -1,6 +1,8 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Equipment;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Observability;
+using Gatherstead.Api.Services.Attributes;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -48,11 +50,10 @@ public class EquipmentService : IEquipmentService
                 query = query.Where(e => idList.Contains(e.Id));
         }
 
-        var equipment = await query
-            .Select(e => MapToDto(e))
-            .ToListAsync(cancellationToken);
+        var equipment = await query.ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<EquipmentDto>>.SuccessfulResponse(equipment);
+        return BaseEntityResponse<IReadOnlyCollection<EquipmentDto>>.SuccessfulResponse(
+            equipment.Select(e => MapToDto(e, [])).ToList());
     }
 
     public async Task<EquipmentResponse> GetAsync(
@@ -67,13 +68,16 @@ public class EquipmentService : IEquipmentService
 
         var equipment = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.Equipment.AsNoTracking().Where(e => e.TenantId == tenantId && e.Id == equipmentId),
+            _dbContext.Equipment.AsNoTracking()
+                .Include(e => e.Attributes)
+                .Where(e => e.TenantId == tenantId && e.Id == equipmentId),
             EntityDisplayName,
             cancellationToken);
 
         if (equipment is null) return response;
 
-        response.SetSuccess(MapToDto(equipment));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        response.SetSuccess(MapToDto(equipment, VisibleAttributes(equipment.Attributes, callerRole)));
         return response;
     }
 
@@ -129,7 +133,28 @@ public class EquipmentService : IEquipmentService
         _dbContext.Equipment.Add(equipment);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(equipment));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        List<AttributeDto> attrs = [];
+
+        if (request.Attributes is { Count: > 0 })
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.EquipmentAttributes.Where(a => a.EquipmentId == equipment.Id),
+                _dbContext.EquipmentAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new EquipmentAttribute { TenantId = tenantId, EquipmentId = equipment.Id },
+                applyExtra: null,
+                cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var savedAttrs = await _dbContext.EquipmentAttributes.AsNoTracking()
+                .Where(a => a.EquipmentId == equipment.Id).ToListAsync(cancellationToken);
+            attrs = VisibleAttributes(savedAttrs, callerRole);
+        }
+
+        response.SetSuccess(MapToDto(equipment, attrs));
         return response;
     }
 
@@ -189,9 +214,26 @@ public class EquipmentService : IEquipmentService
         equipment.Name = normalizedName;
         equipment.Notes = request.Notes;
 
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
+        if (request.Attributes is not null)
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.EquipmentAttributes.Where(a => a.EquipmentId == equipmentId),
+                _dbContext.EquipmentAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new EquipmentAttribute { TenantId = tenantId, EquipmentId = equipmentId },
+                applyExtra: null,
+                cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(equipment));
+        var savedAttrs = await _dbContext.EquipmentAttributes.AsNoTracking()
+            .Where(a => a.EquipmentId == equipmentId).ToListAsync(cancellationToken);
+        response.SetSuccess(MapToDto(equipment, VisibleAttributes(savedAttrs, callerRole)));
         return response;
     }
 
@@ -222,14 +264,28 @@ public class EquipmentService : IEquipmentService
         }
 
         equipment.IsDeleted = true;
+
+        var childAttrs = await _dbContext.EquipmentAttributes
+            .Where(a => a.EquipmentId == equipmentId).ToListAsync(cancellationToken);
+        foreach (var attr in childAttrs)
+            attr.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordSoftDelete("Equipment", tenantId);
-        response.SetSuccess(MapToDto(equipment));
+        response.SetSuccess(MapToDto(equipment, []));
         return response;
     }
 
-    private static EquipmentDto MapToDto(Gatherstead.Data.Entities.Equipment e) => new(
+    private static List<AttributeDto> VisibleAttributes(
+        IEnumerable<EquipmentAttribute> attrs, TenantRole? callerRole)
+        => attrs
+            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
+            .OrderBy(a => a.Key)
+            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
+            .ToList();
+
+    private static EquipmentDto MapToDto(Gatherstead.Data.Entities.Equipment e, IReadOnlyList<AttributeDto> attributes) => new(
         e.Id,
         e.TenantId,
         e.PropertyId,
@@ -239,5 +295,6 @@ public class EquipmentService : IEquipmentService
         e.UpdatedAt,
         e.IsDeleted,
         e.DeletedAt,
-        e.DeletedByUserId);
+        e.DeletedByUserId,
+        attributes);
 }

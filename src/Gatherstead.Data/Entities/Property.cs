@@ -22,4 +22,5 @@ public class Property : AuditableEntity
 
     public ICollection<Event> Events { get; set; } = new List<Event>();
     public ICollection<Accommodation> Accommodations { get; set; } = new List<Accommodation>();
+    public ICollection<PropertyAttribute> Attributes { get; set; } = new List<PropertyAttribute>();
 }

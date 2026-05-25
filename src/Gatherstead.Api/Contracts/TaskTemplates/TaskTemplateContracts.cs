@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
@@ -18,7 +19,8 @@ public record TaskTemplateDto(
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
     DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    Guid? DeletedByUserId,
+    IReadOnlyList<AttributeDto> Attributes);
 
 public class TaskTemplateResponse : BaseEntityResponse<TaskTemplateDto> { }
 
@@ -35,6 +37,7 @@ public class CreateTaskTemplateRequest
     public DateOnly? EndDate { get; init; }
     public int? MinimumAssignees { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }
 
 public class UpdateTaskTemplateRequest
@@ -50,4 +53,5 @@ public class UpdateTaskTemplateRequest
     public DateOnly? EndDate { get; init; }
     public int? MinimumAssignees { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

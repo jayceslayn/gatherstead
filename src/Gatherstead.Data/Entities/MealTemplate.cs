@@ -32,4 +32,5 @@ public class MealTemplate : AuditableEntity
     public string? Notes { get; set; }
 
     public ICollection<MealPlan> Plans { get; set; } = new List<MealPlan>();
+    public ICollection<MealTemplateAttribute> Attributes { get; set; } = new List<MealTemplateAttribute>();
 }

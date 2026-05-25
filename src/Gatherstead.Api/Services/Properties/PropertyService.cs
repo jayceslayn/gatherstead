@@ -1,5 +1,7 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Properties;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Attributes;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -47,11 +49,10 @@ public class PropertyService : IPropertyService
                 query = query.Where(p => idList.Contains(p.Id));
         }
 
-        var properties = await query
-            .Select(p => MapToDto(p))
-            .ToListAsync(cancellationToken);
+        var properties = await query.ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<PropertyDto>>.SuccessfulResponse(properties);
+        return BaseEntityResponse<IReadOnlyCollection<PropertyDto>>.SuccessfulResponse(
+            properties.Select(p => MapToDto(p, [])).ToList());
     }
 
     public async Task<PropertyResponse> GetAsync(
@@ -66,13 +67,18 @@ public class PropertyService : IPropertyService
 
         var property = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.Properties.AsNoTracking().Where(p => p.TenantId == tenantId && p.Id == propertyId),
+            _dbContext.Properties.AsNoTracking()
+                .Include(p => p.Attributes)
+                .Where(p => p.TenantId == tenantId && p.Id == propertyId),
             EntityDisplayName,
             cancellationToken);
 
         if (property is null) return response;
 
-        response.SetSuccess(MapToDto(property));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        var attrs = VisibleAttributes(property.Attributes, callerRole);
+
+        response.SetSuccess(MapToDto(property, attrs));
         return response;
     }
 
@@ -115,7 +121,28 @@ public class PropertyService : IPropertyService
         _dbContext.Properties.Add(property);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(property));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        List<AttributeDto> attrs = [];
+
+        if (request.Attributes is { Count: > 0 })
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.PropertyAttributes.Where(a => a.PropertyId == property.Id),
+                _dbContext.PropertyAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new PropertyAttribute { TenantId = tenantId, PropertyId = property.Id },
+                applyExtra: null,
+                cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var savedAttrs = await _dbContext.PropertyAttributes.AsNoTracking()
+                .Where(a => a.PropertyId == property.Id).ToListAsync(cancellationToken);
+            attrs = VisibleAttributes(savedAttrs, callerRole);
+        }
+
+        response.SetSuccess(MapToDto(property, attrs));
         return response;
     }
 
@@ -161,9 +188,29 @@ public class PropertyService : IPropertyService
 
         property.Name = normalizedName;
         property.Notes = request.Notes?.Trim();
+
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
+        if (request.Attributes is not null)
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.PropertyAttributes.Where(a => a.PropertyId == propertyId),
+                _dbContext.PropertyAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new PropertyAttribute { TenantId = tenantId, PropertyId = propertyId },
+                applyExtra: null,
+                cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(property));
+        var savedAttrs = await _dbContext.PropertyAttributes.AsNoTracking()
+            .Where(a => a.PropertyId == propertyId).ToListAsync(cancellationToken);
+        var attrs = VisibleAttributes(savedAttrs, callerRole);
+
+        response.SetSuccess(MapToDto(property, attrs));
         return response;
     }
 
@@ -194,13 +241,27 @@ public class PropertyService : IPropertyService
         }
 
         property.IsDeleted = true;
+
+        var childAttrs = await _dbContext.PropertyAttributes
+            .Where(a => a.PropertyId == propertyId).ToListAsync(cancellationToken);
+        foreach (var attr in childAttrs)
+            attr.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(property));
+        response.SetSuccess(MapToDto(property, []));
         return response;
     }
 
-    private static PropertyDto MapToDto(Property p) => new(
+    private static List<AttributeDto> VisibleAttributes(
+        IEnumerable<PropertyAttribute> attrs, TenantRole? callerRole)
+        => attrs
+            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
+            .OrderBy(a => a.Key)
+            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
+            .ToList();
+
+    private static PropertyDto MapToDto(Property p, IReadOnlyList<AttributeDto> attributes) => new(
         p.Id,
         p.TenantId,
         p.Name,
@@ -209,5 +270,6 @@ public class PropertyService : IPropertyService
         p.UpdatedAt,
         p.IsDeleted,
         p.DeletedAt,
-        p.DeletedByUserId);
+        p.DeletedByUserId,
+        attributes);
 }

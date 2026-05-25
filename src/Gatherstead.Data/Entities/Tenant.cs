@@ -20,4 +20,5 @@ public class Tenant : AuditableEntity
     public ICollection<Household> Households { get; set; } = new List<Household>();
     public ICollection<Property> Properties { get; set; } = new List<Property>();
     public ICollection<Event> Events { get; set; } = new List<Event>();
+    public ICollection<TenantAttribute> Attributes { get; set; } = new List<TenantAttribute>();
 }

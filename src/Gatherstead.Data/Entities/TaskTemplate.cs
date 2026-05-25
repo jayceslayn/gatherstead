@@ -33,4 +33,5 @@ public class TaskTemplate : AuditableEntity
     public string? Notes { get; set; }
 
     public ICollection<TaskPlan> Plans { get; set; } = new List<TaskPlan>();
+    public ICollection<TaskTemplateAttribute> Attributes { get; set; } = new List<TaskTemplateAttribute>();
 }
