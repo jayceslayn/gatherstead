@@ -1,9 +1,25 @@
 export type TenantRole = 'Owner' | 'Manager' | 'Coordinator' | 'Member' | 'Guest'
 
+export interface AttributeEntry {
+  id: string
+  key: string
+  value: string
+  tenantMinRole: number
+  householdMinRole: number | null
+}
+
+export interface AttributeWriteEntry {
+  key: string
+  value: string
+  tenantMinRole: number
+  householdMinRole?: number | null
+}
+
 export interface TenantSummary {
   id: string
   name: string
   userRole: TenantRole | null
+  attributes: AttributeEntry[]
 }
 
 export interface HouseholdSummary {
@@ -11,6 +27,7 @@ export interface HouseholdSummary {
   tenantId: string
   name: string
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export type HouseholdRole = 'Manager' | 'Member'
@@ -41,6 +58,7 @@ export interface HouseholdMember {
   birthDate: string | null
   dietaryNotes: string | null
   dietaryTags: string[]
+  attributes: AttributeEntry[]
 }
 
 export interface DietaryProfile {
@@ -61,6 +79,7 @@ export interface EventSummary {
   startDate: string
   endDate: string
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export type AttendanceStatus = 'Going' | 'Maybe' | 'NotGoing'
@@ -84,6 +103,7 @@ export interface MealTemplate {
   startDate: string | null
   endDate: string | null
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface MealPlan {
@@ -127,6 +147,7 @@ export interface TaskTemplate {
   endDate: string | null
   minimumAssignees: number | null
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface TaskPlan {
@@ -158,6 +179,7 @@ export interface PropertySummary {
   tenantId: string
   name: string
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface AccommodationSummary {
@@ -169,6 +191,7 @@ export interface AccommodationSummary {
   capacityAdults: number | null
   capacityChildren: number | null
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface AccommodationIntent {
@@ -190,34 +213,9 @@ export interface EquipmentSummary {
   propertyId: string | null
   name: string
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
-export interface AttributeEntry {
-  id: string
-  tenantId: string
-  parentId: string
-  key: string
-  value: string
-  tenantMinRole: number
-  householdMinRole: number | null
-}
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TenantAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PropertyAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface AccommodationAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface HouseholdAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface EventAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface MealTemplateAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface TaskTemplateAttribute extends AttributeEntry {}
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface EquipmentAttribute extends AttributeEntry {}
 
 export const MEAL_TYPE_FLAGS: Record<MealType, number> = {
   Breakfast: 0x01,

@@ -1,6 +1,11 @@
 import type { IEventRepository } from '../interfaces'
-import type { EventSummary } from '../types'
+import type { EventSummary, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+
+function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
+  if (!writes) return []
+  return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
 
 export class DemoEventRepository implements IEventRepository {
   async listEvents(tenantId: string): Promise<EventSummary[]> {
@@ -20,6 +25,7 @@ export class DemoEventRepository implements IEventRepository {
     startDate: string,
     endDate: string,
     notes?: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<EventSummary> {
     const store = getDemoStore()
     if (store.events.value.filter(e => e.tenantId === tenantId).length >= DEMO_LIMITS.events) {
@@ -31,7 +37,7 @@ export class DemoEventRepository implements IEventRepository {
     if (days > DEMO_LIMITS.eventMaxDays) {
       throw new DemoLimitError('eventMaxDays')
     }
-    const e: EventSummary = { id: demoId(), tenantId, propertyId, name, startDate, endDate, notes: notes ?? null }
+    const e: EventSummary = { id: demoId(), tenantId, propertyId, name, startDate, endDate, notes: notes ?? null, attributes: toAttributeEntries(attributes) }
     store.events.value.push(e)
     persistDemoStore()
     return e
@@ -44,6 +50,7 @@ export class DemoEventRepository implements IEventRepository {
     startDate: string,
     endDate: string,
     notes?: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     const store = getDemoStore()
     const e = store.events.value.find(x => x.id === eventId)
@@ -52,6 +59,7 @@ export class DemoEventRepository implements IEventRepository {
     e.startDate = startDate
     e.endDate = endDate
     e.notes = notes ?? null
+    if (attributes !== undefined) e.attributes = toAttributeEntries(attributes)
     persistDemoStore()
   }
 

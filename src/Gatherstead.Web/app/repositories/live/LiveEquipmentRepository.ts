@@ -1,5 +1,5 @@
 import type { IEquipmentRepository } from '../interfaces'
-import type { EquipmentSummary } from '../types'
+import type { EquipmentSummary, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -18,18 +18,18 @@ export class LiveEquipmentRepository implements IEquipmentRepository {
     return r.entity ?? null
   }
 
-  async createEquipment(tenantId: string, name: string, propertyId: string | null, notes: string | null): Promise<EquipmentSummary> {
+  async createEquipment(tenantId: string, name: string, propertyId: string | null, notes: string | null, attributes?: AttributeWriteEntry[] | null): Promise<EquipmentSummary> {
     const r = await $fetch<ApiResponse<EquipmentSummary>>(
       `/api/proxy/tenants/${tenantId}/equipment`,
-      { method: 'POST', body: { name, propertyId, notes } },
+      { method: 'POST', body: { name, propertyId, notes, attributes: attributes ?? null } },
     )
     return r.entity
   }
 
-  async updateEquipment(tenantId: string, equipmentId: string, name: string, propertyId: string | null, notes: string | null): Promise<void> {
+  async updateEquipment(tenantId: string, equipmentId: string, name: string, propertyId: string | null, notes: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/equipment/${equipmentId}`, {
       method: 'PUT',
-      body: { name, propertyId, notes },
+      body: { name, propertyId, notes, attributes: attributes ?? null },
     })
   }
 

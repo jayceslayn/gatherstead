@@ -19,14 +19,6 @@ import type {
   AccommodationSummary,
   AccommodationIntent,
   EquipmentSummary,
-  TenantAttribute,
-  PropertyAttribute,
-  AccommodationAttribute,
-  HouseholdAttribute,
-  EventAttribute,
-  MealTemplateAttribute,
-  TaskTemplateAttribute,
-  EquipmentAttribute,
 } from '../types'
 
 const STORAGE_KEY = 'gs-demo-store'
@@ -40,6 +32,7 @@ export const DEMO_TENANT: TenantSummary = {
   id: DEMO_TENANT_ID,
   name: 'The Super Families Network',
   userRole: 'Owner',
+  attributes: [],
 }
 
 export const DEMO_USER: TenantUserSummary = {
@@ -88,14 +81,6 @@ interface DemoState {
   accommodations: AccommodationSummary[]
   accommodationIntents: AccommodationIntent[]
   equipment: EquipmentSummary[]
-  tenantAttributes: TenantAttribute[]
-  propertyAttributes: PropertyAttribute[]
-  accommodationAttributes: AccommodationAttribute[]
-  householdAttributes: HouseholdAttribute[]
-  eventAttributes: EventAttribute[]
-  mealTemplateAttributes: MealTemplateAttribute[]
-  taskTemplateAttributes: TaskTemplateAttribute[]
-  equipmentAttributes: EquipmentAttribute[]
 }
 
 export interface ReactiveState {
@@ -117,14 +102,6 @@ export interface ReactiveState {
   accommodations: Ref<AccommodationSummary[]>
   accommodationIntents: Ref<AccommodationIntent[]>
   equipment: Ref<EquipmentSummary[]>
-  tenantAttributes: Ref<TenantAttribute[]>
-  propertyAttributes: Ref<PropertyAttribute[]>
-  accommodationAttributes: Ref<AccommodationAttribute[]>
-  householdAttributes: Ref<HouseholdAttribute[]>
-  eventAttributes: Ref<EventAttribute[]>
-  mealTemplateAttributes: Ref<MealTemplateAttribute[]>
-  taskTemplateAttributes: Ref<TaskTemplateAttribute[]>
-  equipmentAttributes: Ref<EquipmentAttribute[]>
 }
 
 function emptyState(): DemoState {
@@ -147,14 +124,6 @@ function emptyState(): DemoState {
     accommodations: [],
     accommodationIntents: [],
     equipment: [],
-    tenantAttributes: [],
-    propertyAttributes: [],
-    accommodationAttributes: [],
-    householdAttributes: [],
-    eventAttributes: [],
-    mealTemplateAttributes: [],
-    taskTemplateAttributes: [],
-    equipmentAttributes: [],
   }
 }
 
@@ -169,34 +138,30 @@ function tryParseLocalStorage(): DemoState | null {
   }
 }
 
+function withAttributes<T extends { attributes?: unknown[] }>(items: T[]): (T & { attributes: unknown[] })[] {
+  return items.map(item => ({ ...item, attributes: item.attributes ?? [] }))
+}
+
 function buildReactiveRefs(state: DemoState): ReactiveState {
   return {
-    tenants: ref(state.tenants),
+    tenants: ref(withAttributes(state.tenants ?? emptyState().tenants) as TenantSummary[]),
     tenantUsers: ref(state.tenantUsers ?? emptyState().tenantUsers),
     householdUsers: ref(state.householdUsers ?? []),
-    households: ref(state.households),
-    members: ref(state.members),
-    events: ref(state.events),
-    attendance: ref(state.attendance),
-    mealTemplates: ref(state.mealTemplates),
-    mealPlans: ref(state.mealPlans),
-    mealIntents: ref(state.mealIntents),
-    mealAttendance: ref(state.mealAttendance),
-    taskTemplates: ref(state.taskTemplates),
-    taskPlans: ref(state.taskPlans),
-    taskIntents: ref(state.taskIntents),
-    properties: ref(state.properties),
-    accommodations: ref(state.accommodations),
-    accommodationIntents: ref(state.accommodationIntents),
-    equipment: ref(state.equipment ?? []),
-    tenantAttributes: ref(state.tenantAttributes ?? []),
-    propertyAttributes: ref(state.propertyAttributes ?? []),
-    accommodationAttributes: ref(state.accommodationAttributes ?? []),
-    householdAttributes: ref(state.householdAttributes ?? []),
-    eventAttributes: ref(state.eventAttributes ?? []),
-    mealTemplateAttributes: ref(state.mealTemplateAttributes ?? []),
-    taskTemplateAttributes: ref(state.taskTemplateAttributes ?? []),
-    equipmentAttributes: ref(state.equipmentAttributes ?? []),
+    households: ref(withAttributes(state.households ?? []) as HouseholdSummary[]),
+    members: ref(withAttributes(state.members ?? []) as HouseholdMember[]),
+    events: ref(withAttributes(state.events ?? []) as EventSummary[]),
+    attendance: ref(state.attendance ?? []),
+    mealTemplates: ref(withAttributes(state.mealTemplates ?? []) as MealTemplate[]),
+    mealPlans: ref(state.mealPlans ?? []),
+    mealIntents: ref(state.mealIntents ?? []),
+    mealAttendance: ref(state.mealAttendance ?? []),
+    taskTemplates: ref(withAttributes(state.taskTemplates ?? []) as TaskTemplate[]),
+    taskPlans: ref(state.taskPlans ?? []),
+    taskIntents: ref(state.taskIntents ?? []),
+    properties: ref(withAttributes(state.properties ?? []) as PropertySummary[]),
+    accommodations: ref(withAttributes(state.accommodations ?? []) as AccommodationSummary[]),
+    accommodationIntents: ref(state.accommodationIntents ?? []),
+    equipment: ref(withAttributes(state.equipment ?? []) as EquipmentSummary[]),
   }
 }
 
@@ -220,14 +185,6 @@ function snapshot(state: ReactiveState): DemoState {
     accommodations: state.accommodations.value,
     accommodationIntents: state.accommodationIntents.value,
     equipment: state.equipment.value,
-    tenantAttributes: state.tenantAttributes.value,
-    propertyAttributes: state.propertyAttributes.value,
-    accommodationAttributes: state.accommodationAttributes.value,
-    householdAttributes: state.householdAttributes.value,
-    eventAttributes: state.eventAttributes.value,
-    mealTemplateAttributes: state.mealTemplateAttributes.value,
-    taskTemplateAttributes: state.taskTemplateAttributes.value,
-    equipmentAttributes: state.equipmentAttributes.value,
   }
 }
 
@@ -265,14 +222,6 @@ export function clearDemoStore(): void {
   _state.accommodations.value = []
   _state.accommodationIntents.value = []
   _state.equipment.value = []
-  _state.tenantAttributes.value = []
-  _state.propertyAttributes.value = []
-  _state.accommodationAttributes.value = []
-  _state.householdAttributes.value = []
-  _state.eventAttributes.value = []
-  _state.mealTemplateAttributes.value = []
-  _state.taskTemplateAttributes.value = []
-  _state.equipmentAttributes.value = []
   localStorage.removeItem(STORAGE_KEY)
 }
 

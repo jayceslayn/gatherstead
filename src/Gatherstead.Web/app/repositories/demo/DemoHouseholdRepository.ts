@@ -1,6 +1,11 @@
 import type { IHouseholdRepository } from '../interfaces'
-import type { HouseholdSummary } from '../types'
+import type { HouseholdSummary, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+
+function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
+  if (!writes) return []
+  return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
 
 export class DemoHouseholdRepository implements IHouseholdRepository {
   async listHouseholds(tenantId: string): Promise<HouseholdSummary[]> {
@@ -13,23 +18,24 @@ export class DemoHouseholdRepository implements IHouseholdRepository {
     ) ?? null
   }
 
-  async createHousehold(tenantId: string, name: string, notes?: string | null): Promise<HouseholdSummary> {
+  async createHousehold(tenantId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<HouseholdSummary> {
     const store = getDemoStore()
     if (store.households.value.filter(h => h.tenantId === tenantId).length >= DEMO_LIMITS.householdsPerTenant) {
       throw new DemoLimitError('householdsPerTenant')
     }
-    const h: HouseholdSummary = { id: demoId(), tenantId, name, notes: notes ?? null }
+    const h: HouseholdSummary = { id: demoId(), tenantId, name, notes: notes ?? null, attributes: toAttributeEntries(attributes) }
     store.households.value.push(h)
     persistDemoStore()
     return h
   }
 
-  async updateHousehold(_tenantId: string, householdId: string, name: string, notes?: string | null): Promise<void> {
+  async updateHousehold(_tenantId: string, householdId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void> {
     const store = getDemoStore()
     const h = store.households.value.find(x => x.id === householdId)
     if (!h) return
     h.name = name
     h.notes = notes ?? null
+    if (attributes !== undefined) h.attributes = toAttributeEntries(attributes)
     persistDemoStore()
   }
 

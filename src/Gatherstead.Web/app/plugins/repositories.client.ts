@@ -13,14 +13,6 @@ import { LivePropertyRepository } from '~/repositories/live/LivePropertyReposito
 import { LiveAccommodationRepository } from '~/repositories/live/LiveAccommodationRepository'
 import { LiveAccommodationIntentRepository } from '~/repositories/live/LiveAccommodationIntentRepository'
 import { LiveEquipmentRepository } from '~/repositories/live/LiveEquipmentRepository'
-import { LiveTenantAttributeRepository } from '~/repositories/live/LiveTenantAttributeRepository'
-import { LivePropertyAttributeRepository } from '~/repositories/live/LivePropertyAttributeRepository'
-import { LiveAccommodationAttributeRepository } from '~/repositories/live/LiveAccommodationAttributeRepository'
-import { LiveHouseholdAttributeRepository } from '~/repositories/live/LiveHouseholdAttributeRepository'
-import { LiveEventAttributeRepository } from '~/repositories/live/LiveEventAttributeRepository'
-import { LiveMealTemplateAttributeRepository } from '~/repositories/live/LiveMealTemplateAttributeRepository'
-import { LiveTaskTemplateAttributeRepository } from '~/repositories/live/LiveTaskTemplateAttributeRepository'
-import { LiveEquipmentAttributeRepository } from '~/repositories/live/LiveEquipmentAttributeRepository'
 import { DemoTenantRepository } from '~/repositories/demo/DemoTenantRepository'
 import { DemoHouseholdRepository } from '~/repositories/demo/DemoHouseholdRepository'
 import { DemoHouseholdMemberRepository } from '~/repositories/demo/DemoHouseholdMemberRepository'
@@ -34,14 +26,6 @@ import { DemoPropertyRepository } from '~/repositories/demo/DemoPropertyReposito
 import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodationRepository'
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
 import { DemoEquipmentRepository } from '~/repositories/demo/DemoEquipmentRepository'
-import { DemoTenantAttributeRepository } from '~/repositories/demo/DemoTenantAttributeRepository'
-import { DemoPropertyAttributeRepository } from '~/repositories/demo/DemoPropertyAttributeRepository'
-import { DemoAccommodationAttributeRepository } from '~/repositories/demo/DemoAccommodationAttributeRepository'
-import { DemoHouseholdAttributeRepository } from '~/repositories/demo/DemoHouseholdAttributeRepository'
-import { DemoEventAttributeRepository } from '~/repositories/demo/DemoEventAttributeRepository'
-import { DemoMealTemplateAttributeRepository } from '~/repositories/demo/DemoMealTemplateAttributeRepository'
-import { DemoTaskTemplateAttributeRepository } from '~/repositories/demo/DemoTaskTemplateAttributeRepository'
-import { DemoEquipmentAttributeRepository } from '~/repositories/demo/DemoEquipmentAttributeRepository'
 import { getDemoStore } from '~/repositories/demo/DemoStore'
 import { seedDemoData } from '~/repositories/demo/seedDemoData'
 
@@ -63,14 +47,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         accommodations: new DemoAccommodationRepository(),
         accommodationIntents: new DemoAccommodationIntentRepository(),
         equipment: new DemoEquipmentRepository(),
-        tenantAttributes: new DemoTenantAttributeRepository(),
-        propertyAttributes: new DemoPropertyAttributeRepository(),
-        accommodationAttributes: new DemoAccommodationAttributeRepository(),
-        householdAttributes: new DemoHouseholdAttributeRepository(),
-        eventAttributes: new DemoEventAttributeRepository(),
-        mealTemplateAttributes: new DemoMealTemplateAttributeRepository(),
-        taskTemplateAttributes: new DemoTaskTemplateAttributeRepository(),
-        equipmentAttributes: new DemoEquipmentAttributeRepository(),
       }
     : {
         tenants: new LiveTenantRepository(),
@@ -86,14 +62,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         accommodations: new LiveAccommodationRepository(),
         accommodationIntents: new LiveAccommodationIntentRepository(),
         equipment: new LiveEquipmentRepository(),
-        tenantAttributes: new LiveTenantAttributeRepository(),
-        propertyAttributes: new LivePropertyAttributeRepository(),
-        accommodationAttributes: new LiveAccommodationAttributeRepository(),
-        householdAttributes: new LiveHouseholdAttributeRepository(),
-        eventAttributes: new LiveEventAttributeRepository(),
-        mealTemplateAttributes: new LiveMealTemplateAttributeRepository(),
-        taskTemplateAttributes: new LiveTaskTemplateAttributeRepository(),
-        equipmentAttributes: new LiveEquipmentAttributeRepository(),
       }
 
   nuxtApp.vueApp.provide(REPOSITORIES_KEY, repos)

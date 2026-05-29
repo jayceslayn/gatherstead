@@ -1,5 +1,5 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, DietaryProfile } from '../types'
+import type { HouseholdMember, DietaryProfile, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -39,10 +39,11 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<HouseholdMember> {
     const r = await $fetch<ApiResponse<HouseholdMember>>(
       `/api/proxy/tenants/${tenantId}/households/${householdId}/members`,
-      { method: 'POST', body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags } },
+      { method: 'POST', body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -57,10 +58,11 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/households/${householdId}/members/${memberId}`, {
       method: 'PUT',
-      body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags },
+      body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes: attributes ?? null },
     })
   }
 

@@ -1,5 +1,5 @@
 import type { IMealPlanRepository } from '../interfaces'
-import type { MealTemplate, MealPlan, MealIntent } from '../types'
+import type { MealTemplate, MealPlan, MealIntent, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -57,10 +57,11 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     startDate: string | null,
     endDate: string | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<MealTemplate> {
     const r = await $fetch<ApiResponse<MealTemplate>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates`,
-      { method: 'POST', body: { name, mealTypes, startDate, endDate, notes } },
+      { method: 'POST', body: { name, mealTypes, startDate, endDate, notes, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -74,10 +75,11 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     startDate: string | null,
     endDate: string | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}`,
-      { method: 'PUT', body: { name, mealTypes, startDate, endDate, notes } },
+      { method: 'PUT', body: { name, mealTypes, startDate, endDate, notes, attributes: attributes ?? null } },
     )
   }
 
