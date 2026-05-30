@@ -107,19 +107,12 @@ async function submit() {
           </div>
         </UFormField>
 
-        <UFormField>
-          <UCheckbox v-model="form.useSubRange" :label="t('event.meal.useSubRange')" />
-        </UFormField>
-
-        <div v-if="form.useSubRange" class="grid grid-cols-2 gap-4">
-          <UFormField :label="t('event.startDate')">
-            <UInput v-model="form.startDate" type="date" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('event.endDate')">
-            <UInput v-model="form.endDate" type="date" class="w-full" />
-          </UFormField>
-        </div>
-        <p v-if="errors.dates" class="text-sm text-error -mt-2">{{ errors.dates }}</p>
+        <GsTemplateDateRangeField
+          v-model:use-sub-range="form.useSubRange"
+          v-model:start-date="form.startDate"
+          v-model:end-date="form.endDate"
+          :error="errors.dates || undefined"
+        />
 
         <UFormField :label="t('common.notes')">
           <UTextarea v-model="form.notes" class="w-full" />

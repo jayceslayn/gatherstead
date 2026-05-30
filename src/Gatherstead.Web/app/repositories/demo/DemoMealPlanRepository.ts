@@ -1,6 +1,6 @@
 import type { IMealPlanRepository } from '../interfaces'
 import type { MealTemplate, MealPlan, MealIntent, AttributeWriteEntry, AttributeEntry } from '../types'
-import { mealTypesFromFlags, taskSlotsFromFlags, TASK_SLOT_FLAGS } from '../types'
+import { mealTypesFromFlags, taskSlotsFromFlags, mealTypeFlagsToTaskSlotFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
 
@@ -106,7 +106,8 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
   }
 
   // Mirrors the backend behavior: create a TaskTemplate alongside the meal so it can be
-  // organized/assigned. Meal-type bits map 1:1 to time-slot bits (Breakfast→Morning, etc.).
+  // organized/assigned, mapping meal types to time slots (Breakfast→Morning, Lunch→Midday,
+  // Dinner→Evening) via the shared helper.
   private createMatchingTask(tenantId: string, eventId: string, meal: MealTemplate): void {
     const store = getDemoStore()
     if (store.taskTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.taskTemplatesPerEvent) {
@@ -118,7 +119,7 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     if (existingNames.has(candidate)) candidate = `${meal.name} (cook)`
     if (existingNames.has(candidate)) return
 
-    const timeSlots = meal.mealTypes === 0 ? TASK_SLOT_FLAGS.Anytime : meal.mealTypes
+    const timeSlots = mealTypeFlagsToTaskSlotFlags(meal.mealTypes)
 
     const taskTemplate = {
       id: demoId(),

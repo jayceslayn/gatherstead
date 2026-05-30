@@ -28,10 +28,17 @@ export class DemoReportRepository implements IReportRepository {
         .map(p => p.id),
     )
 
+    // De-duplicate case-insensitively to match the backend's StringComparer.OrdinalIgnoreCase,
+    // keeping the first-seen casing for display.
     const dietaryForMember = (memberId: string): string[] => {
       const m = memberById.get(memberId)
       if (!m) return []
-      return [...new Set(m.dietaryTags.map(t => t.trim()).filter(Boolean))]
+      const seen = new Map<string, string>()
+      for (const tag of m.dietaryTags.map(t => t.trim()).filter(Boolean)) {
+        const key = tag.toLowerCase()
+        if (!seen.has(key)) seen.set(key, tag)
+      }
+      return [...seen.values()]
     }
 
     const days: EventReportDay[] = []
@@ -58,14 +65,17 @@ export class DemoReportRepository implements IReportRepository {
           }))
           .sort((x, y) => x.name.localeCompare(y.name))
 
-        const tallyMap = new Map<string, number>()
+        // Tally case-insensitively (matching the backend); keep first-seen casing for the label.
+        const tallyMap = new Map<string, { label: string, count: number }>()
         for (const att of attendees) {
           for (const label of att.dietary) {
-            tallyMap.set(label, (tallyMap.get(label) ?? 0) + 1)
+            const key = label.toLowerCase()
+            const existing = tallyMap.get(key)
+            if (existing) existing.count += 1
+            else tallyMap.set(key, { label, count: 1 })
           }
         }
-        const dietary: EventReportDietaryTally[] = [...tallyMap.entries()]
-          .map(([label, count]) => ({ label, count }))
+        const dietary: EventReportDietaryTally[] = [...tallyMap.values()]
           .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
 
         return {

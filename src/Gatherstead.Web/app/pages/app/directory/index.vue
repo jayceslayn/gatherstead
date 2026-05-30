@@ -97,6 +97,6 @@ const filtered = computed(() => {
       </NuxtLink>
     </div>
 
-    <GsCreateHouseholdModal v-model:open="showCreate" :refresh="refresh" />
+    <GsHouseholdModal v-model:open="showCreate" :refresh="refresh" />
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useEventReport } from '~/composables/useEventReport'
+import { useTenantRole } from '~/composables/useTenantRole'
 
 definePageMeta({
   layout: 'default',
@@ -7,9 +8,10 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
+const { isMemberOrAbove } = useTenantRole()
 
 const eventId = computed(() => route.params.eventId as string)
-const { report, pending } = useEventReport(eventId)
+const { report, pending, error } = useEventReport(eventId)
 
 function formatDay(date: string) {
   return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(
@@ -28,9 +30,21 @@ function printReport() {
 
 <template>
   <div>
-    <div v-if="pending" class="py-16 text-center">
+    <GsEmptyState
+      v-if="!isMemberOrAbove"
+      icon="i-heroicons-lock-closed"
+      :title="t('report.noAccess')"
+    />
+
+    <div v-else-if="pending" class="py-16 text-center">
       <p class="text-muted">{{ t('common.loading') }}</p>
     </div>
+
+    <GsEmptyState
+      v-else-if="error"
+      icon="i-heroicons-exclamation-triangle"
+      :title="t('error.fetchFailed')"
+    />
 
     <template v-else-if="report">
       <GsBreadcrumb

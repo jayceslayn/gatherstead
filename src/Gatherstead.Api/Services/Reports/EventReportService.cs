@@ -35,9 +35,11 @@ public class EventReportService : IEventReportService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        // Event managers (Coordinator+) may view reports; this also covers sensitive dietary read,
-        // since the event-manage role floor (Coordinator) is at or above the sensitive-read floor (Member).
-        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        // Any tenant Member+ may view the report: members occasionally execute the meal prep behind
+        // a TaskPlan, and aggregated dietary needs are allergy-safety information. The global
+        // sensitive-read scope (Member+) gates the dietary detail and spans all households, which is
+        // exactly what this cross-household aggregate requires.
+        if (!await ServiceGuards.AuthorizeGlobalSensitiveReadAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
             return response;
 
         var @event = await _dbContext.Events

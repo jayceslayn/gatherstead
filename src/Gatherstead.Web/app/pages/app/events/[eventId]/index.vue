@@ -166,7 +166,7 @@ onMounted(() => {
       <div class="flex items-center gap-2 text-sm text-muted mb-4 flex-wrap">
         <UIcon name="i-heroicons-calendar-days" class="size-4 shrink-0" />
         <span>{{ t('event.dateRange', { start: formatHeader(event.startDate), end: formatHeader(event.endDate) }) }}</span>
-        <GsRoleGate min-role="Coordinator">
+        <GsRoleGate min-role="Member">
           <UButton
             :to="`/app/reports/events/${event.id}`"
             variant="link"

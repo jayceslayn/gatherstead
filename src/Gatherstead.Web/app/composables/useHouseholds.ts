@@ -58,14 +58,16 @@ export function useHouseholdActions(refresh: () => Promise<void>) {
     }
   }
 
-  async function updateHousehold(householdId: string, name: string) {
+  async function updateHousehold(householdId: string, name: string): Promise<boolean> {
     updating.value.push(householdId)
     try {
       await repo.updateHousehold(tenantStore.currentTenantId!, householdId, name)
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== householdId)

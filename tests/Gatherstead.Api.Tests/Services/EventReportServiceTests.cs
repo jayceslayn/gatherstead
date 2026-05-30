@@ -65,11 +65,12 @@ public class EventReportServiceTests : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 
-    private EventReportService CreateService(bool canManageEvent = true)
+    private EventReportService CreateService(bool canReadSensitive = true)
     {
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId);
+        var scope = canReadSensitive ? SensitiveReadScope.Global : SensitiveReadScope.None;
         var auth = Mock.Of<IMemberAuthorizationService>(a =>
-            a.CanManageEventAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManageEvent));
+            a.GetSensitiveReadScopeAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(scope));
         return new EventReportService(_dbContext, tenantContext, auth);
     }
 
@@ -108,9 +109,9 @@ public class EventReportServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetEventMealReportAsync_WithoutEventManage_ReturnsError()
+    public async Task GetEventMealReportAsync_WithoutSensitiveRead_ReturnsError()
     {
-        var result = await CreateService(canManageEvent: false)
+        var result = await CreateService(canReadSensitive: false)
             .GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
 
         Assert.False(result.Successful);

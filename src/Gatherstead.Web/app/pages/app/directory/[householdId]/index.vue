@@ -29,29 +29,8 @@ async function confirmDelete() {
   await deleteHousehold(householdId.value)
 }
 
-// Rename / edit
-const { updating: editUpdating, updateHousehold } = useHouseholdActions(refreshHousehold)
+// Rename / edit — handled by the shared GsHouseholdModal in edit mode.
 const showEdit = ref(false)
-const editName = ref('')
-const editError = ref('')
-const savingEdit = computed(() => editUpdating.value.includes(householdId.value))
-
-function openEdit() {
-  editName.value = household.value?.name ?? ''
-  editError.value = ''
-  showEdit.value = true
-}
-
-async function submitEdit() {
-  editError.value = ''
-  const trimmed = editName.value.trim()
-  if (!trimmed) {
-    editError.value = t('validation.required', { field: t('household.name') })
-    return
-  }
-  await updateHousehold(householdId.value, trimmed)
-  showEdit.value = false
-}
 </script>
 
 <template>
@@ -75,7 +54,7 @@ async function submitEdit() {
               variant="outline"
               size="sm"
               icon="i-heroicons-pencil"
-              @click="openEdit"
+              @click="showEdit = true"
             >
               {{ t('common.edit') }}
             </UButton>
@@ -157,27 +136,10 @@ async function submitEdit() {
       @confirm="confirmDelete"
     />
 
-    <UModal v-model:open="showEdit">
-      <template #content>
-        <div class="p-6">
-          <h3 class="text-lg font-semibold mb-4">{{ t('household.editTitle') }}</h3>
-          <UFormField :label="t('household.name')" :error="editError || undefined">
-            <UInput
-              v-model="editName"
-              :placeholder="t('household.name')"
-              @keydown.enter="submitEdit"
-            />
-          </UFormField>
-          <div class="flex justify-end gap-3 mt-6">
-            <UButton variant="ghost" :disabled="savingEdit" @click="showEdit = false">
-              {{ t('common.cancel') }}
-            </UButton>
-            <UButton :loading="savingEdit" @click="submitEdit">
-              {{ t('common.save') }}
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <GsHouseholdModal
+      v-model:open="showEdit"
+      :household="household"
+      :refresh="refreshHousehold"
+    />
   </div>
 </template>

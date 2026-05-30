@@ -225,6 +225,7 @@
     "eventReports": "Event Reports",
     "chooseEvent": "Choose an event to see attendance and meal planning details.",
     "noEvents": "No events to report on yet.",
+    "noAccess": "You don't have access to reports for this group.",
     "event": {
       "viewReport": "View Report",
       "title": "Event Report",

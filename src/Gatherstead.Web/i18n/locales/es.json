@@ -225,6 +225,7 @@
     "eventReports": "Informes de Eventos",
     "chooseEvent": "Elige un evento para ver la asistencia y los detalles de planificación de comidas.",
     "noEvents": "Aún no hay eventos sobre los que informar.",
+    "noAccess": "No tienes acceso a los informes de este grupo.",
     "event": {
       "viewReport": "Ver Informe",
       "title": "Informe del Evento",

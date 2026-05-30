@@ -122,6 +122,14 @@ These are the highest-risk areas (auth, privilege grants, cross-tenant data) and
 
 ### 🟢 Low
 
+> **Status: all Low items + actionable Nits remediated.**
+> #7 — Report pages now gate on `isMemberOrAbove` with a `report.noAccess` empty-state fallback (en+es).
+> #8 — **Decision: lowered to Member+.** `EventReportService` now uses `AuthorizeGlobalSensitiveReadAsync` (Member+ → global sensitive-read scope); the event-detail "View Report" button gate dropped from Coordinator to Member. Members occasionally cook behind a TaskPlan, and aggregated dietary needs are allergy-safety info.
+> #9 — **Decision: keep current soft-delete (revoked invites disappear).** No code change; the "Pending invitations" list intentionally hides revoked rows.
+> #10 — Extracted `GsHouseholdModal` (create+edit); removed `GsCreateHouseholdModal`; `updateHousehold` now returns `boolean` and the modal gates close on success (fixing the same close-on-failure bug).
+> #11 — Extracted `GsTemplateDateRangeField`; both template modals consume it.
+> Nits — demo matching-task now uses an explicit `mealTypeFlagsToTaskSlotFlags` mapper (no coincidental bit alignment); demo dietary tally is now case-insensitive (matches backend); report page surfaces fetch `error` distinctly from empty data.
+
 #### 7. Reports pages lack a UI-level role gate
 **Files:** `app/pages/app/reports/index.vue`, `app/pages/app/reports/events/[eventId].vue`
 
