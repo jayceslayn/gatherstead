@@ -4,6 +4,7 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using MealAttendanceEntity = Gatherstead.Data.Entities.MealAttendance;
 
 namespace Gatherstead.Api.Services.Reports;
 
@@ -128,7 +129,7 @@ public class EventReportService : IEventReportService
     private static EventReportMealDto BuildMeal(
         MealPlan plan,
         string templateName,
-        List<MealAttendance> attendance,
+        List<MealAttendanceEntity> attendance,
         IReadOnlyDictionary<Guid, HouseholdMember> memberById,
         IReadOnlyDictionary<Guid, IReadOnlyList<string>> dietaryByMember)
     {
