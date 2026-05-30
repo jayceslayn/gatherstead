@@ -211,9 +211,9 @@ Reimplements the same `UModal/UFormField/name-validation` block already in `GsCr
 
 ## Final Step — Update `/docs` When Editing Is Done
 
-After all fixes are applied and the PR is merged, update the following documentation files to reflect the new capabilities:
+> **Status: complete.** All four docs updated to reflect the MVP features.
 
-- **`docs/IMPLEMENTATION_STATUS.md`** — Mark Workstreams A–D as complete; note the invitation/bootstrap flow, `POST /api/me/bootstrap`, and the Reports section; update schema notes for `User.Email` and new `Invitation` entity.
-- **`docs/ARCHITECTURE.md`** — Add the `Reports` and `Invitations` service namespaces to the backend service layer overview; document the JIT provisioning + email-claim auto-claim pattern; note that `HttpContextCurrentUserContext.CacheKey` is intentionally public for the bootstrap flow.
-- **`docs/DESIGN_PRINCIPLES.md`** — Note the `email_verified` requirement for invitation matching under the security/privacy section.
-- **`README.md`** — Update feature list to include user invitations and event reports.
+- **`docs/IMPLEMENTATION_STATUS.md`** ✅ — Added Implemented-Features entries for invitations + JIT provisioning (`POST /api/me/bootstrap`, `MembershipGrant`), event reports, the optional matching-task, and the frontend CRUD UI; updated schema notes (`User.Email`, `Invitation`, filtered unique index); refreshed Planned Enhancements (invite delivery) and Architecture Direction.
+- **`docs/ARCHITECTURE.md`** ✅ — Added the `Invitation` entity to the Shared Foundation, a Reporting subsection (Reports root + `EventReportService`), the JIT-provisioning/email-claim pattern and `MembershipGrant`/`CacheKey` note in Backend conventions, and `Invitation` to both diagrams.
+- **`docs/DESIGN_PRINCIPLES.md`** ✅ — Added the "Verified-identity invitation claiming" principle (`email_verified` requirement, no `preferred_username` matching, non-escalation).
+- **`README.md`** ✅ — Added event reports, meal→task, and family-invite use cases.
