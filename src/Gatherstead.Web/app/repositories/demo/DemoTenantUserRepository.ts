@@ -1,6 +1,10 @@
-import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary } from '../types'
+import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary, InvitationSummary } from '../types'
 import type { ITenantUserRepository } from '../interfaces'
-import { getDemoStore, persistDemoStore } from './DemoStore'
+import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
+
+// Demo-only, in-memory invitations. The demo tenant has a single user, so invites stay Pending
+// (there is no other matching user to auto-accept) — enough to exercise the invite/list/revoke UX.
+const demoInvitations: InvitationSummary[] = []
 
 export class DemoTenantUserRepository implements ITenantUserRepository {
   async listTenantUsers(_tenantId: string): Promise<TenantUserSummary[]> {
@@ -53,5 +57,40 @@ export class DemoTenantUserRepository implements ITenantUserRepository {
       hu => !(hu.householdId === householdId && hu.userId === userId),
     )
     persistDemoStore()
+  }
+
+  async inviteUser(
+    tenantId: string,
+    email: string,
+    role: TenantRole,
+    householdId?: string | null,
+    householdRole?: HouseholdRole | null,
+  ): Promise<InvitationSummary> {
+    const normalized = email.trim().toLowerCase()
+    const existing = demoInvitations.find(i => i.tenantId === tenantId && i.email === normalized && i.status === 'Pending')
+    if (existing) return existing
+
+    const invitation: InvitationSummary = {
+      id: demoId(),
+      tenantId,
+      email: normalized,
+      role,
+      householdId: householdId ?? null,
+      householdRole: householdRole ?? null,
+      status: 'Pending',
+      createdAt: new Date().toISOString(),
+      acceptedAt: null,
+    }
+    demoInvitations.push(invitation)
+    return invitation
+  }
+
+  async listInvitations(tenantId: string): Promise<InvitationSummary[]> {
+    return demoInvitations.filter(i => i.tenantId === tenantId)
+  }
+
+  async revokeInvitation(tenantId: string, invitationId: string): Promise<void> {
+    const idx = demoInvitations.findIndex(i => i.tenantId === tenantId && i.id === invitationId)
+    if (idx >= 0) demoInvitations.splice(idx, 1)
   }
 }

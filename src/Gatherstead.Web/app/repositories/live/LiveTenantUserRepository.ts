@@ -1,4 +1,4 @@
-import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary } from '../types'
+import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary, InvitationSummary } from '../types'
 import type { ITenantUserRepository } from '../interfaces'
 
 export class LiveTenantUserRepository implements ITenantUserRepository {
@@ -47,6 +47,34 @@ export class LiveTenantUserRepository implements ITenantUserRepository {
   async deleteHouseholdUser(tenantId: string, householdId: string, userId: string): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/households/${householdId}/users/${userId}`,
+      { method: 'DELETE' },
+    )
+  }
+
+  async inviteUser(
+    tenantId: string,
+    email: string,
+    role: TenantRole,
+    householdId?: string | null,
+    householdRole?: HouseholdRole | null,
+  ): Promise<InvitationSummary> {
+    const response = await $fetch<{ entity: InvitationSummary }>(
+      `/api/proxy/tenants/${tenantId}/invitations`,
+      { method: 'POST', body: { email, role, householdId: householdId ?? null, householdRole: householdRole ?? null } },
+    )
+    return response.entity
+  }
+
+  async listInvitations(tenantId: string): Promise<InvitationSummary[]> {
+    const response = await $fetch<{ entity: InvitationSummary[] }>(
+      `/api/proxy/tenants/${tenantId}/invitations`,
+    )
+    return response.entity ?? []
+  }
+
+  async revokeInvitation(tenantId: string, invitationId: string): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/invitations/${invitationId}`,
       { method: 'DELETE' },
     )
   }

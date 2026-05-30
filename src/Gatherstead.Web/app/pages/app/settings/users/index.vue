@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTenantUserList } from '~/composables/useTenantUsers'
+import { useTenantUserList, useInvitations, useInvitationActions } from '~/composables/useTenantUsers'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
 import type { TenantRole } from '~/repositories/types'
 
@@ -10,6 +10,11 @@ definePageMeta({
 const { t } = useI18n()
 const { tenantUsers, pending } = useTenantUserList()
 const { memberMap } = useAllMembers()
+const { invitations, refresh: refreshInvites } = useInvitations()
+const { revoke } = useInvitationActions(refreshInvites)
+
+const showInvite = ref(false)
+const pendingInvitations = computed(() => invitations.value.filter(i => i.status === 'Pending'))
 
 const ROLE_ORDER: TenantRole[] = ['Owner', 'Manager', 'Coordinator', 'Member', 'Guest']
 
@@ -30,7 +35,40 @@ const grouped = computed(() =>
 <template>
   <div>
     <GsBreadcrumb :items="[{ label: t('settings.title'), to: '/app/settings' }, { label: t('settings.users') }]" />
-    <GsPageHeader :title="t('settings.users')" />
+    <GsPageHeader :title="t('settings.users')">
+      <GsRoleGate min-role="Manager">
+        <UButton icon="i-heroicons-user-plus" size="sm" @click="showInvite = true">
+          {{ t('tenantUser.invite.title') }}
+        </UButton>
+      </GsRoleGate>
+    </GsPageHeader>
+
+    <GsRoleGate min-role="Manager">
+      <div v-if="pendingInvitations.length" class="mb-6">
+        <p class="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
+          {{ t('tenantUser.invite.pendingTitle') }}
+        </p>
+        <div class="flex flex-col gap-2">
+          <UCard v-for="inv in pendingInvitations" :key="inv.id">
+            <div class="flex items-center gap-3">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm truncate">{{ inv.email }}</p>
+                <p class="text-xs text-muted">{{ t(`tenantUser.roles.${inv.role}`) }}</p>
+              </div>
+              <UBadge color="warning" variant="subtle">{{ t('tenantUser.invite.statusPending') }}</UBadge>
+              <UButton
+                color="error"
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-x-mark"
+                :aria-label="t('tenantUser.invite.revoke')"
+                @click="revoke(inv.id)"
+              />
+            </div>
+          </UCard>
+        </div>
+      </div>
+    </GsRoleGate>
 
     <div class="mb-4">
       <UInput
@@ -85,5 +123,7 @@ const grouped = computed(() =>
         </div>
       </div>
     </div>
+
+    <GsInviteUserModal v-model:open="showInvite" :refresh="refreshInvites" />
   </div>
 </template>

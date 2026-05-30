@@ -68,13 +68,13 @@ export function useTaskTemplates(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { tasks: repo } = useRepositories()
 
-  const { data, pending, error } = useAsyncData<TaskTemplate[]>(
+  const { data, pending, error, refresh } = useAsyncData<TaskTemplate[]>(
     () => `task-templates-${tenantStore.currentTenantId}-${eventId.value}`,
     () => repo.listTaskTemplates(tenantStore.currentTenantId!, eventId.value),
     { watch: [eventId] },
   )
 
-  return { templates: computed(() => data.value ?? []), pending, error }
+  return { templates: computed(() => data.value ?? []), pending, error, refresh }
 }
 
 export function useTaskPlanSection(

@@ -48,6 +48,20 @@ export interface HouseholdUserSummary {
   externalId: string
 }
 
+export type InvitationStatus = 'Pending' | 'Accepted' | 'Revoked'
+
+export interface InvitationSummary {
+  id: string
+  tenantId: string
+  email: string
+  role: TenantRole
+  householdId: string | null
+  householdRole: HouseholdRole | null
+  status: InvitationStatus
+  createdAt: string
+  acceptedAt: string | null
+}
+
 export interface HouseholdMember {
   id: string
   tenantId: string
@@ -214,6 +228,47 @@ export interface EquipmentSummary {
   name: string
   notes: string | null
   attributes: AttributeEntry[]
+}
+
+
+export interface EventReportDietaryTally {
+  label: string
+  count: number
+}
+
+export interface EventReportAttendee {
+  memberId: string
+  name: string
+  status: AttendanceStatus
+  bringOwnFood: boolean
+  dietary: string[]
+}
+
+export interface EventReportMeal {
+  mealPlanId: string
+  templateName: string
+  mealType: MealType
+  going: number
+  maybe: number
+  notGoing: number
+  bringOwnFood: number
+  dietary: EventReportDietaryTally[]
+  attendees: EventReportAttendee[]
+}
+
+export interface EventReportDay {
+  day: string
+  going: number
+  maybe: number
+  meals: EventReportMeal[]
+}
+
+export interface EventReport {
+  eventId: string
+  eventName: string
+  startDate: string
+  endDate: string
+  days: EventReportDay[]
 }
 
 

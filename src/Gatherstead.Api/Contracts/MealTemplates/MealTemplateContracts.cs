@@ -36,6 +36,13 @@ public class CreateMealTemplateRequest
     public DateOnly? EndDate { get; init; }
     public string? Notes { get; init; }
     public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
+
+    /// <summary>
+    /// When true, a matching <see cref="TaskTemplate"/> is created alongside the meal so the
+    /// meal can also be organized/assigned as a task. Meal types map to task time slots
+    /// (Breakfast→Morning, Lunch→Midday, Dinner→Evening) and the same date sub-range is used.
+    /// </summary>
+    public bool CreateMatchingTaskTemplate { get; init; }
 }
 
 public class UpdateMealTemplateRequest

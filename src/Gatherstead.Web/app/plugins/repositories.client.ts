@@ -13,6 +13,7 @@ import { LivePropertyRepository } from '~/repositories/live/LivePropertyReposito
 import { LiveAccommodationRepository } from '~/repositories/live/LiveAccommodationRepository'
 import { LiveAccommodationIntentRepository } from '~/repositories/live/LiveAccommodationIntentRepository'
 import { LiveEquipmentRepository } from '~/repositories/live/LiveEquipmentRepository'
+import { LiveReportRepository } from '~/repositories/live/LiveReportRepository'
 import { DemoTenantRepository } from '~/repositories/demo/DemoTenantRepository'
 import { DemoHouseholdRepository } from '~/repositories/demo/DemoHouseholdRepository'
 import { DemoHouseholdMemberRepository } from '~/repositories/demo/DemoHouseholdMemberRepository'
@@ -26,6 +27,7 @@ import { DemoPropertyRepository } from '~/repositories/demo/DemoPropertyReposito
 import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodationRepository'
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
 import { DemoEquipmentRepository } from '~/repositories/demo/DemoEquipmentRepository'
+import { DemoReportRepository } from '~/repositories/demo/DemoReportRepository'
 import { getDemoStore } from '~/repositories/demo/DemoStore'
 import { seedDemoData } from '~/repositories/demo/seedDemoData'
 
@@ -47,6 +49,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         accommodations: new DemoAccommodationRepository(),
         accommodationIntents: new DemoAccommodationIntentRepository(),
         equipment: new DemoEquipmentRepository(),
+        reports: new DemoReportRepository(),
       }
     : {
         tenants: new LiveTenantRepository(),
@@ -62,6 +65,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         accommodations: new LiveAccommodationRepository(),
         accommodationIntents: new LiveAccommodationIntentRepository(),
         equipment: new LiveEquipmentRepository(),
+        reports: new LiveReportRepository(),
       }
 
   nuxtApp.vueApp.provide(REPOSITORIES_KEY, repos)

@@ -6,7 +6,9 @@ namespace Gatherstead.Api.Security;
 
 public class HttpContextCurrentUserContext : ICurrentUserContext
 {
-    private const string CacheKey = "CurrentUser_UserId";
+    // Public so user-provisioning can pre-seed the resolved id for a brand-new user within the
+    // same request (before the row is queryable), satisfying the auditing interceptor.
+    public const string CacheKey = "CurrentUser_UserId";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IServiceProvider _serviceProvider;

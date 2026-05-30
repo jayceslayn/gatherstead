@@ -13,7 +13,7 @@ const router = useRouter()
 const { isManagerOrAbove } = useTenantRole()
 
 const householdId = computed(() => route.params.householdId as string)
-const { household, pending: householdPending } = useHousehold(householdId)
+const { household, pending: householdPending, refresh: refreshHousehold } = useHousehold(householdId)
 const { members, pending: membersPending } = useHouseholdMembers(householdId)
 
 const pending = computed(() => householdPending.value || membersPending.value)
@@ -27,6 +27,30 @@ const deleting = computed(() => updating.value.includes(householdId.value))
 async function confirmDelete() {
   showDeleteConfirm.value = false
   await deleteHousehold(householdId.value)
+}
+
+// Rename / edit
+const { updating: editUpdating, updateHousehold } = useHouseholdActions(refreshHousehold)
+const showEdit = ref(false)
+const editName = ref('')
+const editError = ref('')
+const savingEdit = computed(() => editUpdating.value.includes(householdId.value))
+
+function openEdit() {
+  editName.value = household.value?.name ?? ''
+  editError.value = ''
+  showEdit.value = true
+}
+
+async function submitEdit() {
+  editError.value = ''
+  const trimmed = editName.value.trim()
+  if (!trimmed) {
+    editError.value = t('validation.required', { field: t('household.name') })
+    return
+  }
+  await updateHousehold(householdId.value, trimmed)
+  showEdit.value = false
 }
 </script>
 
@@ -46,13 +70,23 @@ async function confirmDelete() {
 
       <GsPageHeader :title="household.name">
         <GsRoleGate min-role="Manager">
-          <UButton
-            :to="`/app/directory/${household.id}/create-member`"
-            size="sm"
-            icon="i-heroicons-plus"
-          >
-            {{ t('member.createMember') }}
-          </UButton>
+          <div class="flex items-center gap-2">
+            <UButton
+              variant="outline"
+              size="sm"
+              icon="i-heroicons-pencil"
+              @click="openEdit"
+            >
+              {{ t('common.edit') }}
+            </UButton>
+            <UButton
+              :to="`/app/directory/${household.id}/create-member`"
+              size="sm"
+              icon="i-heroicons-plus"
+            >
+              {{ t('member.createMember') }}
+            </UButton>
+          </div>
         </GsRoleGate>
       </GsPageHeader>
 
@@ -122,5 +156,28 @@ async function confirmDelete() {
       danger
       @confirm="confirmDelete"
     />
+
+    <UModal v-model:open="showEdit">
+      <template #content>
+        <div class="p-6">
+          <h3 class="text-lg font-semibold mb-4">{{ t('household.editTitle') }}</h3>
+          <UFormField :label="t('household.name')" :error="editError || undefined">
+            <UInput
+              v-model="editName"
+              :placeholder="t('household.name')"
+              @keydown.enter="submitEdit"
+            />
+          </UFormField>
+          <div class="flex justify-end gap-3 mt-6">
+            <UButton variant="ghost" :disabled="savingEdit" @click="showEdit = false">
+              {{ t('common.cancel') }}
+            </UButton>
+            <UButton :loading="savingEdit" @click="submitEdit">
+              {{ t('common.save') }}
+            </UButton>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

@@ -12,6 +12,16 @@ interface TenantUserMeApiResponse {
   entity: { linkedMemberId: string | null, linkedHouseholdId: string | null }
 }
 
+// Provision the internal user and claim any pending invitations exactly once per page load,
+// before tenants are resolved, so a freshly-invited user's membership is already in place.
+let bootstrapPromise: Promise<unknown> | null = null
+function ensureBootstrap() {
+  if (!bootstrapPromise) {
+    bootstrapPromise = $fetch('/api/proxy/me/bootstrap', { method: 'POST' }).catch(() => null)
+  }
+  return bootstrapPromise
+}
+
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!to.path.startsWith('/app')) return
 
@@ -44,6 +54,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
     return
   }
+
+  // Live mode: provision the internal user and claim any pending invitations before
+  // resolving tenants, so a freshly-invited user's membership is already in place.
+  await ensureBootstrap()
 
   // Live mode: resolve tenant on first load
   if (!tenantStore.currentTenantId) {

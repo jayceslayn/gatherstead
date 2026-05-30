@@ -15,10 +15,10 @@ export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Prom
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createTemplate(name: string, mealTypes: number, startDate: string | null = null, endDate: string | null = null, notes: string | null = null) {
+  async function createTemplate(name: string, mealTypes: number, startDate: string | null = null, endDate: string | null = null, notes: string | null = null, createMatchingTaskTemplate = false) {
     updating.value.push('new')
     try {
-      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, mealTypes, startDate, endDate, notes)
+      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, mealTypes, startDate, endDate, notes, null, createMatchingTaskTemplate)
       await refresh()
     }
     catch (e) {
@@ -68,13 +68,13 @@ export function useMealTemplates(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { mealPlans: repo } = useRepositories()
 
-  const { data, pending, error } = useAsyncData<MealTemplate[]>(
+  const { data, pending, error, refresh } = useAsyncData<MealTemplate[]>(
     () => `meal-templates-${tenantStore.currentTenantId}-${eventId.value}`,
     () => repo.listMealTemplates(tenantStore.currentTenantId!, eventId.value),
     { watch: [eventId] },
   )
 
-  return { templates: computed(() => data.value ?? []), pending, error }
+  return { templates: computed(() => data.value ?? []), pending, error, refresh }
 }
 
 export function useMealPlanSection(

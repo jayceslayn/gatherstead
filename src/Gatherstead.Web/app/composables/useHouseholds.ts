@@ -21,13 +21,13 @@ export function useHousehold(householdId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { households: repo } = useRepositories()
 
-  const { data, pending, error } = useAsyncData<HouseholdSummary | null>(
+  const { data, pending, error, refresh } = useAsyncData<HouseholdSummary | null>(
     () => `household-${tenantStore.currentTenantId}-${householdId.value}`,
     () => repo.getHousehold(tenantStore.currentTenantId!, householdId.value),
     { watch: [householdId] },
   )
 
-  return { household: computed(() => data.value ?? null), pending, error }
+  return { household: computed(() => data.value ?? null), pending, error, refresh }
 }
 
 export function useHouseholdActions(refresh: () => Promise<void>) {

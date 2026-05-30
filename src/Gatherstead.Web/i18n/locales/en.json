@@ -151,6 +151,14 @@
     "myAttendance": "My Attendance",
     "selectHousehold": "Select household",
     "tabsComingSoon": "This section is coming soon.",
+    "dateRangeLabel": "Date range",
+    "endBeforeStart": "End date must be on or after the start date.",
+    "deleteTitle": "Delete Event",
+    "deleteConfirm": "This will permanently remove this event and all its plans. This cannot be undone.",
+    "dateChangeHint": "Changing the dates will adjust meal and task plans to match.",
+    "propertyLocked": "The property can't be changed after creation.",
+    "noPropertiesTitle": "No properties yet",
+    "noPropertiesHint": "Add a property before creating an event.",
     "meal": {
       "breakfast": "Breakfast",
       "lunch": "Lunch",
@@ -160,7 +168,18 @@
       "noTemplates": "No meal plans have been set up for this event.",
       "noPlans": "No meal plan details available.",
       "dateRange": "{start} – {end}",
-      "oneOff": "One-off"
+      "oneOff": "One-off",
+      "templateName": "Meal Name",
+      "templateNamePlaceholder": "e.g. Saturday Breakfast",
+      "mealTypes": "Meal Types",
+      "selectMealType": "Select at least one meal type.",
+      "useSubRange": "Limit to specific days",
+      "dateRangeLabel": "Date range",
+      "addTemplate": "Add Meal",
+      "editTemplate": "Edit Meal",
+      "deleteTemplate": "Delete Meal",
+      "deleteConfirm": "This will remove the meal and its plans. This cannot be undone.",
+      "createMatchingTask": "Also create a matching task to organize this meal"
     },
     "task": {
       "morning": "Morning",
@@ -173,7 +192,16 @@
       "noPlans": "No task plan details available.",
       "minimumAssignees": "min. {n}",
       "dateRange": "{start} – {end}",
-      "oneOff": "One-off"
+      "oneOff": "One-off",
+      "templateName": "Task Name",
+      "templateNamePlaceholder": "e.g. Set Up Campsite",
+      "timeSlots": "Time Slots",
+      "selectTimeSlot": "Select at least one time slot.",
+      "minimumAssigneesLabel": "Minimum Assignees",
+      "addTemplate": "Add Task",
+      "editTemplate": "Edit Task",
+      "deleteTemplate": "Delete Task",
+      "deleteConfirm": "This will remove the task and its plans. This cannot be undone."
     }
   },
   "property": {
@@ -187,7 +215,38 @@
     "accommodations": "Accommodations",
     "noAccommodations": "No accommodations added yet.",
     "noAccommodationsHintManager": "Create the first accommodation for this property.",
-    "createAccommodation": "Create Accommodation"
+    "createAccommodation": "Create Accommodation",
+    "deleteTitle": "Delete Property",
+    "deleteConfirm": "This will permanently remove this property and its accommodations. This cannot be undone."
+  },
+  "report": {
+    "title": "Reports",
+    "subtitle": "Insights across your gatherings.",
+    "eventReports": "Event Reports",
+    "chooseEvent": "Choose an event to see attendance and meal planning details.",
+    "noEvents": "No events to report on yet.",
+    "event": {
+      "viewReport": "View Report",
+      "title": "Event Report",
+      "headcount": "Headcount",
+      "attendingCount": "{n} attending",
+      "meal": "Meal",
+      "going": "Going",
+      "maybe": "Maybe",
+      "notGoing": "Not Going",
+      "goingCount": "Going: {n}",
+      "maybeCount": "Maybe: {n}",
+      "dietaryTally": "{label} · {count}",
+      "bringingOwnFood": "{n} bringing own food",
+      "dietaryNeeds": "Dietary Needs",
+      "noDietaryNeeds": "No special dietary needs noted.",
+      "attendees": "Attendees",
+      "noMeals": "No meals planned for this day.",
+      "noData": "No attendance or meal data recorded yet.",
+      "print": "Print",
+      "summary": "Summary",
+      "ownFood": "own food"
+    }
   },
   "accommodation": {
     "types": {
@@ -304,6 +363,20 @@
     "householdRoles": {
       "Manager": "Manager",
       "Member": "Member"
+    },
+    "invite": {
+      "title": "Invite User",
+      "hint": "Enter the person's email. They'll join automatically the next time they sign in — whether or not they already have an account.",
+      "email": "Email",
+      "emailPlaceholder": "name{'@'}example.com",
+      "household": "Household access (optional)",
+      "householdRole": "Household role",
+      "noHousehold": "No household access",
+      "send": "Send Invite",
+      "sent": "Invitation sent",
+      "pendingTitle": "Pending invitations",
+      "statusPending": "Pending",
+      "revoke": "Revoke invitation"
     }
   }
 }

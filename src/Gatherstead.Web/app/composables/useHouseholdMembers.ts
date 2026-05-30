@@ -80,21 +80,23 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
-  ) {
+  ): Promise<HouseholdMember | null> {
     updating.value.push('new')
     try {
-      await repo.createMember(
+      const created = await repo.createMember(
         tenantStore.currentTenantId!, householdId.value,
         name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags,
       )
       await refresh()
+      return created
     }
     catch (e) {
       if (e instanceof DemoLimitError) {
         toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
-        return
+        return null
       }
       toast.add({ title: translateError(e), color: 'error' })
+      return null
     }
     finally {
       updating.value = updating.value.filter(k => k !== 'new')

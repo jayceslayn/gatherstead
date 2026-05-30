@@ -29,6 +29,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdUser> HouseholdUsers => Set<HouseholdUser>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();

@@ -1,0 +1,56 @@
+<script setup lang="ts">
+definePageMeta({
+  layout: 'default',
+})
+
+const { t } = useI18n()
+const { events, pending } = useEvents()
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(
+    new Date(date + 'T00:00:00'),
+  )
+}
+</script>
+
+<template>
+  <div>
+    <GsPageHeader :title="t('report.title')" />
+    <p class="text-muted mb-6">{{ t('report.subtitle') }}</p>
+
+    <h2 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">
+      {{ t('report.eventReports') }}
+    </h2>
+    <p class="text-sm text-muted mb-4">{{ t('report.chooseEvent') }}</p>
+
+    <div v-if="pending" class="py-16 text-center">
+      <p class="text-muted">{{ t('common.loading') }}</p>
+    </div>
+
+    <GsEmptyState
+      v-else-if="!events.length"
+      icon="i-heroicons-chart-bar"
+      :title="t('report.noEvents')"
+    />
+
+    <div v-else class="flex flex-col gap-3">
+      <NuxtLink
+        v-for="event in events"
+        :key="event.id"
+        :to="`/app/reports/events/${event.id}`"
+      >
+        <UCard class="hover:ring-1 hover:ring-primary transition-all cursor-pointer">
+          <div class="flex items-center justify-between gap-4">
+            <div class="min-w-0">
+              <p class="font-semibold truncate">{{ event.name }}</p>
+              <p class="text-sm text-muted mt-0.5">
+                {{ t('event.dateRange', { start: formatDate(event.startDate), end: formatDate(event.endDate) }) }}
+              </p>
+            </div>
+            <UIcon name="i-heroicons-chart-bar" class="size-5 text-muted shrink-0" />
+          </div>
+        </UCard>
+      </NuxtLink>
+    </div>
+  </div>
+</template>
