@@ -171,11 +171,13 @@ Reimplements the same `UModal/UFormField/name-validation` block already in `GsCr
 
 ### Nit
 
-- **Demo matching-task time-slot mapping** (`DemoMealPlanRepository.ts`) sets `timeSlots = meal.mealTypes` directly, relying on coincidental flag-value alignment (Breakfast/Lunch/Dinner = 0x01/0x02/0x04 = Morning/Midday/Evening). Add a comment or explicit map to prevent silent breakage if either flag set changes.
-- **Demo dietary tally is case-sensitive** vs. backend `OrdinalIgnoreCase`. "Vegan"/"vegan" produces two tallies in demo, one in live. Also demo reads only `dietaryTags` (no `DietaryProfile` allergies/restrictions) — acceptable but documented.
-- **Demo invitations in a module-level array**, not `DemoStore`/`persistDemoStore`, so they don't survive reload. Fine for demo, flagged for consistency.
-- **`useEventReport` exposes `error`** but the report page ignores it, falling through to a generic `notFound` empty state.
-- **`events/[eventId]/index.vue:35`** builds `tabs` as a plain array, so labels won't update on locale switch without remount (pre-existing pattern in a touched file).
+> **Status: all Nits remediated.**
+
+- ~~**Demo matching-task time-slot mapping**~~ ✅ Now uses an explicit `mealTypeFlagsToTaskSlotFlags` helper (mirrors backend), no longer relying on coincidental flag-bit alignment.
+- ~~**Demo dietary tally is case-sensitive**~~ ✅ Now case-insensitive (first-seen casing preserved) in both per-member dedup and per-meal tally, matching the backend. (Demo still reads only `dietaryTags` — no `DietaryProfile` store exists in demo; documented limitation.)
+- ~~**Demo invitations in a module-level array**~~ ✅ Moved into `DemoStore` (state, reactive refs, snapshot, empty/clear) and persisted via `persistDemoStore`, so they survive reload like every other demo entity.
+- ~~**`useEventReport` exposes `error`**~~ ✅ Report detail page now shows a distinct `error.fetchFailed` state instead of falling through to "not found".
+- ~~**`events/[eventId]/index.vue` plain `tabs` array**~~ ✅ Now `computed`, so tab labels re-translate on locale switch.
 
 ---
 

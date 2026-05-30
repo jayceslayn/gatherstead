@@ -31,18 +31,18 @@ const { updating: taskUpdating, deleteTemplate: deleteTaskTemplate } = useTaskTe
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
 const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
 
-// Tab state
-const tabs: TabsItem[] = [
+// Tab state — computed so labels re-translate on locale switch.
+const tabs = computed<TabsItem[]>(() => [
   { label: t('event.attendance'), value: 'attendance', slot: 'attendance' },
   { label: t('event.meals'), value: 'meals', slot: 'meals' },
   { label: t('event.tasks'), value: 'tasks', slot: 'tasks' },
   { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations' },
-]
+])
 
-const activeTab = ref<string | number>(tabs[0]?.value ?? 0)
+const activeTab = ref<string | number>(tabs.value[0]?.value ?? 0)
 
 watch(activeTab, (newVal) => {
-  const tab = tabs.find(tb => tb.value === newVal)
+  const tab = tabs.value.find(tb => tb.value === newVal)
   if (tab) {
     history.replaceState(null, '', `#${tab.value}`)
   }
@@ -137,7 +137,7 @@ async function confirmDeleteTask() {
 }
 
 onMounted(() => {
-  if (tabs.some(tab => tab.value === route.hash.substring(1))) {
+  if (tabs.value.some(tab => tab.value === route.hash.substring(1))) {
     activeTab.value = route.hash.substring(1)
   }
 })

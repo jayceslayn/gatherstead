@@ -2,10 +2,9 @@ import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary
 import type { ITenantUserRepository } from '../interfaces'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
 
-// Demo-only, in-memory invitations. The demo tenant has a single user, so invites stay Pending
-// (there is no other matching user to auto-accept) — enough to exercise the invite/list/revoke UX.
-const demoInvitations: InvitationSummary[] = []
-
+// Demo invitations live in the persisted DemoStore so they survive reloads like every other demo
+// entity. The demo tenant has a single user, so invites stay Pending (there is no other matching
+// user to auto-accept) — enough to exercise the invite/list/revoke UX.
 export class DemoTenantUserRepository implements ITenantUserRepository {
   async listTenantUsers(_tenantId: string): Promise<TenantUserSummary[]> {
     return [...getDemoStore().tenantUsers.value]
@@ -66,8 +65,9 @@ export class DemoTenantUserRepository implements ITenantUserRepository {
     householdId?: string | null,
     householdRole?: HouseholdRole | null,
   ): Promise<InvitationSummary> {
+    const store = getDemoStore()
     const normalized = email.trim().toLowerCase()
-    const existing = demoInvitations.find(i => i.tenantId === tenantId && i.email === normalized && i.status === 'Pending')
+    const existing = store.invitations.value.find(i => i.tenantId === tenantId && i.email === normalized && i.status === 'Pending')
     if (existing) return existing
 
     const invitation: InvitationSummary = {
@@ -81,16 +81,18 @@ export class DemoTenantUserRepository implements ITenantUserRepository {
       createdAt: new Date().toISOString(),
       acceptedAt: null,
     }
-    demoInvitations.push(invitation)
+    store.invitations.value.push(invitation)
+    persistDemoStore()
     return invitation
   }
 
   async listInvitations(tenantId: string): Promise<InvitationSummary[]> {
-    return demoInvitations.filter(i => i.tenantId === tenantId)
+    return getDemoStore().invitations.value.filter(i => i.tenantId === tenantId)
   }
 
   async revokeInvitation(tenantId: string, invitationId: string): Promise<void> {
-    const idx = demoInvitations.findIndex(i => i.tenantId === tenantId && i.id === invitationId)
-    if (idx >= 0) demoInvitations.splice(idx, 1)
+    const store = getDemoStore()
+    store.invitations.value = store.invitations.value.filter(i => !(i.tenantId === tenantId && i.id === invitationId))
+    persistDemoStore()
   }
 }
