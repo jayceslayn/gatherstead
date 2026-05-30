@@ -51,7 +51,7 @@ export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Prom
     updating.value.push(templateId)
     try {
       await repo.deleteTemplate(tenantStore.currentTenantId!, eventId.value, templateId)
-      await refresh?.()
+      await refresh()
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })

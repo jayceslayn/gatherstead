@@ -76,9 +76,9 @@ async function submit() {
     ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, notes)
     : await createTemplate(form.name.trim(), flags, start, end, notes, form.createMatchingTask)
 
+  // The action toasts on failure and refreshes the list on success (via the refresh prop);
+  // keep the modal open with the user's input intact when the save did not go through.
   if (!ok) return
-
-  emit('saved')
   open.value = false
 }
 </script>

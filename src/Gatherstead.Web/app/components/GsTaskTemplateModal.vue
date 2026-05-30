@@ -73,12 +73,13 @@ async function submit() {
   const min = form.minimumAssignees === '' ? null : Number(form.minimumAssignees)
   const notes = form.notes.trim() || null
 
-  if (isEdit.value && props.template) {
-    await updateTemplate(props.template.id, form.name.trim(), flags, start, end, min, notes)
-  }
-  else {
-    await createTemplate(form.name.trim(), flags, start, end, min, notes)
-  }
+  const ok = (isEdit.value && props.template)
+    ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, min, notes)
+    : await createTemplate(form.name.trim(), flags, start, end, min, notes)
+
+  // The action toasts on failure and refreshes the list on success (via the refresh prop);
+  // keep the modal open with the user's input intact when the save did not go through.
+  if (!ok) return
   open.value = false
 }
 </script>
