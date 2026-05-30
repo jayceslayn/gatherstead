@@ -124,11 +124,14 @@ public class InvitationService : IInvitationService
         var invitations = await _dbContext.Invitations
             .AsNoTracking()
             .Where(i => i.TenantId == tenantId)
-            .OrderByDescending(i => i.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        // Order client-side: SQLite (test provider) can't ORDER BY DateTimeOffset, and the result
+        // set per tenant is small enough that in-memory sorting is inconsequential.
+        var ordered = invitations.OrderByDescending(i => i.CreatedAt).ToList();
+
         return BaseEntityResponse<IReadOnlyCollection<InvitationDto>>.SuccessfulResponse(
-            invitations.Select(MapToDto).ToList());
+            ordered.Select(MapToDto).ToList());
     }
 
     public async Task<InvitationResponse> RevokeAsync(
