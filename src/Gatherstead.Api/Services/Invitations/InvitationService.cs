@@ -1,6 +1,7 @@
 using Gatherstead.Api.Contracts.Invitations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Membership;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -96,7 +97,7 @@ public class InvitationService : IInvitationService
 
         if (existingUser is not null)
         {
-            await GrantMembershipAsync(tenantId, existingUser.Id, request.Role, request.HouseholdId, request.HouseholdRole, cancellationToken);
+            await MembershipGrant.GrantAsync(_dbContext, tenantId, existingUser.Id, request.Role, request.HouseholdId, request.HouseholdRole, cancellationToken);
             invitation.Status = InvitationStatus.Accepted;
             invitation.AcceptedByUserId = existingUser.Id;
             invitation.AcceptedAt = DateTimeOffset.UtcNow;
@@ -156,43 +157,6 @@ public class InvitationService : IInvitationService
 
         response.SetSuccess(MapToDto(invitation));
         return response;
-    }
-
-    private async Task GrantMembershipAsync(
-        Guid tenantId,
-        Guid userId,
-        TenantRole role,
-        Guid? householdId,
-        HouseholdRole? householdRole,
-        CancellationToken cancellationToken)
-    {
-        var hasTenantUser = await _dbContext.TenantUsers
-            .AnyAsync(tu => tu.TenantId == tenantId && tu.UserId == userId, cancellationToken);
-        if (!hasTenantUser)
-        {
-            _dbContext.TenantUsers.Add(new TenantUser
-            {
-                TenantId = tenantId,
-                UserId = userId,
-                Role = role,
-            });
-        }
-
-        if (householdId is Guid hid)
-        {
-            var hasHouseholdUser = await _dbContext.HouseholdUsers
-                .AnyAsync(hu => hu.HouseholdId == hid && hu.UserId == userId, cancellationToken);
-            if (!hasHouseholdUser)
-            {
-                _dbContext.HouseholdUsers.Add(new HouseholdUser
-                {
-                    TenantId = tenantId,
-                    HouseholdId = hid,
-                    UserId = userId,
-                    Role = householdRole ?? Gatherstead.Data.Entities.HouseholdRole.Member,
-                });
-            }
-        }
     }
 
     private static InvitationDto MapToDto(Invitation i) => new(

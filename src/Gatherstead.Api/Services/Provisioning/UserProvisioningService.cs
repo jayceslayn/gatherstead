@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Gatherstead.Api.Contracts.Invitations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Security;
+using Gatherstead.Api.Services.Membership;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -96,35 +97,9 @@ public class UserProvisioningService : IUserProvisioningService
         var now = DateTimeOffset.UtcNow;
         foreach (var invite in pending)
         {
-            var hasTenantUser = await _dbContext.TenantUsers
-                .IgnoreQueryFilters()
-                .AnyAsync(tu => tu.TenantId == invite.TenantId && tu.UserId == userId && !tu.IsDeleted, cancellationToken);
-            if (!hasTenantUser)
-            {
-                _dbContext.TenantUsers.Add(new TenantUser
-                {
-                    TenantId = invite.TenantId,
-                    UserId = userId,
-                    Role = invite.Role,
-                });
-            }
-
-            if (invite.HouseholdId is Guid hid)
-            {
-                var hasHouseholdUser = await _dbContext.HouseholdUsers
-                    .IgnoreQueryFilters()
-                    .AnyAsync(hu => hu.HouseholdId == hid && hu.UserId == userId && !hu.IsDeleted, cancellationToken);
-                if (!hasHouseholdUser)
-                {
-                    _dbContext.HouseholdUsers.Add(new HouseholdUser
-                    {
-                        TenantId = invite.TenantId,
-                        HouseholdId = hid,
-                        UserId = userId,
-                        Role = invite.HouseholdRole ?? HouseholdRole.Member,
-                    });
-                }
-            }
+            await MembershipGrant.GrantAsync(
+                _dbContext, invite.TenantId, userId, invite.Role,
+                invite.HouseholdId, invite.HouseholdRole, cancellationToken);
 
             invite.Status = InvitationStatus.Accepted;
             invite.AcceptedByUserId = userId;

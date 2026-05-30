@@ -80,6 +80,13 @@ if (ok) open.value = false
 
 ### 🟡 Medium — Address before or shortly after merge
 
+> **Status: all four Medium items remediated.**
+> #3 — Added `InvitationServiceTests`, `UserProvisioningServiceTests`, `EventReportServiceTests`.
+> #4 — Extracted `MembershipGrant.GrantAsync`; both services now call it.
+> #5 — Added filtered unique index `IX_Invitation_PendingPerTenantEmail` on `(TenantId, Email) WHERE Status=0 AND IsDeleted=0`.
+> #6 — `create-member.vue` now shows a `validation.required` error on empty name (clears on input).
+> (Backend tests verified by review only — `dotnet` is unavailable in this environment; CI confirms.)
+
 #### 3. Missing backend tests for Workstreams C and D
 The plan explicitly required:
 - `InvitationService`: invite-create (new vs existing user), non-escalation, duplicate-pending idempotency

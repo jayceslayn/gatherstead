@@ -35,8 +35,11 @@ const form = reactive<MemberForm>({
   dietaryTagsInput: '',
 })
 
+const nameError = ref('')
+
 async function onSubmit() {
-  if (!form.name.trim()) return
+  nameError.value = form.name.trim() ? '' : t('validation.required', { field: t('member.name') })
+  if (nameError.value) return
 
   const dietaryTags = form.dietaryTagsInput
     .split(',')
@@ -71,8 +74,8 @@ async function onSubmit() {
     <GsPageHeader :title="t('member.createMember')" />
 
     <UForm :state="form" class="max-w-lg space-y-5" @submit="onSubmit">
-      <UFormField :label="t('member.name')" name="name" required>
-        <UInput v-model="form.name" :placeholder="t('member.name')" required class="w-full" />
+      <UFormField :label="t('member.name')" name="name" :error="nameError || undefined" required>
+        <UInput v-model="form.name" :placeholder="t('member.name')" required class="w-full" @input="nameError = ''" />
       </UFormField>
 
       <UFormField :label="t('member.isAdult')" name="isAdult">

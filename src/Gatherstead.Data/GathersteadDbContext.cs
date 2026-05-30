@@ -142,6 +142,17 @@ public class GathersteadDbContext : DbContext
                 .HasDatabaseName("IX_TenantUser_LinkedMemberId");
         });
 
+        modelBuilder.Entity<Invitation>(b =>
+        {
+            // At most one live, pending invitation per (tenant, email). Backs the read-then-write
+            // idempotency check in InvitationService against a concurrent double-insert.
+            // InvitationStatus.Pending = 0.
+            b.HasIndex(i => new { i.TenantId, i.Email })
+                .IsUnique()
+                .HasFilter("[Status] = 0 AND [IsDeleted] = 0")
+                .HasDatabaseName("IX_Invitation_PendingPerTenantEmail");
+        });
+
         // Configure MemberRelationship to HouseholdMember relationship
         modelBuilder.Entity<MemberRelationship>(b =>
         {
