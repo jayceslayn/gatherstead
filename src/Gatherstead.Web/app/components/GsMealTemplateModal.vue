@@ -72,12 +72,13 @@ async function submit() {
   const end = form.useSubRange ? form.endDate : null
   const notes = form.notes.trim() || null
 
-  if (isEdit.value && props.template) {
-    await updateTemplate(props.template.id, form.name.trim(), flags, start, end, notes)
-  }
-  else {
-    await createTemplate(form.name.trim(), flags, start, end, notes, form.createMatchingTask)
-  }
+  const ok = (isEdit.value && props.template)
+    ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, notes)
+    : await createTemplate(form.name.trim(), flags, start, end, notes, form.createMatchingTask)
+
+  if (!ok) return
+
+  emit('saved')
   open.value = false
 }
 </script>

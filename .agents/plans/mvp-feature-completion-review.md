@@ -29,6 +29,10 @@ Four workstreams across ~3000 lines, 52 files:
 
 ### 🔴 High — Implement before merge
 
+> **Status: both High items remediated** (commit on `claude/mvp-feature-completion-n2oqj`).
+> #1 — `ResolveEmail` now requires `email_verified == true` and no longer falls back to `preferred_username`.
+> #2 — `create/updateTemplate` actions return `Promise<boolean>`; modals gate close on success and emit `saved`. Also fixed a latent `await refresh()` throw (optional-chained) that surfaced once the boolean was honored.
+
 #### 1. Email claim trust / `email_verified` not checked
 **File:** `src/Gatherstead.Api/Services/Provisioning/UserProvisioningService.cs:138-145`
 

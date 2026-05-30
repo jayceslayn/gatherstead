@@ -135,12 +135,34 @@ public class UserProvisioningService : IUserProvisioningService
         return pending.Count;
     }
 
+    /// <summary>
+    /// Resolves the caller's email for invitation matching, but only when the identity provider
+    /// asserts it is verified. Auto-claiming an invitation grants real tenant membership, so an
+    /// unverified or self-asserted address (or a username-style <c>preferred_username</c>, which is
+    /// not guaranteed to be an email) must never drive that flow — doing so would allow a user to
+    /// claim an invitation intended for someone else's address and escalate privileges. When the
+    /// email cannot be trusted this returns null; the user is still provisioned, just without
+    /// auto-claim.
+    /// </summary>
     private static string? ResolveEmail(ClaimsPrincipal principal)
     {
+        if (!IsEmailVerified(principal))
+            return null;
+
         var email = principal.FindFirst(ClaimTypes.Email)?.Value
             ?? principal.FindFirst("email")?.Value
-            ?? principal.FindFirst("emails")?.Value
-            ?? principal.FindFirst("preferred_username")?.Value;
+            ?? principal.FindFirst("emails")?.Value;
         return string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// True only when the IdP explicitly marks the email as verified. Treated as unverified when
+    /// the claim is absent so an IdP that omits it cannot silently enable auto-claim.
+    /// </summary>
+    private static bool IsEmailVerified(ClaimsPrincipal principal)
+    {
+        var verified = principal.FindFirst("email_verified")?.Value
+            ?? principal.FindFirst("verified_email")?.Value;
+        return string.Equals(verified, "true", StringComparison.OrdinalIgnoreCase);
     }
 }
