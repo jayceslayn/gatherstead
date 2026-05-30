@@ -7,7 +7,6 @@ using Gatherstead.Api.Services.ContactMethods;
 using Gatherstead.Api.Services.DietaryProfiles;
 using Gatherstead.Api.Services.HouseholdMembers;
 using Gatherstead.Api.Services.Households;
-using Gatherstead.Api.Services.MemberAttributes;
 using Gatherstead.Api.Services.AccommodationIntents;
 using Gatherstead.Api.Services.Accommodations;
 using Gatherstead.Api.Services.TaskIntents;
@@ -26,6 +25,7 @@ using Gatherstead.Api.Services.Properties;
 using Gatherstead.Api.Services.HouseholdUsers;
 using Gatherstead.Api.Services.TenantUsers;
 using Gatherstead.Api.Services.Tenants;
+using Gatherstead.Api.Services.Equipment;
 using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
@@ -54,7 +54,6 @@ builder.Services.AddScoped<IContactMethodService, ContactMethodService>();
 builder.Services.AddScoped<IDietaryProfileService, DietaryProfileService>();
 builder.Services.AddScoped<IHouseholdMemberService, HouseholdMemberService>();
 builder.Services.AddScoped<IHouseholdService, HouseholdService>();
-builder.Services.AddScoped<IMemberAttributeService, MemberAttributeService>();
 builder.Services.AddScoped<IMemberRelationshipService, MemberRelationshipService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<ITenantUserService, TenantUserService>();
@@ -74,6 +73,7 @@ builder.Services.AddScoped<ITaskIntentService, TaskIntentService>();
 builder.Services.AddScoped<IAccommodationIntentService, AccommodationIntentService>();
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 builder.Services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
+builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 
 // Configure JWT Bearer authentication with external identity provider (Entra External ID / Azure AD B2C)
 // Note: Consider PASETO migration when ecosystem support improves (broader library/provider adoption).

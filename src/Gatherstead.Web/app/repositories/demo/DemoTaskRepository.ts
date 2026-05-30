@@ -1,8 +1,13 @@
 import type { ITaskRepository } from '../interfaces'
-import type { TaskTemplate, TaskPlan, TaskIntent } from '../types'
+import type { TaskTemplate, TaskPlan, TaskIntent, AttributeWriteEntry, AttributeEntry } from '../types'
 import { taskSlotsFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
+
+function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
+  if (!writes) return []
+  return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
 
 export class DemoTaskRepository implements ITaskRepository {
   async listTaskTemplates(_tenantId: string, eventId: string): Promise<TaskTemplate[]> {
@@ -62,12 +67,13 @@ export class DemoTaskRepository implements ITaskRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<TaskTemplate> {
     const store = getDemoStore()
     if (store.taskTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.taskTemplatesPerEvent) {
       throw new DemoLimitError('taskTemplatesPerEvent')
     }
-    const t: TaskTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes, startDate, endDate }
+    const t: TaskTemplate = { id: demoId(), tenantId, eventId, name, timeSlots, minimumAssignees, notes, startDate, endDate, attributes: toAttributeEntries(attributes) }
     store.taskTemplates.value.push(t)
 
     const event = store.events.value.find(e => e.id === eventId)
@@ -106,6 +112,7 @@ export class DemoTaskRepository implements ITaskRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     const store = getDemoStore()
     const t = store.taskTemplates.value.find(x => x.id === templateId)
@@ -148,6 +155,7 @@ export class DemoTaskRepository implements ITaskRepository {
     t.notes = notes
     t.startDate = startDate
     t.endDate = endDate
+    if (attributes !== undefined) t.attributes = toAttributeEntries(attributes)
     persistDemoStore()
   }
 

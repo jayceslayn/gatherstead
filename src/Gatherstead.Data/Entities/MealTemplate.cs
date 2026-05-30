@@ -28,7 +28,9 @@ public class MealTemplate : AuditableEntity
     public MealTypeFlags MealTypes { get; set; }
     public DateOnly? StartDate { get; set; }
     public DateOnly? EndDate { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 
     public ICollection<MealPlan> Plans { get; set; } = new List<MealPlan>();
+    public ICollection<MealTemplateAttribute> Attributes { get; set; } = new List<MealTemplateAttribute>();
 }

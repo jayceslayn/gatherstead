@@ -17,8 +17,15 @@ Gatherstead is organized around bounded contexts that align with the two core go
 - **MemberRelationship**: Parent/child/sibling/spouse/guardian links with type and notes, flexible enough to span households for split-family scenarios. Relationship types are informational; edit permissions derive from `HouseholdRole` and the `TenantUser.LinkedMemberId` Self link, not from relationship entries.【F:src/Gatherstead.Data/Entities/MemberRelationship.cs】
 - **Address**: Mailing addresses per member. At most one can be designated primary, enforced by a filtered unique index.【F:src/Gatherstead.Data/Entities/Address.cs】
 - **ContactMethod**: Email, phone, or other contact entries per member, with a primary-contact designation mirroring the address pattern.【F:src/Gatherstead.Data/Entities/ContactMethod.cs】
-- **MemberAttribute**: Extensible key-value pairs for custom metadata (e.g., t-shirt size, accessibility needs), with a unique constraint on key per member.【F:src/Gatherstead.Data/Entities/MemberAttribute.cs】
+- **HouseholdMemberAttribute**: Extensible key-value pairs for custom metadata on a member (e.g., t-shirt size, accessibility needs). Implements `IParentScopedAttribute`; visibility is governed by `TenantMinRole` (caller's tenant role ≤ stored role threshold) and optionally `HouseholdMinRole` (household-role bypass for household-private fields).【F:src/Gatherstead.Data/Entities/MemberAttribute.cs】
 - **DietaryProfile**: Comprehensive dietary record per member capturing preferred diet, allergies, restrictions, and notes. A tenant-level list endpoint supports aggregation across attending members for meal planning.【F:src/Gatherstead.Data/Entities/DietaryProfile.cs】
+
+### Custom Attribute Pattern
+Nine entities support extensible key-value metadata via a shared `IParentScopedAttribute` interface (`Id`, `TenantId`, `Key`, `Value`, `TenantMinRole`): `TenantAttribute`, `PropertyAttribute`, `AccommodationAttribute`, `EquipmentAttribute`, `EventAttribute`, `MealTemplateAttribute`, `TaskTemplateAttribute`, `HouseholdAttribute`, and `HouseholdMemberAttribute`. Key/value pairs for each entity are unique per `(TenantId, parentId, Key)` and support soft-delete re-activation.
+
+- **Visibility**: Attributes are filtered at read time — a caller only sees attributes whose `TenantMinRole` is ≥ their own tenant role (i.e., the attribute's threshold is at most as restrictive as the caller's role). `HouseholdAttribute` and `HouseholdMemberAttribute` add an optional `HouseholdMinRole` bypass: members whose household role satisfies the threshold see the attribute regardless of their tenant role.
+- **API shape**: Attributes are embedded in the parent entity DTO rather than served from separate endpoints. Single-entity GET (`GET /{entityId}`) includes visible attributes; list endpoints return `attributes: []`. Create and update on the parent entity accept an optional `attributes` array (full-replace semantics — omitting the field leaves existing attributes untouched; supplying it replaces all visible attributes while preserving hidden ones).
+- **`AttributeSyncHelper`**: A shared static helper (`SyncAsync`) used by all attribute-bearing services. It loads existing rows with `IgnoreQueryFilters()` to surface soft-deleted entries for re-activation, then diffs the incoming write list against persisted rows to add/update/soft-delete in a single `SaveChanges` call, avoiding unique-index violations on `(TenantId, parentId, Key)`.
 
 ### Gathering Planning Context
 
@@ -26,6 +33,7 @@ Gatherstead is organized around bounded contexts that align with the two core go
 - **Property**: A physical location that owns accommodations and can host events.【F:src/Gatherstead.Data/Entities/Property.cs】
 - **Accommodation**: A place a member may occupy (e.g., guest room, bunk, RV pad, tent site, or offsite placeholder). Exists independently of any event — the room inventory doesn't change per gathering. Captures type, adult/child capacity, and notes.【F:src/Gatherstead.Data/Entities/Accommodation.cs】
 - **AccommodationIntent**: Member's request to occupy an accommodation on a given night, with status (`Intent`/`Hold`/`Confirmed`) and a decision field for offline arbitration. Not scoped to an event; nights may fall outside any formal gathering.【F:src/Gatherstead.Data/Entities/AccommodationIntent.cs】
+- **Equipment**: Shared equipment or facility owned by a tenant, optionally tied to a specific Property (e.g., kayaks, communal tools). Unique by `(TenantId, PropertyId, Name)`.【F:src/Gatherstead.Data/Entities/Equipment.cs】
 
 #### Event-level
 - **Event**: A time-bounded gathering at a property, defining the date window for meal planning, task coordination, and attendance tracking.【F:src/Gatherstead.Data/Entities/Event.cs】
@@ -40,9 +48,7 @@ Gatherstead is organized around bounded contexts that align with the two core go
 
 ## Entity Hierarchy
 
-The verified ownership hierarchy, derived from FK relationships in the EF Core entities. Solid arrows represent FK ownership (parent → child); dashed arrows represent cross-context references.
-
-> **Future work:** A separate `Equipment` / `EquipmentIntent` entity pair is planned for shared equipment and facilities (e.g., kayaks, communal tools) that members can reserve without an accomodation connotation.
+The verified ownership hierarchy, derived from FK relationships in the EF Core entities. Solid arrows represent FK ownership (parent → child); dashed arrows represent cross-context references. Attribute child entities are omitted from the diagram for clarity — see the Custom Attribute Pattern section above for the full list.
 
 ### Ownership flowchart
 
@@ -55,11 +61,12 @@ flowchart TD
     HouseholdMember --> MemberRelationship
     HouseholdMember --> Address
     HouseholdMember --> ContactMethod
-    HouseholdMember --> MemberAttribute
+    HouseholdMember --> HouseholdMemberAttribute
     HouseholdMember --> DietaryProfile
 
     Tenant --> Property
     Property --> Accommodation --> AccommodationIntent
+    Property --> Equipment
     Property --> Event
     Event --> MealTemplate --> MealPlan --> MealIntent
     MealPlan --> MealAttendance
@@ -89,10 +96,11 @@ erDiagram
     HouseholdMember |o--o| DietaryProfile : ""
     HouseholdMember ||--o{ Address : ""
     HouseholdMember ||--o{ ContactMethod : ""
-    HouseholdMember ||--o{ MemberAttribute : ""
+    HouseholdMember ||--o{ HouseholdMemberAttribute : ""
 
     Tenant          ||--o{ Property : ""
     Property        ||--o{ Accommodation : ""
+    Property        ||--o{ Equipment : ""
     Accommodation   ||--o{ AccommodationIntent : ""
     HouseholdMember ||--o{ AccommodationIntent : ""
     Property        ||--o{ Event : ""

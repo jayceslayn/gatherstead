@@ -23,6 +23,8 @@ import type {
   HouseholdRole,
   TenantUserSummary,
   HouseholdUserSummary,
+  EquipmentSummary,
+  AttributeWriteEntry,
 } from './types'
 
 export const REPOSITORIES_KEY = Symbol('repositories')
@@ -36,13 +38,14 @@ export class DemoLimitError extends Error {
 
 export interface ITenantRepository {
   listTenants(): Promise<TenantSummary[]>
+  getTenant(tenantId: string): Promise<TenantSummary | null>
 }
 
 export interface IHouseholdRepository {
   listHouseholds(tenantId: string): Promise<HouseholdSummary[]>
   getHousehold(tenantId: string, householdId: string): Promise<HouseholdSummary | null>
-  createHousehold(tenantId: string, name: string): Promise<HouseholdSummary>
-  updateHousehold(tenantId: string, householdId: string, name: string): Promise<void>
+  createHousehold(tenantId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<HouseholdSummary>
+  updateHousehold(tenantId: string, householdId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void>
   deleteHousehold(tenantId: string, householdId: string): Promise<void>
 }
 
@@ -59,6 +62,7 @@ export interface IHouseholdMemberRepository {
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<HouseholdMember>
   updateMember(
     tenantId: string,
@@ -70,6 +74,7 @@ export interface IHouseholdMemberRepository {
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteMember(tenantId: string, householdId: string, memberId: string): Promise<void>
 }
@@ -93,6 +98,8 @@ export interface IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<EventSummary>
   updateEvent(
     tenantId: string,
@@ -100,6 +107,8 @@ export interface IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteEvent(tenantId: string, eventId: string): Promise<void>
 }
@@ -144,6 +153,7 @@ export interface IMealPlanRepository {
     startDate: string | null,
     endDate: string | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<MealTemplate>
   updateTemplate(
     tenantId: string,
@@ -154,6 +164,7 @@ export interface IMealPlanRepository {
     startDate: string | null,
     endDate: string | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>
   deleteIntent(
@@ -193,6 +204,7 @@ export interface ITaskRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<TaskTemplate>
   updateTemplate(
     tenantId: string,
@@ -204,6 +216,7 @@ export interface ITaskRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>
   deleteIntent(
@@ -240,8 +253,8 @@ export interface IMealAttendanceRepository {
 export interface IPropertyRepository {
   listProperties(tenantId: string): Promise<PropertySummary[]>
   getProperty(tenantId: string, propertyId: string): Promise<PropertySummary | null>
-  createProperty(tenantId: string, name: string): Promise<PropertySummary>
-  updateProperty(tenantId: string, propertyId: string, name: string): Promise<void>
+  createProperty(tenantId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<PropertySummary>
+  updateProperty(tenantId: string, propertyId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void>
   deleteProperty(tenantId: string, propertyId: string): Promise<void>
 }
 
@@ -256,6 +269,7 @@ export interface IAccommodationRepository {
     capacityAdults: number | null,
     capacityChildren: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<AccommodationSummary>
   updateAccommodation(
     tenantId: string,
@@ -266,6 +280,7 @@ export interface IAccommodationRepository {
     capacityAdults: number | null,
     capacityChildren: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<void>
 }
@@ -302,6 +317,14 @@ export interface IAccommodationIntentRepository {
   ): Promise<void>
 }
 
+export interface IEquipmentRepository {
+  listEquipment(tenantId: string): Promise<EquipmentSummary[]>
+  getEquipment(tenantId: string, equipmentId: string): Promise<EquipmentSummary | null>
+  createEquipment(tenantId: string, name: string, propertyId: string | null, notes: string | null, attributes?: AttributeWriteEntry[] | null): Promise<EquipmentSummary>
+  updateEquipment(tenantId: string, equipmentId: string, name: string, propertyId: string | null, notes: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void>
+  deleteEquipment(tenantId: string, equipmentId: string): Promise<void>
+}
+
 export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
@@ -315,4 +338,5 @@ export interface Repositories {
   properties: IPropertyRepository
   accommodations: IAccommodationRepository
   accommodationIntents: IAccommodationIntentRepository
+  equipment: IEquipmentRepository
 }

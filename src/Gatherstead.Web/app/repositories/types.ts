@@ -1,15 +1,33 @@
 export type TenantRole = 'Owner' | 'Manager' | 'Coordinator' | 'Member' | 'Guest'
 
+export interface AttributeEntry {
+  id: string
+  key: string
+  value: string
+  tenantMinRole: number
+  householdMinRole: number | null
+}
+
+export interface AttributeWriteEntry {
+  key: string
+  value: string
+  tenantMinRole: number
+  householdMinRole?: number | null
+}
+
 export interface TenantSummary {
   id: string
   name: string
   userRole: TenantRole | null
+  attributes: AttributeEntry[]
 }
 
 export interface HouseholdSummary {
   id: string
   tenantId: string
   name: string
+  notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export type HouseholdRole = 'Manager' | 'Member'
@@ -40,6 +58,7 @@ export interface HouseholdMember {
   birthDate: string | null
   dietaryNotes: string | null
   dietaryTags: string[]
+  attributes: AttributeEntry[]
 }
 
 export interface DietaryProfile {
@@ -59,6 +78,8 @@ export interface EventSummary {
   name: string
   startDate: string
   endDate: string
+  notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export type AttendanceStatus = 'Going' | 'Maybe' | 'NotGoing'
@@ -82,6 +103,7 @@ export interface MealTemplate {
   startDate: string | null
   endDate: string | null
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface MealPlan {
@@ -125,6 +147,7 @@ export interface TaskTemplate {
   endDate: string | null
   minimumAssignees: number | null
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface TaskPlan {
@@ -155,6 +178,8 @@ export interface PropertySummary {
   id: string
   tenantId: string
   name: string
+  notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface AccommodationSummary {
@@ -166,6 +191,7 @@ export interface AccommodationSummary {
   capacityAdults: number | null
   capacityChildren: number | null
   notes: string | null
+  attributes: AttributeEntry[]
 }
 
 export interface AccommodationIntent {
@@ -180,6 +206,16 @@ export interface AccommodationIntent {
   partySize: number | null
   priority: number | null
 }
+
+export interface EquipmentSummary {
+  id: string
+  tenantId: string
+  propertyId: string | null
+  name: string
+  notes: string | null
+  attributes: AttributeEntry[]
+}
+
 
 export const MEAL_TYPE_FLAGS: Record<MealType, number> = {
   Breakfast: 0x01,

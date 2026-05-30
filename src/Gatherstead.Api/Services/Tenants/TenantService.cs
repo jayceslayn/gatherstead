@@ -1,12 +1,14 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.Tenants;
 using Gatherstead.Api.Observability;
 using Gatherstead.Api.Security;
+using Gatherstead.Api.Services.Attributes;
+using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Gatherstead.Api.Services.Tenants;
 
@@ -15,24 +17,18 @@ public class TenantService : ITenantService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IAppAdminContext _appAdminContext;
-
-    private static readonly Expression<Func<Tenant, TenantDto>> MapToDtoExpression = tenant => new TenantDto(
-        tenant.Id,
-        tenant.Name,
-        tenant.CreatedAt,
-        tenant.UpdatedAt,
-        tenant.IsDeleted,
-        tenant.DeletedAt,
-        tenant.DeletedByUserId);
+    private readonly IMemberAuthorizationService _memberAuthorizationService;
 
     public TenantService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IAppAdminContext appAdminContext)
+        IAppAdminContext appAdminContext,
+        IMemberAuthorizationService memberAuthorizationService)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
+        _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TenantSummary>>> ListAsync(
@@ -56,9 +52,7 @@ public class TenantService : ITenantService
         {
             var idList = ids.ToList();
             if (idList.Count > 0)
-            {
                 query = query.Where(tu => idList.Contains(tu.TenantId));
-            }
         }
 
         var tenants = await query
@@ -78,9 +72,7 @@ public class TenantService : ITenantService
         {
             var idList = ids.ToList();
             if (idList.Count > 0)
-            {
                 query = query.Where(t => idList.Contains(t.Id));
-            }
         }
 
         var tenants = await query
@@ -96,17 +88,13 @@ public class TenantService : ITenantService
     {
         var response = new TenantResponse();
 
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
-
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var tenant = await _dbContext.Tenants
             .AsNoTracking()
+            .Include(t => t.Attributes)
             .Where(t => t.Id == tenantId)
-            .Select(MapToDtoExpression)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (tenant is null)
@@ -115,7 +103,8 @@ public class TenantService : ITenantService
             return response;
         }
 
-        response.SetSuccess(tenant);
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        response.SetSuccess(MapToDto(tenant, VisibleAttributes(tenant.Attributes, callerRole)));
         return response;
     }
 
@@ -131,7 +120,6 @@ public class TenantService : ITenantService
             return response;
         }
 
-        // Defense-in-depth: only App Admins can create tenants
         if (await _appAdminContext.IsAppAdminAsync(cancellationToken) != true)
         {
             response.AddResponseMessage(MessageType.ERROR, "Only App Admins can create tenants.");
@@ -141,11 +129,8 @@ public class TenantService : ITenantService
         ServiceValidationHelper.TryNormalizeString(request.Name, "Tenant name", response, out string normalizedName);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
 
-        // Validate that the specified owner user exists
         var ownerExists = await _dbContext.Users
             .AsNoTracking()
             .AnyAsync(u => u.Id == request.OwnerUserId, cancellationToken);
@@ -160,6 +145,7 @@ public class TenantService : ITenantService
         {
             Id = Guid.NewGuid(),
             Name = normalizedName,
+            Notes = request.Notes?.Trim(),
         };
 
         var tenantUser = new TenantUser
@@ -174,7 +160,7 @@ public class TenantService : ITenantService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordTenantCreated();
-        response.SetSuccess(MapToDto(tenant));
+        response.SetSuccess(MapToDto(tenant, []));
         return response;
     }
 
@@ -185,7 +171,8 @@ public class TenantService : ITenantService
     {
         var response = new TenantResponse();
 
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
 
         if (request is null)
         {
@@ -196,9 +183,7 @@ public class TenantService : ITenantService
         ServiceValidationHelper.TryNormalizeString(request.Name, "Tenant name", response, out string normalizedName);
 
         if (ServiceValidationHelper.HasErrors(response))
-        {
             return response;
-        }
 
         var tenant = await _dbContext.Tenants
             .Where(t => t.Id == tenantId)
@@ -211,10 +196,28 @@ public class TenantService : ITenantService
         }
 
         tenant.Name = normalizedName;
+        tenant.Notes = request.Notes?.Trim();
+
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
+        if (request.Attributes is not null)
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.TenantAttributes.Where(a => a.TenantId == tenantId),
+                _dbContext.TenantAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new TenantAttribute { TenantId = tenantId },
+                applyExtra: null,
+                cancellationToken);
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(tenant));
+        var savedAttrs = await _dbContext.TenantAttributes.AsNoTracking()
+            .Where(a => a.TenantId == tenantId).ToListAsync(cancellationToken);
+        response.SetSuccess(MapToDto(tenant, VisibleAttributes(savedAttrs, callerRole)));
         return response;
     }
 
@@ -224,12 +227,8 @@ public class TenantService : ITenantService
     {
         var response = new TenantResponse();
 
-        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
-
-        if (ServiceValidationHelper.HasErrors(response))
-        {
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        }
 
         var tenant = await _dbContext.Tenants
             .Where(t => t.Id == tenantId)
@@ -249,33 +248,34 @@ public class TenantService : ITenantService
 
         tenant.IsDeleted = true;
 
+        var childAttrs = await _dbContext.TenantAttributes
+            .Where(a => a.TenantId == tenantId).ToListAsync(cancellationToken);
+        foreach (var attr in childAttrs)
+            attr.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordSoftDelete("Tenant", tenantId);
-        response.SetSuccess(MapToDto(tenant));
+        response.SetSuccess(MapToDto(tenant, []));
         return response;
     }
 
-    /// <summary>
-    /// Returns true when the tenant has more than one Owner — i.e., removing or demoting the
-    /// specified user would not leave the tenant without an Owner.
-    /// Call before any operation that demotes or removes a TenantUser with Role == Owner.
-    /// </summary>
-    private async Task<bool> HasOtherOwnerAsync(Guid tenantId, Guid userId, CancellationToken ct)
-    {
-        return await _dbContext.TenantUsers
-            .AsNoTracking()
-            .AnyAsync(tu => tu.TenantId == tenantId
-                         && tu.UserId != userId
-                         && tu.Role == TenantRole.Owner, ct);
-    }
+    private static List<AttributeDto> VisibleAttributes(
+        IEnumerable<TenantAttribute> attrs, TenantRole? callerRole)
+        => attrs
+            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
+            .OrderBy(a => a.Key)
+            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
+            .ToList();
 
-    private static TenantDto MapToDto(Tenant tenant) => new(
+    private static TenantDto MapToDto(Tenant tenant, IReadOnlyList<AttributeDto> attributes) => new(
         tenant.Id,
         tenant.Name,
+        tenant.Notes,
         tenant.CreatedAt,
         tenant.UpdatedAt,
         tenant.IsDeleted,
         tenant.DeletedAt,
-        tenant.DeletedByUserId);
+        tenant.DeletedByUserId,
+        attributes);
 }

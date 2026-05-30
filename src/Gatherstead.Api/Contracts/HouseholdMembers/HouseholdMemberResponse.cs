@@ -1,3 +1,4 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 
 namespace Gatherstead.Api.Contracts.HouseholdMembers;
@@ -16,8 +17,10 @@ public record HouseholdMemberDto(
     DateOnly? BirthDate,
     string? DietaryNotes,
     string[] DietaryTags,
+    string? Notes,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
     DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    Guid? DeletedByUserId,
+    IReadOnlyList<AttributeDto> Attributes);

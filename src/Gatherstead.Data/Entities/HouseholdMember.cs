@@ -28,13 +28,17 @@ public class HouseholdMember : AuditableEntity
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
     public DateOnly? BirthDate { get; set; }
+    [MaxLength(500)]
     public string? DietaryNotes { get; set; }
+
+    [MaxLength(500)]
+    public string? Notes { get; set; }
 
     public string[] DietaryTags { get; set; } = Array.Empty<string>();
 
     public ICollection<MemberRelationship> Relationships { get; set; } = new List<MemberRelationship>();
     public ICollection<ContactMethod> ContactMethods { get; set; } = new List<ContactMethod>();
     public ICollection<Address> Addresses { get; set; } = new List<Address>();
-    public ICollection<MemberAttribute> Attributes { get; set; } = new List<MemberAttribute>();
+    public ICollection<HouseholdMemberAttribute> Attributes { get; set; } = new List<HouseholdMemberAttribute>();
     public DietaryProfile? DietaryProfile { get; set; }
 }

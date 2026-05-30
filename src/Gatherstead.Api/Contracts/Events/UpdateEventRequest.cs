@@ -1,5 +1,5 @@
-using System;
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 
 namespace Gatherstead.Api.Contracts.Events;
 
@@ -14,4 +14,9 @@ public class UpdateEventRequest
 
     [Required]
     public DateOnly EndDate { get; init; }
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
+
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

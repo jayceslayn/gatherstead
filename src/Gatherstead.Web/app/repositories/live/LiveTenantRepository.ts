@@ -6,9 +6,16 @@ interface TenantsApiResponse {
   successful: boolean
 }
 
+interface ApiResponse<T> { entity: T; successful: boolean }
+
 export class LiveTenantRepository implements ITenantRepository {
   async listTenants(): Promise<TenantSummary[]> {
     const r = await $fetch<TenantsApiResponse>('/api/proxy/tenants')
-    return (r.entity ?? []).map(t => ({ id: t.id, name: t.name, userRole: t.userRole }))
+    return (r.entity ?? []).map(t => ({ id: t.id, name: t.name, userRole: t.userRole, attributes: [] }))
+  }
+
+  async getTenant(tenantId: string): Promise<TenantSummary | null> {
+    const r = await $fetch<ApiResponse<TenantSummary>>(`/api/proxy/tenants/${tenantId}`)
+    return r.entity ?? null
   }
 }

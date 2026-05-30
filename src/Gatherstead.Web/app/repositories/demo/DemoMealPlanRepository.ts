@@ -1,8 +1,13 @@
 import type { IMealPlanRepository } from '../interfaces'
-import type { MealTemplate, MealPlan, MealIntent } from '../types'
+import type { MealTemplate, MealPlan, MealIntent, AttributeWriteEntry, AttributeEntry } from '../types'
 import { mealTypesFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
+
+function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
+  if (!writes) return []
+  return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
 
 export class DemoMealPlanRepository implements IMealPlanRepository {
   async listMealTemplates(_tenantId: string, eventId: string): Promise<MealTemplate[]> {
@@ -61,12 +66,13 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     startDate: string | null,
     endDate: string | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<MealTemplate> {
     const store = getDemoStore()
     if (store.mealTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.mealTemplatesPerEvent) {
       throw new DemoLimitError('mealTemplatesPerEvent')
     }
-    const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, startDate, endDate, notes }
+    const t: MealTemplate = { id: demoId(), tenantId, eventId, name, mealTypes, startDate, endDate, notes, attributes: toAttributeEntries(attributes) }
     store.mealTemplates.value.push(t)
 
     const event = store.events.value.find(e => e.id === eventId)
@@ -103,6 +109,7 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     startDate: string | null,
     endDate: string | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     const store = getDemoStore()
     const t = store.mealTemplates.value.find(x => x.id === templateId)
@@ -144,6 +151,7 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     t.startDate = startDate
     t.endDate = endDate
     t.notes = notes
+    if (attributes !== undefined) t.attributes = toAttributeEntries(attributes)
     persistDemoStore()
   }
 

@@ -146,8 +146,9 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         var userId = _currentUserContext.UserId;
         if (!userId.HasValue) return SensitiveReadScope.None;
 
+        // App Admins can take administrative actions but should not see tenant PII.
         if (await _appAdminContext.IsAppAdminAsync(ct) == true)
-            return SensitiveReadScope.Global;
+            return SensitiveReadScope.None;
 
         var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
         if (info?.Role <= TenantRole.Member)
@@ -159,6 +160,23 @@ public class MemberAuthorizationService : IMemberAuthorizationService
             return SensitiveReadScope.ForHouseholds(householdUsers.Select(hu => hu.HouseholdId));
 
         return SensitiveReadScope.None;
+    }
+
+    public async Task<TenantRole?> GetCallerTenantRoleAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return null;
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true) return null;
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        return info?.Role;
+    }
+
+    public async Task<HouseholdRole?> GetCallerHouseholdRoleAsync(Guid tenantId, Guid householdId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return null;
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        return householdUsers.FirstOrDefault(hu => hu.HouseholdId == householdId)?.Role;
     }
 
     private async Task<TenantUserInfo?> GetTenantUserInfoAsync(Guid tenantId, Guid userId, CancellationToken ct)

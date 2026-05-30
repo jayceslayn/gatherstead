@@ -18,6 +18,7 @@ import type {
   PropertySummary,
   AccommodationSummary,
   AccommodationIntent,
+  EquipmentSummary,
 } from '../types'
 
 const STORAGE_KEY = 'gs-demo-store'
@@ -31,6 +32,7 @@ export const DEMO_TENANT: TenantSummary = {
   id: DEMO_TENANT_ID,
   name: 'The Super Families Network',
   userRole: 'Owner',
+  attributes: [],
 }
 
 export const DEMO_USER: TenantUserSummary = {
@@ -50,6 +52,7 @@ export const DEMO_LIMITS = {
   taskTemplatesPerEvent: 4,
   propertiesPerTenant: 2,
   accommodationsPerProperty: 6,
+  equipmentPerTenant: 10,
 } as const
 
 export class DemoLimitError extends Error {
@@ -77,6 +80,7 @@ interface DemoState {
   properties: PropertySummary[]
   accommodations: AccommodationSummary[]
   accommodationIntents: AccommodationIntent[]
+  equipment: EquipmentSummary[]
 }
 
 export interface ReactiveState {
@@ -97,6 +101,7 @@ export interface ReactiveState {
   properties: Ref<PropertySummary[]>
   accommodations: Ref<AccommodationSummary[]>
   accommodationIntents: Ref<AccommodationIntent[]>
+  equipment: Ref<EquipmentSummary[]>
 }
 
 function emptyState(): DemoState {
@@ -118,6 +123,7 @@ function emptyState(): DemoState {
     properties: [],
     accommodations: [],
     accommodationIntents: [],
+    equipment: [],
   }
 }
 
@@ -132,25 +138,30 @@ function tryParseLocalStorage(): DemoState | null {
   }
 }
 
+function withAttributes<T extends { attributes?: unknown[] }>(items: T[]): (T & { attributes: unknown[] })[] {
+  return items.map(item => ({ ...item, attributes: item.attributes ?? [] }))
+}
+
 function buildReactiveRefs(state: DemoState): ReactiveState {
   return {
-    tenants: ref(state.tenants),
+    tenants: ref(withAttributes(state.tenants ?? emptyState().tenants) as TenantSummary[]),
     tenantUsers: ref(state.tenantUsers ?? emptyState().tenantUsers),
     householdUsers: ref(state.householdUsers ?? []),
-    households: ref(state.households),
-    members: ref(state.members),
-    events: ref(state.events),
-    attendance: ref(state.attendance),
-    mealTemplates: ref(state.mealTemplates),
-    mealPlans: ref(state.mealPlans),
-    mealIntents: ref(state.mealIntents),
-    mealAttendance: ref(state.mealAttendance),
-    taskTemplates: ref(state.taskTemplates),
-    taskPlans: ref(state.taskPlans),
-    taskIntents: ref(state.taskIntents),
-    properties: ref(state.properties),
-    accommodations: ref(state.accommodations),
-    accommodationIntents: ref(state.accommodationIntents),
+    households: ref(withAttributes(state.households ?? []) as HouseholdSummary[]),
+    members: ref(withAttributes(state.members ?? []) as HouseholdMember[]),
+    events: ref(withAttributes(state.events ?? []) as EventSummary[]),
+    attendance: ref(state.attendance ?? []),
+    mealTemplates: ref(withAttributes(state.mealTemplates ?? []) as MealTemplate[]),
+    mealPlans: ref(state.mealPlans ?? []),
+    mealIntents: ref(state.mealIntents ?? []),
+    mealAttendance: ref(state.mealAttendance ?? []),
+    taskTemplates: ref(withAttributes(state.taskTemplates ?? []) as TaskTemplate[]),
+    taskPlans: ref(state.taskPlans ?? []),
+    taskIntents: ref(state.taskIntents ?? []),
+    properties: ref(withAttributes(state.properties ?? []) as PropertySummary[]),
+    accommodations: ref(withAttributes(state.accommodations ?? []) as AccommodationSummary[]),
+    accommodationIntents: ref(state.accommodationIntents ?? []),
+    equipment: ref(withAttributes(state.equipment ?? []) as EquipmentSummary[]),
   }
 }
 
@@ -173,6 +184,7 @@ function snapshot(state: ReactiveState): DemoState {
     properties: state.properties.value,
     accommodations: state.accommodations.value,
     accommodationIntents: state.accommodationIntents.value,
+    equipment: state.equipment.value,
   }
 }
 
@@ -209,6 +221,7 @@ export function clearDemoStore(): void {
   _state.properties.value = []
   _state.accommodations.value = []
   _state.accommodationIntents.value = []
+  _state.equipment.value = []
   localStorage.removeItem(STORAGE_KEY)
 }
 

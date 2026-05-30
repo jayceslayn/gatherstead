@@ -12,6 +12,7 @@ import { LiveTaskRepository } from '~/repositories/live/LiveTaskRepository'
 import { LivePropertyRepository } from '~/repositories/live/LivePropertyRepository'
 import { LiveAccommodationRepository } from '~/repositories/live/LiveAccommodationRepository'
 import { LiveAccommodationIntentRepository } from '~/repositories/live/LiveAccommodationIntentRepository'
+import { LiveEquipmentRepository } from '~/repositories/live/LiveEquipmentRepository'
 import { DemoTenantRepository } from '~/repositories/demo/DemoTenantRepository'
 import { DemoHouseholdRepository } from '~/repositories/demo/DemoHouseholdRepository'
 import { DemoHouseholdMemberRepository } from '~/repositories/demo/DemoHouseholdMemberRepository'
@@ -24,6 +25,7 @@ import { DemoTaskRepository } from '~/repositories/demo/DemoTaskRepository'
 import { DemoPropertyRepository } from '~/repositories/demo/DemoPropertyRepository'
 import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodationRepository'
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
+import { DemoEquipmentRepository } from '~/repositories/demo/DemoEquipmentRepository'
 import { getDemoStore } from '~/repositories/demo/DemoStore'
 import { seedDemoData } from '~/repositories/demo/seedDemoData'
 
@@ -44,6 +46,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         properties: new DemoPropertyRepository(),
         accommodations: new DemoAccommodationRepository(),
         accommodationIntents: new DemoAccommodationIntentRepository(),
+        equipment: new DemoEquipmentRepository(),
       }
     : {
         tenants: new LiveTenantRepository(),
@@ -58,6 +61,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         properties: new LivePropertyRepository(),
         accommodations: new LiveAccommodationRepository(),
         accommodationIntents: new LiveAccommodationIntentRepository(),
+        equipment: new LiveEquipmentRepository(),
       }
 
   nuxtApp.vueApp.provide(REPOSITORIES_KEY, repos)

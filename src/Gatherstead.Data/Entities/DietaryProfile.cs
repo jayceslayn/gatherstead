@@ -24,5 +24,6 @@ public class DietaryProfile : AuditableEntity
 
     public string[] Allergies { get; set; } = Array.Empty<string>();
     public string[] Restrictions { get; set; } = Array.Empty<string>();
+    [MaxLength(500)]
     public string? Notes { get; set; }
 }

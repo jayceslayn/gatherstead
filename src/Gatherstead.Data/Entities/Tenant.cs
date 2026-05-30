@@ -13,8 +13,12 @@ public class Tenant : AuditableEntity
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
 
+    [MaxLength(500)]
+    public string? Notes { get; set; }
+
     public ICollection<TenantUser> Users { get; set; } = new List<TenantUser>();
     public ICollection<Household> Households { get; set; } = new List<Household>();
     public ICollection<Property> Properties { get; set; } = new List<Property>();
     public ICollection<Event> Events { get; set; } = new List<Event>();
+    public ICollection<TenantAttribute> Attributes { get; set; } = new List<TenantAttribute>();
 }

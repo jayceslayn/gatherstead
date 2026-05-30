@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,5 +27,6 @@ public class MemberRelationship : AuditableEntity
     public HouseholdMember? RelatedMember { get; set; }
 
     public RelationshipType RelationshipType { get; set; }
+    [MaxLength(500)]
     public string? Notes { get; set; }
 }

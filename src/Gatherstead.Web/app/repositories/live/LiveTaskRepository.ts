@@ -1,5 +1,5 @@
 import type { ITaskRepository } from '../interfaces'
-import type { TaskTemplate, TaskPlan, TaskIntent } from '../types'
+import type { TaskTemplate, TaskPlan, TaskIntent, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -58,10 +58,11 @@ export class LiveTaskRepository implements ITaskRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<TaskTemplate> {
     const r = await $fetch<ApiResponse<TaskTemplate>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates`,
-      { method: 'POST', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes } },
+      { method: 'POST', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -76,10 +77,11 @@ export class LiveTaskRepository implements ITaskRepository {
     endDate: string | null,
     minimumAssignees: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}`,
-      { method: 'PUT', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes } },
+      { method: 'PUT', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes, attributes: attributes ?? null } },
     )
   }
 

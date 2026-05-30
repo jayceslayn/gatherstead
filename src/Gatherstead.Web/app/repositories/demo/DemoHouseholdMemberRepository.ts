@@ -1,6 +1,11 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, DietaryProfile } from '../types'
+import type { HouseholdMember, DietaryProfile, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+
+function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
+  if (!writes) return []
+  return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
 
 export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository {
   async listMembers(_tenantId: string, householdId: string): Promise<HouseholdMember[]> {
@@ -26,6 +31,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<HouseholdMember> {
     const store = getDemoStore()
     if (store.members.value.filter(m => m.householdId === householdId).length >= DEMO_LIMITS.membersPerHousehold) {
@@ -41,6 +47,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       birthDate,
       dietaryNotes,
       dietaryTags,
+      attributes: toAttributeEntries(attributes),
     }
     store.members.value.push(m)
     persistDemoStore()
@@ -57,6 +64,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     const store = getDemoStore()
     const m = store.members.value.find(x => x.id === memberId)
@@ -67,6 +75,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     m.birthDate = birthDate
     m.dietaryNotes = dietaryNotes
     m.dietaryTags = dietaryTags
+    if (attributes !== undefined) m.attributes = toAttributeEntries(attributes)
     persistDemoStore()
   }
 

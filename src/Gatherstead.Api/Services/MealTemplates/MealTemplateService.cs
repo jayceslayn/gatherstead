@@ -1,5 +1,7 @@
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.MealTemplates;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Attributes;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Planning;
 using Gatherstead.Api.Services.Validation;
@@ -52,9 +54,10 @@ public class MealTemplateService : IMealTemplateService
                 query = query.Where(t => idList.Contains(t.Id));
         }
 
-        var templates = await query.Select(t => MapToDto(t)).ToListAsync(cancellationToken);
+        var templates = await query.ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<MealTemplateDto>>.SuccessfulResponse(templates);
+        return BaseEntityResponse<IReadOnlyCollection<MealTemplateDto>>.SuccessfulResponse(
+            templates.Select(t => MapToDto(t, [])).ToList());
     }
 
     public async Task<MealTemplateResponse> GetAsync(
@@ -71,13 +74,15 @@ public class MealTemplateService : IMealTemplateService
         var template = await ServiceGuards.LoadOrNotFoundAsync(
             response,
             _dbContext.MealTemplates.AsNoTracking()
+                .Include(t => t.Attributes)
                 .Where(t => t.TenantId == tenantId && t.EventId == eventId && t.Id == templateId),
             EntityDisplayName,
             cancellationToken);
 
         if (template is null) return response;
 
-        response.SetSuccess(MapToDto(template));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        response.SetSuccess(MapToDto(template, VisibleAttributes(template.Attributes, callerRole)));
         return response;
     }
 
@@ -142,7 +147,28 @@ public class MealTemplateService : IMealTemplateService
         await _planSyncService.SyncMealPlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(template));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        List<AttributeDto> attrs = [];
+
+        if (request.Attributes is { Count: > 0 })
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.MealTemplateAttributes.Where(a => a.MealTemplateId == template.Id),
+                _dbContext.MealTemplateAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new MealTemplateAttribute { TenantId = tenantId, MealTemplateId = template.Id },
+                applyExtra: null,
+                cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var savedAttrs = await _dbContext.MealTemplateAttributes.AsNoTracking()
+                .Where(a => a.MealTemplateId == template.Id).ToListAsync(cancellationToken);
+            attrs = VisibleAttributes(savedAttrs, callerRole);
+        }
+
+        response.SetSuccess(MapToDto(template, attrs));
         return response;
     }
 
@@ -212,9 +238,26 @@ public class MealTemplateService : IMealTemplateService
             }
         }
 
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
+        if (request.Attributes is not null)
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.MealTemplateAttributes.Where(a => a.MealTemplateId == templateId),
+                _dbContext.MealTemplateAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new MealTemplateAttribute { TenantId = tenantId, MealTemplateId = templateId },
+                applyExtra: null,
+                cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(template));
+        var savedAttrs = await _dbContext.MealTemplateAttributes.AsNoTracking()
+            .Where(a => a.MealTemplateId == templateId).ToListAsync(cancellationToken);
+        response.SetSuccess(MapToDto(template, VisibleAttributes(savedAttrs, callerRole)));
         return response;
     }
 
@@ -246,17 +289,32 @@ public class MealTemplateService : IMealTemplateService
         }
 
         template.IsDeleted = true;
+
+        var childAttrs = await _dbContext.MealTemplateAttributes
+            .Where(a => a.MealTemplateId == templateId).ToListAsync(cancellationToken);
+        foreach (var attr in childAttrs)
+            attr.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(template));
+        response.SetSuccess(MapToDto(template, []));
         return response;
     }
 
-    private static MealTemplateDto MapToDto(MealTemplate t) => new(
+    private static List<AttributeDto> VisibleAttributes(
+        IEnumerable<MealTemplateAttribute> attrs, TenantRole? callerRole)
+        => attrs
+            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
+            .OrderBy(a => a.Key)
+            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
+            .ToList();
+
+    private static MealTemplateDto MapToDto(MealTemplate t, IReadOnlyList<AttributeDto> attributes) => new(
         t.Id, t.TenantId, t.EventId, t.Name, t.MealTypes,
         t.StartDate, t.EndDate,
         t.Notes,
-        t.CreatedAt, t.UpdatedAt, t.IsDeleted, t.DeletedAt, t.DeletedByUserId);
+        t.CreatedAt, t.UpdatedAt, t.IsDeleted, t.DeletedAt, t.DeletedByUserId,
+        attributes);
 
     private static bool ValidateDateRange(
         DateOnly? startDate, DateOnly? endDate,

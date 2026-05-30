@@ -1,5 +1,5 @@
 import type { IEventRepository } from '../interfaces'
-import type { EventSummary } from '../types'
+import type { EventSummary, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -20,10 +20,12 @@ export class LiveEventRepository implements IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<EventSummary> {
     const r = await $fetch<ApiResponse<EventSummary>>(
       `/api/proxy/tenants/${tenantId}/events`,
-      { method: 'POST', body: { propertyId, name, startDate, endDate } },
+      { method: 'POST', body: { propertyId, name, startDate, endDate, notes: notes ?? null, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -34,10 +36,12 @@ export class LiveEventRepository implements IEventRepository {
     name: string,
     startDate: string,
     endDate: string,
+    notes?: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/events/${eventId}`, {
       method: 'PUT',
-      body: { name, startDate, endDate },
+      body: { name, startDate, endDate, notes: notes ?? null, attributes: attributes ?? null },
     })
   }
 

@@ -1,5 +1,5 @@
 import type { IPropertyRepository } from '../interfaces'
-import type { PropertySummary } from '../types'
+import type { PropertySummary, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -18,18 +18,18 @@ export class LivePropertyRepository implements IPropertyRepository {
     return r.entity ?? null
   }
 
-  async createProperty(tenantId: string, name: string): Promise<PropertySummary> {
+  async createProperty(tenantId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<PropertySummary> {
     const r = await $fetch<ApiResponse<PropertySummary>>(
       `/api/proxy/tenants/${tenantId}/properties`,
-      { method: 'POST', body: { name } },
+      { method: 'POST', body: { name, notes: notes ?? null, attributes: attributes ?? null } },
     )
     return r.entity
   }
 
-  async updateProperty(tenantId: string, propertyId: string, name: string): Promise<void> {
+  async updateProperty(tenantId: string, propertyId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/properties/${propertyId}`, {
       method: 'PUT',
-      body: { name },
+      body: { name, notes: notes ?? null, attributes: attributes ?? null },
     })
   }
 

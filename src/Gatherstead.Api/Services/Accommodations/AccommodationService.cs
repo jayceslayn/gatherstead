@@ -1,5 +1,7 @@
 using Gatherstead.Api.Contracts.Accommodations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Attributes;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -48,9 +50,10 @@ public class AccommodationService : IAccommodationService
                 query = query.Where(a => idList.Contains(a.Id));
         }
 
-        var accommodations = await query.Select(a => MapToDto(a)).ToListAsync(cancellationToken);
+        var accommodations = await query.ToListAsync(cancellationToken);
 
-        return BaseEntityResponse<IReadOnlyCollection<AccommodationDto>>.SuccessfulResponse(accommodations);
+        return BaseEntityResponse<IReadOnlyCollection<AccommodationDto>>.SuccessfulResponse(
+            accommodations.Select(a => MapToDto(a, [])).ToList());
     }
 
     public async Task<AccommodationResponse> GetAsync(
@@ -67,13 +70,15 @@ public class AccommodationService : IAccommodationService
         var accommodation = await ServiceGuards.LoadOrNotFoundAsync(
             response,
             _dbContext.Accommodations.AsNoTracking()
+                .Include(a => a.Attributes)
                 .Where(a => a.TenantId == tenantId && a.PropertyId == propertyId && a.Id == accommodationId),
             EntityDisplayName,
             cancellationToken);
 
         if (accommodation is null) return response;
 
-        response.SetSuccess(MapToDto(accommodation));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        response.SetSuccess(MapToDto(accommodation, VisibleAttributes(accommodation.Attributes, callerRole)));
         return response;
     }
 
@@ -131,7 +136,28 @@ public class AccommodationService : IAccommodationService
         _dbContext.Accommodations.Add(accommodation);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(accommodation));
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        List<AttributeDto> attrs = [];
+
+        if (request.Attributes is { Count: > 0 })
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.AccommodationAttributes.Where(a => a.AccommodationId == accommodation.Id),
+                _dbContext.AccommodationAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new AccommodationAttribute { TenantId = tenantId, AccommodationId = accommodation.Id },
+                applyExtra: null,
+                cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var savedAttrs = await _dbContext.AccommodationAttributes.AsNoTracking()
+                .Where(a => a.AccommodationId == accommodation.Id).ToListAsync(cancellationToken);
+            attrs = VisibleAttributes(savedAttrs, callerRole);
+        }
+
+        response.SetSuccess(MapToDto(accommodation, attrs));
         return response;
     }
 
@@ -183,9 +209,26 @@ public class AccommodationService : IAccommodationService
         accommodation.CapacityChildren = request.CapacityChildren;
         accommodation.Notes = request.Notes?.Trim();
 
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
+        if (request.Attributes is not null)
+        {
+            await AttributeSyncHelper.SyncAsync(
+                _dbContext.AccommodationAttributes.Where(a => a.AccommodationId == accommodationId),
+                _dbContext.AccommodationAttributes,
+                request.Attributes,
+                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                tenantId,
+                () => new AccommodationAttribute { TenantId = tenantId, AccommodationId = accommodationId },
+                applyExtra: null,
+                cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(accommodation));
+        var savedAttrs = await _dbContext.AccommodationAttributes.AsNoTracking()
+            .Where(a => a.AccommodationId == accommodationId).ToListAsync(cancellationToken);
+        response.SetSuccess(MapToDto(accommodation, VisibleAttributes(savedAttrs, callerRole)));
         return response;
     }
 
@@ -218,14 +261,29 @@ public class AccommodationService : IAccommodationService
         }
 
         accommodation.IsDeleted = true;
+
+        var childAttrs = await _dbContext.AccommodationAttributes
+            .Where(a => a.AccommodationId == accommodationId).ToListAsync(cancellationToken);
+        foreach (var attr in childAttrs)
+            attr.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(accommodation));
+        response.SetSuccess(MapToDto(accommodation, []));
         return response;
     }
 
-    private static AccommodationDto MapToDto(Accommodation a) => new(
+    private static List<AttributeDto> VisibleAttributes(
+        IEnumerable<AccommodationAttribute> attrs, TenantRole? callerRole)
+        => attrs
+            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
+            .OrderBy(a => a.Key)
+            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
+            .ToList();
+
+    private static AccommodationDto MapToDto(Accommodation a, IReadOnlyList<AttributeDto> attributes) => new(
         a.Id, a.TenantId, a.PropertyId, a.Name, a.Type,
         a.CapacityAdults, a.CapacityChildren, a.Notes,
-        a.CreatedAt, a.UpdatedAt, a.IsDeleted, a.DeletedAt, a.DeletedByUserId);
+        a.CreatedAt, a.UpdatedAt, a.IsDeleted, a.DeletedAt, a.DeletedByUserId,
+        attributes);
 }

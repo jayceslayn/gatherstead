@@ -292,12 +292,13 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     // ── GetSensitiveReadScopeAsync ───────────────────────────────────────────
 
     [Fact]
-    public async Task GetSensitiveReadScopeAsync_AppAdmin_ReturnsGlobal()
+    public async Task GetSensitiveReadScopeAsync_AppAdmin_ReturnsNone()
     {
+        // App Admins have write authority but PII is deliberately redacted from read paths.
         var service = CreateService(_userId, isAppAdmin: true);
         var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
-        Assert.True(scope.IsGlobal);
-        Assert.True(scope.CanReadSensitive(_householdId));
+        Assert.False(scope.IsGlobal);
+        Assert.False(scope.CanReadSensitive(_householdId));
     }
 
     [Theory]
@@ -360,5 +361,72 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         var scope = await service.GetSensitiveReadScopeAsync(_tenantId, TestContext.Current.CancellationToken);
         Assert.False(scope.IsGlobal);
         Assert.False(scope.CanReadSensitive(_householdId));
+    }
+
+    // ── GetCallerTenantRoleAsync ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task GetCallerTenantRoleAsync_Unauthenticated_ReturnsNull()
+    {
+        var service = CreateService(userId: null);
+        Assert.Null(await service.GetCallerTenantRoleAsync(_tenantId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetCallerTenantRoleAsync_AppAdmin_ReturnsNull()
+    {
+        // App Admins are not tenant members; attribute visibility treats them as having no role.
+        var service = CreateService(_userId, isAppAdmin: true);
+        Assert.Null(await service.GetCallerTenantRoleAsync(_tenantId, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(TenantRole.Owner)]
+    [InlineData(TenantRole.Manager)]
+    [InlineData(TenantRole.Coordinator)]
+    [InlineData(TenantRole.Member)]
+    [InlineData(TenantRole.Guest)]
+    public async Task GetCallerTenantRoleAsync_TenantMember_ReturnsRole(TenantRole role)
+    {
+        await SeedTenantUserAsync(role);
+        var service = CreateService(_userId);
+        Assert.Equal(role, await service.GetCallerTenantRoleAsync(_tenantId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetCallerTenantRoleAsync_NonMember_ReturnsNull()
+    {
+        var service = CreateService(_userId);
+        Assert.Null(await service.GetCallerTenantRoleAsync(_tenantId, TestContext.Current.CancellationToken));
+    }
+
+    // ── GetCallerHouseholdRoleAsync ──────────────────────────────────────────
+
+    [Fact]
+    public async Task GetCallerHouseholdRoleAsync_Unauthenticated_ReturnsNull()
+    {
+        var service = CreateService(userId: null);
+        Assert.Null(await service.GetCallerHouseholdRoleAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData(HouseholdRole.Manager)]
+    [InlineData(HouseholdRole.Member)]
+    public async Task GetCallerHouseholdRoleAsync_MemberOfHousehold_ReturnsRole(HouseholdRole role)
+    {
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdUserAsync(_householdId, role);
+        var service = CreateService(_userId);
+        Assert.Equal(role, await service.GetCallerHouseholdRoleAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task GetCallerHouseholdRoleAsync_MemberOfDifferentHousehold_ReturnsNull()
+    {
+        var otherHouseholdId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdUserAsync(otherHouseholdId, HouseholdRole.Manager);
+        var service = CreateService(_userId);
+        Assert.Null(await service.GetCallerHouseholdRoleAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
     }
 }

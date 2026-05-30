@@ -1,6 +1,11 @@
 import type { IAccommodationRepository } from '../interfaces'
-import type { AccommodationSummary, AccommodationType } from '../types'
+import type { AccommodationSummary, AccommodationType, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+
+function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
+  if (!writes) return []
+  return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
 
 export class DemoAccommodationRepository implements IAccommodationRepository {
   async listAccommodations(tenantId: string, propertyId: string): Promise<AccommodationSummary[]> {
@@ -27,12 +32,13 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     capacityAdults: number | null,
     capacityChildren: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<AccommodationSummary> {
     const store = getDemoStore()
     if (store.accommodations.value.filter(a => a.propertyId === propertyId).length >= DEMO_LIMITS.accommodationsPerProperty) {
       throw new DemoLimitError('accommodationsPerProperty')
     }
-    const a: AccommodationSummary = { id: demoId(), tenantId, propertyId, name, type, capacityAdults, capacityChildren, notes }
+    const a: AccommodationSummary = { id: demoId(), tenantId, propertyId, name, type, capacityAdults, capacityChildren, notes, attributes: toAttributeEntries(attributes) }
     store.accommodations.value.push(a)
     persistDemoStore()
     return a
@@ -47,6 +53,7 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     capacityAdults: number | null,
     capacityChildren: number | null,
     notes: string | null,
+    attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     const store = getDemoStore()
     const a = store.accommodations.value.find(x => x.id === accommodationId)
@@ -56,6 +63,7 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     a.capacityAdults = capacityAdults
     a.capacityChildren = capacityChildren
     a.notes = notes
+    if (attributes !== undefined) a.attributes = toAttributeEntries(attributes)
     persistDemoStore()
   }
 

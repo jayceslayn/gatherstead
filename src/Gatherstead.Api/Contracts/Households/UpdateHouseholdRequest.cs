@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 
 namespace Gatherstead.Api.Contracts.Households;
 
@@ -13,4 +14,9 @@ public class UpdateHouseholdRequest
         get => _name;
         init => _name = (value ?? string.Empty).Trim();
     }
+
+    [StringLength(500)]
+    public string? Notes { get; init; } = null;
+
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

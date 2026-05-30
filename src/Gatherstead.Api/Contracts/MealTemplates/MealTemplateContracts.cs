@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
@@ -17,7 +18,8 @@ public record MealTemplateDto(
     DateTimeOffset UpdatedAt,
     bool IsDeleted,
     DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    Guid? DeletedByUserId,
+    IReadOnlyList<AttributeDto> Attributes);
 
 public class MealTemplateResponse : BaseEntityResponse<MealTemplateDto> { }
 
@@ -33,6 +35,7 @@ public class CreateMealTemplateRequest
     public DateOnly? StartDate { get; init; }
     public DateOnly? EndDate { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }
 
 public class UpdateMealTemplateRequest
@@ -47,4 +50,5 @@ public class UpdateMealTemplateRequest
     public DateOnly? StartDate { get; init; }
     public DateOnly? EndDate { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }
