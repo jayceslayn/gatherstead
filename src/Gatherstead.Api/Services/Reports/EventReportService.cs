@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.Reports;
+using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
