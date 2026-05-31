@@ -17,16 +17,7 @@ const { updating, createMember } = useHouseholdMemberActions(householdId, refres
 
 const saving = computed(() => updating.value.includes('new'))
 
-interface MemberForm {
-  name: string
-  isAdult: boolean
-  ageBand: string
-  birthDate: string
-  dietaryNotes: string
-  dietaryTagsInput: string
-}
-
-const form = reactive<MemberForm>({
+const form = reactive({
   name: '',
   isAdult: true,
   ageBand: '',
@@ -73,42 +64,19 @@ async function onSubmit() {
 
     <GsPageHeader :title="t('member.createMember')" />
 
-    <UForm :state="form" class="max-w-lg space-y-5" @submit="onSubmit">
-      <UFormField :label="t('member.name')" name="name" :error="nameError || undefined" required>
-        <UInput v-model="form.name" :placeholder="t('member.name')" required class="w-full" @input="nameError = ''" />
-      </UFormField>
-
-      <UFormField :label="t('member.isAdult')" name="isAdult">
-        <UCheckbox v-model="form.isAdult" :label="t('member.adult')" />
-      </UFormField>
-
-      <UFormField :label="t('member.ageBand')" name="ageBand">
-        <UInput v-model="form.ageBand" :placeholder="t('member.ageBandPlaceholder')" class="w-full" />
-      </UFormField>
-
-      <UFormField :label="t('member.birthDate')" name="birthDate">
-        <UInput v-model="form.birthDate" type="date" class="w-full" />
-      </UFormField>
-
-      <UFormField :label="t('member.dietaryNotes')" name="dietaryNotes">
-        <UTextarea v-model="form.dietaryNotes" :placeholder="t('member.dietaryNotesPlaceholder')" class="w-full" />
-      </UFormField>
-
-      <UFormField :label="t('member.dietaryTags')" name="dietaryTags" :hint="t('member.dietaryTagsHint')">
-        <UInput v-model="form.dietaryTagsInput" :placeholder="t('member.dietaryTagsPlaceholder')" class="w-full" />
-      </UFormField>
-
-      <div class="flex items-center gap-3 pt-2">
-        <UButton type="submit" :loading="saving">
-          {{ t('common.create') }}
-        </UButton>
-        <UButton
-          variant="ghost"
-          :to="`/app/directory/${householdId}`"
-        >
-          {{ t('common.cancel') }}
-        </UButton>
-      </div>
-    </UForm>
+    <GsMemberForm
+      v-model:name="form.name"
+      v-model:is-adult="form.isAdult"
+      v-model:age-band="form.ageBand"
+      v-model:birth-date="form.birthDate"
+      v-model:dietary-notes="form.dietaryNotes"
+      v-model:dietary-tags-input="form.dietaryTagsInput"
+      :name-error="nameError"
+      :loading="saving"
+      :cancel-to="`/app/directory/${householdId}`"
+      :submit-label="t('common.create')"
+      @submit="onSubmit"
+      @clear-name-error="nameError = ''"
+    />
   </div>
 </template>

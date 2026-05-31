@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useEventReport } from '~/composables/useEventReport'
 import { useTenantRole } from '~/composables/useTenantRole'
+import { useFormatDate } from '~/composables/useFormatDate'
 
 definePageMeta({
   layout: 'default',
@@ -12,12 +13,7 @@ const { isMemberOrAbove } = useTenantRole()
 
 const eventId = computed(() => route.params.eventId as string)
 const { report, pending, error } = useEventReport(eventId)
-
-function formatDay(date: string) {
-  return new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(
-    new Date(date + 'T00:00:00'),
-  )
-}
+const { formatDay } = useFormatDate()
 
 const hasAnyData = computed(() =>
   !!report.value?.days.some(d => d.going > 0 || d.maybe > 0 || d.meals.length > 0),

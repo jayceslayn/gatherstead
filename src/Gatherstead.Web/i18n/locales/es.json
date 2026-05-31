@@ -208,6 +208,7 @@
     "title": "Propiedades",
     "name": "Nombre de la Propiedad",
     "createTitle": "Crear Propiedad",
+    "editTitle": "Editar Propiedad",
     "equipment": "Equipo",
     "noProperties": "Aún no hay propiedades",
     "noPropertiesHintManager": "Crea tu primera propiedad para comenzar.",

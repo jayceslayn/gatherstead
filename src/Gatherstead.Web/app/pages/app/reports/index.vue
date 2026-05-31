@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
+import { useFormatDate } from '~/composables/useFormatDate'
 
 definePageMeta({
   layout: 'default',
@@ -8,12 +9,7 @@ definePageMeta({
 const { t } = useI18n()
 const { isMemberOrAbove } = useTenantRole()
 const { events, pending } = useEvents()
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(
-    new Date(date + 'T00:00:00'),
-  )
-}
+const { formatDate } = useFormatDate()
 </script>
 
 <template>

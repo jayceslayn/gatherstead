@@ -111,7 +111,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
-  ) {
+  ): Promise<boolean> {
     updating.value.push(memberId)
     try {
       await repo.updateMember(
@@ -119,9 +119,11 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
         name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags,
       )
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== memberId)

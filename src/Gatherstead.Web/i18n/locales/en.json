@@ -208,6 +208,7 @@
     "title": "Properties",
     "name": "Property Name",
     "createTitle": "Create Property",
+    "editTitle": "Edit Property",
     "equipment": "Equipment",
     "noProperties": "No properties yet",
     "noPropertiesHintManager": "Create your first property to get started.",
