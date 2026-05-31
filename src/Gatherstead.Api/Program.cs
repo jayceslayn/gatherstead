@@ -26,6 +26,9 @@ using Gatherstead.Api.Services.HouseholdUsers;
 using Gatherstead.Api.Services.TenantUsers;
 using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Services.Equipment;
+using Gatherstead.Api.Services.Reports;
+using Gatherstead.Api.Services.Invitations;
+using Gatherstead.Api.Services.Provisioning;
 using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
@@ -74,6 +77,9 @@ builder.Services.AddScoped<IAccommodationIntentService, AccommodationIntentServi
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 builder.Services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
+builder.Services.AddScoped<IEventReportService, EventReportService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
+builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
 
 // Configure JWT Bearer authentication with external identity provider (Entra External ID / Azure AD B2C)
 // Note: Consider PASETO migration when ecosystem support improves (broader library/provider adoption).

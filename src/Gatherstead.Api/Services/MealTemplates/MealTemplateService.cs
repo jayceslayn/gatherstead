@@ -147,6 +147,11 @@ public class MealTemplateService : IMealTemplateService
         await _planSyncService.SyncMealPlanAsync(tenantId, template, @event.StartDate, @event.EndDate, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        if (request.CreateMatchingTaskTemplate)
+        {
+            await CreateMatchingTaskTemplateAsync(tenantId, eventId, template, @event, cancellationToken);
+        }
+
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
         List<AttributeDto> attrs = [];
 
@@ -343,5 +348,61 @@ public class MealTemplateService : IMealTemplateService
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Maps a meal's <see cref="MealTypeFlags"/> to the equivalent <see cref="TaskTimeSlotFlags"/>:
+    /// Breakfast→Morning, Lunch→Midday, Dinner→Evening. Falls back to Anytime when no meal type is set.
+    /// </summary>
+    private static TaskTimeSlotFlags MapMealTypesToTimeSlots(MealTypeFlags mealTypes)
+    {
+        TaskTimeSlotFlags slots = 0;
+        if (mealTypes.HasFlag(MealTypeFlags.Breakfast)) slots |= TaskTimeSlotFlags.Morning;
+        if (mealTypes.HasFlag(MealTypeFlags.Lunch)) slots |= TaskTimeSlotFlags.Midday;
+        if (mealTypes.HasFlag(MealTypeFlags.Dinner)) slots |= TaskTimeSlotFlags.Evening;
+        return slots == 0 ? TaskTimeSlotFlags.Anytime : slots;
+    }
+
+    /// <summary>
+    /// Creates a TaskTemplate mirroring a meal template so the meal can be organized/assigned.
+    /// Skips silently if a task template name conflict cannot be resolved, keeping meal creation successful.
+    /// </summary>
+    private async Task CreateMatchingTaskTemplateAsync(
+        Guid tenantId,
+        Guid eventId,
+        MealTemplate mealTemplate,
+        Event @event,
+        CancellationToken cancellationToken)
+    {
+        var existingNames = await _dbContext.TaskTemplates
+            .AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.EventId == eventId)
+            .Select(t => t.Name)
+            .ToListAsync(cancellationToken);
+
+        var nameSet = existingNames.ToHashSet(StringComparer.Ordinal);
+        var candidate = mealTemplate.Name;
+        if (nameSet.Contains(candidate))
+            candidate = $"{mealTemplate.Name} (cook)";
+        if (nameSet.Contains(candidate))
+            return; // Can't find a non-conflicting name; leave the meal as-is.
+
+        var taskTemplate = new TaskTemplate
+        {
+            Id = Guid.NewGuid(),
+            TenantId = tenantId,
+            EventId = eventId,
+            Name = candidate,
+            TimeSlots = MapMealTypesToTimeSlots(mealTemplate.MealTypes),
+            StartDate = mealTemplate.StartDate,
+            EndDate = mealTemplate.EndDate,
+            Notes = mealTemplate.Notes,
+        };
+
+        _dbContext.TaskTemplates.Add(taskTemplate);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _planSyncService.SyncTaskPlanAsync(tenantId, taskTemplate, @event.StartDate, @event.EndDate, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

@@ -29,6 +29,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdUser> HouseholdUsers => Set<HouseholdUser>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
@@ -139,6 +140,17 @@ public class GathersteadDbContext : DbContext
                 .IsUnique()
                 .HasFilter("[LinkedMemberId] IS NOT NULL")
                 .HasDatabaseName("IX_TenantUser_LinkedMemberId");
+        });
+
+        modelBuilder.Entity<Invitation>(b =>
+        {
+            // At most one live, pending invitation per (tenant, email). Backs the read-then-write
+            // idempotency check in InvitationService against a concurrent double-insert.
+            // InvitationStatus.Pending = 0.
+            b.HasIndex(i => new { i.TenantId, i.Email })
+                .IsUnique()
+                .HasFilter("[Status] = 0 AND [IsDeleted] = 0")
+                .HasDatabaseName("IX_Invitation_PendingPerTenantEmail");
         });
 
         // Configure MemberRelationship to HouseholdMember relationship

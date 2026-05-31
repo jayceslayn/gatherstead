@@ -151,6 +151,14 @@
     "myAttendance": "Mi Asistencia",
     "selectHousehold": "Seleccionar hogar",
     "tabsComingSoon": "Esta sección estará disponible pronto.",
+    "dateRangeLabel": "Rango de fechas",
+    "endBeforeStart": "La fecha de fin debe ser igual o posterior a la de inicio.",
+    "deleteTitle": "Eliminar Evento",
+    "deleteConfirm": "Esto eliminará permanentemente este evento y todos sus planes. No se puede deshacer.",
+    "dateChangeHint": "Cambiar las fechas ajustará los planes de comidas y tareas en consecuencia.",
+    "propertyLocked": "La propiedad no se puede cambiar después de crear el evento.",
+    "noPropertiesTitle": "Aún no hay propiedades",
+    "noPropertiesHint": "Agrega una propiedad antes de crear un evento.",
     "meal": {
       "breakfast": "Desayuno",
       "lunch": "Almuerzo",
@@ -160,7 +168,18 @@
       "noTemplates": "No se han configurado planes de comida para este evento.",
       "noPlans": "No hay detalles del plan de comida disponibles.",
       "dateRange": "{start} – {end}",
-      "oneOff": "Única vez"
+      "oneOff": "Única vez",
+      "templateName": "Nombre de la Comida",
+      "templateNamePlaceholder": "p. ej. Desayuno del sábado",
+      "mealTypes": "Tipos de Comida",
+      "selectMealType": "Selecciona al menos un tipo de comida.",
+      "useSubRange": "Limitar a días específicos",
+      "dateRangeLabel": "Rango de fechas",
+      "addTemplate": "Agregar Comida",
+      "editTemplate": "Editar Comida",
+      "deleteTemplate": "Eliminar Comida",
+      "deleteConfirm": "Esto eliminará la comida y sus planes. No se puede deshacer.",
+      "createMatchingTask": "Crear también una tarea para organizar esta comida"
     },
     "task": {
       "morning": "Mañana",
@@ -173,13 +192,23 @@
       "noPlans": "No hay detalles del plan de tareas disponibles.",
       "minimumAssignees": "mín. {n}",
       "dateRange": "{start} – {end}",
-      "oneOff": "Única vez"
+      "oneOff": "Única vez",
+      "templateName": "Nombre de la Tarea",
+      "templateNamePlaceholder": "p. ej. Montar el campamento",
+      "timeSlots": "Franjas Horarias",
+      "selectTimeSlot": "Selecciona al menos una franja horaria.",
+      "minimumAssigneesLabel": "Asignados Mínimos",
+      "addTemplate": "Agregar Tarea",
+      "editTemplate": "Editar Tarea",
+      "deleteTemplate": "Eliminar Tarea",
+      "deleteConfirm": "Esto eliminará la tarea y sus planes. No se puede deshacer."
     }
   },
   "property": {
     "title": "Propiedades",
     "name": "Nombre de la Propiedad",
     "createTitle": "Crear Propiedad",
+    "editTitle": "Editar Propiedad",
     "equipment": "Equipo",
     "noProperties": "Aún no hay propiedades",
     "noPropertiesHintManager": "Crea tu primera propiedad para comenzar.",
@@ -187,7 +216,35 @@
     "accommodations": "Alojamientos",
     "noAccommodations": "Aún no se han agregado alojamientos.",
     "noAccommodationsHintManager": "Crea el primer alojamiento para esta propiedad.",
-    "createAccommodation": "Crear Alojamiento"
+    "createAccommodation": "Crear Alojamiento",
+    "deleteTitle": "Eliminar Propiedad",
+    "deleteConfirm": "Esto eliminará permanentemente esta propiedad y sus alojamientos. No se puede deshacer."
+  },
+  "report": {
+    "title": "Informes",
+    "subtitle": "Información sobre tus reuniones.",
+    "eventReports": "Informes de Eventos",
+    "chooseEvent": "Elige un evento para ver la asistencia y los detalles de planificación de comidas.",
+    "noEvents": "Aún no hay eventos sobre los que informar.",
+    "noAccess": "No tienes acceso a los informes de este grupo.",
+    "event": {
+      "viewReport": "Ver Informe",
+      "title": "Informe del Evento",
+      "headcount": "Asistentes",
+      "attendingCount": "{n} asistiendo",
+      "goingCount": "Asistirá: {n}",
+      "maybeCount": "Quizás: {n}",
+      "dietaryTally": "{label} · {count}",
+      "bringingOwnFood": "{n} traen su propia comida",
+      "dietaryNeeds": "Necesidades Dietéticas",
+      "noDietaryNeeds": "No se indicaron necesidades dietéticas especiales.",
+      "attendees": "Asistentes",
+      "noMeals": "No hay comidas planificadas para este día.",
+      "noData": "Aún no se han registrado datos de asistencia o comidas.",
+      "print": "Imprimir",
+      "summary": "Resumen",
+      "ownFood": "comida propia"
+    }
   },
   "accommodation": {
     "types": {
@@ -304,6 +361,20 @@
     "householdRoles": {
       "Manager": "Administrador",
       "Member": "Miembro"
+    },
+    "invite": {
+      "title": "Invitar Usuario",
+      "hint": "Ingresa el correo de la persona. Se unirá automáticamente la próxima vez que inicie sesión, tenga o no una cuenta.",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "nombre{'@'}ejemplo.com",
+      "household": "Acceso a hogar (opcional)",
+      "householdRole": "Rol en el hogar",
+      "noHousehold": "Sin acceso a hogar",
+      "send": "Enviar Invitación",
+      "sent": "Invitación enviada",
+      "pendingTitle": "Invitaciones pendientes",
+      "statusPending": "Pendiente",
+      "revoke": "Revocar invitación"
     }
   }
 }

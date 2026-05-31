@@ -25,6 +25,8 @@ import type {
   HouseholdUserSummary,
   EquipmentSummary,
   AttributeWriteEntry,
+  EventReport,
+  InvitationSummary,
 } from './types'
 
 export const REPOSITORIES_KEY = Symbol('repositories')
@@ -87,6 +89,15 @@ export interface ITenantUserRepository {
   listUserHouseholdAccess(tenantId: string, userId: string): Promise<HouseholdUserSummary[]>
   upsertHouseholdUser(tenantId: string, householdId: string, userId: string, role: HouseholdRole): Promise<void>
   deleteHouseholdUser(tenantId: string, householdId: string, userId: string): Promise<void>
+  inviteUser(
+    tenantId: string,
+    email: string,
+    role: TenantRole,
+    householdId?: string | null,
+    householdRole?: HouseholdRole | null,
+  ): Promise<InvitationSummary>
+  listInvitations(tenantId: string): Promise<InvitationSummary[]>
+  revokeInvitation(tenantId: string, invitationId: string): Promise<void>
 }
 
 export interface IEventRepository {
@@ -154,6 +165,7 @@ export interface IMealPlanRepository {
     endDate: string | null,
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
+    createMatchingTaskTemplate?: boolean,
   ): Promise<MealTemplate>
   updateTemplate(
     tenantId: string,
@@ -325,6 +337,10 @@ export interface IEquipmentRepository {
   deleteEquipment(tenantId: string, equipmentId: string): Promise<void>
 }
 
+export interface IReportRepository {
+  getEventMealReport(tenantId: string, eventId: string): Promise<EventReport | null>
+}
+
 export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
@@ -339,4 +355,5 @@ export interface Repositories {
   accommodations: IAccommodationRepository
   accommodationIntents: IAccommodationIntentRepository
   equipment: IEquipmentRepository
+  reports: IReportRepository
 }

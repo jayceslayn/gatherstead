@@ -13,7 +13,7 @@ const router = useRouter()
 const { isManagerOrAbove } = useTenantRole()
 
 const householdId = computed(() => route.params.householdId as string)
-const { household, pending: householdPending } = useHousehold(householdId)
+const { household, pending: householdPending, refresh: refreshHousehold } = useHousehold(householdId)
 const { members, pending: membersPending } = useHouseholdMembers(householdId)
 
 const pending = computed(() => householdPending.value || membersPending.value)
@@ -28,6 +28,9 @@ async function confirmDelete() {
   showDeleteConfirm.value = false
   await deleteHousehold(householdId.value)
 }
+
+// Rename / edit — handled by the shared GsHouseholdModal in edit mode.
+const showEdit = ref(false)
 </script>
 
 <template>
@@ -46,13 +49,23 @@ async function confirmDelete() {
 
       <GsPageHeader :title="household.name">
         <GsRoleGate min-role="Manager">
-          <UButton
-            :to="`/app/directory/${household.id}/create-member`"
-            size="sm"
-            icon="i-heroicons-plus"
-          >
-            {{ t('member.createMember') }}
-          </UButton>
+          <div class="flex items-center gap-2">
+            <UButton
+              variant="outline"
+              size="sm"
+              icon="i-heroicons-pencil"
+              @click="showEdit = true"
+            >
+              {{ t('common.edit') }}
+            </UButton>
+            <UButton
+              :to="`/app/directory/${household.id}/create-member`"
+              size="sm"
+              icon="i-heroicons-plus"
+            >
+              {{ t('member.createMember') }}
+            </UButton>
+          </div>
         </GsRoleGate>
       </GsPageHeader>
 
@@ -121,6 +134,12 @@ async function confirmDelete() {
       :confirm-label="t('common.delete')"
       danger
       @confirm="confirmDelete"
+    />
+
+    <GsHouseholdModal
+      v-model:open="showEdit"
+      :household="household"
+      :refresh="refreshHousehold"
     />
   </div>
 </template>

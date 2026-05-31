@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useProperty } from '~/composables/useProperties'
+import { useProperty, usePropertyActions } from '~/composables/useProperties'
 import { useAccommodations } from '~/composables/useAccommodations'
 import { useTenantRole } from '~/composables/useTenantRole'
 import type { AccommodationSummary, AccommodationType } from '~/repositories/types'
@@ -8,11 +8,22 @@ definePageMeta({ layout: 'default' })
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const { isManagerOrAbove } = useTenantRole()
 
 const propertyId = computed(() => route.params.propertyId as string)
-const { property, pending: propertyPending } = useProperty(propertyId)
+const { property, pending: propertyPending, refresh } = useProperty(propertyId)
 const { accommodations, pending: accommodationsPending } = useAccommodations(propertyId)
+const { updating, deleteProperty } = usePropertyActions(refresh)
+
+const showEdit = ref(false)
+const showDeleteConfirm = ref(false)
+
+async function confirmDelete() {
+  showDeleteConfirm.value = false
+  await deleteProperty(propertyId.value)
+  await router.push('/app/properties')
+}
 
 const TYPE_ORDER: AccommodationType[] = ['Bedroom', 'Bunk', 'RvPad', 'Tent', 'Offsite']
 
@@ -47,14 +58,21 @@ function typeLabel(type: AccommodationType): string {
 
       <GsPageHeader :title="property.name">
         <GsRoleGate min-role="Manager">
-          <UButton
-            :to="`/app/properties/${property.id}/edit`"
-            variant="outline"
-            size="sm"
-            icon="i-heroicons-pencil"
-          >
-            {{ t('common.edit') }}
-          </UButton>
+          <div class="flex items-center gap-2">
+            <UButton variant="outline" size="sm" icon="i-heroicons-pencil" @click="showEdit = true">
+              {{ t('common.edit') }}
+            </UButton>
+            <UButton
+              color="error"
+              variant="ghost"
+              size="sm"
+              icon="i-heroicons-trash"
+              :loading="updating.includes(propertyId)"
+              @click="showDeleteConfirm = true"
+            >
+              {{ t('property.deleteTitle') }}
+            </UButton>
+          </div>
         </GsRoleGate>
       </GsPageHeader>
 
@@ -113,6 +131,17 @@ function typeLabel(type: AccommodationType): string {
       v-else
       icon="i-heroicons-exclamation-triangle"
       :title="t('error.notFound')"
+    />
+
+    <GsPropertyModal v-model:open="showEdit" :property="property" :refresh="refresh" />
+
+    <GsConfirmModal
+      v-model:open="showDeleteConfirm"
+      :title="t('property.deleteTitle')"
+      :description="t('property.deleteConfirm')"
+      :confirm-label="t('common.delete')"
+      danger
+      @confirm="confirmDelete"
     />
   </div>
 </template>

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { useTenantStore } from '~/stores/tenant'
 import type { HouseholdMember } from '~/repositories/types'
 import { useHousehold } from '~/composables/useHouseholds'
-import { useMember } from '~/composables/useHouseholdMembers'
+import { useMember, useHouseholdMembers, useHouseholdMemberActions } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
   layout: 'default',
@@ -10,25 +9,18 @@ definePageMeta({
 
 const { t } = useI18n()
 const route = useRoute()
-const toast = useToast()
-const tenantStore = useTenantStore()
 
 const householdId = computed(() => route.params.householdId as string)
 const memberId = computed(() => route.params.memberId as string)
 
 const { household } = useHousehold(householdId)
 const { member, pending } = useMember(householdId, memberId)
+const { refresh } = useHouseholdMembers(householdId)
+const { updating, updateMember } = useHouseholdMemberActions(householdId, refresh)
 
-interface MemberForm {
-  name: string
-  isAdult: boolean
-  ageBand: string
-  birthDate: string
-  dietaryNotes: string
-  dietaryTagsInput: string
-}
+const saving = computed(() => updating.value.includes(memberId.value))
 
-const form = reactive<MemberForm>({
+const form = reactive({
   name: '',
   isAdult: true,
   ageBand: '',
@@ -37,8 +29,8 @@ const form = reactive<MemberForm>({
   dietaryTagsInput: '',
 })
 
+const nameError = ref('')
 const isDirty = ref(false)
-const saving = ref(false)
 
 watch(member, (val: HouseholdMember | null) => {
   if (!val) return
@@ -48,7 +40,7 @@ watch(member, (val: HouseholdMember | null) => {
   form.birthDate = val.birthDate ?? ''
   form.dietaryNotes = val.dietaryNotes ?? ''
   form.dietaryTagsInput = val.dietaryTags.join(', ')
-  // Reset after the form watcher's next-tick flush so it doesn't mark as dirty on load
+  // Reset after the form watcher's next-tick flush so pre-fill doesn't mark as dirty
   nextTick(() => { isDirty.value = false })
 }, { immediate: true })
 
@@ -61,39 +53,26 @@ onBeforeRouteLeave(() => {
 })
 
 async function onSubmit() {
-  if (!form.name.trim()) return
+  nameError.value = form.name.trim() ? '' : t('validation.required', { field: t('member.name') })
+  if (nameError.value) return
 
-  saving.value = true
-  try {
-    const dietaryTags = form.dietaryTagsInput
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean)
+  const dietaryTags = form.dietaryTagsInput
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
 
-    await $fetch(
-      `/api/proxy/tenants/${tenantStore.currentTenantId}/households/${householdId.value}/members/${memberId.value}`,
-      {
-        method: 'PUT',
-        body: {
-          name: form.name.trim(),
-          isAdult: form.isAdult,
-          ageBand: form.ageBand.trim() || null,
-          birthDate: form.birthDate || null,
-          dietaryNotes: form.dietaryNotes.trim() || null,
-          dietaryTags,
-        },
-      },
-    )
-
+  const ok = await updateMember(
+    memberId.value,
+    form.name.trim(),
+    form.isAdult,
+    form.ageBand.trim() || null,
+    form.birthDate || null,
+    form.dietaryNotes.trim() || null,
+    dietaryTags,
+  )
+  if (ok) {
     isDirty.value = false
-    toast.add({ title: t('member.savedSuccessfully'), color: 'success' })
     await navigateTo(`/app/directory/${householdId.value}/${memberId.value}`)
-  }
-  catch {
-    toast.add({ title: t('common.error'), color: 'error' })
-  }
-  finally {
-    saving.value = false
   }
 }
 </script>
@@ -116,43 +95,20 @@ async function onSubmit() {
 
       <GsPageHeader :title="`${t('common.edit')} ${member.name}`" />
 
-      <UForm :state="form" class="max-w-lg space-y-5" @submit="onSubmit">
-        <UFormField :label="t('member.name')" name="name" required>
-          <UInput v-model="form.name" :placeholder="t('member.name')" required class="w-full" />
-        </UFormField>
-
-        <UFormField :label="t('member.isAdult')" name="isAdult">
-          <UCheckbox v-model="form.isAdult" :label="t('member.adult')" />
-        </UFormField>
-
-        <UFormField :label="t('member.ageBand')" name="ageBand">
-          <UInput v-model="form.ageBand" :placeholder="t('member.ageBandPlaceholder')" class="w-full" />
-        </UFormField>
-
-        <UFormField :label="t('member.birthDate')" name="birthDate">
-          <UInput v-model="form.birthDate" type="date" class="w-full" />
-        </UFormField>
-
-        <UFormField :label="t('member.dietaryNotes')" name="dietaryNotes">
-          <UTextarea v-model="form.dietaryNotes" :placeholder="t('member.dietaryNotesPlaceholder')" class="w-full" />
-        </UFormField>
-
-        <UFormField :label="t('member.dietaryTags')" name="dietaryTags" :hint="t('member.dietaryTagsHint')">
-          <UInput v-model="form.dietaryTagsInput" :placeholder="t('member.dietaryTagsPlaceholder')" class="w-full" />
-        </UFormField>
-
-        <div class="flex items-center gap-3 pt-2">
-          <UButton type="submit" :loading="saving">
-            {{ t('common.save') }}
-          </UButton>
-          <UButton
-            variant="ghost"
-            :to="`/app/directory/${householdId}/${memberId}`"
-          >
-            {{ t('common.cancel') }}
-          </UButton>
-        </div>
-      </UForm>
+      <GsMemberForm
+        v-model:name="form.name"
+        v-model:is-adult="form.isAdult"
+        v-model:age-band="form.ageBand"
+        v-model:birth-date="form.birthDate"
+        v-model:dietary-notes="form.dietaryNotes"
+        v-model:dietary-tags-input="form.dietaryTagsInput"
+        :name-error="nameError"
+        :loading="saving"
+        :cancel-to="`/app/directory/${householdId}/${memberId}`"
+        :submit-label="t('common.save')"
+        @submit="onSubmit"
+        @clear-name-error="nameError = ''"
+      />
     </template>
 
     <GsEmptyState

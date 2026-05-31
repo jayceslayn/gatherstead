@@ -29,13 +29,13 @@ export function useEvent(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { events: repo } = useRepositories()
 
-  const { data, pending, error } = useAsyncData<EventSummary | null>(
+  const { data, pending, error, refresh } = useAsyncData<EventSummary | null>(
     () => `event-${tenantStore.currentTenantId}-${eventId.value}`,
     () => repo.getEvent(tenantStore.currentTenantId!, eventId.value),
     { watch: [eventId] },
   )
 
-  return { event: computed(() => data.value ?? null), pending, error }
+  return { event: computed(() => data.value ?? null), pending, error, refresh }
 }
 
 export function useEventActions(refresh: () => Promise<void>) {
@@ -46,32 +46,36 @@ export function useEventActions(refresh: () => Promise<void>) {
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createEvent(propertyId: string, name: string, startDate: string, endDate: string) {
+  async function createEvent(propertyId: string, name: string, startDate: string, endDate: string): Promise<EventSummary | null> {
     updating.value.push('new')
     try {
-      await repo.createEvent(tenantStore.currentTenantId!, propertyId, name, startDate, endDate)
+      const created = await repo.createEvent(tenantStore.currentTenantId!, propertyId, name, startDate, endDate)
       await refresh()
+      return created
     }
     catch (e) {
       if (e instanceof DemoLimitError) {
         toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
-        return
+        return null
       }
       toast.add({ title: translateError(e), color: 'error' })
+      return null
     }
     finally {
       updating.value = updating.value.filter(k => k !== 'new')
     }
   }
 
-  async function updateEvent(eventId: string, name: string, startDate: string, endDate: string) {
+  async function updateEvent(eventId: string, name: string, startDate: string, endDate: string): Promise<boolean> {
     updating.value.push(eventId)
     try {
       await repo.updateEvent(tenantStore.currentTenantId!, eventId, name, startDate, endDate)
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== eventId)

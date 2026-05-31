@@ -20,13 +20,16 @@ Gatherstead keeps sprawling families organized and together: one source of truth
 - **Centralized family directory**: Keep up-to-date contact information (emails, phone numbers, mailing addresses) and relationship context for everyone in the extended family, making it easy to send updates, invitations, or holiday cards.
 - **Dietary and accessibility notes**: Track dietary tags/preferences and other important notes (e.g.accessibility needs) so hosts can plan inclusive meals.
 - **Event attendance and meals**: Aggregate who is attending which dates and meals, capture bring-your-own-food choices, and surface headcounts for shopping and prep.
+- **Event reports**: Roll attendance and meals up into a print-friendly per-day report with headcounts and aggregated dietary needs, so cooks know how much—and what kind—of food to prepare.
 - **Accommodation coordination**: Collect stay intents for guest rooms, RV spots, or other resources, with arbitration-friendly workflows instead of first-come reservations.
-- **Task planning**: Create templates for tasks (e.g. meal prep, cleaning, and event setup), assign or volunteer for time slots, and track completion during the event.
+- **Task planning**: Create templates for tasks (e.g. meal prep, cleaning, and event setup), assign or volunteer for time slots, and track completion during the event. Meals can optionally spin up a matching prep task in one step.
+- **Invite the family in**: Tenant managers invite relatives by email; invitees join automatically the next time they sign in, whether or not they already have an account.
 
 ## 📚 Documentation
 For more detailed information about the project, please see the following documents:
 
 - **[Architecture](docs/ARCHITECTURE.md)**: An overview of the technology stack, domain-driven design, and technical conventions.
 - **[Design Principles](docs/DESIGN_PRINCIPLES.md)**: The guiding principles for security, privacy, and data safety.
+- **[Web UI Design](docs/WEB-UI-DESIGN.md)**: Frontend UX/UI conventions — components, status language, mobile-first, and interaction patterns.
 - **[Implementation Status](docs/IMPLEMENTATION_STATUS.md)**: The current implementation status, planned enhancements, and schema details.
 - **[Deployment Guide](docs/DEPLOYMENT.md)**: Detailed instructions for manual and automated deployment.

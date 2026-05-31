@@ -21,13 +21,13 @@ export function useProperty(propertyId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { properties: repo } = useRepositories()
 
-  const { data, pending, error } = useAsyncData<PropertySummary | null>(
+  const { data, pending, error, refresh } = useAsyncData<PropertySummary | null>(
     () => `property-${tenantStore.currentTenantId}-${propertyId.value}`,
     () => repo.getProperty(tenantStore.currentTenantId!, propertyId.value),
     { watch: [propertyId] },
   )
 
-  return { property: computed(() => data.value ?? null), pending, error }
+  return { property: computed(() => data.value ?? null), pending, error, refresh }
 }
 
 export function usePropertyActions(refresh: () => Promise<void>) {
@@ -58,14 +58,16 @@ export function usePropertyActions(refresh: () => Promise<void>) {
     }
   }
 
-  async function updateProperty(propertyId: string, name: string) {
+  async function updateProperty(propertyId: string, name: string): Promise<boolean> {
     updating.value.push(propertyId)
     try {
       await repo.updateProperty(tenantStore.currentTenantId!, propertyId, name)
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== propertyId)

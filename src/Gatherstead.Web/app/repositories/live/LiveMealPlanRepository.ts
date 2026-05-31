@@ -58,10 +58,11 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     endDate: string | null,
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
+    createMatchingTaskTemplate?: boolean,
   ): Promise<MealTemplate> {
     const r = await $fetch<ApiResponse<MealTemplate>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates`,
-      { method: 'POST', body: { name, mealTypes, startDate, endDate, notes, attributes: attributes ?? null } },
+      { method: 'POST', body: { name, mealTypes, startDate, endDate, notes, attributes: attributes ?? null, createMatchingTaskTemplate: createMatchingTaskTemplate ?? false } },
     )
     return r.entity
   }

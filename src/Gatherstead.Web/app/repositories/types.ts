@@ -48,6 +48,20 @@ export interface HouseholdUserSummary {
   externalId: string
 }
 
+export type InvitationStatus = 'Pending' | 'Accepted' | 'Revoked'
+
+export interface InvitationSummary {
+  id: string
+  tenantId: string
+  email: string
+  role: TenantRole
+  householdId: string | null
+  householdRole: HouseholdRole | null
+  status: InvitationStatus
+  createdAt: string
+  acceptedAt: string | null
+}
+
 export interface HouseholdMember {
   id: string
   tenantId: string
@@ -217,6 +231,47 @@ export interface EquipmentSummary {
 }
 
 
+export interface EventReportDietaryTally {
+  label: string
+  count: number
+}
+
+export interface EventReportAttendee {
+  memberId: string
+  name: string
+  status: AttendanceStatus
+  bringOwnFood: boolean
+  dietary: string[]
+}
+
+export interface EventReportMeal {
+  mealPlanId: string
+  templateName: string
+  mealType: MealType
+  going: number
+  maybe: number
+  notGoing: number
+  bringOwnFood: number
+  dietary: EventReportDietaryTally[]
+  attendees: EventReportAttendee[]
+}
+
+export interface EventReportDay {
+  day: string
+  going: number
+  maybe: number
+  meals: EventReportMeal[]
+}
+
+export interface EventReport {
+  eventId: string
+  eventName: string
+  startDate: string
+  endDate: string
+  days: EventReportDay[]
+}
+
+
 export const MEAL_TYPE_FLAGS: Record<MealType, number> = {
   Breakfast: 0x01,
   Lunch: 0x02,
@@ -240,4 +295,16 @@ export const ALL_TASK_SLOTS: TaskTimeSlot[] = ['Morning', 'Midday', 'Evening', '
 
 export function taskSlotsFromFlags(flags: number): TaskTimeSlot[] {
   return ALL_TASK_SLOTS.filter(s => (flags & TASK_SLOT_FLAGS[s]) !== 0)
+}
+
+// Maps meal-type flags to the equivalent task time-slot flags (Breakfast→Morning, Lunch→Midday,
+// Dinner→Evening), falling back to Anytime when nothing maps. Mirrors the backend
+// MealTemplateService.MapMealTypesToTimeSlots so the demo "matching task" behaves identically —
+// and doesn't depend on the two flag sets happening to share bit values.
+export function mealTypeFlagsToTaskSlotFlags(mealTypes: number): number {
+  let slots = 0
+  if (mealTypes & MEAL_TYPE_FLAGS.Breakfast) slots |= TASK_SLOT_FLAGS.Morning
+  if (mealTypes & MEAL_TYPE_FLAGS.Lunch) slots |= TASK_SLOT_FLAGS.Midday
+  if (mealTypes & MEAL_TYPE_FLAGS.Dinner) slots |= TASK_SLOT_FLAGS.Evening
+  return slots === 0 ? TASK_SLOT_FLAGS.Anytime : slots
 }

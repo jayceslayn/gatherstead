@@ -94,6 +94,13 @@ public enum HouseholdRole
     Member = 1
 }
 
+public enum InvitationStatus
+{
+    Pending = 0,
+    Accepted = 1,
+    Revoked = 2
+}
+
 public enum SecurityEventType
 {
     AuthFailure,

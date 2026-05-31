@@ -19,6 +19,7 @@ import type {
   AccommodationSummary,
   AccommodationIntent,
   EquipmentSummary,
+  InvitationSummary,
 } from '../types'
 
 const STORAGE_KEY = 'gs-demo-store'
@@ -81,6 +82,7 @@ interface DemoState {
   accommodations: AccommodationSummary[]
   accommodationIntents: AccommodationIntent[]
   equipment: EquipmentSummary[]
+  invitations: InvitationSummary[]
 }
 
 export interface ReactiveState {
@@ -102,6 +104,7 @@ export interface ReactiveState {
   accommodations: Ref<AccommodationSummary[]>
   accommodationIntents: Ref<AccommodationIntent[]>
   equipment: Ref<EquipmentSummary[]>
+  invitations: Ref<InvitationSummary[]>
 }
 
 function emptyState(): DemoState {
@@ -124,6 +127,7 @@ function emptyState(): DemoState {
     accommodations: [],
     accommodationIntents: [],
     equipment: [],
+    invitations: [],
   }
 }
 
@@ -162,6 +166,7 @@ function buildReactiveRefs(state: DemoState): ReactiveState {
     accommodations: ref(withAttributes(state.accommodations ?? []) as AccommodationSummary[]),
     accommodationIntents: ref(state.accommodationIntents ?? []),
     equipment: ref(withAttributes(state.equipment ?? []) as EquipmentSummary[]),
+    invitations: ref(state.invitations ?? []),
   }
 }
 
@@ -185,6 +190,7 @@ function snapshot(state: ReactiveState): DemoState {
     accommodations: state.accommodations.value,
     accommodationIntents: state.accommodationIntents.value,
     equipment: state.equipment.value,
+    invitations: state.invitations.value,
   }
 }
 
@@ -222,6 +228,7 @@ export function clearDemoStore(): void {
   _state.accommodations.value = []
   _state.accommodationIntents.value = []
   _state.equipment.value = []
+  _state.invitations.value = []
   localStorage.removeItem(STORAGE_KEY)
 }
 

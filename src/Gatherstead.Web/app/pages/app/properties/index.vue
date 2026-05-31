@@ -61,6 +61,6 @@ const showCreate = ref(false)
       </NuxtLink>
     </div>
 
-    <GsCreatePropertyModal v-model:open="showCreate" :refresh="refresh" />
+    <GsPropertyModal v-model:open="showCreate" :refresh="refresh" />
   </div>
 </template>

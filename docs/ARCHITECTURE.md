@@ -7,8 +7,9 @@ This repository uses an Azure-first architecture with a C# .NET API and a Vue 3 
 Gatherstead is organized around bounded contexts that align with the two core goals while sharing a multi-tenant foundation.
 
 ### Shared Foundation (Tenancy)
-- **User**: Authenticated identity (Entra ID login) with an `ExternalId` for the Entra subject and an `IsAppAdmin` flag for platform-level administrative access. App Admins bypass all tenant and resource authorization checks and are the only role permitted to create tenants.【F:src/Gatherstead.Data/Entities/User.cs】
+- **User**: Authenticated identity (Entra ID login) with an `ExternalId` for the Entra subject, a nullable indexed `Email` (captured from the verified token claim, used for invitation matching), and an `IsAppAdmin` flag for platform-level administrative access. App Admins bypass all tenant and resource authorization checks and are the only role permitted to create tenants. Internal `User` rows are provisioned just-in-time on first authenticated load via `POST /api/me/bootstrap` (`UserProvisioningService`), which also auto-claims any matching pending invitations.【F:src/Gatherstead.Data/Entities/User.cs】
 - **Tenant**: Top-level aggregate for an extended family or organization, providing isolation across families or groups. Tenant creation requires App Admin privilege and specifies the initial Owner user.【F:src/Gatherstead.Data/Entities/Tenant.cs】
+- **Invitation**: An app-managed invitation matching an email to a tenant + role (and optional initial household access), with a `Status` of Pending/Accepted/Revoked. Inherits `AuditableEntity` (soft-delete) and carries `TenantId` for global-filter isolation; a filtered unique index enforces at most one live pending invite per `(TenantId, Email)`. Invitations are claimed by email when the invitee first authenticates (or accepted immediately if a matching `User` already exists), so the invite UX is identical whether or not the user pre-exists in the identity provider — no email-delivery infrastructure required. Email is only trusted for claiming when the IdP asserts `email_verified`.【F:src/Gatherstead.Data/Entities/Invitation.cs】
 
 ### Family Directory Context
 - **Household**: A family grouping. Can evolve as families split or merge.【F:src/Gatherstead.Data/Entities/Household.cs】
@@ -46,6 +47,9 @@ Nine entities support extensible key-value metadata via a shared `IParentScopedA
 - **TaskPlan**: Dated task instance for a specific day and time slot. Supports exception marking and completion tracking.【F:src/Gatherstead.Data/Entities/TaskPlan.cs】
 - **TaskIntent**: Member's volunteer/assignment record for a `TaskPlan`.【F:src/Gatherstead.Data/Entities/TaskIntent.cs】
 
+### Reporting (read-only aggregates)
+- **Reports root**: Tenant-scoped reporting lives under a single `ReportsController` (`/tenants/{tenantId}/reports`) so future report types share tenant authorization and routing. The first report type is the **event meal/attendance report** (`/reports/events/{eventId}`), served by `EventReportService` — a read-only aggregate that joins `MealAttendance` through `MealPlan`→`MealTemplate` plus per-day `EventAttendance` to produce day-by-day headcounts, per-meal going/maybe/notGoing/bring-own-food counts, and an aggregated dietary tally (member `DietaryTags` + `DietaryProfile`). Gated at Member+ via `AuthorizeGlobalSensitiveReadAsync` since aggregated dietary needs are allergy-safety information members executing meal prep need to see.
+
 ## Entity Hierarchy
 
 The verified ownership hierarchy, derived from FK relationships in the EF Core entities. Solid arrows represent FK ownership (parent → child); dashed arrows represent cross-context references. Attribute child entities are omitted from the diagram for clarity — see the Custom Attribute Pattern section above for the full list.
@@ -55,6 +59,8 @@ The verified ownership hierarchy, derived from FK relationships in the EF Core e
 ```mermaid
 flowchart TD
     Tenant -->|"M:N via TenantUser\n(TenantRole)"| User
+    Tenant --> Invitation
+    Invitation -.->|"claimed by email\n→ TenantUser"| User
     Tenant --> Household --> HouseholdMember
     Household -->|"M:N via HouseholdUser\n(HouseholdRole)"| User
     TenantUser -.->|"optional LinkedMemberId\n(Self profile)"| HouseholdMember
@@ -87,6 +93,7 @@ erDiagram
     Tenant    ||--o{ TenantUser    : "role"
     User      ||--o{ TenantUser    : ""
     TenantUser |o--o| HouseholdMember : "LinkedMemberId (self)"
+    Tenant    ||--o{ Invitation    : "pending invites"
     Tenant    ||--o{ Household     : ""
     Household ||--o{ HouseholdUser : "role"
     User      ||--o{ HouseholdUser : ""
@@ -141,6 +148,7 @@ erDiagram
 - **Composable global query filters**: `GathersteadDbContext` applies a single global query filter per entity that combines soft-delete exclusion (`IsDeleted`) and tenant isolation (`TenantId`). The soft-delete clause is conditionally toggled via a `_includeDeleted` field on the DbContext instance, which EF Core re-evaluates per query. Tenant isolation is always enforced and cannot be bypassed. This avoids the need to call `IgnoreQueryFilters()` (which removes all filters) and manually reconstruct tenant filtering.
 - **Querying deleted entities**: List/read endpoints accept an optional `?includeDeleted=true` query parameter. This is RBAC-gated to `TenantRole.Manager` or higher in `RequireTenantAccessAttribute`; for lower-role users, the flag is silently ignored. The authorization decision flows via `HttpContext.Items` to `IIncludeDeletedContext`, which the DbContext reads at construction time—ensuring the raw query parameter alone cannot bypass RBAC.
 - **Identity provider**: The `ExternalIdentity` configuration section supports both Microsoft Entra External ID (`ciamlogin.com`) and Azure AD B2C (`b2clogin.com`). Both use standard OIDC/JWT; the authority URL pattern differs (Entra External ID omits the policy segment) and `SignUpSignInPolicyId` is only required for B2C.
+- **JIT provisioning & invitation claiming**: `POST /api/me/bootstrap` (`UserProvisioningService`, authenticated but not tenant-scoped) upserts the caller's internal `User` from the `sub` claim, refreshes `Email`, and auto-claims pending `Invitation`s matching the **verified** email. Email is trusted only when the IdP asserts `email_verified == true`; the spoofable `preferred_username` is never used for matching (a user must not be able to claim another address's invitation). `HttpContextCurrentUserContext.CacheKey` is `public` so the service can pre-seed a brand-new user's id into `HttpContext.Items`, letting the auditing interceptor stamp the self-created row. `MembershipGrant.GrantAsync` is the shared, idempotent helper that both the immediate-accept (existing user) and bootstrap-claim paths use to add `TenantUser`/`HouseholdUser` rows without downgrading existing membership. The Nuxt `tenant.global.ts` middleware invokes bootstrap once before resolving tenants so an invited user's membership exists on first load.
 
 ### Frontend
 - Use Nuxt 4 conventions (pages, server routes, composables) with the Vue 3 composition API and TypeScript. Keep shared state in composables or Pinia when appropriate.

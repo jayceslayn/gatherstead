@@ -1,6 +1,6 @@
 import type { IMealPlanRepository } from '../interfaces'
 import type { MealTemplate, MealPlan, MealIntent, AttributeWriteEntry, AttributeEntry } from '../types'
-import { mealTypesFromFlags } from '../types'
+import { mealTypesFromFlags, taskSlotsFromFlags, mealTypeFlagsToTaskSlotFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
 
@@ -67,6 +67,7 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     endDate: string | null,
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
+    createMatchingTaskTemplate?: boolean,
   ): Promise<MealTemplate> {
     const store = getDemoStore()
     if (store.mealTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.mealTemplatesPerEvent) {
@@ -96,8 +97,63 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
       }
     }
 
+    if (createMatchingTaskTemplate) {
+      this.createMatchingTask(tenantId, eventId, t)
+    }
+
     persistDemoStore()
     return t
+  }
+
+  // Mirrors the backend behavior: create a TaskTemplate alongside the meal so it can be
+  // organized/assigned, mapping meal types to time slots (Breakfast→Morning, Lunch→Midday,
+  // Dinner→Evening) via the shared helper.
+  private createMatchingTask(tenantId: string, eventId: string, meal: MealTemplate): void {
+    const store = getDemoStore()
+    if (store.taskTemplates.value.filter(t => t.eventId === eventId).length >= DEMO_LIMITS.taskTemplatesPerEvent) {
+      return
+    }
+
+    const existingNames = new Set(store.taskTemplates.value.filter(t => t.eventId === eventId).map(t => t.name))
+    let candidate = meal.name
+    if (existingNames.has(candidate)) candidate = `${meal.name} (cook)`
+    if (existingNames.has(candidate)) return
+
+    const timeSlots = mealTypeFlagsToTaskSlotFlags(meal.mealTypes)
+
+    const taskTemplate = {
+      id: demoId(),
+      tenantId,
+      eventId,
+      name: candidate,
+      timeSlots,
+      minimumAssignees: null,
+      notes: meal.notes,
+      startDate: meal.startDate,
+      endDate: meal.endDate,
+      attributes: [] as AttributeEntry[],
+    }
+    store.taskTemplates.value.push(taskTemplate)
+
+    const event = store.events.value.find(e => e.id === eventId)
+    if (event) {
+      const days = enumDays(meal.startDate ?? event.startDate, meal.endDate ?? event.endDate)
+      for (const day of days) {
+        for (const timeSlot of taskSlotsFromFlags(timeSlots)) {
+          store.taskPlans.value.push({
+            id: demoId(),
+            tenantId,
+            templateId: taskTemplate.id,
+            day,
+            timeSlot,
+            completed: false,
+            notes: null,
+            isException: false,
+            exceptionReason: null,
+          })
+        }
+      }
+    }
   }
 
   async updateTemplate(
