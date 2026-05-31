@@ -93,10 +93,16 @@ function printReport() {
               </template>
 
               <div class="space-y-3 text-sm">
+                <!-- Count chips follow the shared status language: Going=success/check,
+                     Maybe=secondary/question (color is never the sole differentiator). -->
                 <div class="flex flex-wrap gap-2">
-                  <UBadge color="success" variant="subtle">{{ t('report.event.goingCount', { n: meal.going }) }}</UBadge>
-                  <UBadge v-if="meal.maybe" color="warning" variant="subtle">{{ t('report.event.maybeCount', { n: meal.maybe }) }}</UBadge>
-                  <UBadge v-if="meal.bringOwnFood" color="neutral" variant="subtle">
+                  <UBadge color="success" variant="subtle" icon="i-heroicons-check-circle">
+                    {{ t('report.event.goingCount', { n: meal.going }) }}
+                  </UBadge>
+                  <UBadge v-if="meal.maybe" color="secondary" variant="subtle" icon="i-heroicons-question-mark-circle">
+                    {{ t('report.event.maybeCount', { n: meal.maybe }) }}
+                  </UBadge>
+                  <UBadge v-if="meal.bringOwnFood" color="neutral" variant="subtle" icon="i-heroicons-shopping-bag">
                     {{ t('report.event.bringingOwnFood', { n: meal.bringOwnFood }) }}
                   </UBadge>
                 </div>
@@ -125,9 +131,11 @@ function printReport() {
                       class="flex items-center justify-between gap-2"
                     >
                       <span :class="att.status === 'Maybe' ? 'text-muted' : ''">{{ att.name }}</span>
-                      <span class="text-xs text-muted flex items-center gap-1.5">
-                        <span v-if="att.status === 'Maybe'">{{ t('report.event.maybe') }}</span>
-                        <span v-if="att.bringOwnFood">{{ t('report.event.ownFood') }}</span>
+                      <span class="flex items-center gap-1.5">
+                        <GsStatusBadge :status="att.status" icon-only />
+                        <UBadge v-if="att.bringOwnFood" color="neutral" variant="subtle" icon="i-heroicons-shopping-bag">
+                          {{ t('report.event.ownFood') }}
+                        </UBadge>
                       </span>
                     </li>
                   </ul>

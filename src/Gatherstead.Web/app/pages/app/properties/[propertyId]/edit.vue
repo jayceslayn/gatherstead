@@ -31,8 +31,8 @@ async function onSubmit() {
     nameError.value = t('validation.required', { field: t('property.name') })
     return
   }
-  await updateProperty(propertyId.value, trimmed)
-  await navigateTo(`/app/properties/${propertyId.value}`)
+  const ok = await updateProperty(propertyId.value, trimmed)
+  if (ok) await navigateTo(`/app/properties/${propertyId.value}`)
 }
 
 async function confirmDelete() {

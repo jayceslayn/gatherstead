@@ -58,14 +58,16 @@ export function usePropertyActions(refresh: () => Promise<void>) {
     }
   }
 
-  async function updateProperty(propertyId: string, name: string) {
+  async function updateProperty(propertyId: string, name: string): Promise<boolean> {
     updating.value.push(propertyId)
     try {
       await repo.updateProperty(tenantStore.currentTenantId!, propertyId, name)
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== propertyId)

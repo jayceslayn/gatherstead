@@ -1,5 +1,7 @@
 # Gatherstead Web UI Design Plan
 
+> **Note:** The durable, enforceable UX/UI conventions from this plan (status language, mobile-first rules, component vocabulary, interaction patterns) have been distilled into the top-level [docs/WEB-UI-DESIGN.md](../../WEB-UI-DESIGN.md). This file is retained as the original design plan and phased implementation history.
+
 ## Context
 
 The app needs a full frontend UI built on the existing Nuxt 4 + Vue 3 + Nuxt UI v4 + Tailwind foundation. The shell is in place (landing page, auth flow, tenant routing, sidebar layout), but all tenant-scoped pages are placeholders. This plan designs the full UI architecture — navigation, routes, pages, components, and state — before any implementation begins.
