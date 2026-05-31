@@ -2,6 +2,8 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
+  ssr: !process.env.NUXT_PUBLIC_DEMO_MODE,
+
   devtools: { enabled: true },
 
   css: [

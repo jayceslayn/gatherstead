@@ -1,0 +1,38 @@
+name: Deploy Demo Site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: src/Gatherstead.Web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: src/Gatherstead.Web
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate static demo site
+        working-directory: src/Gatherstead.Web
+        env:
+          NUXT_PUBLIC_DEMO_MODE: 'true'
+        run: pnpm generate
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: src/Gatherstead.Web/.output/public
+          skip_app_build: true

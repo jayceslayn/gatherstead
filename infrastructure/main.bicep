@@ -19,6 +19,9 @@ param deployerObjectId string
 @allowed(['F1', 'B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1v3', 'P2v3', 'P3v3'])
 param appServicePlanSku string = 'F1'
 
+@description('Whether to deploy the demo static web app.')
+param deployDemo bool = false
+
 @description('Number of days to retain logs in the Log Analytics workspace. Use 30 for dev, 90 for prod.')
 @minValue(30)
 @maxValue(730)
@@ -90,6 +93,14 @@ module appservice 'modules/appservice.bicep' = {
   }
 }
 
+module demo 'modules/staticwebapp.bicep' = if (deployDemo) {
+  name: 'demo'
+  scope: rg
+  params: {
+    location: location
+  }
+}
+
 output managedIdentityName string = identity.outputs.name
 output managedIdentityClientId string = identity.outputs.clientId
 output sqlServerName string = sql.outputs.sqlServerName
@@ -101,3 +112,4 @@ output apiAppUrl string = appservice.outputs.apiAppUrl
 output webAppUrl string = appservice.outputs.webAppUrl
 output appInsightsId string = observability.outputs.appInsightsId
 output logAnalyticsWorkspaceId string = observability.outputs.workspaceId
+output demoSiteUrl string = deployDemo ? demo.outputs.demoSiteUrl : ''
