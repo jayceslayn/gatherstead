@@ -8,10 +8,16 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const { tenantUsers, pending } = useTenantUserList()
+const { tenantUsers, pending, refresh: refreshTenantUsers } = useTenantUserList()
 const { memberMap } = useAllMembers()
 const { invitations, refresh: refreshInvites } = useInvitations()
 const { revoke } = useInvitationActions(refreshInvites)
+
+// When an invite is sent to an existing user the API accepts it immediately and adds a
+// TenantUser entry; refresh both lists so the new member appears without a page reload.
+async function refreshAfterInvite() {
+  await Promise.all([refreshInvites(), refreshTenantUsers()])
+}
 
 const showInvite = ref(false)
 const pendingInvitations = computed(() => invitations.value.filter(i => i.status === 'Pending'))
@@ -124,6 +130,6 @@ const grouped = computed(() =>
       </div>
     </div>
 
-    <GsInviteUserModal v-model:open="showInvite" :refresh="refreshInvites" />
+    <GsInviteUserModal v-model:open="showInvite" :refresh="refreshAfterInvite" />
   </div>
 </template>

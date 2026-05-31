@@ -338,6 +338,7 @@ onMounted(() => {
         :event-id="eventId"
         :template="editingMealTemplate"
         :refresh="refreshMealTemplates"
+        :refresh-tasks="refreshTaskTemplates"
       />
       <GsTaskTemplateModal
         v-model:open="showTaskModal"
