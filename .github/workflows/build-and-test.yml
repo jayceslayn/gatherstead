@@ -78,3 +78,37 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  check-openapi-freshness:
+    needs: [build-backend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Build API (Release)
+        run: dotnet build src/Gatherstead.Api/Gatherstead.Api.csproj --no-restore --configuration Release
+
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Generate fresh OpenAPI spec
+        run: |
+          dotnet swagger tofile \
+            --output /tmp/openapi-fresh.json \
+            src/Gatherstead.Api/bin/Release/net10.0/Gatherstead.Api.dll v1
+
+      - name: Fail if spec is stale (run scripts/generate-openapi.sh to update)
+        run: |
+          if [ ! -f src/Gatherstead.Api/openapi.json ]; then
+            echo "::warning::openapi.json is not yet committed. Run scripts/generate-openapi.sh once to generate and commit it."
+          else
+            diff src/Gatherstead.Api/openapi.json /tmp/openapi-fresh.json
+          fi
