@@ -1,5 +1,5 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, DietaryProfile, AttributeWriteEntry } from '../types'
+import type { HouseholdMember, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -16,18 +16,6 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
       `/api/proxy/tenants/${tenantId}/households/${householdId}/members/${memberId}`,
     )
     return r.entity ?? null
-  }
-
-  async getDietaryProfile(tenantId: string, householdId: string, memberId: string): Promise<DietaryProfile | null> {
-    try {
-      const r = await $fetch<ApiResponse<DietaryProfile>>(
-        `/api/proxy/tenants/${tenantId}/households/${householdId}/members/${memberId}/dietary-profile`,
-      )
-      return r.entity ?? null
-    }
-    catch {
-      return null
-    }
   }
 
   async createMember(

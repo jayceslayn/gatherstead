@@ -99,7 +99,7 @@ const showEdit = ref(false)
                   <span v-if="member.ageBand" class="text-sm text-muted">· {{ member.ageBand }}</span>
                 </div>
               </div>
-              <GsDietaryTags :dietary-tags="member.dietaryTags" class="hidden sm:flex" />
+              <GsDietaryTags :slugs="member.dietaryTags" class="hidden sm:flex" />
               <UIcon name="i-heroicons-chevron-right" class="size-5 text-muted shrink-0" />
             </div>
           </UCard>

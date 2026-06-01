@@ -14,6 +14,7 @@ import { LiveAccommodationRepository } from '~/repositories/live/LiveAccommodati
 import { LiveAccommodationIntentRepository } from '~/repositories/live/LiveAccommodationIntentRepository'
 import { LiveEquipmentRepository } from '~/repositories/live/LiveEquipmentRepository'
 import { LiveReportRepository } from '~/repositories/live/LiveReportRepository'
+import { LiveDietaryTagRepository } from '~/repositories/live/LiveDietaryTagRepository'
 import { DemoTenantRepository } from '~/repositories/demo/DemoTenantRepository'
 import { DemoHouseholdRepository } from '~/repositories/demo/DemoHouseholdRepository'
 import { DemoHouseholdMemberRepository } from '~/repositories/demo/DemoHouseholdMemberRepository'
@@ -28,6 +29,7 @@ import { DemoAccommodationRepository } from '~/repositories/demo/DemoAccommodati
 import { DemoAccommodationIntentRepository } from '~/repositories/demo/DemoAccommodationIntentRepository'
 import { DemoEquipmentRepository } from '~/repositories/demo/DemoEquipmentRepository'
 import { DemoReportRepository } from '~/repositories/demo/DemoReportRepository'
+import { DemoDietaryTagRepository } from '~/repositories/demo/DemoDietaryTagRepository'
 import { getDemoStore } from '~/repositories/demo/DemoStore'
 import { seedDemoData } from '~/repositories/demo/seedDemoData'
 
@@ -39,6 +41,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         tenants: new DemoTenantRepository(),
         households: new DemoHouseholdRepository(),
         householdMembers: new DemoHouseholdMemberRepository(),
+        dietaryTags: new DemoDietaryTagRepository(),
         tenantUsers: new DemoTenantUserRepository(),
         events: new DemoEventRepository(),
         eventAttendance: new DemoEventAttendanceRepository(),
@@ -55,6 +58,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         tenants: new LiveTenantRepository(),
         households: new LiveHouseholdRepository(),
         householdMembers: new LiveHouseholdMemberRepository(),
+        dietaryTags: new LiveDietaryTagRepository(),
         tenantUsers: new LiveTenantUserRepository(),
         events: new LiveEventRepository(),
         eventAttendance: new LiveEventAttendanceRepository(),

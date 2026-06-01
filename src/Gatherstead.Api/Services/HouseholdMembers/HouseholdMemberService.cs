@@ -139,7 +139,7 @@ public class HouseholdMemberService : IHouseholdMemberService
             AgeBand = request.AgeBand?.Trim(),
             BirthDate = request.BirthDate,
             DietaryNotes = request.DietaryNotes?.Trim(),
-            DietaryTags = request.DietaryTags ?? Array.Empty<string>(),
+            DietaryTags = NormalizeDietaryTags(request.DietaryTags),
             Notes = request.Notes?.Trim(),
         };
 
@@ -217,7 +217,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         member.AgeBand = request.AgeBand?.Trim();
         member.BirthDate = request.BirthDate;
         member.DietaryNotes = request.DietaryNotes?.Trim();
-        member.DietaryTags = request.DietaryTags ?? Array.Empty<string>();
+        member.DietaryTags = NormalizeDietaryTags(request.DietaryTags);
         member.Notes = request.Notes?.Trim();
 
         var tenantRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
@@ -290,6 +290,17 @@ public class HouseholdMemberService : IHouseholdMemberService
         GathersteadMetrics.RecordSoftDelete("HouseholdMember", tenantId);
         response.SetSuccess(MapToDto(member, canReadSensitive: true, []));
         return response;
+    }
+
+    private static string[] NormalizeDietaryTags(string[]? tags)
+    {
+        if (tags is null or { Length: 0 }) return Array.Empty<string>();
+        return tags
+            .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static bool IsVisibleAttribute(HouseholdMemberAttribute a, TenantRole? tenantRole, HouseholdRole? householdRole)

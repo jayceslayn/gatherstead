@@ -26,7 +26,7 @@ const form = reactive({
   ageBand: '',
   birthDate: '',
   dietaryNotes: '',
-  dietaryTagsInput: '',
+  dietaryTags: [] as string[],
 })
 
 const nameError = ref('')
@@ -39,7 +39,7 @@ watch(member, (val: HouseholdMember | null) => {
   form.ageBand = val.ageBand ?? ''
   form.birthDate = val.birthDate ?? ''
   form.dietaryNotes = val.dietaryNotes ?? ''
-  form.dietaryTagsInput = val.dietaryTags.join(', ')
+  form.dietaryTags = [...val.dietaryTags]
   // Reset after the form watcher's next-tick flush so pre-fill doesn't mark as dirty
   nextTick(() => { isDirty.value = false })
 }, { immediate: true })
@@ -56,11 +56,6 @@ async function onSubmit() {
   nameError.value = form.name.trim() ? '' : t('validation.required', { field: t('member.name') })
   if (nameError.value) return
 
-  const dietaryTags = form.dietaryTagsInput
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
-
   const ok = await updateMember(
     memberId.value,
     form.name.trim(),
@@ -68,7 +63,7 @@ async function onSubmit() {
     form.ageBand.trim() || null,
     form.birthDate || null,
     form.dietaryNotes.trim() || null,
-    dietaryTags,
+    form.dietaryTags,
   )
   if (ok) {
     isDirty.value = false
@@ -101,7 +96,7 @@ async function onSubmit() {
         v-model:age-band="form.ageBand"
         v-model:birth-date="form.birthDate"
         v-model:dietary-notes="form.dietaryNotes"
-        v-model:dietary-tags-input="form.dietaryTagsInput"
+        v-model:dietary-tags="form.dietaryTags"
         :name-error="nameError"
         :loading="saving"
         :cancel-to="`/app/directory/${householdId}/${memberId}`"

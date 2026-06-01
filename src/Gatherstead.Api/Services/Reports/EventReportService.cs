@@ -89,16 +89,24 @@ public class EventReportService : IEventReportService
             .Where(m => m.TenantId == tenantId && memberIds.Contains(m.Id))
             .ToListAsync(cancellationToken);
 
-        var profiles = await _dbContext.DietaryProfiles
-            .AsNoTracking()
-            .Where(p => p.TenantId == tenantId && memberIds.Contains(p.HouseholdMemberId))
-            .ToListAsync(cancellationToken);
+        // Resolve DietaryTag slugs to display names so the report shows human-readable labels.
+        var allSlugs = members.SelectMany(m => m.DietaryTags).Distinct().ToList();
+        var tagNameBySlug = allSlugs.Count > 0
+            ? await _dbContext.DietaryTags
+                .AsNoTracking()
+                .Where(t => allSlugs.Contains(t.Slug) && t.IsActive)
+                .ToDictionaryAsync(t => t.Slug, t => t.DisplayName,
+                    StringComparer.OrdinalIgnoreCase, cancellationToken)
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         var memberById = members.ToDictionary(m => m.Id);
-        var profileByMember = profiles.ToDictionary(p => p.HouseholdMemberId);
         var dietaryByMember = members.ToDictionary(
             m => m.Id,
-            m => DietaryLabels(m, profileByMember.GetValueOrDefault(m.Id)));
+            m => (IReadOnlyList<string>)m.DietaryTags
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => tagNameBySlug.TryGetValue(t.Trim(), out var name) ? name : t.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList());
 
         var attendancesByPlan = mealAttendances
             .GroupBy(a => a.MealPlanId)
@@ -148,14 +156,22 @@ public class EventReportService : IEventReportService
                 memberById.GetValueOrDefault(a.HouseholdMemberId)?.Name ?? string.Empty,
                 a.Status,
                 a.BringOwnFood,
-                dietaryByMember.GetValueOrDefault(a.HouseholdMemberId, [])))
+                dietaryByMember.GetValueOrDefault(a.HouseholdMemberId, []),
+                memberById.GetValueOrDefault(a.HouseholdMemberId)?.DietaryNotes))
             .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        // Group attendees by their full sorted tag combination so cooks know how many plates
+        // must satisfy each specific combination simultaneously (not independent per-label counts).
         var dietary = attendees
-            .SelectMany(a => a.Dietary)
-            .GroupBy(label => label, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new DietaryTallyDto(g.Key, g.Count()))
+            .Select(a => string.Join(", ", a.Dietary
+                .Select(d => d.Trim())
+                .Where(d => d.Length > 0)
+                .OrderBy(d => d, StringComparer.OrdinalIgnoreCase)))
+            .GroupBy(combo => combo, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new DietaryTallyDto(
+                string.IsNullOrEmpty(g.Key) ? "No dietary restrictions" : g.Key,
+                g.Count()))
             .OrderByDescending(d => d.Count)
             .ThenBy(d => d.Label, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -166,26 +182,4 @@ public class EventReportService : IEventReportService
             dietary, attendees);
     }
 
-    /// <summary>
-    /// Combines a member's dietary signals (tags, preferred diet, allergies, restrictions) into a
-    /// distinct, normalized label set used for both per-attendee display and per-meal tallies.
-    /// </summary>
-    private static IReadOnlyList<string> DietaryLabels(HouseholdMember member, DietaryProfile? profile)
-    {
-        var labels = new List<string>();
-        labels.AddRange(member.DietaryTags);
-        if (profile is not null)
-        {
-            if (!string.IsNullOrWhiteSpace(profile.PreferredDiet))
-                labels.Add(profile.PreferredDiet);
-            labels.AddRange(profile.Allergies);
-            labels.AddRange(profile.Restrictions);
-        }
-
-        return labels
-            .Where(l => !string.IsNullOrWhiteSpace(l))
-            .Select(l => l.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
 }

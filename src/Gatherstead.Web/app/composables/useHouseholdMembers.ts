@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { HouseholdMember, DietaryProfile } from '~/repositories/types'
+import type { HouseholdMember } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
@@ -50,19 +50,6 @@ export function useMember(householdId: Ref<string>, memberId: Ref<string>) {
   )
 
   return { member: computed(() => data.value ?? null), pending, error }
-}
-
-export function useDietaryProfile(householdId: Ref<string>, memberId: Ref<string>) {
-  const tenantStore = useTenantStore()
-  const { householdMembers: repo } = useRepositories()
-
-  const { data, pending, error } = useAsyncData<DietaryProfile | null>(
-    () => `dietary-${tenantStore.currentTenantId}-${householdId.value}-${memberId.value}`,
-    () => repo.getDietaryProfile(tenantStore.currentTenantId!, householdId.value, memberId.value),
-    { watch: [householdId, memberId] },
-  )
-
-  return { dietaryProfile: computed(() => data.value ?? null), pending, error }
 }
 
 export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () => Promise<void>) {

@@ -40,5 +40,4 @@ public class HouseholdMember : AuditableEntity
     public ICollection<ContactMethod> ContactMethods { get; set; } = new List<ContactMethod>();
     public ICollection<Address> Addresses { get; set; } = new List<Address>();
     public ICollection<HouseholdMemberAttribute> Attributes { get; set; } = new List<HouseholdMemberAttribute>();
-    public DietaryProfile? DietaryProfile { get; set; }
 }

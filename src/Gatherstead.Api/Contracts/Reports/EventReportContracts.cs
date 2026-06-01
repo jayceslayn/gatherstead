@@ -38,6 +38,7 @@ public record EventReportAttendeeDto(
     string Name,
     AttendanceStatus Status,
     bool BringOwnFood,
-    IReadOnlyList<string> Dietary);
+    IReadOnlyList<string> Dietary,
+    string? DietaryNotes);
 
 public class EventReportResponse : BaseEntityResponse<EventReportDto> { }

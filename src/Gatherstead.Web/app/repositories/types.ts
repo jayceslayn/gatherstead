@@ -75,14 +75,14 @@ export interface HouseholdMember {
   attributes: AttributeEntry[]
 }
 
-export interface DietaryProfile {
+export type DietaryCategory = 'Diet' | 'Allergy' | 'Restriction'
+
+export interface DietaryTag {
   id: string
-  tenantId: string
-  householdMemberId: string
-  preferredDiet: string
-  allergies: string[]
-  restrictions: string[]
-  notes: string | null
+  slug: string
+  displayName: string
+  category: DietaryCategory
+  sortOrder: number
 }
 
 export interface EventSummary {
@@ -242,6 +242,7 @@ export interface EventReportAttendee {
   status: AttendanceStatus
   bringOwnFood: boolean
   dietary: string[]
+  dietaryNotes: string | null
 }
 
 export interface EventReportMeal {

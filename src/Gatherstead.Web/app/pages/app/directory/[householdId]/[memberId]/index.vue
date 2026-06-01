@@ -2,7 +2,7 @@
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useHousehold } from '~/composables/useHouseholds'
-import { useMember, useDietaryProfile } from '~/composables/useHouseholdMembers'
+import { useMember } from '~/composables/useHouseholdMembers'
 
 definePageMeta({
   layout: 'default',
@@ -16,10 +16,7 @@ const householdId = computed(() => route.params.householdId as string)
 const memberId = computed(() => route.params.memberId as string)
 
 const { household } = useHousehold(householdId)
-const { member, pending: memberPending } = useMember(householdId, memberId)
-const { dietaryProfile, pending: profilePending } = useDietaryProfile(householdId, memberId)
-
-const pending = computed(() => memberPending.value || profilePending.value)
+const { member, pending } = useMember(householdId, memberId)
 
 const isSelf = computed(() => memberStore.linkedMemberId === memberId.value)
 const { isManagerOrAbove } = useTenantRole()
@@ -82,51 +79,27 @@ function formatDate(date: string | null) {
           </dl>
         </UCard>
 
-        <!-- Dietary Profile -->
+        <!-- Dietary Information -->
         <UCard>
           <template #header>
-            <p class="font-semibold">{{ t('member.dietaryProfile') }}</p>
+            <p class="font-semibold">{{ t('member.dietaryInfo') }}</p>
           </template>
 
-          <div v-if="!dietaryProfile && !member.dietaryTags.length && !member.dietaryNotes" class="text-sm text-muted">
-            {{ t('member.noDietaryProfile') }}
+          <div v-if="!member.dietaryTags.length && !member.dietaryNotes" class="text-sm text-muted">
+            {{ t('member.noDietaryInfo') }}
           </div>
 
           <dl v-else class="space-y-3 text-sm">
-            <div v-if="dietaryProfile?.preferredDiet" class="flex justify-between gap-4">
-              <dt class="text-muted">{{ t('member.preferredDiet') }}</dt>
-              <dd>{{ dietaryProfile.preferredDiet }}</dd>
-            </div>
-
-            <div v-if="dietaryProfile?.allergies?.length">
-              <dt class="text-muted mb-1.5">{{ t('member.allergies') }}</dt>
-              <dd>
-                <GsDietaryTags :allergies="dietaryProfile.allergies" />
-              </dd>
-            </div>
-
-            <div v-if="dietaryProfile?.restrictions?.length">
-              <dt class="text-muted mb-1.5">{{ t('member.restrictions') }}</dt>
-              <dd>
-                <GsDietaryTags :restrictions="dietaryProfile.restrictions" />
-              </dd>
-            </div>
-
             <div v-if="member.dietaryTags.length">
               <dt class="text-muted mb-1.5">{{ t('member.dietaryTags') }}</dt>
               <dd>
-                <GsDietaryTags :dietary-tags="member.dietaryTags" />
+                <GsDietaryTags :slugs="member.dietaryTags" />
               </dd>
             </div>
 
             <div v-if="member.dietaryNotes" class="flex flex-col gap-1">
               <dt class="text-muted">{{ t('member.dietaryNotes') }}</dt>
               <dd class="whitespace-pre-wrap">{{ member.dietaryNotes }}</dd>
-            </div>
-
-            <div v-if="dietaryProfile?.notes" class="flex flex-col gap-1">
-              <dt class="text-muted">{{ t('common.notes') }}</dt>
-              <dd class="whitespace-pre-wrap">{{ dietaryProfile.notes }}</dd>
             </div>
           </dl>
         </UCard>

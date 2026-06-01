@@ -119,3 +119,10 @@ public enum SecurityEventSeverity
     Warning,
     Critical
 }
+
+public enum DietaryCategory
+{
+    Diet        = 0,
+    Allergy     = 1,
+    Restriction = 2,
+}

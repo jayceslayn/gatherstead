@@ -102,14 +102,15 @@
     "noMembers": "Aún no hay miembros",
     "noMembersHintManager": "Agrega el primer miembro a este hogar.",
     "noMembersHintMember": "Aún no se han agregado miembros a este hogar.",
-    "dietaryProfile": "Perfil Dietético",
-    "preferredDiet": "Dieta Preferida",
-    "allergies": "Alergias",
-    "restrictions": "Restricciones Dietéticas",
-    "noDietaryProfile": "No hay perfil dietético registrado.",
+    "dietaryInfo": "Información Dietética",
+    "noDietaryInfo": "No hay información dietética registrada.",
     "dietaryTags": "Etiquetas Dietéticas",
-    "dietaryTagsPlaceholder": "p. ej. veg, sin-gluten, sin-lactosa",
-    "dietaryTagsHint": "Etiquetas separadas por comas"
+    "dietaryTagsPlaceholder": "Seleccionar etiquetas dietéticas…"
+  },
+  "dietaryCategory": {
+    "allergy": "Alergias",
+    "restriction": "Restricciones",
+    "diet": "Dieta"
   },
   "event": {
     "title": "Eventos",

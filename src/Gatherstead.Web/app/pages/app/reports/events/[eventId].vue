@@ -124,15 +124,20 @@ function printReport() {
                     <li
                       v-for="att in meal.attendees"
                       :key="att.memberId"
-                      class="flex items-center justify-between gap-2"
+                      class="flex flex-col gap-0.5"
                     >
-                      <span :class="att.status === 'Maybe' ? 'text-muted' : ''">{{ att.name }}</span>
-                      <span class="flex items-center gap-1.5">
-                        <GsStatusBadge :status="att.status" icon-only />
-                        <UBadge v-if="att.bringOwnFood" color="neutral" variant="subtle" icon="i-heroicons-shopping-bag">
-                          {{ t('report.event.ownFood') }}
-                        </UBadge>
-                      </span>
+                      <div class="flex items-center justify-between gap-2">
+                        <span :class="att.status === 'Maybe' ? 'text-muted' : ''">{{ att.name }}</span>
+                        <span class="flex items-center gap-1.5">
+                          <GsStatusBadge :status="att.status" icon-only />
+                          <UBadge v-if="att.bringOwnFood" color="neutral" variant="subtle" icon="i-heroicons-shopping-bag">
+                            {{ t('report.event.ownFood') }}
+                          </UBadge>
+                        </span>
+                      </div>
+                      <p v-if="att.dietaryNotes" class="text-xs text-muted italic pl-0.5">
+                        {{ att.dietaryNotes }}
+                      </p>
                     </li>
                   </ul>
                 </div>

@@ -2,7 +2,7 @@ import type {
   TenantSummary,
   HouseholdSummary,
   HouseholdMember,
-  DietaryProfile,
+  DietaryTag,
   EventSummary,
   AttendanceStatus,
   AttendanceRecord,
@@ -51,10 +51,13 @@ export interface IHouseholdRepository {
   deleteHousehold(tenantId: string, householdId: string): Promise<void>
 }
 
+export interface IDietaryTagRepository {
+  listDietaryTags(): Promise<DietaryTag[]>
+}
+
 export interface IHouseholdMemberRepository {
   listMembers(tenantId: string, householdId: string): Promise<HouseholdMember[]>
   getMember(tenantId: string, householdId: string, memberId: string): Promise<HouseholdMember | null>
-  getDietaryProfile(tenantId: string, householdId: string, memberId: string): Promise<DietaryProfile | null>
   createMember(
     tenantId: string,
     householdId: string,
@@ -345,6 +348,7 @@ export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
   householdMembers: IHouseholdMemberRepository
+  dietaryTags: IDietaryTagRepository
   tenantUsers: ITenantUserRepository
   events: IEventRepository
   eventAttendance: IEventAttendanceRepository

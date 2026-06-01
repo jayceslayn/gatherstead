@@ -23,7 +23,7 @@ const form = reactive({
   ageBand: '',
   birthDate: '',
   dietaryNotes: '',
-  dietaryTagsInput: '',
+  dietaryTags: [] as string[],
 })
 
 const nameError = ref('')
@@ -32,18 +32,13 @@ async function onSubmit() {
   nameError.value = form.name.trim() ? '' : t('validation.required', { field: t('member.name') })
   if (nameError.value) return
 
-  const dietaryTags = form.dietaryTagsInput
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean)
-
   const created = await createMember(
     form.name.trim(),
     form.isAdult,
     form.ageBand.trim() || null,
     form.birthDate || null,
     form.dietaryNotes.trim() || null,
-    dietaryTags,
+    form.dietaryTags,
   )
 
   if (created) {
@@ -70,7 +65,7 @@ async function onSubmit() {
       v-model:age-band="form.ageBand"
       v-model:birth-date="form.birthDate"
       v-model:dietary-notes="form.dietaryNotes"
-      v-model:dietary-tags-input="form.dietaryTagsInput"
+      v-model:dietary-tags="form.dietaryTags"
       :name-error="nameError"
       :loading="saving"
       :cancel-to="`/app/directory/${householdId}`"

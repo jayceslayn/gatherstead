@@ -102,14 +102,15 @@
     "noMembers": "No members yet",
     "noMembersHintManager": "Add the first member to this household.",
     "noMembersHintMember": "No members have been added to this household yet.",
-    "dietaryProfile": "Dietary Profile",
-    "preferredDiet": "Preferred Diet",
-    "allergies": "Allergies",
-    "restrictions": "Dietary Restrictions",
-    "noDietaryProfile": "No dietary profile on file.",
+    "dietaryInfo": "Dietary Information",
+    "noDietaryInfo": "No dietary information on file.",
     "dietaryTags": "Dietary Tags",
-    "dietaryTagsPlaceholder": "e.g. veg, gf, df",
-    "dietaryTagsHint": "Comma-separated tags"
+    "dietaryTagsPlaceholder": "Select dietary tags…"
+  },
+  "dietaryCategory": {
+    "allergy": "Allergies",
+    "restriction": "Restrictions",
+    "diet": "Diet"
   },
   "event": {
     "title": "Events",

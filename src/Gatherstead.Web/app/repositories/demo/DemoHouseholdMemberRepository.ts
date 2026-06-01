@@ -1,5 +1,5 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, DietaryProfile, AttributeWriteEntry, AttributeEntry } from '../types'
+import type { HouseholdMember, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
@@ -16,10 +16,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     return getDemoStore().members.value.find(
       m => m.householdId === householdId && m.id === memberId,
     ) ?? null
-  }
-
-  async getDietaryProfile(_tenantId: string, _householdId: string, _memberId: string): Promise<DietaryProfile | null> {
-    return null
   }
 
   async createMember(

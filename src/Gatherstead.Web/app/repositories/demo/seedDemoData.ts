@@ -70,7 +70,7 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
 
   const edna = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, ednaStudio.id, 'Edna Mode', true, null, null,
-    'No capes. Also no gluten.', ['Gluten-Free'],
+    'No capes. Also no gluten.', ['gluten-free'],
   )
 
   // Link demo user to Bob Parr

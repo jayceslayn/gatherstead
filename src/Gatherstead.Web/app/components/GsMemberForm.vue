@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { useDietaryTags } from '~/composables/useDietaryTags'
+
 const name = defineModel<string>('name', { required: true })
 const isAdult = defineModel<boolean>('isAdult', { required: true })
 const ageBand = defineModel<string>('ageBand', { required: true })
 const birthDate = defineModel<string>('birthDate', { required: true })
 const dietaryNotes = defineModel<string>('dietaryNotes', { required: true })
-const dietaryTagsInput = defineModel<string>('dietaryTagsInput', { required: true })
+const dietaryTags = defineModel<string[]>('dietaryTags', { required: true })
 
 const props = defineProps<{
   nameError: string
@@ -19,11 +21,29 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const { tagsByCategory } = useDietaryTags()
+
+const CATEGORY_ICON: Record<'Allergy' | 'Restriction' | 'Diet', string> = {
+  Allergy: 'i-heroicons-exclamation-triangle',
+  Restriction: 'i-heroicons-no-symbol',
+  Diet: 'i-heroicons-check-circle',
+}
+
+const tagItems = computed(() => {
+  const cats: ('Allergy' | 'Restriction' | 'Diet')[] = ['Allergy', 'Restriction', 'Diet']
+  return cats.flatMap(key =>
+    tagsByCategory.value[key].map(tag => ({
+      label: tag.displayName,
+      value: tag.slug,
+      icon: CATEGORY_ICON[key],
+    })),
+  )
+})
 </script>
 
 <template>
   <UForm
-    :state="{ name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTagsInput }"
+    :state="{ name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags }"
     class="max-w-lg space-y-5"
     @submit="emit('submit')"
   >
@@ -53,8 +73,20 @@ const { t } = useI18n()
       <UTextarea v-model="dietaryNotes" :placeholder="t('member.dietaryNotesPlaceholder')" class="w-full" />
     </UFormField>
 
-    <UFormField :label="t('member.dietaryTags')" name="dietaryTags" :hint="t('member.dietaryTagsHint')">
-      <UInput v-model="dietaryTagsInput" :placeholder="t('member.dietaryTagsPlaceholder')" class="w-full" />
+    <UFormField :label="t('member.dietaryTags')" name="dietaryTags">
+      <USelectMenu
+        v-model="dietaryTags"
+        :items="tagItems"
+        value-key="value"
+        :placeholder="t('member.dietaryTagsPlaceholder')"
+        :content="{ side: 'bottom' }"
+        multiple
+        clear
+        class="w-full"
+      />
+      <div v-if="dietaryTags.length" class="mt-2">
+        <GsDietaryTags :slugs="dietaryTags" />
+      </div>
     </UFormField>
 
     <div class="flex items-center gap-3 pt-2">

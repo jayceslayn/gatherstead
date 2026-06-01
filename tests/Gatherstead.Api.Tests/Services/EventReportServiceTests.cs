@@ -44,17 +44,7 @@ public class EventReportServiceTests : IAsyncLifetime
         _dbContext.HouseholdMembers.AddRange(
             new HouseholdMember { Id = _alice, TenantId = _tenantId, HouseholdId = _householdId, Name = "Alice", DietaryTags = ["vegan"] },
             new HouseholdMember { Id = _bob, TenantId = _tenantId, HouseholdId = _householdId, Name = "Bob", DietaryTags = ["Vegan"] },
-            new HouseholdMember { Id = _carol, TenantId = _tenantId, HouseholdId = _householdId, Name = "Carol" });
-
-        _dbContext.DietaryProfiles.Add(new DietaryProfile
-        {
-            Id = Guid.NewGuid(),
-            TenantId = _tenantId,
-            HouseholdMemberId = _carol,
-            PreferredDiet = "Kosher",
-            Allergies = ["peanuts"],
-            Restrictions = [],
-        });
+            new HouseholdMember { Id = _carol, TenantId = _tenantId, HouseholdId = _householdId, Name = "Carol", DietaryTags = ["kosher"] });
 
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -162,19 +152,20 @@ public class EventReportServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetEventMealReportAsync_DietaryTallyIsCaseInsensitive()
+    public async Task GetEventMealReportAsync_DietaryTallyGroupsByMemberCombo()
     {
         await SeedMealPlanWithAttendanceAsync();
 
         var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
 
         var meal = result.Entity!.Days.Single(d => d.Day == Day1).Meals.Single();
-        // "vegan" + "Vegan" collapse to one tally with count 2.
-        var vegan = Assert.Single(meal.Dietary, d => string.Equals(d.Label, "vegan", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal(2, vegan.Count);
-        // Carol (Maybe) contributes her profile-derived labels too.
-        Assert.Contains(meal.Dietary, d => d.Label == "Kosher");
-        Assert.Contains(meal.Dietary, d => d.Label == "peanuts");
+        // "vegan" and "Vegan" slugs both resolve to display name "Vegan" (case-insensitive lookup
+        // in the DietaryTag seed table) → same combo → count 2.
+        var veganCombo = Assert.Single(meal.Dietary, d => string.Equals(d.Label, "Vegan", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, veganCombo.Count);
+        // Carol (Maybe) has "kosher" tag → resolves to "Kosher" → her own combo group.
+        var kosherCombo = Assert.Single(meal.Dietary, d => string.Equals(d.Label, "Kosher", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(1, kosherCombo.Count);
     }
 
     [Fact]

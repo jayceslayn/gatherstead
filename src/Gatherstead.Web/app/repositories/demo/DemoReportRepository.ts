@@ -9,6 +9,9 @@ import type {
 } from '../types'
 import { getDemoStore } from './DemoStore'
 import { enumDays } from './DemoHelpers'
+import { DEMO_DIETARY_TAGS } from './DemoDietaryTagRepository'
+
+const SLUG_TO_DISPLAY_NAME = new Map(DEMO_DIETARY_TAGS.map(t => [t.slug.toLowerCase(), t.displayName]))
 
 const MEAL_TYPE_ORDER: Record<MealType, number> = { Breakfast: 0, Lunch: 1, Dinner: 2 }
 
@@ -28,15 +31,15 @@ export class DemoReportRepository implements IReportRepository {
         .map(p => p.id),
     )
 
-    // De-duplicate case-insensitively to match the backend's StringComparer.OrdinalIgnoreCase,
-    // keeping the first-seen casing for display.
+    // Resolve slugs to display names (mirrors backend slug → DisplayName lookup).
+    // Unknown slugs fall back to the slug string itself.
     const dietaryForMember = (memberId: string): string[] => {
       const m = memberById.get(memberId)
       if (!m) return []
       const seen = new Map<string, string>()
-      for (const tag of m.dietaryTags.map(t => t.trim()).filter(Boolean)) {
-        const key = tag.toLowerCase()
-        if (!seen.has(key)) seen.set(key, tag)
+      for (const slug of m.dietaryTags.map(t => t.trim()).filter(Boolean)) {
+        const key = slug.toLowerCase()
+        if (!seen.has(key)) seen.set(key, SLUG_TO_DISPLAY_NAME.get(key) ?? slug)
       }
       return [...seen.values()]
     }
@@ -62,20 +65,21 @@ export class DemoReportRepository implements IReportRepository {
             status: a.status,
             bringOwnFood: a.bringOwnFood,
             dietary: dietaryForMember(a.householdMemberId),
+            dietaryNotes: memberById.get(a.householdMemberId)?.dietaryNotes ?? null,
           }))
           .sort((x, y) => x.name.localeCompare(y.name))
 
-        // Tally case-insensitively (matching the backend); keep first-seen casing for the label.
-        const tallyMap = new Map<string, { label: string, count: number }>()
+        // Group attendees by their full sorted tag combo (mirrors backend per-member combo tally).
+        const comboMap = new Map<string, number>()
         for (const att of attendees) {
-          for (const label of att.dietary) {
-            const key = label.toLowerCase()
-            const existing = tallyMap.get(key)
-            if (existing) existing.count += 1
-            else tallyMap.set(key, { label, count: 1 })
-          }
+          const combo = att.dietary
+            .map(d => d.trim()).filter(Boolean)
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+            .join(', ')
+          comboMap.set(combo, (comboMap.get(combo) ?? 0) + 1)
         }
-        const dietary: EventReportDietaryTally[] = [...tallyMap.values()]
+        const dietary: EventReportDietaryTally[] = [...comboMap.entries()]
+          .map(([key, count]) => ({ label: key === '' ? 'No dietary restrictions' : key, count }))
           .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
 
         return {

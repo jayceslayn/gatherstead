@@ -59,7 +59,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<TaskTemplateAttribute> TaskTemplateAttributes => Set<TaskTemplateAttribute>();
     public DbSet<EquipmentAttribute> EquipmentAttributes => Set<EquipmentAttribute>();
     public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
-    public DbSet<DietaryProfile> DietaryProfiles => Set<DietaryProfile>();
+    public DbSet<DietaryTag> DietaryTags => Set<DietaryTag>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -79,6 +79,9 @@ public class GathersteadDbContext : DbContext
             {
                 // SecurityEvent is append-only; temporal history adds overhead without benefit.
                 if (entityType.ClrType == typeof(SecurityEvent))
+                    continue;
+                // DietaryTag is app-wide reference data with no tenant/audit lifecycle.
+                if (entityType.ClrType == typeof(DietaryTag))
                     continue;
                 modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
             }
@@ -171,6 +174,44 @@ public class GathersteadDbContext : DbContext
         {
             foreignKey.DeleteBehavior = DeleteBehavior.Restrict;
         }
+
+        modelBuilder.Entity<DietaryTag>(b =>
+        {
+            b.HasData(
+                // Diet
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000001"), Slug = "vegan",            DisplayName = "Vegan",             Category = DietaryCategory.Diet,        SortOrder = 0,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000002"), Slug = "vegetarian",       DisplayName = "Vegetarian",         Category = DietaryCategory.Diet,        SortOrder = 1,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000003"), Slug = "pescatarian",      DisplayName = "Pescatarian",        Category = DietaryCategory.Diet,        SortOrder = 2,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000004"), Slug = "flexitarian",      DisplayName = "Flexitarian",        Category = DietaryCategory.Diet,        SortOrder = 3,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000005"), Slug = "halal",            DisplayName = "Halal",              Category = DietaryCategory.Diet,        SortOrder = 4,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000006"), Slug = "kosher",           DisplayName = "Kosher",             Category = DietaryCategory.Diet,        SortOrder = 5,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000007"), Slug = "paleo",            DisplayName = "Paleo",              Category = DietaryCategory.Diet,        SortOrder = 6,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000008"), Slug = "keto",             DisplayName = "Keto",               Category = DietaryCategory.Diet,        SortOrder = 7,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70100-0000-0000-0000-000000000009"), Slug = "raw-food",         DisplayName = "Raw Food",           Category = DietaryCategory.Diet,        SortOrder = 8,  IsActive = true },
+                // Allergy
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000001"), Slug = "peanut-allergy",   DisplayName = "Peanut Allergy",     Category = DietaryCategory.Allergy,     SortOrder = 0,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000002"), Slug = "tree-nut-allergy", DisplayName = "Tree Nut Allergy",   Category = DietaryCategory.Allergy,     SortOrder = 1,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000003"), Slug = "shellfish-allergy",DisplayName = "Shellfish Allergy",  Category = DietaryCategory.Allergy,     SortOrder = 2,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000004"), Slug = "fish-allergy",     DisplayName = "Fish Allergy",       Category = DietaryCategory.Allergy,     SortOrder = 3,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000005"), Slug = "milk-allergy",     DisplayName = "Milk Allergy",       Category = DietaryCategory.Allergy,     SortOrder = 4,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000006"), Slug = "egg-allergy",      DisplayName = "Egg Allergy",        Category = DietaryCategory.Allergy,     SortOrder = 5,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000007"), Slug = "soy-allergy",      DisplayName = "Soy Allergy",        Category = DietaryCategory.Allergy,     SortOrder = 6,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000008"), Slug = "wheat-allergy",    DisplayName = "Wheat Allergy",      Category = DietaryCategory.Allergy,     SortOrder = 7,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70200-0000-0000-0000-000000000009"), Slug = "sesame-allergy",   DisplayName = "Sesame Allergy",     Category = DietaryCategory.Allergy,     SortOrder = 8,  IsActive = true },
+                // Restriction
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000001"), Slug = "gluten-free",         DisplayName = "Gluten Free",        Category = DietaryCategory.Restriction, SortOrder = 0,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000002"), Slug = "dairy-free",           DisplayName = "Dairy Free",         Category = DietaryCategory.Restriction, SortOrder = 1,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000003"), Slug = "lactose-intolerant",   DisplayName = "Lactose Intolerant", Category = DietaryCategory.Restriction, SortOrder = 2,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000004"), Slug = "nut-free",             DisplayName = "Nut Free",           Category = DietaryCategory.Restriction, SortOrder = 3,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000005"), Slug = "low-sodium",           DisplayName = "Low Sodium",         Category = DietaryCategory.Restriction, SortOrder = 4,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000006"), Slug = "low-sugar",            DisplayName = "Low Sugar",          Category = DietaryCategory.Restriction, SortOrder = 5,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000007"), Slug = "diabetic-friendly",    DisplayName = "Diabetic Friendly",  Category = DietaryCategory.Restriction, SortOrder = 6,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000008"), Slug = "low-fodmap",           DisplayName = "Low FODMAP",         Category = DietaryCategory.Restriction, SortOrder = 7,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-000000000009"), Slug = "no-pork",              DisplayName = "No Pork",            Category = DietaryCategory.Restriction, SortOrder = 8,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-00000000000a"), Slug = "no-alcohol",           DisplayName = "No Alcohol",         Category = DietaryCategory.Restriction, SortOrder = 9,  IsActive = true },
+                new DietaryTag { Id = new Guid("d1e70300-0000-0000-0000-00000000000b"), Slug = "no-shellfish",         DisplayName = "No Shellfish",       Category = DietaryCategory.Restriction, SortOrder = 10, IsActive = true }
+            );
+        });
 
         ApplyGlobalFilters(modelBuilder);
     }
