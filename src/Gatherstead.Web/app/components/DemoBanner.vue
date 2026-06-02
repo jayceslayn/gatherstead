@@ -2,8 +2,7 @@
 import { inject } from 'vue'
 import { REPOSITORIES_KEY } from '~/repositories/interfaces'
 import type { Repositories } from '~/repositories/interfaces'
-import { DEMO_LIMITS, clearDemoStore } from '~/repositories/demo/DemoStore'
-import { seedDemoData } from '~/repositories/demo/seedDemoData'
+import { DEMO_LIMITS } from '~/repositories/demo/demoConstants'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useEventStore } from '~/stores/event'
 
@@ -20,8 +19,10 @@ type LimitKey = keyof typeof DEMO_LIMITS
 const limitKeys = Object.keys(DEMO_LIMITS) as LimitKey[]
 
 async function resetDemoData() {
-  if (!repos) return
+  if (!__DEMO_MODE__ || !repos) return
   isResetting.value = true
+  const { clearDemoStore } = await import('~/repositories/demo/DemoStore')
+  const { seedDemoData } = await import('~/repositories/demo/seedDemoData')
   clearDemoStore()
   await seedDemoData(repos)
   memberStore.clear()

@@ -4,6 +4,12 @@ export default defineNuxtConfig({
 
   ssr: !process.env.NUXT_PUBLIC_DEMO_MODE,
 
+  vite: {
+    define: {
+      __DEMO_MODE__: JSON.stringify(!!process.env.NUXT_PUBLIC_DEMO_MODE),
+    },
+  },
+
   devtools: { enabled: true },
 
   css: [

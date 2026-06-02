@@ -3,9 +3,8 @@ import { useTenantStore } from '~/stores/tenant'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useCurrentMemberStore } from '~/stores/member'
 
-const config = useRuntimeConfig()
 const { t } = useI18n()
-const { logout, user } = useAuth()
+const { logout, user, isDemo } = useAuth()
 const tenantStore = useTenantStore()
 const { isManagerOrAbove } = useTenantRole()
 const currentMemberStore = useCurrentMemberStore()
@@ -45,7 +44,7 @@ const accountMenuItems = computed(() => {
     ],
   ]
 
-  if (!config.public.demoMode) {
+  if (!isDemo) {
     groups.push([{
       label: t('common.signOut'),
       icon: 'i-heroicons-arrow-right-on-rectangle',

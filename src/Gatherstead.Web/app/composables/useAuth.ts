@@ -1,4 +1,4 @@
-import { DEMO_USER, DEMO_USER_DISPLAY_NAME } from '~/repositories/demo/DemoStore'
+import { DEMO_USER_DISPLAY_NAME, DEMO_USER_EXTERNAL_ID } from '~/repositories/demo/demoConstants'
 
 export function useAuth() {
   const config = useRuntimeConfig()
@@ -6,9 +6,10 @@ export function useAuth() {
   if (config.public.demoMode) {
     return {
       loggedIn: ref(true),
-      user: ref({ name: DEMO_USER_DISPLAY_NAME, email: DEMO_USER.externalId }),
+      user: ref({ name: DEMO_USER_DISPLAY_NAME, email: DEMO_USER_EXTERNAL_ID }),
       login: () => navigateTo('/tenants'),
       logout: () => navigateTo('/'),
+      isDemo: true,
     }
   }
 
@@ -19,5 +20,6 @@ export function useAuth() {
     user,
     login: () => navigateTo('/auth/azure', { external: true }),
     logout: () => navigateTo('/auth/logout', { external: true }),
+    isDemo: false,
   }
 }

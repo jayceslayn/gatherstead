@@ -1,7 +1,7 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useCurrentMemberStore } from '~/stores/member'
 import type { TenantRole } from '~/repositories/types'
-import { DEMO_TENANT, DEMO_USER, getDemoStore } from '~/repositories/demo/DemoStore'
+import { DEMO_TENANT, DEMO_USER } from '~/repositories/demo/demoConstants'
 
 interface TenantsApiResponse {
   entity: Array<{ id: string; name: string; userRole: TenantRole | null }>
@@ -25,24 +25,16 @@ function ensureBootstrap() {
 export default defineNuxtRouteMiddleware(async (to) => {
   if (!to.path.startsWith('/app')) return
 
-  const config = useRuntimeConfig()
-
-  if (!config.public.demoMode) {
-    const { loggedIn } = useAuth()
-    if (!loggedIn.value) {
-      return navigateTo('/')
-    }
-  }
-
   const tenantStore = useTenantStore()
   const memberStore = useCurrentMemberStore()
 
-  if (config.public.demoMode) {
+  if (__DEMO_MODE__) {
     if (!tenantStore.currentTenantId) {
       tenantStore.setTenant(DEMO_TENANT.id, DEMO_TENANT.name, DEMO_TENANT.userRole)
     }
     if (memberStore.activeTenantId !== DEMO_TENANT.id) {
       memberStore.clearForTenant(DEMO_TENANT.id)
+      const { getDemoStore } = await import('~/repositories/demo/DemoStore')
       const demoStore = getDemoStore()
       const demoUser = demoStore.tenantUsers.value.find(u => u.userId === DEMO_USER.userId)
       if (demoUser?.linkedMemberId) {
@@ -53,6 +45,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
       }
     }
     return
+  }
+
+  const { loggedIn } = useAuth()
+  if (!loggedIn.value) {
+    return navigateTo('/')
   }
 
   // Live mode: provision the internal user and claim any pending invitations before

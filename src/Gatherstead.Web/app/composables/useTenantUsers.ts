@@ -1,4 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
+import { useCurrentMemberStore } from '~/stores/member'
 import { useRepositories } from '~/composables/useRepositories'
 import type { TenantRole, HouseholdRole, InvitationSummary } from '~/repositories/types'
 
@@ -14,15 +15,25 @@ export function useTenantUserList() {
 
 export function useTenantUserActions(refresh?: () => Promise<void>) {
   const tenantStore = useTenantStore()
+  const memberStore = useCurrentMemberStore()
   const { tenantUsers: repo } = useRepositories()
   const toast = useToast()
   const { translateError } = useApiError()
+  const config = useRuntimeConfig()
   const updating = ref<string[]>([])
 
-  async function setLinkedMember(userId: string, memberId: string | null) {
+  async function setLinkedMember(userId: string, memberId: string | null, householdId?: string) {
     updating.value.push(userId)
     try {
       await repo.setLinkedMember(tenantStore.currentTenantId!, userId, memberId)
+      if (config.public.demoMode) {
+        if (memberId && householdId) {
+          memberStore.setLinkedMember(memberId, householdId)
+        }
+        else {
+          memberStore.clear()
+        }
+      }
       await refresh?.()
     }
     catch (e) {
