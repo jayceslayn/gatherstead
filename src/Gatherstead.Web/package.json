@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "generate:types": "openapi-ts ../../src/Gatherstead.Api/openapi.json --output app/repositories/generated/api.d.ts"
+    "generate:types": "openapi-typescript ../../src/Gatherstead.Api/openapi.json -o app/repositories/generated/api.d.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
