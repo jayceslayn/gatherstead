@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "generate:types": "openapi-typescript ../../src/Gatherstead.Api/openapi.json -o app/repositories/generated/api.d.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
@@ -36,7 +37,8 @@
     "@types/node": "^25.9.1",
     "eslint": "^10.2.1",
     "typescript": "^6.0.3",
-    "vue-tsc": "^3.2.7"
+    "vue-tsc": "^3.2.7",
+    "openapi-typescript": "^7.8.0"
   },
   "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1"
 }

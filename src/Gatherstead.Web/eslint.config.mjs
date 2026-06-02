@@ -3,6 +3,7 @@ import vueI18n from '@intlify/eslint-plugin-vue-i18n'
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt(
+  { ignores: ['app/repositories/generated/**'] },
   ...vueI18n.configs['flat/recommended'],
   {
     rules: {

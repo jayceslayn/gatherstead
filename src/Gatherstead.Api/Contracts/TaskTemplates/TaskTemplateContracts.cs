@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
@@ -10,7 +11,7 @@ public record TaskTemplateDto(
     Guid TenantId,
     Guid EventId,
     string Name,
-    TaskTimeSlotFlags TimeSlots,
+    [property: JsonConverter(typeof(JsonNumberEnumConverter<TaskTimeSlotFlags>))] TaskTimeSlotFlags TimeSlots,
     DateOnly? StartDate,
     DateOnly? EndDate,
     int? MinimumAssignees,
@@ -31,6 +32,7 @@ public class CreateTaskTemplateRequest
     public string Name { get; init; } = string.Empty;
 
     [Required]
+    [JsonConverter(typeof(JsonNumberEnumConverter<TaskTimeSlotFlags>))]
     public TaskTimeSlotFlags TimeSlots { get; init; }
 
     public DateOnly? StartDate { get; init; }
@@ -47,6 +49,7 @@ public class UpdateTaskTemplateRequest
     public string Name { get; init; } = string.Empty;
 
     [Required]
+    [JsonConverter(typeof(JsonNumberEnumConverter<TaskTimeSlotFlags>))]
     public TaskTimeSlotFlags TimeSlots { get; init; }
 
     public DateOnly? StartDate { get; init; }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
@@ -10,7 +11,7 @@ public record MealTemplateDto(
     Guid TenantId,
     Guid EventId,
     string Name,
-    MealTypeFlags MealTypes,
+    [property: JsonConverter(typeof(JsonNumberEnumConverter<MealTypeFlags>))] MealTypeFlags MealTypes,
     DateOnly? StartDate,
     DateOnly? EndDate,
     string? Notes,
@@ -30,6 +31,7 @@ public class CreateMealTemplateRequest
     public string Name { get; init; } = string.Empty;
 
     [Required]
+    [JsonConverter(typeof(JsonNumberEnumConverter<MealTypeFlags>))]
     public MealTypeFlags MealTypes { get; init; }
 
     public DateOnly? StartDate { get; init; }
@@ -52,6 +54,7 @@ public class UpdateMealTemplateRequest
     public string Name { get; init; } = string.Empty;
 
     [Required]
+    [JsonConverter(typeof(JsonNumberEnumConverter<MealTypeFlags>))]
     public MealTypeFlags MealTypes { get; init; }
 
     public DateOnly? StartDate { get; init; }
