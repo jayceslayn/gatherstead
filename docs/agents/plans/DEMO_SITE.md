@@ -17,18 +17,28 @@ The demo site uses the **same codebase** as production. A runtime config flag sw
 
 ## Configuration
 
-### Runtime Config
+### Build-time Constant
 
-Add to `runtimeConfig.public` in [`nuxt.config.ts`](../src/Gatherstead.Web/nuxt.config.ts):
+The primary mechanism is a build-time `__DEMO_MODE__` constant injected via `vite.define`, which enables Rollup to dead-code-eliminate the inactive branch — including its `import()` expressions — so live and demo bundles contain only their respective repository implementations:
 
 ```ts
-runtimeConfig: {
-  public: {
-    apiBaseUrl: 'http://localhost:5000',
-    demoMode: false,  // Overridden by NUXT_PUBLIC_DEMO_MODE=true
+vite: {
+  define: {
+    __DEMO_MODE__: JSON.stringify(process.env.NUXT_PUBLIC_DEMO_MODE === 'true'),
   },
-}
+},
+ssr: process.env.NUXT_PUBLIC_DEMO_MODE !== 'true',
 ```
+
+An ambient declaration in `app/types/env.d.ts` makes `__DEMO_MODE__` available throughout the TypeScript codebase:
+
+```ts
+declare const __DEMO_MODE__: boolean
+```
+
+### Runtime Config
+
+`runtimeConfig.public` in [`nuxt.config.ts`](../src/Gatherstead.Web/nuxt.config.ts) still includes `demoMode: false` (overrideable via `NUXT_PUBLIC_DEMO_MODE`) for runtime use in a small number of places (e.g., the demo banner's "Go Live" link guard). All mode branching in code uses `__DEMO_MODE__` rather than `config.public.demoMode`.
 
 ### Hybrid Rendering (Production)
 
@@ -36,25 +46,22 @@ Production uses Nuxt's hybrid rendering via `routeRules`. Public/marketing pages
 
 ```ts
 routeRules: {
-  '/dashboard/**': { ssr: false },   // SPA -- authenticated, no SEO need
-  '/': { prerender: true },           // Static prerender -- landing page
+  '/tenants/**': { ssr: false },
+  '/app/**': { ssr: false },
+  '/': { prerender: true },
 },
 ```
 
 ### Demo Build
 
-When `NUXT_PUBLIC_DEMO_MODE` is set, SSR is disabled entirely so `nuxt generate` produces a pure SPA:
-
-```ts
-ssr: !process.env.NUXT_PUBLIC_DEMO_MODE,
-```
+When `NUXT_PUBLIC_DEMO_MODE=true`, `ssr` is set to `false` and `nuxt generate` produces a pure SPA:
 
 **Build command:**
 ```bash
-NUXT_PUBLIC_DEMO_MODE=true nuxt generate
+NUXT_PUBLIC_DEMO_MODE=true pnpm generate
 ```
 
-Output is written to `.output/public/` -- a fully static site ready for deployment.
+Output is written to `.output/public/` — a fully static site ready for deployment.
 
 ## Repository Pattern
 
@@ -62,24 +69,28 @@ The data access layer uses a **repository pattern** with two implementations per
 
 ### Summary
 
-- **Injection**: A `.client.ts` Nuxt plugin selects live vs. demo repositories at startup and provides them to the Vue app via `provide/inject`. Composables call `useRepositories()` — they contain no `if (demoMode)` logic.
-- **Live repositories**: `app/repositories/live/Live*Repository.ts` — lift `$fetch` calls verbatim from composables.
-- **Demo repositories**: `app/repositories/demo/Demo*Repository.ts` — read from and write to a shared reactive singleton (`DemoStore.ts`) backed by localStorage key `gs-demo-store`.
-- **Composables**: thin `useAsyncData` wrappers over repository methods; write methods catch `DemoLimitError` and surface a warning toast.
-- **`useAuth.ts`**: unchanged — authentication identity is not data and retains its own demo branch.
+- **Injection**: `app/plugins/repositories.client.ts` (a Nuxt client plugin) selects live vs. demo repositories at build time using `__DEMO_MODE__`. Each branch performs a single `import()` from the relevant barrel file — `~/repositories/live` or `~/repositories/demo` — so Rollup emits one chunk per mode and eliminates the dead branch entirely. The resolved repositories are provided to the Vue app via `provide/inject`; composables call `useRepositories()` with no mode awareness.
+- **Live repositories**: `app/repositories/live/Live*Repository.ts` — `$fetch`-backed implementations; re-exported from `repositories/live/index.ts`.
+- **Demo repositories**: `app/repositories/demo/Demo*Repository.ts` — read from and write to a shared reactive singleton (`DemoStore.ts`) backed by localStorage key `gs-demo-store`; re-exported from `repositories/demo/index.ts`.
+- **Demo constants**: Pure static values (`DEMO_TENANT`, `DEMO_USER`, `DEMO_LIMITS`, etc.) live in `repositories/demo/demoConstants.ts` — no reactive state — so they can be imported directly in `useAuth` and `tenant.global.ts` without pulling `DemoStore`'s reactive internals into the live bundle.
+- **Composables**: thin `useAsyncData` wrappers over repository methods; write methods catch `DemoLimitError` and surface a warning toast. No `demoMode` checks anywhere in pages, layouts, or components.
+- **`useAuth.ts`**: branches on `__DEMO_MODE__` (build-time) to stub auth with demo user identity.
 
 ## Entity Limits
 
-Limits are defined as constants in `repositories/demo/DemoStore.ts` and enforced by demo repository write methods, which throw `DemoLimitError` when exceeded. Composable write functions catch `DemoLimitError` and surface a warning toast — pages require no changes.
+Limits are defined as constants in `repositories/demo/demoConstants.ts` and enforced by demo repository write methods, which throw `DemoLimitError` when exceeded. Composable write functions catch `DemoLimitError` and surface a warning toast — pages require no changes.
 
 ```ts
 export const DEMO_LIMITS = {
-  householdsPerTenant:    3,   // teases directory feature, encourages upgrade
-  membersPerHousehold:    4,
-  events:                 1,   // single event; max 3 days duration
-  eventMaxDays:           3,
-  mealTemplatesPerEvent:  2,
-  taskTemplatesPerEvent: 2,
+  householdsPerTenant:      3,
+  membersPerHousehold:      5,
+  events:                   1,
+  eventMaxDays:             3,
+  mealTemplatesPerEvent:    3,
+  taskTemplatesPerEvent:    4,
+  propertiesPerTenant:      2,
+  accommodationsPerProperty: 6,
+  equipmentPerTenant:       10,
 } as const
 ```
 
@@ -129,46 +140,43 @@ Locale keys to add under `demo.*` in `en.json` and `es.json`:
 
 ## Auth Bypass
 
-`composables/useAuth.ts` provides a unified auth interface with a demo bypass:
+`composables/useAuth.ts` provides a unified auth interface with a demo bypass, branching on the build-time `__DEMO_MODE__` constant so the live bundle contains no demo code path:
 
 ```ts
-export function useAuth() {
-  const { demoMode } = useRuntimeConfig().public
+import { DEMO_USER_DISPLAY_NAME, DEMO_USER_EXTERNAL_ID } from '~/repositories/demo/demoConstants'
 
-  if (demoMode) {
+export function useAuth() {
+  if (__DEMO_MODE__) {
     return {
-      isAuthenticated: ref(true),
-      user: ref({ name: 'Demo User', role: 'Owner' }),
-      login: () => {},
-      logout: () => {
-        // Clear localStorage, redirect to landing
-      },
+      loggedIn: ref(true),
+      user: ref({ name: DEMO_USER_DISPLAY_NAME, email: DEMO_USER_EXTERNAL_ID }),
+      login: () => navigateTo('/tenants'),
+      logout: () => navigateTo('/'),
     }
   }
 
-  // Real auth implementation (Entra ID / MSAL)
+  const { loggedIn, user } = useUserSession()
+  return {
+    loggedIn,
+    user,
+    login: () => navigateTo('/auth/azure', { external: true }),
+    logout: () => navigateTo('/auth/logout', { external: true }),
+  }
 }
 ```
 
-This prevents any auth-related redirects or checks from blocking the demo experience. The mock user has Owner role so all features are accessible.
+This prevents any auth-related redirects or checks from blocking the demo experience. The mock user has Owner role so all features are accessible. The `auth.ts` route middleware requires no demo-mode check — `useAuth()` already returns `loggedIn: ref(true)` in demo mode, so `if (!loggedIn.value)` naturally passes through.
 
 ## Demo Banner
 
-A `UAlert` is rendered above the main content slot in `app/layouts/default.vue`, visible only when `demoMode` is true. It is always present (not dismissible) so visitors are continually aware of the demo context.
+`app/components/DemoBanner.vue` renders a sticky amber banner at the top of every page when `__DEMO_MODE__` is `true` (its own `v-if` guard), providing a persistent demo context indicator. It is always present (not dismissible).
 
-```vue
-<!-- app/layouts/default.vue — above the <slot /> -->
-<UAlert
-  v-if="config.public.demoMode"
-  color="warning"
-  variant="subtle"
-  :title="$t('demo.banner.title')"
-  :description="$t('demo.banner.description')"
-  :actions="[{ label: $t('demo.banner.learnMore'), to: '/demo' }]"
-/>
-```
+The banner includes a "Learn more" button that opens a modal (`UModal`) with:
+- The entity limits table (sourced from `DEMO_LIMITS` in `demoConstants.ts`)
+- A "Reset Demo Data" button that calls `clearDemoStore()` and re-runs `seedDemoData()`
+- A "Go Live" CTA button (shown only when `config.public.liveUrl` is set)
 
-The `/demo` route (a public page) explains the demo's limitations, entity limits table, and provides a "Reset Demo Data" button that clears `gs-demo-store` from localStorage and reloads the seed.
+The banner is included in both `layouts/default.vue` and `layouts/landing.vue` via `<DemoBanner />`. In a live build the component is present but its `v-if="isDemoMode"` (where `isDemoMode = __DEMO_MODE__`) evaluates to `false` at compile time, so it renders nothing. `clearDemoStore` and `seedDemoData` are loaded via dynamic `import()` inside `resetDemoData()`, guarded by `if (!__DEMO_MODE__ || !repos) return`, ensuring these async chunks are never created in the live build.
 
 ## Infrastructure
 
@@ -287,23 +295,31 @@ With `nuxt generate`, all routes must be statically pre-renderable. Since the de
 
 ## Files Summary
 
-| File | Action |
+| File | Status |
 |------|--------|
-| `src/Gatherstead.Web/nuxt.config.ts` | Add `demoMode` config, `routeRules`, conditional SSR |
-| `src/Gatherstead.Web/app/repositories/types.ts` | **Create** — domain types moved from composables |
-| `src/Gatherstead.Web/app/repositories/interfaces.ts` | **Create** — `I*Repository` interfaces + `Repositories` aggregate |
-| `src/Gatherstead.Web/app/repositories/live/Live*Repository.ts` | **Create** — `$fetch`-backed live implementations (7 files) |
-| `src/Gatherstead.Web/app/repositories/demo/DemoStore.ts` | **Create** — reactive localStorage singleton + `DEMO_LIMITS` + `DemoLimitError` |
-| `src/Gatherstead.Web/app/repositories/demo/Demo*Repository.ts` | **Create** — localStorage-backed demo implementations (7 files) |
-| `src/Gatherstead.Web/app/plugins/repositories.client.ts` | **Create** — selects live vs. demo; provides via `provide/inject` |
-| `src/Gatherstead.Web/app/composables/useRepositories.ts` | **Create** — `inject()` wrapper |
-| `src/Gatherstead.Web/app/composables/use*.ts` (7 files) | **Update** — remove `if (demoMode)` branches; delegate to repositories |
-| `src/Gatherstead.Web/app/composables/useAuth.ts` | **Unchanged** — auth identity retains its own demo branch |
-| `src/Gatherstead.Web/app/middleware/tenant.global.ts` | **Update** — add demo short-circuit before API call |
-| `src/Gatherstead.Web/app/layouts/default.vue` | **Update** — add `UAlert` demo banner |
-| `src/Gatherstead.Web/app/pages/demo.vue` | **Create** — public page explaining demo limits + reset button |
-| `src/Gatherstead.Web/app/i18n/locales/en.json` | **Update** — add `demo.banner.*` and `demo.limitReached.*` keys |
-| `src/Gatherstead.Web/app/i18n/locales/es.json` | **Update** — same keys in Spanish |
-| `infrastructure/modules/staticwebapp.bicep` | **Create** — Static Web App module |
-| `infrastructure/main.bicep` | Add conditional demo module |
-| `.github/workflows/deploy-demo.yml` | **Create** — Demo CI/CD workflow |
+| `src/Gatherstead.Web/nuxt.config.ts` | Updated — `vite.define` (`__DEMO_MODE__`), `ssr !== 'true'`, `routeRules` |
+| `src/Gatherstead.Web/app/types/env.d.ts` | Added — ambient `declare const __DEMO_MODE__: boolean` |
+| `src/Gatherstead.Web/app/repositories/types.ts` | Added — domain types barrel |
+| `src/Gatherstead.Web/app/repositories/interfaces.ts` | Added — `I*Repository` interfaces + `Repositories` aggregate |
+| `src/Gatherstead.Web/app/repositories/live/Live*Repository.ts` | Added — `$fetch`-backed live implementations (15 files) |
+| `src/Gatherstead.Web/app/repositories/live/index.ts` | Added — barrel re-export of all 15 live repository classes |
+| `src/Gatherstead.Web/app/repositories/demo/demoConstants.ts` | Added — pure static constants (`DEMO_TENANT`, `DEMO_USER`, `DEMO_LIMITS`, etc.) |
+| `src/Gatherstead.Web/app/repositories/demo/DemoStore.ts` | Added — reactive localStorage singleton + `DemoLimitError`; re-exports from `demoConstants` |
+| `src/Gatherstead.Web/app/repositories/demo/Demo*Repository.ts` | Added — localStorage-backed demo implementations (15 files) |
+| `src/Gatherstead.Web/app/repositories/demo/DemoNotImplemented.ts` | Added — `notImplemented(method)` utility for intentionally deferred stub methods |
+| `src/Gatherstead.Web/app/repositories/demo/index.ts` | Added — barrel re-export of all 15 demo repository classes |
+| `src/Gatherstead.Web/app/repositories/demo/seedDemoData.ts` | Added — seeds full demo dataset through repository CRUD methods |
+| `src/Gatherstead.Web/app/plugins/repositories.client.ts` | Added — `__DEMO_MODE__`-gated single dynamic barrel import; provides via `provide/inject` |
+| `src/Gatherstead.Web/app/composables/useRepositories.ts` | Added — `inject()` wrapper |
+| `src/Gatherstead.Web/app/composables/useAuth.ts` | Updated — branches on `__DEMO_MODE__`; no `isDemo` in return shape |
+| `src/Gatherstead.Web/app/middleware/auth.ts` | Updated — removed redundant `demoMode` check |
+| `src/Gatherstead.Web/app/middleware/tenant.global.ts` | Updated — branches on `__DEMO_MODE__`; `getDemoStore` via dynamic import |
+| `src/Gatherstead.Web/app/composables/useTenantUsers.ts` | Updated — `setLinkedMember` mode-agnostic (matches `userId` to auth user `externalId`) |
+| `src/Gatherstead.Web/app/components/DemoBanner.vue` | Added — sticky banner + modal with limits table, reset, and Go Live CTA |
+| `src/Gatherstead.Web/app/layouts/default.vue` | Updated — `<DemoBanner />`; sign-out item gated by `__DEMO_MODE__` |
+| `src/Gatherstead.Web/app/layouts/landing.vue` | Updated — `<DemoBanner />`; auth buttons gated by `isDemoMode = __DEMO_MODE__` |
+| `src/Gatherstead.Web/app/locales/en.json` | Updated — `demo.banner.*`, `demo.modal.*` keys |
+| `src/Gatherstead.Web/app/locales/es.json` | Updated — same keys in Spanish |
+| `infrastructure/modules/staticwebapp.bicep` | Added — Static Web App module |
+| `infrastructure/main.bicep` | Updated — conditional `deployDemo` demo module |
+| `.github/workflows/deploy-demo.yml` | Added — Demo CI/CD workflow |

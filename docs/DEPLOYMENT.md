@@ -149,16 +149,18 @@ az webapp deploy --resource-group <resourceGroupName> --name <webAppName> --src-
 
 After deployment, the apps are reachable at the `apiAppUrl` and `webAppUrl` outputs.
 
-## Demo Site (Planned)
+## Demo Site
 
-A public demo site will be deployed alongside production on **Azure Static Web Apps (Free tier)** at `demo.gatherstead.<host>.<ext>`. The demo uses the same codebase but is built as a static SPA with `nuxt generate` and `NUXT_PUBLIC_DEMO_MODE=true`, using browser localStorage instead of a backend API. No App Service plan, SQL Server, or managed identity is required — zero hosting cost.
+A public demo site is deployed alongside production on **Azure Static Web Apps (Free tier)** at `demo.gatherstead.<host>.<ext>`. The demo uses the same codebase built as a static SPA with `NUXT_PUBLIC_DEMO_MODE=true pnpm generate`, using browser localStorage instead of a backend API. No App Service plan, SQL Server, or managed identity is required — zero hosting cost.
+
+A build-time `__DEMO_MODE__` constant (set via `vite.define` when `NUXT_PUBLIC_DEMO_MODE=true`) ensures the live and demo bundles are fully isolated: Rollup eliminates the dead branch entirely so no demo repository code ships in the live build and no live API client code ships in the demo build.
 
 ### Infrastructure
 
-A new `infrastructure/modules/staticwebapp.bicep` module provisions the Static Web App resource, gated behind a `deployDemo` parameter in `main.bicep` so it is only created when explicitly enabled.
+`infrastructure/modules/staticwebapp.bicep` provisions the Static Web App resource, gated behind a `deployDemo` parameter in `main.bicep` so it is only created when explicitly enabled.
 
 ### CI/CD
 
-A dedicated GitHub Actions workflow (`.github/workflows/deploy-demo.yml`) builds and deploys the demo on push to `main`, keeping it in sync with the latest code.
+`.github/workflows/deploy-demo.yml` builds and deploys the demo on push to `main`, keeping it in sync with the latest code.
 
 See [DEMO_SITE.md](agents/plans/DEMO_SITE.md) for full architecture and implementation details.
