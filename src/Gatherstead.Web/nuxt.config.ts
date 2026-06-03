@@ -2,11 +2,11 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
 
-  ssr: !process.env.NUXT_PUBLIC_DEMO_MODE,
+  ssr: process.env.NUXT_PUBLIC_DEMO_MODE !== 'true',
 
   vite: {
     define: {
-      __DEMO_MODE__: JSON.stringify(!!process.env.NUXT_PUBLIC_DEMO_MODE),
+      __DEMO_MODE__: JSON.stringify(process.env.NUXT_PUBLIC_DEMO_MODE === 'true'),
     },
   },
 
