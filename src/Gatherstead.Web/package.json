@@ -17,17 +17,17 @@
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/vue3": "^6.1.20",
     "@nuxt/fonts": "^0.14.0",
-    "@nuxt/icon": "^2.2.1",
+    "@nuxt/icon": "^2.2.3",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.7.1",
     "@nuxtjs/i18n": "^10.3.0",
     "@pinia/nuxt": "^0.11.3",
-    "nuxt": "^4.4.6",
+    "nuxt": "^4.4.7",
     "nuxt-auth-utils": "^0.5.29",
     "pinia": "^3.0.4",
     "serialize-javascript": "7.0.5",
     "tailwindcss": "^4.2.4",
-    "vue": "^3.5.33",
+    "vue": "^3.5.35",
     "vue-router": "^5.0.6"
   },
   "devDependencies": {
@@ -35,9 +35,9 @@
     "@intlify/eslint-plugin-vue-i18n": "^4.3.0",
     "@nuxt/eslint": "^1.15.2",
     "@types/node": "^25.9.1",
-    "eslint": "^10.2.1",
+    "eslint": "^10.4.1",
     "typescript": "^6.0.3",
-    "vue-tsc": "^3.2.7",
+    "vue-tsc": "^3.3.3",
     "openapi-typescript": "^7.8.0"
   },
   "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1"
