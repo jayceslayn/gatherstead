@@ -2,12 +2,12 @@
 import { inject } from 'vue'
 import { REPOSITORIES_KEY } from '~/repositories/interfaces'
 import type { Repositories } from '~/repositories/interfaces'
-import { DEMO_LIMITS, clearDemoStore } from '~/repositories/demo/DemoStore'
-import { seedDemoData } from '~/repositories/demo/seedDemoData'
+import { DEMO_LIMITS } from '~/repositories/demo/demoConstants'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useEventStore } from '~/stores/event'
 
 const config = useRuntimeConfig()
+const isDemoMode = __DEMO_MODE__
 const { t } = useI18n()
 const open = ref(false)
 const isResetting = ref(false)
@@ -20,8 +20,10 @@ type LimitKey = keyof typeof DEMO_LIMITS
 const limitKeys = Object.keys(DEMO_LIMITS) as LimitKey[]
 
 async function resetDemoData() {
-  if (!repos) return
+  if (!__DEMO_MODE__ || !repos) return
   isResetting.value = true
+  const { clearDemoStore } = await import('~/repositories/demo/DemoStore')
+  const { seedDemoData } = await import('~/repositories/demo/seedDemoData')
   clearDemoStore()
   await seedDemoData(repos)
   memberStore.clear()
@@ -34,7 +36,7 @@ async function resetDemoData() {
 
 <template>
   <div
-    v-if="config.public.demoMode"
+    v-if="isDemoMode"
     class="sticky top-0 z-50 bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800"
   >
     <div class="max-w-screen-xl mx-auto px-4 py-1.5 flex items-center justify-between gap-4">

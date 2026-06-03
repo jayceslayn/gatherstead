@@ -2,12 +2,13 @@
 const { t } = useI18n()
 const { loggedIn, logout } = useAuth()
 const config = useRuntimeConfig()
+const isDemoMode = __DEMO_MODE__
 </script>
 
 <!-- eslint-disable vue/no-multiple-template-root -->
 <template>
   <DemoBanner />
-  <UHeader to="/" :toggle="!config.public.demoMode">
+  <UHeader to="/" :toggle="!isDemoMode">
     <template #title>
       <picture>
         <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_wide.png">
@@ -17,14 +18,14 @@ const config = useRuntimeConfig()
     <template #right>
       <LocaleSwitcher />
       <UButton
-        v-if="!config.public.demoMode && config.public.demoUrl"
+        v-if="!isDemoMode && config.public.demoUrl"
         variant="soft"
         :to="(config.public.demoUrl as string)"
         external
       >
         {{ t('landing.tryDemo') }}
       </UButton>
-      <template v-if="!config.public.demoMode">
+      <template v-if="!isDemoMode">
         <UButton
           v-if="loggedIn"
           variant="ghost"

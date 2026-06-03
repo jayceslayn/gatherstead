@@ -3,14 +3,12 @@ import { useTenantUserList, useTenantUserActions } from '~/composables/useTenant
 import { useUserHouseholdAccess, useHouseholdUserActions } from '~/composables/useHouseholdUsers'
 import { useHouseholds } from '~/composables/useHouseholds'
 import { useHouseholdMembers, useAllMembers } from '~/composables/useHouseholdMembers'
-import { useCurrentMemberStore } from '~/stores/member'
 import type { HouseholdRole, TenantRole } from '~/repositories/types'
 
 definePageMeta({
   layout: 'default',
 })
 
-const config = useRuntimeConfig()
 const { t } = useI18n()
 const route = useRoute()
 const userId = computed(() => route.params.userId as string)
@@ -49,18 +47,8 @@ const selectedLinkedMemberId = computed(() => {
     : undefined
 })
 
-const currentMemberStore = useCurrentMemberStore()
-
 async function handleSetLinkedMember(memberId: string | null) {
-  await setLinkedMember(userId.value, memberId)
-  if (config.public.demoMode) {
-    if (memberId && memberHouseholdId.value) {
-      currentMemberStore.setLinkedMember(memberId, memberHouseholdId.value)
-    }
-    else {
-      currentMemberStore.clear()
-    }
-  }
+  await setLinkedMember(userId.value, memberId, memberHouseholdId.value || undefined)
 }
 
 // Household access section
