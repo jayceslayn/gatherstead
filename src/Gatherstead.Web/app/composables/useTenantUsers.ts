@@ -17,21 +17,24 @@ export function useTenantUserActions(refresh?: () => Promise<void>) {
   const tenantStore = useTenantStore()
   const memberStore = useCurrentMemberStore()
   const { tenantUsers: repo } = useRepositories()
+  const { tenantUsers } = useTenantUserList()
+  const { user } = useAuth()
   const toast = useToast()
   const { translateError } = useApiError()
-  const config = useRuntimeConfig()
   const updating = ref<string[]>([])
 
   async function setLinkedMember(userId: string, memberId: string | null, householdId?: string) {
     updating.value.push(userId)
     try {
       await repo.setLinkedMember(tenantStore.currentTenantId!, userId, memberId)
-      if (config.public.demoMode) {
+      const email = (user.value as { email?: string } | null)?.email
+      const currentUser = tenantUsers.value.find(u => u.externalId === email)
+      if (currentUser?.userId === userId) {
         if (memberId && householdId) {
           memberStore.setLinkedMember(memberId, householdId)
         }
         else {
-          memberStore.clear()
+          memberStore.clearForTenant(tenantStore.currentTenantId!)
         }
       }
       await refresh?.()

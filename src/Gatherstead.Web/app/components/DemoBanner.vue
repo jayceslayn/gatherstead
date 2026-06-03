@@ -7,6 +7,7 @@ import { useCurrentMemberStore } from '~/stores/member'
 import { useEventStore } from '~/stores/event'
 
 const config = useRuntimeConfig()
+const isDemoMode = __DEMO_MODE__
 const { t } = useI18n()
 const open = ref(false)
 const isResetting = ref(false)
@@ -35,7 +36,7 @@ async function resetDemoData() {
 
 <template>
   <div
-    v-if="config.public.demoMode"
+    v-if="isDemoMode"
     class="sticky top-0 z-50 bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800"
   >
     <div class="max-w-screen-xl mx-auto px-4 py-1.5 flex items-center justify-between gap-4">
