@@ -19,17 +19,20 @@ public class MealTemplateService : IMealTemplateService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly PlanSyncService _planSyncService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public MealTemplateService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService,
-        PlanSyncService planSyncService)
+        PlanSyncService planSyncService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
         _planSyncService = planSyncService ?? throw new ArgumentNullException(nameof(planSyncService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<MealTemplateDto>>> ListAsync(
@@ -314,12 +317,12 @@ public class MealTemplateService : IMealTemplateService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private static MealTemplateDto MapToDto(MealTemplate t, IReadOnlyList<AttributeDto> attributes) => new(
-        t.Id, t.TenantId, t.EventId, t.Name, t.MealTypes,
+    private MealTemplateDto MapToDto(MealTemplate t, IReadOnlyList<AttributeDto> attributes) => new(
+        t.Id, t.TenantId, t.EventId, t.Name, (int)t.MealTypes,
         t.StartDate, t.EndDate,
         t.Notes,
-        t.CreatedAt, t.UpdatedAt, t.IsDeleted, t.DeletedAt, t.DeletedByUserId,
-        attributes);
+        attributes,
+        t.ToAuditInfo(_auditVisibility.IncludeAudit));
 
     private static bool ValidateDateRange(
         DateOnly? startDate, DateOnly? endDate,

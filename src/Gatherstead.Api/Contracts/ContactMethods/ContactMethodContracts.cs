@@ -11,11 +11,7 @@ public record ContactMethodDto(
     ContactMethodType Type,
     string Value,
     bool IsPrimary,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class ContactMethodResponse : BaseEntityResponse<ContactMethodDto> { }
 

@@ -12,11 +12,7 @@ public record MealPlanDto(
     string? Notes,
     bool IsException,
     string? ExceptionReason,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class MealPlanResponse : BaseEntityResponse<MealPlanDto> { }
 

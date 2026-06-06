@@ -50,7 +50,8 @@ public class MealTemplateServiceTests : IAsyncLifetime
         var auth = Mock.Of<IMemberAuthorizationService>(a =>
             a.CanManageEventAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(true)
             && a.GetCallerTenantRoleAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult((TenantRole?)TenantRole.Owner));
-        return new MealTemplateService(_dbContext, tenantContext, auth, new PlanSyncService(_dbContext));
+        return new MealTemplateService(_dbContext, tenantContext, auth, new PlanSyncService(_dbContext),
+            Mock.Of<Gatherstead.Api.Contracts.Responses.IAuditVisibilityContext>());
     }
 
     [Fact]

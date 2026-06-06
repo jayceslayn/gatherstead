@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
@@ -8,37 +9,39 @@ namespace Gatherstead.Api.Contracts.Reports;
 /// and per-meal dietary needs so cooks know how much and what kind of food to prepare.
 /// </summary>
 public record EventReportDto(
-    Guid EventId,
-    string EventName,
-    DateOnly StartDate,
-    DateOnly EndDate,
-    IReadOnlyList<EventReportDayDto> Days);
+    [property: Required] Guid EventId,
+    [property: Required] string EventName,
+    [property: Required] DateOnly StartDate,
+    [property: Required] DateOnly EndDate,
+    [property: Required] IReadOnlyList<EventReportDayDto> Days);
 
 public record EventReportDayDto(
-    DateOnly Day,
-    int Going,
-    int Maybe,
-    IReadOnlyList<EventReportMealDto> Meals);
+    [property: Required] DateOnly Day,
+    [property: Required] int Going,
+    [property: Required] int Maybe,
+    [property: Required] IReadOnlyList<EventReportMealDto> Meals);
 
 public record EventReportMealDto(
-    Guid MealPlanId,
-    string TemplateName,
-    MealType MealType,
-    int Going,
-    int Maybe,
-    int NotGoing,
-    int BringOwnFood,
-    IReadOnlyList<DietaryTallyDto> Dietary,
-    IReadOnlyList<EventReportAttendeeDto> Attendees);
+    [property: Required] Guid MealPlanId,
+    [property: Required] string TemplateName,
+    [property: Required] MealType MealType,
+    [property: Required] int Going,
+    [property: Required] int Maybe,
+    [property: Required] int NotGoing,
+    [property: Required] int BringOwnFood,
+    [property: Required] IReadOnlyList<DietaryTallyDto> Dietary,
+    [property: Required] IReadOnlyList<EventReportAttendeeDto> Attendees);
 
-public record DietaryTallyDto(string Label, int Count);
+public record DietaryTallyDto(
+    [property: Required] string Label,
+    [property: Required] int Count);
 
 public record EventReportAttendeeDto(
-    Guid MemberId,
-    string Name,
-    AttendanceStatus Status,
-    bool BringOwnFood,
-    IReadOnlyList<string> Dietary,
+    [property: Required] Guid MemberId,
+    [property: Required] string Name,
+    [property: Required] AttendanceStatus Status,
+    [property: Required] bool BringOwnFood,
+    [property: Required] IReadOnlyList<string> Dietary,
     string? DietaryNotes);
 
 public class EventReportResponse : BaseEntityResponse<EventReportDto> { }

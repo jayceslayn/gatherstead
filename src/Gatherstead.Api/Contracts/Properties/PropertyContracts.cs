@@ -9,12 +9,8 @@ public record PropertyDto(
     Guid TenantId,
     string Name,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class PropertyResponse : BaseEntityResponse<PropertyDto> { }
 

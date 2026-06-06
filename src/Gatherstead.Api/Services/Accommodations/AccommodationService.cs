@@ -17,15 +17,18 @@ public class AccommodationService : IAccommodationService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public AccommodationService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<AccommodationDto>>> ListAsync(
@@ -281,9 +284,9 @@ public class AccommodationService : IAccommodationService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private static AccommodationDto MapToDto(Accommodation a, IReadOnlyList<AttributeDto> attributes) => new(
+    private AccommodationDto MapToDto(Accommodation a, IReadOnlyList<AttributeDto> attributes) => new(
         a.Id, a.TenantId, a.PropertyId, a.Name, a.Type,
         a.CapacityAdults, a.CapacityChildren, a.Notes,
-        a.CreatedAt, a.UpdatedAt, a.IsDeleted, a.DeletedAt, a.DeletedByUserId,
-        attributes);
+        attributes,
+        a.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

@@ -37,15 +37,21 @@ public class RequireTenantAccessAttributeTests : IAsyncLifetime
     private AuthorizationFilterContext CreateContext(
         Guid? routeTenantId,
         Guid? userId,
-        string? includeDeleted = null)
+        string? includeDeleted = null,
+        string? includeAudit = null)
     {
         var httpContext = new DefaultHttpContext();
 
         if (routeTenantId.HasValue)
             httpContext.Request.RouteValues["tenantId"] = routeTenantId.Value.ToString();
 
+        var queryParts = new List<string>();
         if (includeDeleted != null)
-            httpContext.Request.QueryString = new QueryString($"?includeDeleted={includeDeleted}");
+            queryParts.Add($"includeDeleted={includeDeleted}");
+        if (includeAudit != null)
+            queryParts.Add($"includeAudit={includeAudit}");
+        if (queryParts.Count > 0)
+            httpContext.Request.QueryString = new QueryString("?" + string.Join("&", queryParts));
 
         var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == userId);
         var appAdminContext = Mock.Of<IAppAdminContext>(c => c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(false));
@@ -255,5 +261,56 @@ public class RequireTenantAccessAttributeTests : IAsyncLifetime
 
         Assert.Null(context.Result);
         Assert.True(context.HttpContext.Items["IncludeDeletedAuthorized"] is true);
+    }
+
+    [Fact]
+    public async Task IncludeAuditTrue_ManagerRole_SetsHttpContextItem()
+    {
+        await SeedTenantUser(TenantRole.Manager);
+        var attribute = new RequireTenantAccessAttribute();
+        var context = CreateContext(routeTenantId: _tenantId, userId: _userId, includeAudit: "true");
+
+        await attribute.OnAuthorizationAsync(context);
+
+        Assert.Null(context.Result);
+        Assert.True(context.HttpContext.Items["IncludeAuditAuthorized"] is true);
+    }
+
+    [Fact]
+    public async Task IncludeAuditTrue_MemberRole_DoesNotSetHttpContextItem()
+    {
+        await SeedTenantUser(TenantRole.Member);
+        var attribute = new RequireTenantAccessAttribute();
+        var context = CreateContext(routeTenantId: _tenantId, userId: _userId, includeAudit: "true");
+
+        await attribute.OnAuthorizationAsync(context);
+
+        Assert.Null(context.Result);
+        Assert.False(context.HttpContext.Items.ContainsKey("IncludeAuditAuthorized"));
+    }
+
+    [Fact]
+    public async Task IncludeAuditFalse_Manager_DoesNotSetHttpContextItem()
+    {
+        await SeedTenantUser(TenantRole.Manager);
+        var attribute = new RequireTenantAccessAttribute();
+        var context = CreateContext(routeTenantId: _tenantId, userId: _userId, includeAudit: "false");
+
+        await attribute.OnAuthorizationAsync(context);
+
+        Assert.Null(context.Result);
+        Assert.False(context.HttpContext.Items.ContainsKey("IncludeAuditAuthorized"));
+    }
+
+    [Fact]
+    public async Task MinimumRole_NoTenantIdInRoute_ThrowsInvalidOperation()
+    {
+        // A MinimumRole requirement without a {tenantId} route segment is a misconfiguration:
+        // the check would silently never run, so the attribute fails loudly instead.
+        var attribute = new RequireTenantAccessAttribute(TenantRole.Manager);
+        var context = CreateContext(routeTenantId: null, userId: _userId);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => attribute.OnAuthorizationAsync(context));
     }
 }

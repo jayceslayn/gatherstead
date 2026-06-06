@@ -6,7 +6,6 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Gatherstead.Api.Services.MemberRelationships;
 
@@ -19,28 +18,18 @@ public class MemberRelationshipService : IMemberRelationshipService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    private static readonly Expression<Func<MemberRelationship, MemberRelationshipDto>> MapToDtoExpression =
-        rel => new MemberRelationshipDto(
-            rel.Id,
-            rel.TenantId,
-            rel.HouseholdMemberId,
-            rel.RelatedMemberId,
-            rel.RelationshipType,
-            rel.Notes,
-            rel.CreatedAt,
-            rel.UpdatedAt,
-            rel.IsDeleted,
-            rel.DeletedAt,
-            rel.DeletedByUserId);
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public MemberRelationshipService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<MemberRelationshipDto>>> ListAsync(
@@ -70,9 +59,8 @@ public class MemberRelationshipService : IMemberRelationshipService
             }
         }
 
-        var relationships = await query
-            .Select(MapToDtoExpression)
-            .ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var relationships = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<MemberRelationshipDto>>.SuccessfulResponse(relationships);
     }
@@ -262,16 +250,12 @@ public class MemberRelationshipService : IMemberRelationshipService
         return response;
     }
 
-    private static MemberRelationshipDto MapToDto(MemberRelationship rel) => new(
+    private MemberRelationshipDto MapToDto(MemberRelationship rel) => new(
         rel.Id,
         rel.TenantId,
         rel.HouseholdMemberId,
         rel.RelatedMemberId,
         rel.RelationshipType,
         rel.Notes,
-        rel.CreatedAt,
-        rel.UpdatedAt,
-        rel.IsDeleted,
-        rel.DeletedAt,
-        rel.DeletedByUserId);
+        rel.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

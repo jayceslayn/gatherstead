@@ -1,22 +1,23 @@
+using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.TenantUsers;
 
 public record TenantUserDto(
-    Guid UserId,
-    Guid TenantId,
-    TenantRole Role,
+    [property: Required] Guid UserId,
+    [property: Required] Guid TenantId,
+    [property: Required] TenantRole Role,
     Guid? LinkedMemberId,
-    string ExternalId);
+    [property: Required] string ExternalId);
 
 public record TenantUserMeDto(
-    Guid UserId,
-    Guid TenantId,
-    TenantRole Role,
+    [property: Required] Guid UserId,
+    [property: Required] Guid TenantId,
+    [property: Required] TenantRole Role,
     Guid? LinkedMemberId,
     Guid? LinkedHouseholdId,
-    string ExternalId);
+    [property: Required] string ExternalId);
 
 public class TenantUserResponse : BaseEntityResponse<TenantUserDto> { }
 

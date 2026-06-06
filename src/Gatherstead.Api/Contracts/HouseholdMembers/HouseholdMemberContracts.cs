@@ -15,12 +15,8 @@ public record HouseholdMemberDto(
     string? DietaryNotes,
     string[] DietaryTags,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class HouseholdMemberResponse : BaseEntityResponse<HouseholdMemberDto> { }
 
@@ -37,8 +33,10 @@ public class CreateHouseholdMemberRequest
 
     public DateOnly? BirthDate { get; init; }
 
+    [StringLength(500)]
     public string? DietaryNotes { get; init; }
 
+    [MaxLength(30)]
     public string[]? DietaryTags { get; init; }
 
     [StringLength(500)]
@@ -66,8 +64,10 @@ public class UpdateHouseholdMemberRequest
 
     public DateOnly? BirthDate { get; init; }
 
+    [StringLength(500)]
     public string? DietaryNotes { get; init; }
 
+    [MaxLength(30)]
     public string[]? DietaryTags { get; init; }
 
     [StringLength(500)]

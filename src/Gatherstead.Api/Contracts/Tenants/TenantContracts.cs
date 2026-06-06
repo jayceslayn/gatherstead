@@ -9,16 +9,12 @@ public record TenantDto(
     Guid Id,
     string Name,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class TenantResponse : BaseEntityResponse<TenantDto> { }
 
-public record TenantSummary(Guid Id, string Name, TenantRole? UserRole = null);
+public record TenantSummary([property: Required] Guid Id, [property: Required] string Name, [property: Required] TenantRole? UserRole = null);
 
 public class CreateTenantRequest
 {

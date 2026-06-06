@@ -16,15 +16,18 @@ public class HouseholdMemberService : IHouseholdMemberService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public HouseholdMemberService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdMemberDto>>> ListAsync(
@@ -315,7 +318,7 @@ public class HouseholdMemberService : IHouseholdMemberService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole, a.HouseholdMinRole))
             .ToList();
 
-    private static HouseholdMemberDto MapToDto(HouseholdMember member, bool canReadSensitive, IReadOnlyList<AttributeDto> attributes) => new(
+    private HouseholdMemberDto MapToDto(HouseholdMember member, bool canReadSensitive, IReadOnlyList<AttributeDto> attributes) => new(
         member.Id,
         member.TenantId,
         member.HouseholdId,
@@ -326,10 +329,6 @@ public class HouseholdMemberService : IHouseholdMemberService
         canReadSensitive ? member.DietaryNotes : null,
         canReadSensitive ? member.DietaryTags : [],
         canReadSensitive ? member.Notes : null,
-        member.CreatedAt,
-        member.UpdatedAt,
-        member.IsDeleted,
-        member.DeletedAt,
-        member.DeletedByUserId,
-        attributes);
+        attributes,
+        member.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

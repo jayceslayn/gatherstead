@@ -14,11 +14,7 @@ public record AddressDto(
     string PostalCode,
     string Country,
     bool IsPrimary,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class AddressResponse : BaseEntityResponse<AddressDto> { }
 

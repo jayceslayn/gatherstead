@@ -9,12 +9,8 @@ public record HouseholdDto(
     Guid TenantId,
     string Name,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class HouseholdResponse : BaseEntityResponse<HouseholdDto> { }
 

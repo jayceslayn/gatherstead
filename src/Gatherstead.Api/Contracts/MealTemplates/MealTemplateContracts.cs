@@ -11,16 +11,12 @@ public record MealTemplateDto(
     Guid TenantId,
     Guid EventId,
     string Name,
-    [property: JsonConverter(typeof(JsonNumberEnumConverter<MealTypeFlags>))] MealTypeFlags MealTypes,
+    int MealTypes,
     DateOnly? StartDate,
     DateOnly? EndDate,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class MealTemplateResponse : BaseEntityResponse<MealTemplateDto> { }
 

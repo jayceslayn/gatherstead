@@ -13,11 +13,7 @@ public record MealAttendanceDto(
     AttendanceStatus Status,
     bool BringOwnFood,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class MealAttendanceResponse : BaseEntityResponse<MealAttendanceDto> { }
 

@@ -40,8 +40,12 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
         var tenantIdValue = context.HttpContext.GetRouteValue("tenantId");
         if (tenantIdValue is null)
         {
-            // No tenantId in route - this filter doesn't apply
-            // (e.g., /api/tenants endpoint doesn't have {tenantId} parameter)
+            // No tenantId in route. A MinimumRole requirement without a {tenantId} route segment
+            // is a developer misconfiguration — the check would never run.
+            if (MinimumRole.HasValue)
+                throw new InvalidOperationException(
+                    $"[RequireTenantAccess(MinimumRole={MinimumRole})] is applied to a route that has no {{tenantId}} segment. " +
+                    $"The authorization check will never execute. Add {{tenantId}} to the route template or remove the minimum-role requirement.");
             return;
         }
 
@@ -70,9 +74,13 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
         var isAppAdmin = await appAdminContext.IsAppAdminAsync();
         if (isAppAdmin == true)
         {
-            if (string.Equals(context.HttpContext.Request.Query["includeDeleted"], "true", StringComparison.OrdinalIgnoreCase))
+            if (IsQueryFlagSet(context.HttpContext, "includeDeleted"))
             {
                 context.HttpContext.Items["IncludeDeletedAuthorized"] = true;
+            }
+            if (IsQueryFlagSet(context.HttpContext, "includeAudit"))
+            {
+                context.HttpContext.Items["IncludeAuditAuthorized"] = true;
             }
             return;
         }
@@ -129,13 +137,20 @@ public class RequireTenantAccessAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        // If includeDeleted=true is requested and user has Manager+ role, authorize it
-        if (string.Equals(context.HttpContext.Request.Query["includeDeleted"], "true", StringComparison.OrdinalIgnoreCase)
-            && HasRequiredRole(tenantUser.Role, TenantRole.Manager))
+        // includeDeleted and includeAudit are sensitive capabilities gated at Manager+.
+        var isManagerPlus = HasRequiredRole(tenantUser.Role, TenantRole.Manager);
+        if (isManagerPlus && IsQueryFlagSet(context.HttpContext, "includeDeleted"))
         {
             context.HttpContext.Items["IncludeDeletedAuthorized"] = true;
         }
+        if (isManagerPlus && IsQueryFlagSet(context.HttpContext, "includeAudit"))
+        {
+            context.HttpContext.Items["IncludeAuditAuthorized"] = true;
+        }
     }
+
+    private static bool IsQueryFlagSet(HttpContext httpContext, string name)
+        => string.Equals(httpContext.Request.Query[name], "true", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Determines if the user's role meets the minimum required role.

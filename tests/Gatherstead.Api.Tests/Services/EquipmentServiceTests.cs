@@ -34,7 +34,8 @@ public class EquipmentServiceTests : IAsyncLifetime
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == (contextTenantId ?? _tenantId));
         var auth = Mock.Of<IMemberAuthorizationService>(a =>
             a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManage));
-        return new EquipmentService(_dbContext, tenantContext, auth);
+        return new EquipmentService(_dbContext, tenantContext, auth,
+            Mock.Of<Gatherstead.Api.Contracts.Responses.IAuditVisibilityContext>());
     }
 
     // ── ValidateTenantContext ─────────────────────────────────────────────────

@@ -9,11 +9,7 @@ public record TaskIntentDto(
     Guid TaskPlanId,
     Guid HouseholdMemberId,
     bool Volunteered,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class TaskIntentResponse : BaseEntityResponse<TaskIntentDto> { }
 

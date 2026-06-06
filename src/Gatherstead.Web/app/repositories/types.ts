@@ -4,19 +4,23 @@ import type { components } from './generated/api'
 
 type S = components['schemas']
 
-// Helper: strips backend audit fields that the frontend doesn't render.
-// Most entity DTOs include audit fields; frontend types only expose business fields.
-type OmitAudit<T> = Omit<T, 'createdAt' | 'updatedAt' | 'isDeleted' | 'deletedAt' | 'deletedByUserId'>
+// Helper: strips the backend audit block and removes the universal optionality that
+// openapi-typescript applies to all DTO fields. Required<T> converts `id?: string` →
+// `id: string` and `notes?: string | null` → `notes: string | null`, so IDs and other
+// required fields become non-optional while explicitly nullable fields stay nullable.
+type OmitAudit<T> = Omit<Required<T>, 'audit'>
 
 // ── Enums ──────────────────────────────────────────────────────────────────
-export type TenantRole = S['TenantRole']
-export type HouseholdRole = S['HouseholdRole']
-export type AttendanceStatus = S['AttendanceStatus']
-export type InvitationStatus = S['InvitationStatus']
-export type AccommodationType = S['AccommodationType']
-export type AccommodationIntentStatus = S['AccommodationIntentStatus']
-export type AccommodationIntentDecision = S['AccommodationIntentDecision']
-export type DietaryCategory = S['DietaryCategory']
+// openapi-typescript inlines enum values per-field rather than naming them.
+// Extract each enum type from a DTO that contains it so they stay in sync with the API.
+export type TenantRole = NonNullable<S['TenantUserDto']['role']>
+export type HouseholdRole = NonNullable<S['HouseholdUserDto']['role']>
+export type AttendanceStatus = NonNullable<S['EventAttendanceDto']['status']>
+export type InvitationStatus = NonNullable<S['InvitationDto']['status']>
+export type AccommodationType = NonNullable<S['AccommodationDto']['type']>
+export type AccommodationIntentStatus = NonNullable<S['AccommodationIntentDto']['status']>
+export type AccommodationIntentDecision = NonNullable<S['AccommodationIntentDto']['decision']>
+export type DietaryCategory = NonNullable<S['DietaryTagDto']['category']>
 
 // MealType and TaskTimeSlot are re-exported from typeUtils (they're also used
 // alongside the flag utility functions defined there)
@@ -29,9 +33,13 @@ export type AttributeWriteEntry = S['AttributeWriteEntry']
 
 // ── Tenants ────────────────────────────────────────────────────────────────
 // TenantSummary augments the backend lightweight record with an attributes array.
-// The list endpoint returns the C# TenantSummary (no attributes); the repository
-// layer adds attributes: [] to satisfy this unified type.
-export type TenantSummary = S['TenantSummary'] & { attributes: S['AttributeDto'][] }
+// userRole is overridden to TenantRole | null because Swashbuckle 10.x incorrectly
+// strips nullable from value-type enums; app admins receive null when they have no
+// explicit tenant membership.
+export type TenantSummary = Omit<S['TenantSummary'], 'userRole'> & {
+  userRole: TenantRole | null
+  attributes: S['AttributeDto'][]
+}
 export type TenantUserSummary = S['TenantUserDto']
 export type HouseholdUserSummary = S['HouseholdUserDto']
 

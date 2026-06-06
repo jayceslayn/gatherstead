@@ -11,17 +11,13 @@ public record TaskTemplateDto(
     Guid TenantId,
     Guid EventId,
     string Name,
-    [property: JsonConverter(typeof(JsonNumberEnumConverter<TaskTimeSlotFlags>))] TaskTimeSlotFlags TimeSlots,
+    int TimeSlots,
     DateOnly? StartDate,
     DateOnly? EndDate,
     int? MinimumAssignees,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class TaskTemplateResponse : BaseEntityResponse<TaskTemplateDto> { }
 

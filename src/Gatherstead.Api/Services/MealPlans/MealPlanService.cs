@@ -14,15 +14,18 @@ public class MealPlanService : IMealPlanService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public MealPlanService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<MealPlanDto>>> ListAsync(
@@ -111,8 +114,8 @@ public class MealPlanService : IMealPlanService
         return response;
     }
 
-    private static MealPlanDto MapToDto(Data.Entities.MealPlan p) => new(
+    private MealPlanDto MapToDto(Data.Entities.MealPlan p) => new(
         p.Id, p.TenantId, p.MealTemplateId, p.Day, p.MealType, p.Notes,
         p.IsException, p.ExceptionReason,
-        p.CreatedAt, p.UpdatedAt, p.IsDeleted, p.DeletedAt, p.DeletedByUserId);
+        p.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

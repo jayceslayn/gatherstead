@@ -6,7 +6,6 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Gatherstead.Api.Services.Addresses;
 
@@ -18,32 +17,18 @@ public class AddressService : IAddressService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    private static readonly Expression<Func<Address, AddressDto>> MapToDtoExpression =
-        address => new AddressDto(
-            address.Id,
-            address.TenantId,
-            address.HouseholdMemberId,
-            address.Line1,
-            address.Line2,
-            address.City,
-            address.State,
-            address.PostalCode,
-            address.Country,
-            address.IsPrimary,
-            address.CreatedAt,
-            address.UpdatedAt,
-            address.IsDeleted,
-            address.DeletedAt,
-            address.DeletedByUserId);
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public AddressService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<AddressDto>>> ListAsync(
@@ -73,9 +58,8 @@ public class AddressService : IAddressService
             }
         }
 
-        var addresses = await query
-            .Select(MapToDtoExpression)
-            .ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var addresses = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<AddressDto>>.SuccessfulResponse(addresses);
     }
@@ -263,7 +247,7 @@ public class AddressService : IAddressService
         }
     }
 
-    private static AddressDto MapToDto(Address address) => new(
+    private AddressDto MapToDto(Address address) => new(
         address.Id,
         address.TenantId,
         address.HouseholdMemberId,
@@ -274,9 +258,5 @@ public class AddressService : IAddressService
         address.PostalCode,
         address.Country,
         address.IsPrimary,
-        address.CreatedAt,
-        address.UpdatedAt,
-        address.IsDeleted,
-        address.DeletedAt,
-        address.DeletedByUserId);
+        address.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

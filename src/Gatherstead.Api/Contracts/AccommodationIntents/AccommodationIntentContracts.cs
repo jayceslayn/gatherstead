@@ -15,11 +15,7 @@ public record AccommodationIntentDto(
     AccommodationIntentDecision Decision,
     int? PartySize,
     int? Priority,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class AccommodationIntentResponse : BaseEntityResponse<AccommodationIntentDto> { }
 

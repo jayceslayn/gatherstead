@@ -29,6 +29,7 @@ using Gatherstead.Api.Services.Equipment;
 using Gatherstead.Api.Services.Reports;
 using Gatherstead.Api.Services.Invitations;
 using Gatherstead.Api.Services.Provisioning;
+using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
 using Gatherstead.Data;
@@ -49,12 +50,14 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.UseInlineDefinitionsForEnums();
     c.DescribeAllParametersInCamelCase();
+    c.SupportNonNullableReferenceTypes();
 });
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>();
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<IIncludeDeletedContext, HttpContextIncludeDeletedContext>();
+builder.Services.AddScoped<IAuditVisibilityContext, HttpContextAuditVisibilityContext>();
 builder.Services.AddScoped<AuditingSaveChangesInterceptor>();
 builder.Services.AddScoped<IAppAdminContext, HttpContextAppAdminContext>();
 builder.Services.AddScoped<IMemberAuthorizationService, MemberAuthorizationService>();

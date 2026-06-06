@@ -14,15 +14,18 @@ public class TaskPlanService : ITaskPlanService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public TaskPlanService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TaskPlanDto>>> ListAsync(
@@ -112,8 +115,8 @@ public class TaskPlanService : ITaskPlanService
         return response;
     }
 
-    private static TaskPlanDto MapToDto(Data.Entities.TaskPlan p) => new(
+    private TaskPlanDto MapToDto(Data.Entities.TaskPlan p) => new(
         p.Id, p.TenantId, p.TemplateId, p.Day, p.TimeSlot, p.Completed, p.Notes,
         p.IsException, p.ExceptionReason,
-        p.CreatedAt, p.UpdatedAt, p.IsDeleted, p.DeletedAt, p.DeletedByUserId);
+        p.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

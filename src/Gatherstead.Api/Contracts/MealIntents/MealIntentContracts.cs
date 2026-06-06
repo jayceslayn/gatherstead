@@ -10,11 +10,7 @@ public record MealIntentDto(
     Guid MealPlanId,
     Guid HouseholdMemberId,
     bool Volunteered,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class MealIntentResponse : BaseEntityResponse<MealIntentDto> { }
 

@@ -17,15 +17,18 @@ public class PropertyService : IPropertyService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public PropertyService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<PropertyDto>>> ListAsync(
@@ -261,15 +264,11 @@ public class PropertyService : IPropertyService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private static PropertyDto MapToDto(Property p, IReadOnlyList<AttributeDto> attributes) => new(
+    private PropertyDto MapToDto(Property p, IReadOnlyList<AttributeDto> attributes) => new(
         p.Id,
         p.TenantId,
         p.Name,
         p.Notes,
-        p.CreatedAt,
-        p.UpdatedAt,
-        p.IsDeleted,
-        p.DeletedAt,
-        p.DeletedByUserId,
-        attributes);
+        attributes,
+        p.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

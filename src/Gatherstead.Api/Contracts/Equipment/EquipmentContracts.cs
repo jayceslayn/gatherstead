@@ -10,12 +10,8 @@ public record EquipmentDto(
     Guid? PropertyId,
     string Name,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class EquipmentResponse : BaseEntityResponse<EquipmentDto> { }
 

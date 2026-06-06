@@ -15,15 +15,18 @@ public class AccommodationIntentService : IAccommodationIntentService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public AccommodationIntentService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<AccommodationIntentDto>>> ListAsync(
@@ -207,8 +210,8 @@ public class AccommodationIntentService : IAccommodationIntentService
         return response;
     }
 
-    private static AccommodationIntentDto MapToDto(AccommodationIntent i) => new(
+    private AccommodationIntentDto MapToDto(AccommodationIntent i) => new(
         i.Id, i.TenantId, i.AccommodationId, i.HouseholdMemberId, i.Night, i.Status, i.Notes,
         i.Decision, i.PartySize, i.Priority,
-        i.CreatedAt, i.UpdatedAt, i.IsDeleted, i.DeletedAt, i.DeletedByUserId);
+        i.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

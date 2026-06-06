@@ -3,8 +3,9 @@ import { MEAL_TYPE_FLAGS, TASK_SLOT_FLAGS } from './generated/flags.gen'
 
 type S = components['schemas']
 
-export type MealType = S['MealType']
-export type TaskTimeSlot = S['TaskTimeSlot']
+// openapi-typescript inlines enum values rather than naming them — extract from a DTO field.
+export type MealType = NonNullable<S['MealPlanDto']['mealType']>
+export type TaskTimeSlot = NonNullable<S['TaskPlanDto']['timeSlot']>
 
 export { MEAL_TYPE_FLAGS, TASK_SLOT_FLAGS }
 

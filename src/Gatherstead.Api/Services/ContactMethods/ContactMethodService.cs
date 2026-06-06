@@ -6,7 +6,6 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
-using System.Linq.Expressions;
 
 namespace Gatherstead.Api.Services.ContactMethods;
 
@@ -18,28 +17,18 @@ public class ContactMethodService : IContactMethodService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
 
-    private static readonly Expression<Func<ContactMethod, ContactMethodDto>> MapToDtoExpression =
-        contact => new ContactMethodDto(
-            contact.Id,
-            contact.TenantId,
-            contact.HouseholdMemberId,
-            contact.Type,
-            contact.Value,
-            contact.IsPrimary,
-            contact.CreatedAt,
-            contact.UpdatedAt,
-            contact.IsDeleted,
-            contact.DeletedAt,
-            contact.DeletedByUserId);
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public ContactMethodService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<ContactMethodDto>>> ListAsync(
@@ -69,9 +58,8 @@ public class ContactMethodService : IContactMethodService
             }
         }
 
-        var contacts = await query
-            .Select(MapToDtoExpression)
-            .ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var contacts = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<ContactMethodDto>>.SuccessfulResponse(contacts);
     }
@@ -243,16 +231,12 @@ public class ContactMethodService : IContactMethodService
         }
     }
 
-    private static ContactMethodDto MapToDto(ContactMethod contact) => new(
+    private ContactMethodDto MapToDto(ContactMethod contact) => new(
         contact.Id,
         contact.TenantId,
         contact.HouseholdMemberId,
         contact.Type,
         contact.Value,
         contact.IsPrimary,
-        contact.CreatedAt,
-        contact.UpdatedAt,
-        contact.IsDeleted,
-        contact.DeletedAt,
-        contact.DeletedByUserId);
+        contact.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

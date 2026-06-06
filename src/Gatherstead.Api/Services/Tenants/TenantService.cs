@@ -18,17 +18,20 @@ public class TenantService : ITenantService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IAppAdminContext _appAdminContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public TenantService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IAppAdminContext appAdminContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TenantSummary>>> ListAsync(
@@ -268,14 +271,10 @@ public class TenantService : ITenantService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private static TenantDto MapToDto(Tenant tenant, IReadOnlyList<AttributeDto> attributes) => new(
+    private TenantDto MapToDto(Tenant tenant, IReadOnlyList<AttributeDto> attributes) => new(
         tenant.Id,
         tenant.Name,
         tenant.Notes,
-        tenant.CreatedAt,
-        tenant.UpdatedAt,
-        tenant.IsDeleted,
-        tenant.DeletedAt,
-        tenant.DeletedByUserId,
-        attributes);
+        attributes,
+        tenant.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

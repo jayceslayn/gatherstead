@@ -11,11 +11,7 @@ public record MemberRelationshipDto(
     Guid RelatedMemberId,
     RelationshipType RelationshipType,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class MemberRelationshipResponse : BaseEntityResponse<MemberRelationshipDto> { }
 

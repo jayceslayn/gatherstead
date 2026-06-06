@@ -19,17 +19,20 @@ public class EventService : IEventService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly PlanSyncService _planSyncService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public EventService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         IMemberAuthorizationService memberAuthorizationService,
-        PlanSyncService planSyncService)
+        PlanSyncService planSyncService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
         _planSyncService = planSyncService ?? throw new ArgumentNullException(nameof(planSyncService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<EventDto>>> ListAsync(
@@ -279,7 +282,7 @@ public class EventService : IEventService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private static EventDto MapToDto(Event @event, IReadOnlyList<AttributeDto> attributes) => new(
+    private EventDto MapToDto(Event @event, IReadOnlyList<AttributeDto> attributes) => new(
         @event.Id,
         @event.TenantId,
         @event.PropertyId,
@@ -287,10 +290,6 @@ public class EventService : IEventService
         @event.StartDate,
         @event.EndDate,
         @event.Notes,
-        @event.CreatedAt,
-        @event.UpdatedAt,
-        @event.IsDeleted,
-        @event.DeletedAt,
-        @event.DeletedByUserId,
-        attributes);
+        attributes,
+        @event.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

@@ -38,6 +38,7 @@ class Program
 
             EnsureColumnMasterKey(connection, keyVaultUrl);
             EnsureColumnEncryptionKey(connection);
+            EnsureColumnEncryption(connection);
             EnsureTemporalRetention(connection);
 
             Console.WriteLine("\nDatabase setup completed successfully.");
@@ -104,6 +105,65 @@ class Program
         createCmd.ExecuteNonQuery();
 
         Console.WriteLine("Column Encryption Key created successfully.");
+    }
+
+    private static void EnsureColumnEncryption(SqlConnection connection)
+    {
+        Console.WriteLine("\nChecking column-level encryption...");
+
+        // Columns that must be encrypted and their SQL types.
+        // ContactMethod.Value uses Deterministic so equality lookups remain possible.
+        // All other PII columns use Randomized (no filtering needed against those values).
+        var columns = new[]
+        {
+            ("HouseholdMembers", "Name",         "NVARCHAR(200)", "RANDOMIZED"),
+            ("HouseholdMembers", "BirthDate",     "DATE",          "RANDOMIZED"),
+            ("HouseholdMembers", "DietaryNotes",  "NVARCHAR(500)", "RANDOMIZED"),
+            ("ContactMethods",   "Value",         "NVARCHAR(256)", "DETERMINISTIC"),
+        };
+
+        foreach (var (table, column, sqlType, encType) in columns)
+        {
+            // sys.columns.encryption_type is non-NULL when the column is already encrypted.
+            var checkCmd = new SqlCommand(@"
+                SELECT COUNT(*)
+                FROM sys.columns c
+                JOIN sys.tables  t ON c.object_id = t.object_id
+                WHERE t.name = @table AND c.name = @column
+                  AND c.encryption_type IS NOT NULL", connection);
+            checkCmd.Parameters.AddWithValue("@table", table);
+            checkCmd.Parameters.AddWithValue("@column", column);
+
+            if ((int)checkCmd.ExecuteScalar() > 0)
+            {
+                Console.WriteLine($"  {table}.{column} is already encrypted — skipping.");
+                continue;
+            }
+
+            Console.WriteLine($"  Encrypting {table}.{column} ({encType})...");
+
+            // Always Encrypted with Secure Enclaves supports in-place encryption via ALTER COLUMN.
+            // String columns require a BIN2 collation; non-string types (DATE) do not.
+            var collation = sqlType.StartsWith("NVARCHAR", StringComparison.OrdinalIgnoreCase)
+                ? " COLLATE Latin1_General_BIN2"
+                : string.Empty;
+
+            var sql = $"""
+                ALTER TABLE dbo.[{table}]
+                ALTER COLUMN [{column}] {sqlType}{collation}
+                ENCRYPTED WITH (
+                    COLUMN_ENCRYPTION_KEY = [{CekName}],
+                    ENCRYPTION_TYPE = {encType},
+                    ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256'
+                ) WITH (ONLINE = ON);
+                """;
+
+            var alterCmd = new SqlCommand(sql, connection);
+            alterCmd.ExecuteNonQuery();
+            Console.WriteLine($"  {table}.{column} encrypted successfully.");
+        }
+
+        Console.WriteLine("Column encryption check complete.");
     }
 
     private static void EnsureTemporalRetention(SqlConnection connection)

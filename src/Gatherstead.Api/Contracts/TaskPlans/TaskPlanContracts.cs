@@ -13,11 +13,7 @@ public record TaskPlanDto(
     string? Notes,
     bool IsException,
     string? ExceptionReason,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class TaskPlanResponse : BaseEntityResponse<TaskPlanDto> { }
 

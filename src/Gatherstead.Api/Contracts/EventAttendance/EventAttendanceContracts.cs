@@ -5,22 +5,18 @@ using Gatherstead.Data.Entities;
 namespace Gatherstead.Api.Contracts.EventAttendance;
 
 public record EventAttendanceDto(
-    Guid Id,
-    Guid TenantId,
-    Guid EventId,
-    Guid HouseholdMemberId,
-    DateOnly Day,
-    AttendanceStatus Status,
+    [property: Required] Guid Id,
+    [property: Required] Guid TenantId,
+    [property: Required] Guid EventId,
+    [property: Required] Guid HouseholdMemberId,
+    [property: Required] DateOnly Day,
+    [property: Required] AttendanceStatus Status,
     DateTimeOffset? ArrivalWindowStart,
     DateTimeOffset? ArrivalWindowEnd,
     DateTimeOffset? DepartureWindowStart,
     DateTimeOffset? DepartureWindowEnd,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId);
+    AuditInfo? Audit);
 
 public class EventAttendanceResponse : BaseEntityResponse<EventAttendanceDto> { }
 

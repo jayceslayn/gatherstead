@@ -67,6 +67,7 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
                     break;
                 case EntityState.Deleted:
                     ConvertToSoftDelete(entry, userId.Value, utcNow);
+                    // TODO: Cascade soft delete to FK-related entities that also implement IAuditableEntity?
                     break;
             }
         }
@@ -84,7 +85,7 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
 
         foreach (var entry in context.ChangeTracker.Entries())
         {
-            if (entry.State != EntityState.Added)
+            if (entry.State != EntityState.Added && entry.State != EntityState.Modified)
             {
                 continue;
             }
@@ -97,6 +98,29 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
                 continue;
             }
 
+            if (entry.State == EntityState.Modified)
+            {
+                // Block TenantId reassignment — the value must not change from what was loaded.
+                if (tenantIdProperty.OriginalValue is Guid originalTenantId &&
+                    tenantIdProperty.CurrentValue is Guid updatedTenantId &&
+                    originalTenantId != updatedTenantId)
+                {
+                    _logger.LogCritical(
+                        "Cross-tenant reassignment blocked: entity {EntityType} TenantId changed from {OriginalTenantId} " +
+                        "to {NewTenantId}. UserId: {UserId}",
+                        entry.Entity.GetType().Name,
+                        originalTenantId,
+                        updatedTenantId,
+                        _currentUserContext.UserId);
+
+                    throw new InvalidOperationException(
+                        $"Entity '{entry.Entity.GetType().Name}' TenantId cannot be changed from '{originalTenantId}' " +
+                        $"to '{updatedTenantId}'. Cross-tenant reassignment is not permitted.");
+                }
+                continue;
+            }
+
+            // EntityState.Added: entity TenantId must match the current request's tenant context.
             var entityTenantId = (Guid)tenantIdProperty.CurrentValue!;
             if (entityTenantId != currentTenantId.Value)
             {

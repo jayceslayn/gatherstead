@@ -18,15 +18,18 @@ public class EquipmentService : IEquipmentService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public EquipmentService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<EquipmentDto>>> ListAsync(
@@ -285,16 +288,12 @@ public class EquipmentService : IEquipmentService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private static EquipmentDto MapToDto(Gatherstead.Data.Entities.Equipment e, IReadOnlyList<AttributeDto> attributes) => new(
+    private EquipmentDto MapToDto(Gatherstead.Data.Entities.Equipment e, IReadOnlyList<AttributeDto> attributes) => new(
         e.Id,
         e.TenantId,
         e.PropertyId,
         e.Name,
         e.Notes,
-        e.CreatedAt,
-        e.UpdatedAt,
-        e.IsDeleted,
-        e.DeletedAt,
-        e.DeletedByUserId,
-        attributes);
+        attributes,
+        e.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

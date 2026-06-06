@@ -16,15 +16,18 @@ public class HouseholdService : IHouseholdService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuditVisibilityContext _auditVisibility;
 
     public HouseholdService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuditVisibilityContext auditVisibility)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>> ListAsync(
@@ -265,15 +268,11 @@ public class HouseholdService : IHouseholdService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole, a.HouseholdMinRole))
             .ToList();
 
-    private static HouseholdDto MapToDto(Household household, IReadOnlyList<AttributeDto> attributes) => new(
+    private HouseholdDto MapToDto(Household household, IReadOnlyList<AttributeDto> attributes) => new(
         household.Id,
         household.TenantId,
         household.Name,
         household.Notes,
-        household.CreatedAt,
-        household.UpdatedAt,
-        household.IsDeleted,
-        household.DeletedAt,
-        household.DeletedByUserId,
-        attributes);
+        attributes,
+        household.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

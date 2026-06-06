@@ -14,12 +14,8 @@ public record AccommodationDto(
     int? CapacityAdults,
     int? CapacityChildren,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class AccommodationResponse : BaseEntityResponse<AccommodationDto> { }
 

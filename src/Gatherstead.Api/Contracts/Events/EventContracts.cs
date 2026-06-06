@@ -12,12 +12,8 @@ public record EventDto(
     DateOnly StartDate,
     DateOnly EndDate,
     string? Notes,
-    DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    bool IsDeleted,
-    DateTimeOffset? DeletedAt,
-    Guid? DeletedByUserId,
-    IReadOnlyList<AttributeDto> Attributes);
+    IReadOnlyList<AttributeDto> Attributes,
+    AuditInfo? Audit);
 
 public class EventResponse : BaseEntityResponse<EventDto> { }
 

@@ -5,14 +5,14 @@ using Gatherstead.Data.Entities;
 namespace Gatherstead.Api.Contracts.Invitations;
 
 public record InvitationDto(
-    Guid Id,
-    Guid TenantId,
-    string Email,
-    TenantRole Role,
+    [property: Required] Guid Id,
+    [property: Required] Guid TenantId,
+    [property: Required] string Email,
+    [property: Required] TenantRole Role,
     Guid? HouseholdId,
     HouseholdRole? HouseholdRole,
-    InvitationStatus Status,
-    DateTimeOffset CreatedAt,
+    [property: Required] InvitationStatus Status,
+    [property: Required] DateTimeOffset CreatedAt,
     DateTimeOffset? AcceptedAt);
 
 public class InvitationResponse : BaseEntityResponse<InvitationDto> { }
