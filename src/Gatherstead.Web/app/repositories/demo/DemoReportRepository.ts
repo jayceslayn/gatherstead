@@ -5,6 +5,9 @@ import type {
   EventReportMeal,
   EventReportAttendee,
   EventReportDietaryTally,
+  EventReportTask,
+  EventReportAccommodation,
+  EventReportOccupant,
   MealType,
 } from '../types'
 import { getDemoStore } from './DemoStore'
@@ -14,6 +17,12 @@ import { DEMO_DIETARY_TAGS } from './DemoDietaryTagRepository'
 const SLUG_TO_DISPLAY_NAME = new Map(DEMO_DIETARY_TAGS.map(t => [t.slug.toLowerCase(), t.displayName]))
 
 const MEAL_TYPE_ORDER: Record<MealType, number> = { Breakfast: 0, Lunch: 1, Dinner: 2 }
+
+// "Anytime" (and unslotted) tasks lead, then the timed slots in order (mirrors the backend sort).
+const TASK_SLOT_ORDER: Record<string, number> = { Anytime: -1, Morning: 0, Midday: 1, Evening: 2 }
+function taskSlotRank(slot: string | null | undefined): number {
+  return slot ? TASK_SLOT_ORDER[slot] ?? 99 : -1
+}
 
 export class DemoReportRepository implements IReportRepository {
   // Mirrors the backend EventReportService aggregation against the in-memory demo store.
@@ -30,6 +39,21 @@ export class DemoReportRepository implements IReportRepository {
         .filter(p => templateNameById.has(p.mealTemplateId))
         .map(p => p.id),
     )
+
+    // Task templates → plans → intents for this event.
+    const taskTemplateById = new Map(
+      store.taskTemplates.value.filter(t => t.eventId === eventId).map(t => [t.id, t]),
+    )
+    const taskPlansForEvent = store.taskPlans.value.filter(p => taskTemplateById.has(p.templateId))
+    const intentsByPlan = new Map<string, string[]>()
+    for (const intent of store.taskIntents.value) {
+      const names = intentsByPlan.get(intent.taskPlanId) ?? []
+      names.push(memberById.get(intent.householdMemberId)?.name ?? '')
+      intentsByPlan.set(intent.taskPlanId, names)
+    }
+
+    // Accommodations for the event's property → intents on the event's nights.
+    const eventAccommodations = store.accommodations.value.filter(a => a.propertyId === event.propertyId)
 
     // Resolve slugs to display names (mirrors backend slug → DisplayName lookup).
     // Unknown slugs fall back to the slug string itself.
@@ -95,7 +119,60 @@ export class DemoReportRepository implements IReportRepository {
         }
       })
 
-      days.push({ day, going, maybe, meals })
+      // Tasks for this day, ordered by slot then template name (mirrors backend).
+      const tasks: EventReportTask[] = taskPlansForEvent
+        .filter(p => p.day === day)
+        .map((plan): EventReportTask => {
+          const template = taskTemplateById.get(plan.templateId)
+          const assignees = [...(intentsByPlan.get(plan.id) ?? [])]
+            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+          return {
+            taskPlanId: plan.id,
+            templateId: plan.templateId,
+            templateName: template?.name ?? '',
+            timeSlot: plan.timeSlot ?? null,
+            assigneeCount: assignees.length,
+            minimumAssignees: template?.minimumAssignees ?? null,
+            completed: plan.completed ?? false,
+            isException: plan.isException ?? false,
+            exceptionReason: plan.exceptionReason ?? null,
+            assignees,
+          }
+        })
+        .sort((a, b) =>
+          taskSlotRank(a.timeSlot) - taskSlotRank(b.timeSlot)
+          || a.templateName.localeCompare(b.templateName, undefined, { sensitivity: 'base' }))
+
+      // Accommodations occupied this night (declined excluded; null party size counts as 1).
+      const accommodations: EventReportAccommodation[] = eventAccommodations
+        .map((accommodation): EventReportAccommodation | null => {
+          const occupants: EventReportOccupant[] = store.accommodationIntents.value
+            .filter(i => i.accommodationId === accommodation.id && i.night === day && i.decision !== 'Declined')
+            .map((i): EventReportOccupant => ({
+              memberId: i.householdMemberId,
+              name: memberById.get(i.householdMemberId)?.name ?? '',
+              status: i.status ?? 'Intent',
+              decision: i.decision ?? 'Pending',
+              partySize: i.partySize ?? null,
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+
+          if (occupants.length === 0) return null
+
+          return {
+            accommodationId: accommodation.id,
+            name: accommodation.name,
+            type: accommodation.type ?? 'Bedroom',
+            capacityAdults: accommodation.capacityAdults ?? null,
+            capacityChildren: accommodation.capacityChildren ?? null,
+            occupied: occupants.reduce((sum, o) => sum + (o.partySize ?? 1), 0),
+            occupants,
+          }
+        })
+        .filter((a): a is EventReportAccommodation => a !== null)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+
+      days.push({ day, going, maybe, meals, tasks, accommodations })
     }
 
     return {

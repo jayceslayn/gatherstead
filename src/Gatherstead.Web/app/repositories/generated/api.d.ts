@@ -4036,6 +4036,21 @@ export interface components {
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
         };
+        EventReportAccommodationDto: {
+            /** Format: uuid */
+            accommodationId: string;
+            name: string;
+            /** @enum {string} */
+            type: "Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite";
+            /** Format: int32 */
+            capacityAdults?: number | null;
+            /** Format: int32 */
+            capacityChildren?: number | null;
+            notes?: string | null;
+            /** Format: int32 */
+            occupied: number;
+            occupants: components["schemas"]["EventReportOccupantDto"][];
+        };
         EventReportAttendeeDto: {
             /** Format: uuid */
             memberId: string;
@@ -4054,6 +4069,8 @@ export interface components {
             /** Format: int32 */
             maybe: number;
             meals: components["schemas"]["EventReportMealDto"][];
+            tasks: components["schemas"]["EventReportTaskDto"][];
+            accommodations: components["schemas"]["EventReportAccommodationDto"][];
         };
         EventReportDto: {
             /** Format: uuid */
@@ -4082,10 +4099,38 @@ export interface components {
             dietary: components["schemas"]["DietaryTallyDto"][];
             attendees: components["schemas"]["EventReportAttendeeDto"][];
         };
+        EventReportOccupantDto: {
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+            /** @enum {string} */
+            status: "Intent" | "Hold" | "Confirmed";
+            /** @enum {string} */
+            decision: "Pending" | "Approved" | "Declined";
+            /** Format: int32 */
+            partySize?: number | null;
+        };
         EventReportResponse: {
             entity?: components["schemas"]["EventReportDto"];
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
+        EventReportTaskDto: {
+            /** Format: uuid */
+            taskPlanId: string;
+            /** Format: uuid */
+            templateId: string;
+            templateName: string;
+            /** @enum {string|null} */
+            timeSlot?: "Morning" | "Midday" | "Evening" | "Anytime" | null;
+            /** Format: int32 */
+            assigneeCount: number;
+            /** Format: int32 */
+            minimumAssignees?: number | null;
+            completed: boolean;
+            isException: boolean;
+            exceptionReason?: string | null;
+            assignees: string[];
         };
         EventResponse: {
             entity?: components["schemas"]["EventDto"];

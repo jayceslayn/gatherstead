@@ -87,6 +87,9 @@ export type EventReportDay = S['EventReportDayDto']
 export type EventReportMeal = S['EventReportMealDto']
 export type EventReportAttendee = S['EventReportAttendeeDto']
 export type EventReportDietaryTally = S['DietaryTallyDto']
+export type EventReportTask = S['EventReportTaskDto']
+export type EventReportAccommodation = S['EventReportAccommodationDto']
+export type EventReportOccupant = S['EventReportOccupantDto']
 
 // ── Flag utilities ────────────────────────────────────────────────────────
 export {

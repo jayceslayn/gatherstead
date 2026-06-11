@@ -60,24 +60,30 @@ const displayName = computed(() => {
   return name ?? t('common.appName')
 })
 
-const mobileNavItems = computed(() => {
-  const items = [
-    { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
-    { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
-    { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
-    { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
-  ]
-  if (isManagerOrAbove.value) {
-    items.push({ label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' })
-  }
-  return items
-})
+const mobileNavItems = computed(() => [
+  { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
+  { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
+  { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
+  { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
+])
+
+// Manager-only destinations live behind a "More" sheet so the bottom bar stays uncrowded.
+const mobileMoreItems = computed(() => isManagerOrAbove.value
+  ? [[
+      { label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' },
+      { label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' },
+    ]]
+  : [],
+)
 
 const route = useRoute()
 function isActive(path: string) {
   if (path === '/app') return route.path === '/app'
   return route.path.startsWith(path)
 }
+const isMoreActive = computed(() =>
+  route.path.startsWith('/app/reports') || route.path.startsWith('/app/settings'),
+)
 </script>
 
 <template>
@@ -153,6 +159,23 @@ function isActive(path: string) {
         <UIcon :name="item.icon" class="size-6" />
         <span>{{ item.label }}</span>
       </NuxtLink>
+      <UDropdownMenu
+        v-if="mobileMoreItems.length"
+        :items="mobileMoreItems"
+        :content="{ side: 'top', align: 'end' }"
+        :ui="{ content: 'w-44' }"
+        class="flex-1"
+      >
+        <button
+          type="button"
+          class="w-full h-full flex flex-col items-center justify-center gap-0.5 text-xs transition-colors"
+          :class="isMoreActive ? 'text-primary' : 'text-muted hover:text-default'"
+          :aria-label="t('nav.more')"
+        >
+          <UIcon name="i-heroicons-ellipsis-horizontal-circle" class="size-6" />
+          <span>{{ t('nav.more') }}</span>
+        </button>
+      </UDropdownMenu>
     </nav>
   </div>
 </template>

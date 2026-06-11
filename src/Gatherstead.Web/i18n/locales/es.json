@@ -249,7 +249,18 @@
       "dietaryCount": "{n} dietético",
       "showDetails": "Mostrar detalles",
       "hideDetails": "Ocultar detalles",
-      "comingSoon": "Esta sección del informe estará disponible pronto."
+      "comingSoon": "Esta sección del informe estará disponible pronto.",
+      "noTasks": "No hay tareas para este día.",
+      "noAccommodations": "Nadie se aloja este día.",
+      "assignees": "Asignados",
+      "noAssignees": "Aún no hay nadie asignado.",
+      "assigneeCount": "{n} asignados",
+      "assigneeRatio": "{n}/{m} asignados",
+      "occupancy": "{n}/{m} alojados",
+      "occupantCount": "{n} alojados",
+      "prevDay": "Día anterior",
+      "nextDay": "Día siguiente",
+      "dayOf": "Día {n} de {total}"
     }
   },
   "accommodation": {

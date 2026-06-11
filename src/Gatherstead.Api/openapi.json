@@ -7733,6 +7733,61 @@
         },
         "additionalProperties": false
       },
+      "EventReportAccommodationDto": {
+        "required": [
+          "accommodationId",
+          "name",
+          "occupants",
+          "occupied",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "accommodationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "Bedroom",
+              "Bunk",
+              "RvPad",
+              "Tent",
+              "Offsite"
+            ],
+            "type": "string"
+          },
+          "capacityAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "capacityChildren": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "occupied": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "occupants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventReportOccupantDto"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "EventReportAttendeeDto": {
         "required": [
           "bringOwnFood",
@@ -7777,10 +7832,12 @@
       },
       "EventReportDayDto": {
         "required": [
+          "accommodations",
           "day",
           "going",
           "maybe",
-          "meals"
+          "meals",
+          "tasks"
         ],
         "type": "object",
         "properties": {
@@ -7800,6 +7857,18 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EventReportMealDto"
+            }
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventReportTaskDto"
+            }
+          },
+          "accommodations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventReportAccommodationDto"
             }
           }
         },
@@ -7901,6 +7970,47 @@
         },
         "additionalProperties": false
       },
+      "EventReportOccupantDto": {
+        "required": [
+          "decision",
+          "memberId",
+          "name",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "Intent",
+              "Hold",
+              "Confirmed"
+            ],
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "Pending",
+              "Approved",
+              "Declined"
+            ],
+            "type": "string"
+          },
+          "partySize": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "EventReportResponse": {
         "type": "object",
         "properties": {
@@ -7916,6 +8026,68 @@
               "$ref": "#/components/schemas/ResponseMessage"
             },
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "EventReportTaskDto": {
+        "required": [
+          "assigneeCount",
+          "assignees",
+          "completed",
+          "isException",
+          "taskPlanId",
+          "templateId",
+          "templateName"
+        ],
+        "type": "object",
+        "properties": {
+          "taskPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "timeSlot": {
+            "enum": [
+              "Morning",
+              "Midday",
+              "Evening",
+              "Anytime"
+            ],
+            "type": "string",
+            "nullable": true
+          },
+          "assigneeCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimumAssignees": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "isException": {
+            "type": "boolean"
+          },
+          "exceptionReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "assignees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false

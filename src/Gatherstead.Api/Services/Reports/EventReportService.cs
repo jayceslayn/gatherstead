@@ -78,9 +78,48 @@ public class EventReportService : IEventReportService
             .Where(a => a.TenantId == tenantId && a.EventId == eventId)
             .ToListAsync(cancellationToken);
 
-        // Members referenced by any attendance, plus their dietary data.
+        // Task templates → plans → intents (non-deleted via global query filters).
+        var taskTemplates = await _dbContext.TaskTemplates
+            .AsNoTracking()
+            .Where(t => t.TenantId == tenantId && t.EventId == eventId)
+            .ToListAsync(cancellationToken);
+
+        var taskTemplateIds = taskTemplates.Select(t => t.Id).ToList();
+
+        var taskPlans = await _dbContext.TaskPlans
+            .AsNoTracking()
+            .Where(p => p.TenantId == tenantId && taskTemplateIds.Contains(p.TemplateId))
+            .ToListAsync(cancellationToken);
+
+        var taskPlanIds = taskPlans.Select(p => p.Id).ToList();
+
+        var taskIntents = await _dbContext.TaskIntents
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId && taskPlanIds.Contains(i.TaskPlanId))
+            .ToListAsync(cancellationToken);
+
+        // Accommodations for the event's property → intents on the event's nights.
+        var accommodations = await _dbContext.Accommodations
+            .AsNoTracking()
+            .Where(a => a.TenantId == tenantId && a.PropertyId == @event.PropertyId)
+            .ToListAsync(cancellationToken);
+
+        var accommodationIds = accommodations.Select(a => a.Id).ToList();
+
+        var accommodationIntents = await _dbContext.AccommodationIntents
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId
+                && accommodationIds.Contains(i.AccommodationId)
+                && i.Night >= @event.StartDate
+                && i.Night <= @event.EndDate)
+            .ToListAsync(cancellationToken);
+
+        // Members referenced by any attendance, task intent, or accommodation intent, plus
+        // their dietary data — resolved once so assignee/occupant names need no extra query.
         var memberIds = mealAttendances.Select(a => a.HouseholdMemberId)
             .Concat(eventAttendances.Select(a => a.HouseholdMemberId))
+            .Concat(taskIntents.Select(i => i.HouseholdMemberId))
+            .Concat(accommodationIntents.Select(i => i.HouseholdMemberId))
             .Distinct()
             .ToList();
 
@@ -116,6 +155,18 @@ public class EventReportService : IEventReportService
             .GroupBy(p => p.Day)
             .ToDictionary(g => g.Key, g => g.OrderBy(p => p.MealType).ToList());
 
+        var taskTemplateById = taskTemplates.ToDictionary(t => t.Id);
+        var taskPlansByDay = taskPlans
+            .GroupBy(p => p.Day)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        var taskIntentsByPlan = taskIntents
+            .GroupBy(i => i.TaskPlanId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var accommodationIntentsByNight = accommodationIntents
+            .GroupBy(i => (i.AccommodationId, i.Night))
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var days = new List<EventReportDayDto>();
         for (var day = @event.StartDate; day <= @event.EndDate; day = day.AddDays(1))
         {
@@ -130,7 +181,25 @@ public class EventReportService : IEventReportService
                 meals.Add(BuildMeal(plan, templateNames.GetValueOrDefault(plan.MealTemplateId, string.Empty), planAttendance, memberById, dietaryByMember));
             }
 
-            days.Add(new EventReportDayDto(day, going, maybe, meals));
+            // "Anytime" (and unslotted) tasks lead, then the timed slots in order; ties by name.
+            var tasks = taskPlansByDay.GetValueOrDefault(day, [])
+                .OrderBy(p => TaskSlotRank(p.TimeSlot))
+                .ThenBy(p => taskTemplateById.GetValueOrDefault(p.TemplateId)?.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .Select(p => BuildTask(p, taskTemplateById.GetValueOrDefault(p.TemplateId), taskIntentsByPlan.GetValueOrDefault(p.Id, []), memberById))
+                .ToList();
+
+            // Only emit an accommodation for nights that actually have non-declined occupants,
+            // otherwise every day fills with empty cabins.
+            var dayAccommodations = new List<EventReportAccommodationDto>();
+            foreach (var accommodation in accommodations.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                var nightIntents = accommodationIntentsByNight.GetValueOrDefault((accommodation.Id, day), []);
+                var built = BuildAccommodation(accommodation, nightIntents, memberById);
+                if (built is not null)
+                    dayAccommodations.Add(built);
+            }
+
+            days.Add(new EventReportDayDto(day, going, maybe, meals, tasks, dayAccommodations));
         }
 
         response.SetSuccess(new EventReportDto(@event.Id, @event.Name, @event.StartDate, @event.EndDate, days));
@@ -180,6 +249,74 @@ public class EventReportService : IEventReportService
             plan.Id, templateName, plan.MealType,
             going, maybe, notGoing, bringOwnFood,
             dietary, attendees);
+    }
+
+    // "Anytime" and unslotted tasks lead (rank -1) since they apply to the whole day; the timed
+    // slots then follow in their natural Morning → Midday → Evening order.
+    private static int TaskSlotRank(TaskTimeSlot? slot) => slot switch
+    {
+        null or TaskTimeSlot.Anytime => -1,
+        _ => (int)slot,
+    };
+
+    private static EventReportTaskDto BuildTask(
+        TaskPlan plan,
+        TaskTemplate? template,
+        List<TaskIntent> intents,
+        IReadOnlyDictionary<Guid, HouseholdMember> memberById)
+    {
+        // An intent row IS the assignment; Volunteered only distinguishes self-signup from
+        // manager assignment and is not a coverage signal, so every intent counts toward coverage.
+        var assignees = intents
+            .Select(i => memberById.GetValueOrDefault(i.HouseholdMemberId)?.Name ?? string.Empty)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new EventReportTaskDto(
+            plan.Id,
+            plan.TemplateId,
+            template?.Name ?? string.Empty,
+            plan.TimeSlot,
+            assignees.Count,
+            template?.MinimumAssignees,
+            plan.Completed,
+            plan.IsException,
+            plan.ExceptionReason,
+            assignees);
+    }
+
+    private static EventReportAccommodationDto? BuildAccommodation(
+        Accommodation accommodation,
+        List<AccommodationIntent> nightIntents,
+        IReadOnlyDictionary<Guid, HouseholdMember> memberById)
+    {
+        // A declined request frees the slot, so it neither occupies nor appears as an occupant.
+        var occupants = nightIntents
+            .Where(i => i.Decision != AccommodationIntentDecision.Declined)
+            .Select(i => new EventReportOccupantDto(
+                i.HouseholdMemberId,
+                memberById.GetValueOrDefault(i.HouseholdMemberId)?.Name ?? string.Empty,
+                i.Status,
+                i.Decision,
+                i.PartySize))
+            .OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (occupants.Count == 0)
+            return null;
+
+        // A null party size still occupies one slot (the requesting member).
+        var occupied = occupants.Sum(o => o.PartySize ?? 1);
+
+        return new EventReportAccommodationDto(
+            accommodation.Id,
+            accommodation.Name,
+            accommodation.Type,
+            accommodation.CapacityAdults,
+            accommodation.CapacityChildren,
+            accommodation.Notes,
+            occupied,
+            occupants);
     }
 
 }

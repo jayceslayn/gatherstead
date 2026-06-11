@@ -176,5 +176,173 @@ public class EventReportServiceTests : IAsyncLifetime
         Assert.True(result.Successful);
         Assert.All(result.Entity!.Days, d => Assert.Empty(d.Meals));
         Assert.All(result.Entity.Days, d => Assert.Equal(0, d.Going));
+        Assert.All(result.Entity.Days, d => Assert.Empty(d.Tasks));
+        Assert.All(result.Entity.Days, d => Assert.Empty(d.Accommodations));
+    }
+
+    // Creates a task plan on Day1 with the given minimum assignees, and assigns the supplied
+    // members to it. Returns the plan id so callers can flag it as an exception, etc.
+    private async Task<Guid> SeedTaskPlanAsync(int? minimumAssignees, params Guid[] assignees)
+    {
+        var templateId = Guid.NewGuid();
+        _dbContext.TaskTemplates.Add(new TaskTemplate
+        {
+            Id = templateId,
+            TenantId = _tenantId,
+            EventId = _eventId,
+            Name = "Set Up",
+            TimeSlots = TaskTimeSlotFlags.Morning,
+            MinimumAssignees = minimumAssignees,
+        });
+
+        var planId = Guid.NewGuid();
+        _dbContext.TaskPlans.Add(new TaskPlan
+        {
+            Id = planId,
+            TenantId = _tenantId,
+            TemplateId = templateId,
+            Day = Day1,
+            TimeSlot = TaskTimeSlot.Morning,
+        });
+
+        foreach (var memberId in assignees)
+        {
+            _dbContext.TaskIntents.Add(new TaskIntent
+            {
+                Id = Guid.NewGuid(),
+                TenantId = _tenantId,
+                TaskPlanId = planId,
+                HouseholdMemberId = memberId,
+                Volunteered = true,
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return planId;
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_TaskCoverage_ReportsAssigneeCountAndNames()
+    {
+        // min 2, two assignees → "covered" by the client-side threshold.
+        await SeedTaskPlanAsync(minimumAssignees: 2, _alice, _bob);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var task = Assert.Single(result.Entity!.Days.Single(d => d.Day == Day1).Tasks);
+        Assert.Equal("Set Up", task.TemplateName);
+        Assert.Equal(TaskTimeSlot.Morning, task.TimeSlot);
+        Assert.Equal(2, task.MinimumAssignees);
+        Assert.Equal(2, task.AssigneeCount);
+        Assert.Equal(["Alice", "Bob"], task.Assignees);
+        Assert.False(task.IsException);
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_TaskCoverage_PartialAndOpenReflectAssigneeCount()
+    {
+        // min 2, one assignee → "partial".
+        await SeedTaskPlanAsync(minimumAssignees: 2, _alice);
+
+        var task = (await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken))
+            .Entity!.Days.Single(d => d.Day == Day1).Tasks.Single();
+
+        Assert.Equal(2, task.MinimumAssignees);
+        Assert.Equal(1, task.AssigneeCount);
+        Assert.Equal(["Alice"], task.Assignees);
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_TaskCoverage_OpenWhenNoIntents()
+    {
+        await SeedTaskPlanAsync(minimumAssignees: 1);
+
+        var task = (await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken))
+            .Entity!.Days.Single(d => d.Day == Day1).Tasks.Single();
+
+        Assert.Equal(0, task.AssigneeCount);
+        Assert.Empty(task.Assignees);
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_TaskException_IsFlagged()
+    {
+        var planId = await SeedTaskPlanAsync(minimumAssignees: 1, _alice);
+        var plan = await _dbContext.TaskPlans.SingleAsync(p => p.Id == planId, TestContext.Current.CancellationToken);
+        plan.IsException = true;
+        plan.ExceptionReason = "Cancelled — venue closed";
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var task = (await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken))
+            .Entity!.Days.Single(d => d.Day == Day1).Tasks.Single();
+
+        Assert.True(task.IsException);
+        Assert.Equal("Cancelled — venue closed", task.ExceptionReason);
+    }
+
+    private Guid SeedAccommodation()
+    {
+        var accommodationId = Guid.NewGuid();
+        _dbContext.Accommodations.Add(new Accommodation
+        {
+            Id = accommodationId,
+            TenantId = _tenantId,
+            PropertyId = _propertyId,
+            Name = "Cabin A",
+            Type = AccommodationType.Bedroom,
+            CapacityAdults = 4,
+            CapacityChildren = 2,
+            Notes = "Lake views. No capes near the fireplace.",
+        });
+        return accommodationId;
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_AccommodationOccupancy_SumsPartySizeExcludingDeclined()
+    {
+        var accommodationId = SeedAccommodation();
+        _dbContext.AccommodationIntents.AddRange(
+            // PartySize 5 — counts fully.
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _alice, Night = Day1, Status = AccommodationIntentStatus.Confirmed, Decision = AccommodationIntentDecision.Approved, PartySize = 5 },
+            // Null PartySize — counts as 1.
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _bob, Night = Day1, Status = AccommodationIntentStatus.Hold, Decision = AccommodationIntentDecision.Pending, PartySize = null },
+            // Declined — excluded entirely.
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _carol, Night = Day1, Status = AccommodationIntentStatus.Intent, Decision = AccommodationIntentDecision.Declined, PartySize = 3 });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var accommodation = Assert.Single(result.Entity!.Days.Single(d => d.Day == Day1).Accommodations);
+        Assert.Equal("Cabin A", accommodation.Name);
+        Assert.Equal(4, accommodation.CapacityAdults);
+        Assert.Equal(2, accommodation.CapacityChildren);
+        Assert.Equal("Lake views. No capes near the fireplace.", accommodation.Notes);
+        Assert.Equal(6, accommodation.Occupied); // 5 + 1 (declined excluded)
+        Assert.Equal(2, accommodation.Occupants.Count);
+        Assert.Equal(["Alice", "Bob"], accommodation.Occupants.Select(o => o.Name));
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_Accommodation_OmittedOnNightsWithoutOccupants()
+    {
+        var accommodationId = SeedAccommodation();
+        // Only Day1 has an intent; Day2 should not list the accommodation at all.
+        _dbContext.AccommodationIntents.Add(new AccommodationIntent
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenantId,
+            AccommodationId = accommodationId,
+            HouseholdMemberId = _alice,
+            Night = Day1,
+            Status = AccommodationIntentStatus.Confirmed,
+            Decision = AccommodationIntentDecision.Approved,
+            PartySize = 2,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        Assert.Single(result.Entity!.Days.Single(d => d.Day == Day1).Accommodations);
+        Assert.Empty(result.Entity.Days.Single(d => d.Day == Day2).Accommodations);
     }
 }

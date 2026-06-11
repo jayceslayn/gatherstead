@@ -96,17 +96,17 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   )
 
   // 7. Task templates — plans auto-generated per (day × timeSlot) by createTemplate
-  await repos.tasks.createTemplate(
+  const setUpTemplate = await repos.tasks.createTemplate(
     DEMO_TENANT_ID, event.id, 'Set Up', 0x01,
     eventStart, eventStart,
     null, 'Prepare the venue before the event.',
   )
-  await repos.tasks.createTemplate(
+  const suitCheckTemplate = await repos.tasks.createTemplate(
     DEMO_TENANT_ID, event.id, 'Suit Inventory Check', 0x01,
     null, null,
     1, 'Coordinate with Edna. Do NOT ask about capes.',
   )
-  await repos.tasks.createTemplate(
+  const keepDashTemplate = await repos.tasks.createTemplate(
     DEMO_TENANT_ID, event.id, 'Keep Dash From Running', 0x08,
     null, null,
     2, 'Two adults minimum. Past attempts with one have failed.',
@@ -121,6 +121,27 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const day1 = eventStart
   const day2 = addDays(eventStart, 1)
   const day3 = addDays(eventStart, 2)
+
+  // 8b. Seed task intents — a deliberate coverage mix so the report shows Covered/Partial/Open.
+  // "Set Up" (no minimum): Bob + Helen volunteer on day 1 → covered.
+  const setUpPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, setUpTemplate.id)
+  const day1SetUp = setUpPlans.find(p => p.day === day1)
+  if (day1SetUp) {
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, setUpTemplate.id, day1SetUp.id, parrFamily.id, bob.id, true)
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, setUpTemplate.id, day1SetUp.id, parrFamily.id, helen.id, true)
+  }
+  // "Suit Inventory Check" (min 1): Edna covers day 1; days 2–3 left open.
+  const suitCheckPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, suitCheckTemplate.id)
+  const day1SuitCheck = suitCheckPlans.find(p => p.day === day1)
+  if (day1SuitCheck) {
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, suitCheckTemplate.id, day1SuitCheck.id, ednaStudio.id, edna.id, true)
+  }
+  // "Keep Dash From Running" (min 2): only Helen volunteers on day 1 → partial; rest open.
+  const keepDashPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, keepDashTemplate.id)
+  const day1KeepDash = keepDashPlans.find(p => p.day === day1)
+  if (day1KeepDash) {
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, keepDashTemplate.id, day1KeepDash.id, parrFamily.id, helen.id, true)
+  }
 
   // 9. Seed meal attendance
   const breakfastPlans = await repos.mealPlans.listPlans(DEMO_TENANT_ID, event.id, breakfastTemplate.id)
