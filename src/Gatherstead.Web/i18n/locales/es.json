@@ -146,6 +146,7 @@
     "calendarView": "Vista de calendario",
     "listView": "Vista de lista",
     "overview": "Resumen",
+    "details": "Detalles",
     "meals": "Comidas",
     "tasks": "Tareas",
     "accommodations": "Alojamiento",
@@ -244,7 +245,11 @@
       "noData": "Aún no se han registrado datos de asistencia o comidas.",
       "print": "Imprimir",
       "summary": "Resumen",
-      "ownFood": "comida propia"
+      "ownFood": "comida propia",
+      "dietaryCount": "{n} dietético",
+      "showDetails": "Mostrar detalles",
+      "hideDetails": "Ocultar detalles",
+      "comingSoon": "Esta sección del informe estará disponible pronto."
     }
   },
   "accommodation": {

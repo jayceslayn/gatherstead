@@ -146,6 +146,7 @@
     "calendarView": "Calendar view",
     "listView": "List view",
     "overview": "Overview",
+    "details": "Details",
     "meals": "Meals",
     "tasks": "Tasks",
     "accommodations": "Accommodations",
@@ -244,7 +245,11 @@
       "noData": "No attendance or meal data recorded yet.",
       "print": "Print",
       "summary": "Summary",
-      "ownFood": "own food"
+      "ownFood": "own food",
+      "dietaryCount": "{n} dietary",
+      "showDetails": "Show details",
+      "hideDetails": "Hide details",
+      "comingSoon": "This report section is coming soon."
     }
   },
   "accommodation": {

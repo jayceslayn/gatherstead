@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { useMealTemplates, useMealTemplateActions } from '~/composables/useMealPlans'
-import { useTaskTemplates, useTaskTemplateActions } from '~/composables/useTaskTemplates'
+import { useTaskTemplates } from '~/composables/useTaskTemplates'
 import { useHouseholds } from '~/composables/useHouseholds'
 import { useAccommodations } from '~/composables/useAccommodations'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
-import { mealTypesFromFlags } from '~/repositories/types'
-import type { MealTemplate, TaskTemplate } from '~/repositories/types'
 import type { TabsItem } from '@nuxt/ui'
 
 definePageMeta({
@@ -22,11 +19,7 @@ const { households } = useHouseholds()
 const eventId = computed(() => route.params.eventId as string)
 
 const { event, pending: eventPending } = useEvent(eventId)
-const { templates: mealTemplates, pending: mealTemplatesPending, refresh: refreshMealTemplates } = useMealTemplates(eventId)
-const { templates: taskTemplates, pending: taskTemplatesPending, refresh: refreshTaskTemplates } = useTaskTemplates(eventId)
-
-const { updating: mealUpdating, deleteTemplate: deleteMealTemplate } = useMealTemplateActions(eventId, refreshMealTemplates)
-const { updating: taskUpdating, deleteTemplate: deleteTaskTemplate } = useTaskTemplateActions(eventId, refreshTaskTemplates)
+const { templates: taskTemplates, pending: taskTemplatesPending } = useTaskTemplates(eventId)
 
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
 const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
@@ -34,7 +27,6 @@ const { accommodations, pending: accommodationsPending } = useAccommodations(eve
 // Tab state — computed so labels re-translate on locale switch.
 const tabs = computed<TabsItem[]>(() => [
   { label: t('event.attendance'), value: 'attendance', slot: 'attendance' },
-  { label: t('event.meals'), value: 'meals', slot: 'meals' },
   { label: t('event.tasks'), value: 'tasks', slot: 'tasks' },
   { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations' },
 ])
@@ -88,54 +80,6 @@ function formatHeader(date: string) {
   )
 }
 
-function formatRange(start: string | null, end: string | null): string | null {
-  if (!start || !end) return null
-  const fmt = (d: string) => new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(d + 'T00:00:00'))
-  return start === end ? fmt(start) : t('event.meal.dateRange', { start: fmt(start), end: fmt(end) })
-}
-
-function mealTypeLabels(template: MealTemplate): string {
-  return mealTypesFromFlags(template.mealTypes).map(mt => t(`event.meal.${mt.toLowerCase()}`)).join(', ')
-}
-
-// Meal template modal
-const showMealModal = ref(false)
-const editingMealTemplate = ref<MealTemplate | null>(null)
-function openCreateMeal() {
-  editingMealTemplate.value = null
-  showMealModal.value = true
-}
-function openEditMeal(template: MealTemplate) {
-  editingMealTemplate.value = template
-  showMealModal.value = true
-}
-
-// Task template modal
-const showTaskModal = ref(false)
-const editingTaskTemplate = ref<TaskTemplate | null>(null)
-function openCreateTask() {
-  editingTaskTemplate.value = null
-  showTaskModal.value = true
-}
-function openEditTask(template: TaskTemplate) {
-  editingTaskTemplate.value = template
-  showTaskModal.value = true
-}
-
-// Delete confirms
-const mealToDelete = ref<MealTemplate | null>(null)
-const taskToDelete = ref<TaskTemplate | null>(null)
-async function confirmDeleteMeal() {
-  const tpl = mealToDelete.value
-  mealToDelete.value = null
-  if (tpl) await deleteMealTemplate(tpl.id)
-}
-async function confirmDeleteTask() {
-  const tpl = taskToDelete.value
-  taskToDelete.value = null
-  if (tpl) await deleteTaskTemplate(tpl.id)
-}
-
 onMounted(() => {
   if (tabs.value.some(tab => tab.value === route.hash.substring(1))) {
     activeTab.value = route.hash.substring(1)
@@ -151,7 +95,7 @@ onMounted(() => {
 
     <template v-else-if="event">
       <GsPageHeader :title="event.name">
-        <GsRoleGate min-role="Manager">
+        <GsRoleGate min-role="Coordinator">
           <UButton
             :to="`/app/events/${event.id}/edit`"
             variant="outline"
@@ -203,73 +147,8 @@ onMounted(() => {
           </div>
         </template>
 
-        <template #meals>
-          <div class="mt-4">
-            <div class="flex justify-end mb-4">
-              <GsRoleGate min-role="Coordinator">
-                <UButton icon="i-heroicons-plus" size="sm" @click="openCreateMeal">
-                  {{ t('event.meal.addTemplate') }}
-                </UButton>
-              </GsRoleGate>
-            </div>
-
-            <div v-if="mealTemplatesPending" class="py-8 text-center text-sm text-muted">
-              {{ t('common.loading') }}
-            </div>
-            <GsEmptyState
-              v-else-if="!mealTemplates.length"
-              icon="i-heroicons-cake"
-              :title="t('event.meal.noTemplates')"
-            />
-            <div v-else class="space-y-3">
-              <UCard v-for="template in mealTemplates" :key="template.id">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <p class="font-semibold">{{ template.name }}</p>
-                      <span v-if="formatRange(template.startDate, template.endDate)" class="text-xs text-muted">
-                        {{ formatRange(template.startDate, template.endDate) }}
-                      </span>
-                    </div>
-                    <p class="text-sm text-muted mt-0.5">{{ mealTypeLabels(template) }}</p>
-                    <p v-if="template.notes" class="text-sm text-muted mt-1">{{ template.notes }}</p>
-                  </div>
-                  <GsRoleGate min-role="Coordinator">
-                    <div class="flex items-center gap-1 shrink-0">
-                      <UButton
-                        variant="ghost"
-                        size="xs"
-                        icon="i-heroicons-pencil"
-                        :aria-label="t('common.edit')"
-                        @click="openEditMeal(template)"
-                      />
-                      <UButton
-                        color="error"
-                        variant="ghost"
-                        size="xs"
-                        icon="i-heroicons-trash"
-                        :aria-label="t('common.delete')"
-                        :loading="mealUpdating.includes(template.id)"
-                        @click="mealToDelete = template"
-                      />
-                    </div>
-                  </GsRoleGate>
-                </div>
-              </UCard>
-            </div>
-          </div>
-        </template>
-
         <template #tasks>
           <div class="mt-4">
-            <div class="flex justify-end mb-4">
-              <GsRoleGate min-role="Coordinator">
-                <UButton icon="i-heroicons-plus" size="sm" @click="openCreateTask">
-                  {{ t('event.task.addTemplate') }}
-                </UButton>
-              </GsRoleGate>
-            </div>
-
             <div v-if="taskTemplatesPending" class="py-8 text-center text-sm text-muted">
               {{ t('common.loading') }}
             </div>
@@ -279,34 +158,12 @@ onMounted(() => {
               :title="t('event.task.noTemplates')"
             />
             <div v-else class="space-y-4">
-              <div v-for="template in taskTemplates" :key="template.id">
-                <GsRoleGate min-role="Coordinator">
-                  <div class="flex items-center justify-end gap-1 mb-1">
-                    <UButton
-                      variant="ghost"
-                      size="xs"
-                      icon="i-heroicons-pencil"
-                      :aria-label="t('common.edit')"
-                      @click="openEditTask(template)"
-                    >
-                      {{ t('common.edit') }}
-                    </UButton>
-                    <UButton
-                      color="error"
-                      variant="ghost"
-                      size="xs"
-                      icon="i-heroicons-trash"
-                      :aria-label="t('common.delete')"
-                      :loading="taskUpdating.includes(template.id)"
-                      @click="taskToDelete = template"
-                    />
-                  </div>
-                </GsRoleGate>
-                <GsTaskTemplateSection
-                  :template="template"
-                  :event-id="eventId"
-                />
-              </div>
+              <GsTaskTemplateSection
+                v-for="template in taskTemplates"
+                :key="template.id"
+                :template="template"
+                :event-id="eventId"
+              />
             </div>
           </div>
         </template>
@@ -332,38 +189,6 @@ onMounted(() => {
           </div>
         </template>
       </UTabs>
-
-      <GsMealTemplateModal
-        v-model:open="showMealModal"
-        :event-id="eventId"
-        :template="editingMealTemplate"
-        :refresh="refreshMealTemplates"
-        :refresh-tasks="refreshTaskTemplates"
-      />
-      <GsTaskTemplateModal
-        v-model:open="showTaskModal"
-        :event-id="eventId"
-        :template="editingTaskTemplate"
-        :refresh="refreshTaskTemplates"
-      />
-      <GsConfirmModal
-        :open="!!mealToDelete"
-        :title="t('event.meal.deleteTemplate')"
-        :description="t('event.meal.deleteConfirm')"
-        :confirm-label="t('common.delete')"
-        danger
-        @update:open="val => { if (!val) mealToDelete = null }"
-        @confirm="confirmDeleteMeal"
-      />
-      <GsConfirmModal
-        :open="!!taskToDelete"
-        :title="t('event.task.deleteTemplate')"
-        :description="t('event.task.deleteConfirm')"
-        :confirm-label="t('common.delete')"
-        danger
-        @update:open="val => { if (!val) taskToDelete = null }"
-        @confirm="confirmDeleteTask"
-      />
     </template>
 
     <GsEmptyState
