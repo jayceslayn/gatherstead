@@ -201,6 +201,12 @@ export interface ITaskRepository {
     planId: string,
     memberId: string,
   ): Promise<TaskIntent[]>
+  listPlanIntents(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+  ): Promise<TaskIntent[]>
   upsertIntent(
     tenantId: string,
     eventId: string,

@@ -31,6 +31,18 @@ export class LiveTaskRepository implements ITaskRepository {
     return r.entity ?? []
   }
 
+  async listPlanIntents(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+  ): Promise<TaskIntent[]> {
+    const r = await $fetch<ApiResponse<TaskIntent[]>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}/intents`,
+    )
+    return r.entity ?? []
+  }
+
   async upsertIntent(
     tenantId: string,
     eventId: string,

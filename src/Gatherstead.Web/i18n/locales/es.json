@@ -204,6 +204,12 @@
       "editTemplate": "Editar Tarea",
       "deleteTemplate": "Eliminar Tarea",
       "deleteConfirm": "Esto eliminará la tarea y sus planes. No se puede deshacer."
+    },
+    "signup": {
+      "member": "Miembro",
+      "firstNight": "Primera noche",
+      "lastNight": "Última noche",
+      "nightsSelected": "{n} noche seleccionada | {n} noches seleccionadas"
     }
   },
   "property": {

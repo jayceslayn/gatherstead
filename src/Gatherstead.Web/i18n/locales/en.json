@@ -204,6 +204,12 @@
       "editTemplate": "Edit Task",
       "deleteTemplate": "Delete Task",
       "deleteConfirm": "This will remove the task and its plans. This cannot be undone."
+    },
+    "signup": {
+      "member": "Member",
+      "firstNight": "First night",
+      "lastNight": "Last night",
+      "nightsSelected": "{n} night selected | {n} nights selected"
     }
   },
   "property": {

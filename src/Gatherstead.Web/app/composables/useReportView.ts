@@ -17,6 +17,21 @@ export function taskCoverage(task: EventReportTask): CoverageStatus {
   return 'Open'
 }
 
+/**
+ * Badge colour for a task's minimum-assignee coverage, shared by the report and
+ * the event sign-up so both highlight identically: green (met), amber (partial),
+ * red (none yet). Tasks with no minimum stay neutral (white) — coverage is N/A.
+ */
+export function taskCoverageColor(
+  assigneeCount: number,
+  minimumAssignees: number | null | undefined,
+): 'neutral' | 'success' | 'warning' | 'error' {
+  if (minimumAssignees == null) return 'neutral'
+  if (assigneeCount >= minimumAssignees) return 'success'
+  if (assigneeCount > 0) return 'warning'
+  return 'error'
+}
+
 export type OccupancyState = 'vacant' | 'partial' | 'full' | 'over' | 'unknown'
 
 export interface Occupancy {
@@ -25,18 +40,29 @@ export interface Occupancy {
   state: OccupancyState
 }
 
+/** Occupancy-state → badge colour, shared by the report and the event sign-up. */
+export const OCCUPANCY_COLOR: Record<OccupancyState, 'neutral' | 'success' | 'warning' | 'error'> = {
+  vacant: 'neutral',
+  partial: 'success',
+  full: 'warning',
+  over: 'error',
+  unknown: 'neutral',
+}
+
+/** Derives occupancy state from raw counts. Capacity null → 'unknown' (count only, no colour). */
+export function occupancyState(occupied: number, capacity: number | null): OccupancyState {
+  if (capacity == null) return 'unknown'
+  if (occupied === 0) return 'vacant'
+  if (occupied > capacity) return 'over'
+  if (occupied >= capacity) return 'full'
+  return 'partial'
+}
+
 /** Total capacity vs occupied party size. Capacity null → state is 'unknown' (count only, no colour). */
 export function accommodationOccupancy(acc: EventReportAccommodation): Occupancy {
   const capacity = acc.capacityAdults != null || acc.capacityChildren != null
     ? (acc.capacityAdults ?? 0) + (acc.capacityChildren ?? 0)
     : null
 
-  let state: OccupancyState
-  if (capacity == null) state = 'unknown'
-  else if (acc.occupied === 0) state = 'vacant'
-  else if (acc.occupied > capacity) state = 'over'
-  else if (acc.occupied >= capacity) state = 'full'
-  else state = 'partial'
-
-  return { capacity, occupied: acc.occupied, state }
+  return { capacity, occupied: acc.occupied, state: occupancyState(acc.occupied, capacity) }
 }

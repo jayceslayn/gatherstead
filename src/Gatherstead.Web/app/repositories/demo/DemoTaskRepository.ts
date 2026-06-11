@@ -30,6 +30,15 @@ export class DemoTaskRepository implements ITaskRepository {
     )
   }
 
+  async listPlanIntents(
+    _tenantId: string,
+    _eventId: string,
+    _templateId: string,
+    planId: string,
+  ): Promise<TaskIntent[]> {
+    return getDemoStore().taskIntents.value.filter(i => i.taskPlanId === planId)
+  }
+
   async upsertIntent(
     tenantId: string,
     _eventId: string,

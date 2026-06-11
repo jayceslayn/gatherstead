@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { EventReportDay } from '~/repositories/types'
-import { taskCoverage, accommodationOccupancy } from '~/composables/useReportView'
+import { accommodationOccupancy, OCCUPANCY_COLOR } from '~/composables/useReportView'
 
 type Section = 'meals' | 'tasks' | 'accommodations'
 
@@ -26,14 +26,6 @@ const accommodationTypeIcon: Record<string, string> = {
   Offsite: 'i-heroicons-arrow-top-right-on-square',
 }
 
-const occupancyColor: Record<string, 'neutral' | 'success' | 'warning' | 'error'> = {
-  vacant: 'neutral',
-  partial: 'success',
-  full: 'warning',
-  over: 'error',
-  unknown: 'neutral',
-}
-
 const showMeals = computed(() => props.forcePrint || props.section === 'meals')
 const showTasks = computed(() => props.forcePrint || props.section === 'tasks')
 const showAccommodations = computed(() => props.forcePrint || props.section === 'accommodations')
@@ -48,6 +40,12 @@ function detailClass(id: string, expandedClasses: string) {
 
 function occupancy(acc: typeof props.day.accommodations[number]) {
   return accommodationOccupancy(acc)
+}
+
+// Expand state is keyed by day + accommodation so the same accommodation on
+// different days toggles independently (accommodationId alone repeats per day).
+function accKey(acc: typeof props.day.accommodations[number]) {
+  return `${props.day.day}:${acc.accommodationId}`
 }
 </script>
 
@@ -159,12 +157,7 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
                   <span v-if="task.timeSlot" class="text-xs text-muted">{{ t(`event.task.${task.timeSlot.toLowerCase()}`) }}</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5 mt-2">
-                  <GsStatusBadge :status="taskCoverage(task)" />
-                  <UBadge color="neutral" variant="subtle" icon="i-heroicons-user-group">
-                    {{ task.minimumAssignees != null
-                      ? t('report.event.assigneeRatio', { n: task.assigneeCount, m: task.minimumAssignees })
-                      : t('report.event.assigneeCount', { n: task.assigneeCount }) }}
-                  </UBadge>
+                  <GsTaskCoverageBadge :assignee-count="task.assigneeCount" :minimum-assignees="task.minimumAssignees" />
                 </div>
               </div>
               <UIcon
@@ -199,9 +192,9 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
             <button
               type="button"
               class="w-full flex items-start justify-between gap-3 text-left"
-              :aria-expanded="isExpanded(acc.accommodationId)"
-              :aria-label="isExpanded(acc.accommodationId) ? t('report.event.hideDetails') : t('report.event.showDetails')"
-              @click="emit('toggle', acc.accommodationId)"
+              :aria-expanded="isExpanded(accKey(acc))"
+              :aria-label="isExpanded(accKey(acc)) ? t('report.event.hideDetails') : t('report.event.showDetails')"
+              @click="emit('toggle', accKey(acc))"
             >
               <div class="min-w-0 flex items-start gap-2">
                 <UIcon :name="accommodationTypeIcon[acc.type] ?? 'i-heroicons-home'" class="size-5 shrink-0 mt-0.5 text-primary" />
@@ -209,7 +202,7 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
                   <p class="font-semibold truncate">{{ acc.name }}</p>
                   <div class="mt-2">
                     <UBadge
-                      :color="occupancyColor[occupancy(acc).state]"
+                      :color="OCCUPANCY_COLOR[occupancy(acc).state]"
                       variant="subtle"
                       icon="i-heroicons-user-group"
                     >
@@ -224,11 +217,11 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
               <UIcon
                 name="i-heroicons-chevron-down"
                 class="size-5 shrink-0 mt-1 transition-transform print:hidden"
-                :class="isExpanded(acc.accommodationId) ? 'rotate-180' : ''"
+                :class="isExpanded(accKey(acc)) ? 'rotate-180' : ''"
               />
             </button>
 
-            <div :class="['text-sm', detailClass(acc.accommodationId, 'mt-3')]">
+            <div :class="['text-sm', detailClass(accKey(acc), 'mt-3')]">
               <ul class="space-y-0.5">
                 <li v-for="occ in acc.occupants" :key="occ.memberId" class="flex items-center justify-between gap-2">
                   <span>{{ occ.name }}</span>
