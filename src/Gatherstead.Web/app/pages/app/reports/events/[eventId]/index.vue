@@ -42,8 +42,7 @@ onMounted(() => {
   if (tabs.value.some(tab => tab.value === hash)) activeTab.value = hash as Section
 })
 
-// Progressive disclosure — attendee/assignee/occupant detail is collapsed by default. Detail stays
-// in the DOM (hidden) so the print variant can reveal every section without juggling expand state.
+// Progressive disclosure — attendee/assignee/occupant detail is collapsed by default.
 const expanded = ref<Set<string>>(new Set())
 function toggle(id: string) {
   const next = new Set(expanded.value)
@@ -62,10 +61,6 @@ function prevDay() {
 }
 function nextDay() {
   selectedDayIndex.value = Math.min(days.value.length - 1, selectedDayIndex.value + 1)
-}
-
-function printReport() {
-  if (import.meta.client) window.print()
 }
 </script>
 
@@ -96,7 +91,13 @@ function printReport() {
       />
 
       <GsPageHeader :title="report.eventName">
-        <UButton variant="outline" size="sm" icon="i-heroicons-printer" @click="printReport">
+        <UButton
+          variant="outline"
+          size="sm"
+          icon="i-heroicons-printer"
+          :to="`/app/reports/events/${eventId}/print`"
+          target="_blank"
+        >
           {{ t('report.event.print') }}
         </UButton>
       </GsPageHeader>
@@ -114,7 +115,7 @@ function printReport() {
 
       <template v-else>
         <!-- Section tabs -->
-        <div class="flex border-b border-default mb-4 print:hidden" role="tablist">
+        <div class="flex border-b border-default mb-4" role="tablist">
           <button
             v-for="tab in tabs"
             :key="tab.value"
@@ -133,7 +134,7 @@ function printReport() {
         </div>
 
         <!-- Desktop: day columns side by side; headers stick to page scroll. -->
-        <div class="hidden lg:flex gap-4 overflow-x-auto pb-2 print:hidden">
+        <div class="hidden lg:flex gap-4 overflow-x-auto pb-2">
           <GsEventReportDay
             v-for="day in days"
             :key="day.day"
@@ -146,7 +147,7 @@ function printReport() {
         </div>
 
         <!-- Mobile: one day at a time with prev/next navigation. -->
-        <div class="lg:hidden print:hidden">
+        <div class="lg:hidden">
           <div class="flex items-center justify-between gap-3 mb-3">
             <UButton
               color="neutral"
@@ -178,18 +179,6 @@ function printReport() {
             :day="days[selectedDayIndex]!"
             :section="activeTab"
             :expanded="expanded"
-            @toggle="toggle"
-          />
-        </div>
-
-        <!-- Print: every day stacked, all sections, detail expanded. -->
-        <div class="hidden print:block space-y-8">
-          <GsEventReportDay
-            v-for="day in days"
-            :key="`print-${day.day}`"
-            :day="day"
-            :expanded="expanded"
-            force-print
             @toggle="toggle"
           />
         </div>

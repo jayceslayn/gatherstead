@@ -52,9 +52,10 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
 </script>
 
 <template>
-  <section class="flex flex-col">
-    <!-- Headline: date + total attendance. Stays visible while the day's detail scrolls. -->
-    <header class="sticky top-0 z-10 bg-default border-b border-default pb-2 mb-3">
+  <section class="flex flex-col print:break-inside-avoid">
+    <!-- Headline: date + total attendance. Stays visible while the day's detail scrolls.
+         In print the sticky positioning is dropped and the header is kept with its cards. -->
+    <header class="sticky top-0 z-10 bg-default border-b border-default pb-2 mb-3 print:static print:break-after-avoid">
       <h3 class="font-semibold text-highlighted">{{ formatDay(day.day) }}</h3>
       <div class="flex items-center gap-3 text-sm text-muted mt-0.5">
         <span class="inline-flex items-center gap-1">
@@ -71,7 +72,7 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
         <p v-if="forcePrint" class="text-xs font-medium uppercase tracking-wide text-muted mb-2">{{ t('event.meals') }}</p>
         <p v-if="!day.meals.length" class="text-sm text-muted">{{ t('report.event.noMeals') }}</p>
         <div v-else class="space-y-2">
-          <UCard v-for="meal in day.meals" :key="meal.mealPlanId" :ui="{ body: 'p-3 sm:p-3' }">
+          <UCard v-for="meal in day.meals" :key="meal.mealPlanId" :ui="{ body: 'p-3 sm:p-3' }" class="print:break-inside-avoid">
             <button
               type="button"
               class="w-full flex items-start justify-between gap-3 text-left"
@@ -144,7 +145,7 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
         <p v-if="forcePrint" class="text-xs font-medium uppercase tracking-wide text-muted mb-2">{{ t('event.tasks') }}</p>
         <p v-if="!day.tasks.length" class="text-sm text-muted">{{ t('report.event.noTasks') }}</p>
         <div v-else class="space-y-2">
-          <UCard v-for="task in day.tasks" :key="task.taskPlanId" :ui="{ body: 'p-3 sm:p-3' }">
+          <UCard v-for="task in day.tasks" :key="task.taskPlanId" :ui="{ body: 'p-3 sm:p-3' }" class="print:break-inside-avoid">
             <button
               type="button"
               class="w-full flex items-start justify-between gap-3 text-left"
@@ -194,7 +195,7 @@ function occupancy(acc: typeof props.day.accommodations[number]) {
         <p v-if="forcePrint" class="text-xs font-medium uppercase tracking-wide text-muted mb-2">{{ t('event.accommodations') }}</p>
         <p v-if="!day.accommodations.length" class="text-sm text-muted">{{ t('report.event.noAccommodations') }}</p>
         <div v-else class="space-y-2">
-          <UCard v-for="acc in day.accommodations" :key="acc.accommodationId" :ui="{ body: 'p-3 sm:p-3' }">
+          <UCard v-for="acc in day.accommodations" :key="acc.accommodationId" :ui="{ body: 'p-3 sm:p-3' }" class="print:break-inside-avoid">
             <button
               type="button"
               class="w-full flex items-start justify-between gap-3 text-left"

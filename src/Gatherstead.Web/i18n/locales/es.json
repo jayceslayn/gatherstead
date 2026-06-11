@@ -244,6 +244,8 @@
       "noMeals": "No hay comidas planificadas para este día.",
       "noData": "Aún no se han registrado datos de asistencia o comidas.",
       "print": "Imprimir",
+      "printNow": "Imprimir informe",
+      "backToReport": "Volver al informe",
       "summary": "Resumen",
       "ownFood": "comida propia",
       "dietaryCount": "{n} dietético",

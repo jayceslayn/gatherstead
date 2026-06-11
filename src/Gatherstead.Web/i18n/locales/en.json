@@ -244,6 +244,8 @@
       "noMeals": "No meals planned for this day.",
       "noData": "No attendance or meal data recorded yet.",
       "print": "Print",
+      "printNow": "Print report",
+      "backToReport": "Back to report",
       "summary": "Summary",
       "ownFood": "own food",
       "dietaryCount": "{n} dietary",
