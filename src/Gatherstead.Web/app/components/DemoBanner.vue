@@ -50,37 +50,34 @@ async function resetDemoData() {
     </div>
   </div>
 
-  <UModal v-model:open="open">
-    <template #content>
-      <div class="p-6">
-        <h3 class="text-lg font-semibold mb-2">{{ t('demo.modal.title') }}</h3>
-        <p class="text-sm text-muted mb-4">{{ t('demo.modal.intro') }}</p>
+  <UModal v-model:open="open" :title="t('demo.modal.title')">
+    <template #body>
+      <p class="text-sm text-muted mb-4">{{ t('demo.modal.intro') }}</p>
 
-        <h4 class="text-sm font-semibold mb-2">{{ t('demo.modal.limitsTitle') }}</h4>
-        <table class="w-full text-sm mb-4">
-          <tbody>
-            <tr
-              v-for="key in limitKeys"
-              :key="key"
-              class="border-b border-(--ui-border) last:border-0"
-            >
-              <td class="py-1.5 text-muted">{{ t(`demo.modal.limits.${key}`) }}</td>
-              <td class="py-1.5 text-right font-medium">{{ DEMO_LIMITS[key] }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <h4 class="text-sm font-semibold mb-2">{{ t('demo.modal.limitsTitle') }}</h4>
+      <table class="w-full text-sm mb-4">
+        <tbody>
+          <tr
+            v-for="key in limitKeys"
+            :key="key"
+            class="border-b border-(--ui-border) last:border-0"
+          >
+            <td class="py-1.5 text-muted">{{ t(`demo.modal.limits.${key}`) }}</td>
+            <td class="py-1.5 text-right font-medium">{{ DEMO_LIMITS[key] }}</td>
+          </tr>
+        </tbody>
+      </table>
 
-        <p class="text-xs text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
-        <UButton
-          variant="ghost"
-          color="warning"
-          :loading="isResetting"
-          :disabled="isResetting"
-          @click="resetDemoData"
-        >
-          {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
-        </UButton>
-      </div>
+      <p class="text-xs text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
+      <UButton
+        variant="ghost"
+        color="warning"
+        :loading="isResetting"
+        :disabled="isResetting"
+        @click="resetDemoData"
+      >
+        {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
+      </UButton>
     </template>
 
     <template #footer>

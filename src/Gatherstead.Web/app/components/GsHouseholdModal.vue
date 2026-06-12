@@ -53,12 +53,12 @@ async function submit() {
 </script>
 
 <template>
-  <UModal v-model:open="open">
-    <template #content>
-      <div class="p-6 space-y-5">
-        <h3 class="text-lg font-semibold">
-          {{ isEdit ? t('household.editTitle') : t('household.createTitle') }}
-        </h3>
+  <UModal
+    v-model:open="open"
+    :title="isEdit ? t('household.editTitle') : t('household.createTitle')"
+  >
+    <template #body>
+      <div class="space-y-5">
         <UFormField :label="t('household.name')" :error="nameError || undefined" required>
           <UInput
             v-model="form.name"
@@ -71,14 +71,17 @@ async function submit() {
           <UTextarea v-model="form.notes" class="w-full" />
         </UFormField>
         <GsAttributeField v-model="form.attributes" />
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton variant="ghost" :disabled="saving" @click="open = false">
-            {{ t('common.cancel') }}
-          </UButton>
-          <UButton :loading="saving" @click="submit">
-            {{ isEdit ? t('common.save') : t('common.create') }}
-          </UButton>
-        </div>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton variant="ghost" :disabled="saving" @click="open = false">
+          {{ t('common.cancel') }}
+        </UButton>
+        <UButton :loading="saving" @click="submit">
+          {{ isEdit ? t('common.save') : t('common.create') }}
+        </UButton>
       </div>
     </template>
   </UModal>
