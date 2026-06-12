@@ -46,7 +46,7 @@ const tagItems = computed(() => {
 const derivedBand = computed(() => birthDate.value ? deriveFromBirthDate(birthDate.value) : null)
 
 const displayedAgeBand = computed({
-  get: () => derivedBand.value ?? ((ageBand.value as AgeBand | '') || null),
+  get: () => derivedBand.value ?? ((ageBand.value as AgeBand | '') || undefined),
   set: (val) => { ageBand.value = val ?? '' },
 })
 

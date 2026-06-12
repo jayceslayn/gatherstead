@@ -29,7 +29,7 @@ const { t } = useI18n()
 
 const eventId = computed(() => props.eventId ?? '')
 const templateActions = props.draftMode ? null : useMealTemplateActions(eventId, props.refresh ?? (() => Promise.resolve()))
-const { updating, createTemplate, updateTemplate } = templateActions ?? { updating: ref([]), createTemplate: async () => false, updateTemplate: async () => false }
+const { updating, createTemplate, updateTemplate } = templateActions ?? { updating: ref<string[]>([]), createTemplate: async () => false, updateTemplate: async () => false }
 
 const isEdit = computed(() => !!props.template)
 const saving = computed(() => updating.value.includes(props.template?.id ?? 'new'))
