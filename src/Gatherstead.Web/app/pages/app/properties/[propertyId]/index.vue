@@ -76,6 +76,13 @@ function typeLabel(type: AccommodationType): string {
         </GsRoleGate>
       </GsPageHeader>
 
+      <div v-if="property.attributes.length" class="mb-6 max-w-lg">
+        <h2 class="text-sm font-semibold text-muted uppercase tracking-wide mb-2">
+          {{ t('attribute.title') }}
+        </h2>
+        <GsAttributeList :attributes="property.attributes" />
+      </div>
+
       <div v-if="accommodationsPending" class="py-8 text-center">
         <p class="text-muted">{{ t('common.loading') }}</p>
       </div>

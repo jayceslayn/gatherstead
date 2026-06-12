@@ -43,6 +43,7 @@
     "households": "Households",
     "events": "Events",
     "properties": "Properties",
+    "equipment": "Equipment",
     "reports": "Reports",
     "settings": "Settings",
     "more": "More",
@@ -231,6 +232,40 @@
     "deleteTitle": "Delete Property",
     "deleteConfirm": "This will permanently remove this property and its accommodations. This cannot be undone."
   },
+  "equipment": {
+    "title": "Equipment",
+    "subtitle": "Shared gear tracked across your group, scoped to a property.",
+    "name": "Equipment Name",
+    "namePlaceholder": "e.g. Industrial BBQ Grill",
+    "property": "Property",
+    "noProperty": "No property",
+    "allProperties": "All properties",
+    "searchPlaceholder": "Search equipment…",
+    "noMatches": "No equipment matches your filters.",
+    "createTitle": "Add Equipment",
+    "editTitle": "Edit Equipment",
+    "noEquipment": "No equipment yet",
+    "noEquipmentHintManager": "Add your first piece of equipment to get started.",
+    "noEquipmentHintMember": "No equipment has been added yet.",
+    "unassignedProperty": "Unknown property",
+    "deleteTitle": "Delete Equipment",
+    "deleteConfirm": "This will permanently remove this equipment. This cannot be undone."
+  },
+  "attribute": {
+    "title": "Additional Details",
+    "hint": "Optional custom fields",
+    "add": "Add detail",
+    "keyPlaceholder": "Label (e.g. Gate Code)",
+    "valuePlaceholder": "Value (e.g. 4-7-3-9)",
+    "keyRequired": "Add a label, or remove this detail with the delete button",
+    "visibleTo": {
+      "owner": "Owners only",
+      "manager": "Managers and above",
+      "coordinator": "Coordinators and above",
+      "member": "Members and above",
+      "guest": "Everyone"
+    }
+  },
   "report": {
     "title": "Reports",
     "subtitle": "Insights across your gatherings.",
@@ -348,7 +383,8 @@
         "mealTemplatesPerEvent": "Meal templates per event",
         "taskTemplatesPerEvent": "Task templates per event",
         "propertiesPerTenant": "Properties per group",
-        "accommodationsPerProperty": "Accommodations per property"
+        "accommodationsPerProperty": "Accommodations per property",
+        "equipmentPerTenant": "Equipment items per group"
       },
       "dataResets": "Demo data lives in your browser's localStorage. Clearing site data or switching browsers resets everything to the original sample data.",
       "cta": "Ready to keep your gatherings?",

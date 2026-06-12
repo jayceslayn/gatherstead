@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { HouseholdSummary } from '~/repositories/types'
+import type { HouseholdSummary, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
@@ -38,10 +38,14 @@ export function useHouseholdActions(refresh: () => Promise<void>) {
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createHousehold(name: string): Promise<boolean> {
+  async function createHousehold(
+    name: string,
+    notes: string | null = null,
+    attributes: AttributeWriteEntry[] = [],
+  ): Promise<boolean> {
     updating.value.push('new')
     try {
-      await repo.createHousehold(tenantStore.currentTenantId!, name)
+      await repo.createHousehold(tenantStore.currentTenantId!, name, notes, attributes)
       await refresh()
       return true
     }
@@ -58,10 +62,15 @@ export function useHouseholdActions(refresh: () => Promise<void>) {
     }
   }
 
-  async function updateHousehold(householdId: string, name: string): Promise<boolean> {
+  async function updateHousehold(
+    householdId: string,
+    name: string,
+    notes: string | null = null,
+    attributes: AttributeWriteEntry[] = [],
+  ): Promise<boolean> {
     updating.value.push(householdId)
     try {
-      await repo.updateHousehold(tenantStore.currentTenantId!, householdId, name)
+      await repo.updateHousehold(tenantStore.currentTenantId!, householdId, name, notes, attributes)
       await refresh()
       return true
     }

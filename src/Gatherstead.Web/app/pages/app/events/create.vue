@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { MealTemplateDraft } from '~/components/GsMealTemplateModal.vue'
 import type { TaskTemplateDraft } from '~/components/GsTaskTemplateModal.vue'
+import type { AttributeWriteEntry } from '~/repositories/types'
 import { useProperties } from '~/composables/useProperties'
 import { useMealTemplateActions } from '~/composables/useMealPlans'
 import { useTaskTemplateActions } from '~/composables/useTaskTemplates'
+import { cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
 
 definePageMeta({
   layout: 'default',
@@ -21,6 +23,8 @@ const form = reactive({
   name: '',
   startDate: '',
   endDate: '',
+  notes: '',
+  attributes: [] as AttributeWriteEntry[],
 })
 
 const errors = reactive({
@@ -48,7 +52,7 @@ function validate(): boolean {
   else if (form.endDate < form.startDate) {
     errors.dates = t('event.endBeforeStart')
   }
-  return !errors.propertyId && !errors.name && !errors.dates
+  return !errors.propertyId && !errors.name && !errors.dates && !hasIncompleteAttributeRows(form.attributes)
 }
 
 // === Template drafts ===
@@ -78,17 +82,20 @@ const taskActions = useTaskTemplateActions(newEventId, async () => {})
 
 async function onSubmit() {
   if (!validate()) return
-  const created = await createEvent(form.propertyId, form.name.trim(), form.startDate, form.endDate)
+  const created = await createEvent(
+    form.propertyId, form.name.trim(), form.startDate, form.endDate,
+    form.notes.trim() || null, cleanAttributeWriteEntries(form.attributes),
+  )
   if (!created) return
 
   newEventId.value = created.id
 
   await Promise.all([
     ...mealDrafts.value.map(d =>
-      mealActions.createTemplate(d.name, d.mealTypes, d.startDate, d.endDate, d.notes, d.createMatchingTask),
+      mealActions.createTemplate(d.name, d.mealTypes, d.startDate, d.endDate, d.notes, d.attributes, d.createMatchingTask),
     ),
     ...taskDrafts.value.map(d =>
-      taskActions.createTemplate(d.name, d.timeSlots, d.startDate, d.endDate, d.minimumAssignees, d.notes),
+      taskActions.createTemplate(d.name, d.timeSlots, d.startDate, d.endDate, d.minimumAssignees, d.notes, d.attributes),
     ),
   ])
 
@@ -129,6 +136,12 @@ async function onSubmit() {
           :property-items="propertyItems"
           :errors="errors"
         />
+
+        <UFormField :label="t('common.notes')">
+          <UTextarea v-model="form.notes" class="w-full" />
+        </UFormField>
+
+        <GsAttributeField v-model="form.attributes" />
 
         <div class="flex items-center gap-3 pt-2">
           <UButton type="submit" :loading="saving">

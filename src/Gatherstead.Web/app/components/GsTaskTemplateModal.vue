@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { TaskTemplate, TaskTimeSlot } from '~/repositories/types'
+import type { TaskTemplate, TaskTimeSlot, AttributeWriteEntry } from '~/repositories/types'
 import { ALL_TASK_SLOTS, TASK_SLOT_FLAGS, taskSlotsFromFlags } from '~/repositories/types'
 import { useTaskTemplateActions } from '~/composables/useTaskTemplates'
+import { toAttributeWriteEntries, cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
 
 export interface TaskTemplateDraft {
   name: string
@@ -10,6 +11,7 @@ export interface TaskTemplateDraft {
   endDate: string | null
   minimumAssignees: number | null
   notes: string | null
+  attributes: AttributeWriteEntry[]
 }
 
 const props = defineProps<{
@@ -41,6 +43,7 @@ const form = reactive({
   startDate: '',
   endDate: '',
   notes: '',
+  attributes: [] as AttributeWriteEntry[],
 })
 
 const errors = reactive({ name: '', timeSlots: '', dates: '' })
@@ -54,6 +57,7 @@ function reset() {
   form.startDate = tpl?.startDate ?? ''
   form.endDate = tpl?.endDate ?? ''
   form.notes = tpl?.notes ?? ''
+  form.attributes = toAttributeWriteEntries(tpl?.attributes)
   errors.name = ''
   errors.timeSlots = ''
   errors.dates = ''
@@ -77,7 +81,7 @@ function validate(): boolean {
     if (!form.startDate || !form.endDate) errors.dates = t('validation.required', { field: t('event.meal.dateRangeLabel') })
     else if (form.endDate < form.startDate) errors.dates = t('event.endBeforeStart')
   }
-  return !errors.name && !errors.timeSlots && !errors.dates
+  return !errors.name && !errors.timeSlots && !errors.dates && !hasIncompleteAttributeRows(form.attributes)
 }
 
 async function submit() {
@@ -87,16 +91,17 @@ async function submit() {
   const end = form.useSubRange ? form.endDate : null
   const min = form.minimumAssignees === '' ? null : Number(form.minimumAssignees)
   const notes = form.notes.trim() || null
+  const attributes = cleanAttributeWriteEntries(form.attributes)
 
   if (props.draftMode) {
-    emit('save', { name: form.name.trim(), timeSlots: flags, startDate: start, endDate: end, minimumAssignees: min, notes })
+    emit('save', { name: form.name.trim(), timeSlots: flags, startDate: start, endDate: end, minimumAssignees: min, notes, attributes })
     open.value = false
     return
   }
 
   const ok = (isEdit.value && props.template)
-    ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, min, notes)
-    : await createTemplate(form.name.trim(), flags, start, end, min, notes)
+    ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, min, notes, attributes)
+    : await createTemplate(form.name.trim(), flags, start, end, min, notes, attributes)
 
   if (!ok) return
   open.value = false
@@ -141,6 +146,8 @@ async function submit() {
         <UFormField :label="t('common.notes')">
           <UTextarea v-model="form.notes" class="w-full" />
         </UFormField>
+
+        <GsAttributeField v-model="form.attributes" />
 
         <div class="flex justify-end gap-3 pt-2">
           <UButton variant="ghost" :disabled="saving" @click="open = false">

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { HouseholdMember } from '~/repositories/types'
+import type { HouseholdMember, AttributeWriteEntry } from '~/repositories/types'
 import { useHousehold } from '~/composables/useHouseholds'
 import { useMember, useHouseholdMembers, useHouseholdMemberActions } from '~/composables/useHouseholdMembers'
+import { toAttributeWriteEntries, cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
 
 definePageMeta({
   layout: 'default',
@@ -27,6 +28,7 @@ const form = reactive({
   birthDate: '',
   dietaryNotes: '',
   dietaryTags: [] as string[],
+  attributes: [] as AttributeWriteEntry[],
 })
 
 const nameError = ref('')
@@ -40,6 +42,7 @@ watch(member, (val: HouseholdMember | null) => {
   form.birthDate = val.birthDate ?? ''
   form.dietaryNotes = val.dietaryNotes ?? ''
   form.dietaryTags = [...val.dietaryTags]
+  form.attributes = toAttributeWriteEntries(val.attributes)
   // Reset after the form watcher's next-tick flush so pre-fill doesn't mark as dirty
   nextTick(() => { isDirty.value = false })
 }, { immediate: true })
@@ -55,6 +58,9 @@ onBeforeRouteLeave(() => {
 async function onSubmit() {
   nameError.value = form.name.trim() ? '' : t('validation.required', { field: t('member.name') })
   if (nameError.value) return
+  // A row with a value but no label would be silently dropped — block save so the editor's
+  // inline warning prompts the user to add a label or remove it with the delete button.
+  if (hasIncompleteAttributeRows(form.attributes)) return
 
   const ok = await updateMember(
     memberId.value,
@@ -64,6 +70,7 @@ async function onSubmit() {
     form.birthDate || null,
     form.dietaryNotes.trim() || null,
     form.dietaryTags,
+    cleanAttributeWriteEntries(form.attributes),
   )
   if (ok) {
     isDirty.value = false
@@ -97,6 +104,7 @@ async function onSubmit() {
         v-model:birth-date="form.birthDate"
         v-model:dietary-notes="form.dietaryNotes"
         v-model:dietary-tags="form.dietaryTags"
+        v-model:attributes="form.attributes"
         :name-error="nameError"
         :loading="saving"
         :cancel-to="`/app/directory/${householdId}/${memberId}`"

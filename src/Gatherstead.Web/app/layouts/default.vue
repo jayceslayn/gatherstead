@@ -13,6 +13,7 @@ const primaryNavItems = computed(() => [[
   { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
   { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
   { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
+  { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
   { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
 ]])
 
@@ -67,14 +68,19 @@ const mobileNavItems = computed(() => [
   { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
 ])
 
-// Manager-only destinations live behind a "More" sheet so the bottom bar stays uncrowded.
-const mobileMoreItems = computed(() => isManagerOrAbove.value
-  ? [[
+// Secondary destinations live behind a "More" sheet so the bottom bar stays uncrowded.
+const mobileMoreItems = computed(() => {
+  const groups: Array<Array<{ label: string; icon: string; to: string }>> = [[
+    { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
+  ]]
+  if (isManagerOrAbove.value) {
+    groups.push([
       { label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' },
       { label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' },
-    ]]
-  : [],
-)
+    ])
+  }
+  return groups
+})
 
 const route = useRoute()
 function isActive(path: string) {
@@ -82,7 +88,9 @@ function isActive(path: string) {
   return route.path.startsWith(path)
 }
 const isMoreActive = computed(() =>
-  route.path.startsWith('/app/reports') || route.path.startsWith('/app/settings'),
+  route.path.startsWith('/app/equipment')
+  || route.path.startsWith('/app/reports')
+  || route.path.startsWith('/app/settings'),
 )
 </script>
 

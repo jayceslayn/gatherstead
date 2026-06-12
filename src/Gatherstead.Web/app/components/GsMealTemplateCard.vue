@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AttributeEntry } from '~/repositories/types'
 import { useTemplateFormatting } from '~/composables/useTemplateFormatting'
 
 defineProps<{
@@ -7,6 +8,7 @@ defineProps<{
   startDate: string | null
   endDate: string | null
   notes?: string | null
+  attributes?: AttributeEntry[]
 }>()
 
 const { formatRange, mealTypeLabels } = useTemplateFormatting()
@@ -23,7 +25,10 @@ const { formatRange, mealTypeLabels } = useTemplateFormatting()
           </span>
         </div>
         <p class="text-sm text-muted mt-0.5">{{ mealTypeLabels(mealTypes) }}</p>
-        <p v-if="notes" class="text-sm text-muted mt-1">{{ notes }}</p>
+        <p v-if="notes" class="text-sm text-muted mt-1 break-words whitespace-pre-wrap">{{ notes }}</p>
+        <div v-if="attributes?.length" class="mt-2">
+          <GsAttributeList :attributes="attributes" />
+        </div>
       </div>
       <div class="flex items-center gap-1 shrink-0">
         <slot name="actions" />

@@ -3,6 +3,7 @@ import type {
   TaskTemplate,
   TaskPlan,
   TaskIntent,
+  AttributeWriteEntry,
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
@@ -20,10 +21,10 @@ export function useTaskTemplateActions(eventId: Ref<string>, refresh: () => Prom
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createTemplate(name: string, timeSlots: number, startDate: string | null = null, endDate: string | null = null, minimumAssignees: number | null = null, notes: string | null = null): Promise<boolean> {
+  async function createTemplate(name: string, timeSlots: number, startDate: string | null = null, endDate: string | null = null, minimumAssignees: number | null = null, notes: string | null = null, attributes: AttributeWriteEntry[] = []): Promise<boolean> {
     updating.value.push('new')
     try {
-      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, timeSlots, startDate, endDate, minimumAssignees, notes)
+      await repo.createTemplate(tenantStore.currentTenantId!, eventId.value, name, timeSlots, startDate, endDate, minimumAssignees, notes, attributes)
       await refresh()
       return true
     }
@@ -40,10 +41,10 @@ export function useTaskTemplateActions(eventId: Ref<string>, refresh: () => Prom
     }
   }
 
-  async function updateTemplate(templateId: string, name: string, timeSlots: number, startDate: string | null = null, endDate: string | null = null, minimumAssignees: number | null = null, notes: string | null = null): Promise<boolean> {
+  async function updateTemplate(templateId: string, name: string, timeSlots: number, startDate: string | null = null, endDate: string | null = null, minimumAssignees: number | null = null, notes: string | null = null, attributes: AttributeWriteEntry[] = []): Promise<boolean> {
     updating.value.push(templateId)
     try {
-      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, timeSlots, startDate, endDate, minimumAssignees, notes)
+      await repo.updateTemplate(tenantStore.currentTenantId!, eventId.value, templateId, name, timeSlots, startDate, endDate, minimumAssignees, notes, attributes)
       await refresh()
       return true
     }

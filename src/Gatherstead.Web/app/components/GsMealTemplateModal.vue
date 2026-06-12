@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { MealTemplate, MealType } from '~/repositories/types'
+import type { MealTemplate, MealType, AttributeWriteEntry } from '~/repositories/types'
 import { ALL_MEAL_TYPES, MEAL_TYPE_FLAGS, mealTypesFromFlags } from '~/repositories/types'
 import { useMealTemplateActions } from '~/composables/useMealPlans'
+import { toAttributeWriteEntries, cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
 
 export interface MealTemplateDraft {
   name: string
@@ -9,6 +10,7 @@ export interface MealTemplateDraft {
   startDate: string | null
   endDate: string | null
   notes: string | null
+  attributes: AttributeWriteEntry[]
   createMatchingTask: boolean
 }
 
@@ -41,6 +43,7 @@ const form = reactive({
   startDate: '',
   endDate: '',
   notes: '',
+  attributes: [] as AttributeWriteEntry[],
   createMatchingTask: false,
 })
 
@@ -54,6 +57,7 @@ function reset() {
   form.startDate = tpl?.startDate ?? ''
   form.endDate = tpl?.endDate ?? ''
   form.notes = tpl?.notes ?? ''
+  form.attributes = toAttributeWriteEntries(tpl?.attributes)
   form.createMatchingTask = false
   errors.name = ''
   errors.mealTypes = ''
@@ -78,7 +82,7 @@ function validate(): boolean {
     if (!form.startDate || !form.endDate) errors.dates = t('validation.required', { field: t('event.meal.dateRangeLabel') })
     else if (form.endDate < form.startDate) errors.dates = t('event.endBeforeStart')
   }
-  return !errors.name && !errors.mealTypes && !errors.dates
+  return !errors.name && !errors.mealTypes && !errors.dates && !hasIncompleteAttributeRows(form.attributes)
 }
 
 async function submit() {
@@ -87,16 +91,17 @@ async function submit() {
   const start = form.useSubRange ? form.startDate : null
   const end = form.useSubRange ? form.endDate : null
   const notes = form.notes.trim() || null
+  const attributes = cleanAttributeWriteEntries(form.attributes)
 
   if (props.draftMode) {
-    emit('save', { name: form.name.trim(), mealTypes: flags, startDate: start, endDate: end, notes, createMatchingTask: form.createMatchingTask })
+    emit('save', { name: form.name.trim(), mealTypes: flags, startDate: start, endDate: end, notes, attributes, createMatchingTask: form.createMatchingTask })
     open.value = false
     return
   }
 
   const ok = (isEdit.value && props.template)
-    ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, notes)
-    : await createTemplate(form.name.trim(), flags, start, end, notes, form.createMatchingTask)
+    ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, notes, attributes)
+    : await createTemplate(form.name.trim(), flags, start, end, notes, attributes, form.createMatchingTask)
 
   if (!ok) return
   if (form.createMatchingTask) await props.refreshTasks?.()
@@ -138,6 +143,8 @@ async function submit() {
         <UFormField :label="t('common.notes')">
           <UTextarea v-model="form.notes" class="w-full" />
         </UFormField>
+
+        <GsAttributeField v-model="form.attributes" />
 
         <UFormField v-if="!isEdit">
           <UCheckbox v-model="form.createMatchingTask" :label="t('event.meal.createMatchingTask')" />

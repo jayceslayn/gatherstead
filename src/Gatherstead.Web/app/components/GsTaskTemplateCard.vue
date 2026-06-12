@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { AttributeEntry } from '~/repositories/types'
 import { useTemplateFormatting } from '~/composables/useTemplateFormatting'
 
 defineProps<{
@@ -8,6 +9,7 @@ defineProps<{
   endDate: string | null
   minimumAssignees?: number | null
   notes?: string | null
+  attributes?: AttributeEntry[]
 }>()
 
 const { t } = useI18n()
@@ -28,7 +30,10 @@ const { formatRange, taskSlotLabels } = useTemplateFormatting()
         <p v-if="minimumAssignees" class="text-xs text-muted mt-0.5">
           {{ t('event.task.minimumAssignees', { n: minimumAssignees }) }}
         </p>
-        <p v-if="notes" class="text-sm text-muted mt-1">{{ notes }}</p>
+        <p v-if="notes" class="text-sm text-muted mt-1 break-words whitespace-pre-wrap">{{ notes }}</p>
+        <div v-if="attributes?.length" class="mt-2">
+          <GsAttributeList :attributes="attributes" />
+        </div>
       </div>
       <div class="flex items-center gap-1 shrink-0">
         <slot name="actions" />

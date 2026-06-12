@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { PropertySummary } from '~/repositories/types'
+import type { PropertySummary, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
@@ -38,10 +38,14 @@ export function usePropertyActions(refresh: () => Promise<void>) {
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createProperty(name: string): Promise<boolean> {
+  async function createProperty(
+    name: string,
+    notes: string | null = null,
+    attributes: AttributeWriteEntry[] = [],
+  ): Promise<boolean> {
     updating.value.push('new')
     try {
-      await repo.createProperty(tenantStore.currentTenantId!, name)
+      await repo.createProperty(tenantStore.currentTenantId!, name, notes, attributes)
       await refresh()
       return true
     }
@@ -58,10 +62,15 @@ export function usePropertyActions(refresh: () => Promise<void>) {
     }
   }
 
-  async function updateProperty(propertyId: string, name: string): Promise<boolean> {
+  async function updateProperty(
+    propertyId: string,
+    name: string,
+    notes: string | null = null,
+    attributes: AttributeWriteEntry[] = [],
+  ): Promise<boolean> {
     updating.value.push(propertyId)
     try {
-      await repo.updateProperty(tenantStore.currentTenantId!, propertyId, name)
+      await repo.updateProperty(tenantStore.currentTenantId!, propertyId, name, notes, attributes)
       await refresh()
       return true
     }

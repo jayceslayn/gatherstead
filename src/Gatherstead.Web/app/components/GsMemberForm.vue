@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AgeBand } from '~/repositories/types'
+import type { AgeBand, AttributeWriteEntry } from '~/repositories/types'
 import { useDietaryTags } from '~/composables/useDietaryTags'
 import { useAgeBands } from '~/composables/useAgeBands'
 
@@ -9,6 +9,7 @@ const ageBand = defineModel<string>('ageBand', { required: true })
 const birthDate = defineModel<string>('birthDate', { required: true })
 const dietaryNotes = defineModel<string>('dietaryNotes', { required: true })
 const dietaryTags = defineModel<string[]>('dietaryTags', { required: true })
+const attributes = defineModel<AttributeWriteEntry[]>('attributes', { required: true })
 
 const props = defineProps<{
   nameError: string
@@ -108,6 +109,8 @@ watch(birthDate, (bd) => {
         <GsDietaryTags :slugs="dietaryTags" />
       </div>
     </UFormField>
+
+    <GsAttributeField v-model="attributes" />
 
     <div class="flex items-center gap-3 pt-2">
       <UButton type="submit" :loading="props.loading">

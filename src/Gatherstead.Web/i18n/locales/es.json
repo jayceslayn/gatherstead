@@ -43,6 +43,7 @@
     "households": "Hogares",
     "events": "Eventos",
     "properties": "Propiedades",
+    "equipment": "Equipos",
     "reports": "Informes",
     "settings": "Configuración",
     "more": "Más",
@@ -231,6 +232,40 @@
     "deleteTitle": "Eliminar Propiedad",
     "deleteConfirm": "Esto eliminará permanentemente esta propiedad y sus alojamientos. No se puede deshacer."
   },
+  "equipment": {
+    "title": "Equipos",
+    "subtitle": "Equipamiento compartido en tu grupo, asociado a una propiedad.",
+    "name": "Nombre del Equipo",
+    "namePlaceholder": "p. ej. Parrilla Industrial",
+    "property": "Propiedad",
+    "noProperty": "Sin propiedad",
+    "allProperties": "Todas las propiedades",
+    "searchPlaceholder": "Buscar equipos…",
+    "noMatches": "Ningún equipo coincide con tus filtros.",
+    "createTitle": "Añadir Equipo",
+    "editTitle": "Editar Equipo",
+    "noEquipment": "Aún no hay equipos",
+    "noEquipmentHintManager": "Añade tu primer equipo para empezar.",
+    "noEquipmentHintMember": "Aún no se han añadido equipos.",
+    "unassignedProperty": "Propiedad desconocida",
+    "deleteTitle": "Eliminar Equipo",
+    "deleteConfirm": "Esto eliminará permanentemente este equipo. No se puede deshacer."
+  },
+  "attribute": {
+    "title": "Detalles Adicionales",
+    "hint": "Campos personalizados opcionales",
+    "add": "Añadir detalle",
+    "keyPlaceholder": "Etiqueta (p. ej. Código de Puerta)",
+    "valuePlaceholder": "Valor (p. ej. 4-7-3-9)",
+    "keyRequired": "Añade una etiqueta o elimina este detalle con el botón de eliminar",
+    "visibleTo": {
+      "owner": "Solo propietarios",
+      "manager": "Gerentes y superiores",
+      "coordinator": "Coordinadores y superiores",
+      "member": "Miembros y superiores",
+      "guest": "Todos"
+    }
+  },
   "report": {
     "title": "Informes",
     "subtitle": "Información sobre tus reuniones.",
@@ -348,7 +383,8 @@
         "mealTemplatesPerEvent": "Plantillas de comida por evento",
         "taskTemplatesPerEvent": "Plantillas de tareas por evento",
         "propertiesPerTenant": "Propiedades por grupo",
-        "accommodationsPerProperty": "Alojamientos por propiedad"
+        "accommodationsPerProperty": "Alojamientos por propiedad",
+        "equipmentPerTenant": "Equipos por grupo"
       },
       "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
       "cta": "¿Listo para guardar tus reuniones?",

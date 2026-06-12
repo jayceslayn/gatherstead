@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { EventSummary } from '~/repositories/types'
+import type { EventSummary, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
@@ -46,10 +46,17 @@ export function useEventActions(refresh: () => Promise<void>) {
   const { translateError } = useApiError()
   const updating = ref<string[]>([])
 
-  async function createEvent(propertyId: string, name: string, startDate: string, endDate: string): Promise<EventSummary | null> {
+  async function createEvent(
+    propertyId: string,
+    name: string,
+    startDate: string,
+    endDate: string,
+    notes: string | null = null,
+    attributes: AttributeWriteEntry[] = [],
+  ): Promise<EventSummary | null> {
     updating.value.push('new')
     try {
-      const created = await repo.createEvent(tenantStore.currentTenantId!, propertyId, name, startDate, endDate)
+      const created = await repo.createEvent(tenantStore.currentTenantId!, propertyId, name, startDate, endDate, notes, attributes)
       await refresh()
       return created
     }
@@ -66,10 +73,17 @@ export function useEventActions(refresh: () => Promise<void>) {
     }
   }
 
-  async function updateEvent(eventId: string, name: string, startDate: string, endDate: string): Promise<boolean> {
+  async function updateEvent(
+    eventId: string,
+    name: string,
+    startDate: string,
+    endDate: string,
+    notes: string | null = null,
+    attributes: AttributeWriteEntry[] = [],
+  ): Promise<boolean> {
     updating.value.push(eventId)
     try {
-      await repo.updateEvent(tenantStore.currentTenantId!, eventId, name, startDate, endDate)
+      await repo.updateEvent(tenantStore.currentTenantId!, eventId, name, startDate, endDate, notes, attributes)
       await refresh()
       return true
     }

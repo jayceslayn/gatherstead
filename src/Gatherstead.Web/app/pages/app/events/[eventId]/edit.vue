@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { EventSummary, MealTemplate, TaskTemplate } from '~/repositories/types'
+import type { EventSummary, MealTemplate, TaskTemplate, AttributeWriteEntry } from '~/repositories/types'
 import { useProperties } from '~/composables/useProperties'
 import { useMealTemplates, useMealTemplateActions } from '~/composables/useMealPlans'
 import { useTaskTemplates, useTaskTemplateActions } from '~/composables/useTaskTemplates'
 import { useTenantRole } from '~/composables/useTenantRole'
+import { toAttributeWriteEntries, cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
 import type { TabsItem } from '@nuxt/ui'
 
 definePageMeta({
@@ -30,6 +31,8 @@ const form = reactive({
   name: '',
   startDate: '',
   endDate: '',
+  notes: '',
+  attributes: [] as AttributeWriteEntry[],
 })
 
 const errors = reactive({ name: '', dates: '' })
@@ -44,6 +47,8 @@ watch(event, (val: EventSummary | null) => {
   form.name = val.name
   form.startDate = val.startDate
   form.endDate = val.endDate
+  form.notes = val.notes ?? ''
+  form.attributes = toAttributeWriteEntries(val.attributes)
 }, { immediate: true })
 
 function validate(): boolean {
@@ -55,12 +60,15 @@ function validate(): boolean {
   else if (form.endDate < form.startDate) {
     errors.dates = t('event.endBeforeStart')
   }
-  return !errors.name && !errors.dates
+  return !errors.name && !errors.dates && !hasIncompleteAttributeRows(form.attributes)
 }
 
 async function onSubmit() {
   if (!validate()) return
-  const ok = await updateEvent(eventId.value, form.name.trim(), form.startDate, form.endDate)
+  const ok = await updateEvent(
+    eventId.value, form.name.trim(), form.startDate, form.endDate,
+    form.notes.trim() || null, cleanAttributeWriteEntries(form.attributes),
+  )
   if (ok) {
     await refresh()
     await navigateTo(`/app/events/${eventId.value}`)
@@ -176,6 +184,12 @@ async function confirmDeleteTask() {
 
               <p class="text-xs text-muted">{{ t('event.dateChangeHint') }}</p>
 
+              <UFormField :label="t('common.notes')">
+                <UTextarea v-model="form.notes" class="w-full" />
+              </UFormField>
+
+              <GsAttributeField v-model="form.attributes" />
+
               <div class="flex items-center gap-3 pt-2">
                 <UButton type="submit" :loading="saving">
                   {{ t('common.save') }}
@@ -226,6 +240,7 @@ async function confirmDeleteTask() {
                 :start-date="template.startDate"
                 :end-date="template.endDate"
                 :notes="template.notes"
+                :attributes="template.attributes"
               >
                 <template #actions>
                   <GsRoleGate min-role="Coordinator">
@@ -280,6 +295,7 @@ async function confirmDeleteTask() {
                 :end-date="template.endDate"
                 :minimum-assignees="template.minimumAssignees"
                 :notes="template.notes"
+                :attributes="template.attributes"
               >
                 <template #actions>
                   <GsRoleGate min-role="Coordinator">

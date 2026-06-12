@@ -25,8 +25,30 @@ function birthDateYearsAgo(years: number): string {
 }
 
 export async function seedDemoData(repos: Repositories): Promise<void> {
-  // 1. Property
-  const property = await repos.properties.createProperty(DEMO_TENANT_ID, 'Camp Nomanisan')
+  // 1. Property — with custom attributes scoped to different roles to show off the
+  // extensible-attributes feature. tenantMinRole uses the backend TenantRole enum
+  // (Owner 0, Manager 1, Coordinator 2, Member 3, Guest 4); an attribute is visible
+  // to callers whose role is at least as privileged (callerRole <= tenantMinRole).
+  const property = await repos.properties.createProperty(
+    DEMO_TENANT_ID, 'Camp Nomanisan', 'Volcanic island retreat. Monorail runs along the north ridge.',
+    [
+      { key: 'Gate Code', value: '4-7-3-9', tenantMinRole: 2 }, // Coordinator and above
+      { key: 'WiFi Network', value: 'NomanisanGuest', tenantMinRole: 3 }, // Members and above
+    ],
+  )
+
+  // 1b. Equipment — always scoped to a property; one carries a custom attribute.
+  await repos.equipment.createEquipment(
+    DEMO_TENANT_ID, 'Projector & Screen', property.id,
+    'For the Saturday night movie. Keep well away from Jack-Jack.',
+    [{ key: 'Storage Location', value: 'Cabin A loft', tenantMinRole: 3 }],
+  )
+  await repos.equipment.createEquipment(
+    DEMO_TENANT_ID, 'Industrial BBQ Grill', property.id, 'Propane. Two spare tanks in the shed.', [],
+  )
+  await repos.equipment.createEquipment(
+    DEMO_TENANT_ID, 'First Aid Kit', property.id, 'Restocked this spring. No capes inside.', [],
+  )
 
   // 2. Accommodations
   const cabinA = await repos.accommodations.createAccommodation(
@@ -43,8 +65,11 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     DEMO_TENANT_ID, property.id, 'Tent Site 1', 'Tent', 4, 0, null,
   )
 
-  // 3. Households
-  const parrFamily = await repos.households.createHousehold(DEMO_TENANT_ID, 'The Parr Family')
+  // 3. Households — the Parr household carries notes + a role-gated custom attribute.
+  const parrFamily = await repos.households.createHousehold(
+    DEMO_TENANT_ID, 'The Parr Family', 'Keep the secret identities secret.',
+    [{ key: 'Emergency Contact', value: 'Lucius Best (Frozone) · 555-0142', tenantMinRole: 2 }], // Coordinator and above
+  )
   const frozoneHousehold = await repos.households.createHousehold(DEMO_TENANT_ID, 'The Frozone Household')
   const ednaStudio = await repos.households.createHousehold(DEMO_TENANT_ID, 'Edna Mode Studio')
 
@@ -54,6 +79,7 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const bob = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Bob Parr', true, null, birthDateYearsAgo(45),
     'Large portions — saving the world burns a lot of calories.', [],
+    [{ key: 'Supersuit Size', value: 'XL (reinforced seams)', tenantMinRole: 3 }], // Members and above
   )
   const helen = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', true, 'Age18To64', null, null, [],
@@ -92,6 +118,11 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const eventEnd = addDays(eventStart, 2)
   const event = await repos.events.createEvent(
     DEMO_TENANT_ID, property.id, 'Super Summer Retreat — Keep It Secret!', eventStart, eventEnd,
+    'Annual gathering of the Supers. Civilian clothes on arrival.',
+    [
+      { key: 'Dress Code', value: 'Secret identities encouraged', tenantMinRole: 3 }, // Members and above
+      { key: 'Emergency Contact', value: 'Mirage · 555-0100', tenantMinRole: 1 }, // Manager and above
+    ],
   )
 
   // 6. Meal templates — plans auto-generated per (day × mealType) by createTemplate
@@ -101,8 +132,10 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const lunchTemplate = await repos.mealPlans.createTemplate(
     DEMO_TENANT_ID, event.id, 'Lunch', 0x02, null, null, null,
   )
+  // Dinner also spins up a matching task template ("Dinner", Evening slot) via the
+  // createMatchingTaskTemplate flag — the same flow the meal-template modal exposes.
   const dinnerTemplate = await repos.mealPlans.createTemplate(
-    DEMO_TENANT_ID, event.id, 'Dinner', 0x04, null, null, null,
+    DEMO_TENANT_ID, event.id, 'Dinner', 0x04, null, null, null, null, true,
   )
 
   // 7. Task templates — plans auto-generated per (day × timeSlot) by createTemplate
@@ -151,6 +184,21 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const day1KeepDash = keepDashPlans.find(p => p.day === day1)
   if (day1KeepDash) {
     await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, keepDashTemplate.id, day1KeepDash.id, parrFamily.id, helen.id, true)
+  }
+  // "Dinner" (auto-generated from the Dinner meal template, no minimum): Bob cooks day 1,
+  // Helen day 2 → covered; day 3 left open.
+  const dinnerTaskTemplate = (await repos.tasks.listTaskTemplates(DEMO_TENANT_ID, event.id))
+    .find(t => t.name === 'Dinner')
+  if (dinnerTaskTemplate) {
+    const dinnerTaskPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id)
+    const day1DinnerTask = dinnerTaskPlans.find(p => p.day === day1)
+    const day2DinnerTask = dinnerTaskPlans.find(p => p.day === day2)
+    if (day1DinnerTask) {
+      await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id, day1DinnerTask.id, parrFamily.id, bob.id, true)
+    }
+    if (day2DinnerTask) {
+      await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id, day2DinnerTask.id, parrFamily.id, helen.id, true)
+    }
   }
 
   // 9. Seed meal attendance

@@ -1,5 +1,5 @@
 import { useTenantStore } from '~/stores/tenant'
-import type { HouseholdMember } from '~/repositories/types'
+import type { HouseholdMember, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
@@ -67,12 +67,13 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes: AttributeWriteEntry[] = [],
   ): Promise<HouseholdMember | null> {
     updating.value.push('new')
     try {
       const created = await repo.createMember(
         tenantStore.currentTenantId!, householdId.value,
-        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags,
+        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes,
       )
       await refresh()
       return created
@@ -98,12 +99,13 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     birthDate: string | null,
     dietaryNotes: string | null,
     dietaryTags: string[],
+    attributes: AttributeWriteEntry[] = [],
   ): Promise<boolean> {
     updating.value.push(memberId)
     try {
       await repo.updateMember(
         tenantStore.currentTenantId!, householdId.value, memberId,
-        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags,
+        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes,
       )
       await refresh()
       return true
