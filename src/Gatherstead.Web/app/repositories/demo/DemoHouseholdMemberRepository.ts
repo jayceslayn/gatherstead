@@ -1,21 +1,38 @@
 import type { IHouseholdMemberRepository } from '../interfaces'
-import type { HouseholdMember, AttributeWriteEntry, AttributeEntry } from '../types'
+import type { HouseholdMember, AgeBand, AttributeWriteEntry, AttributeEntry } from '../types'
+import { deriveAgeBand } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+import { DEMO_AGE_BANDS } from './DemoAgeBandRepository'
 
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
   if (!writes) return []
   return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
 }
 
+// Mirrors the backend: when a birth date is present the age band is derived and
+// authoritative; the stored manual band is only used as a fallback when no birth date.
+function withDerivedAgeBand(m: HouseholdMember): HouseholdMember {
+  if (!m.birthDate) return m
+  return { ...m, ageBand: deriveAgeBand(m.birthDate, DEMO_AGE_BANDS) }
+}
+
+// Store the manual band only when there's no birth date (the backend nulls it otherwise).
+function bandForStorage(ageBand: string | null, birthDate: string | null): AgeBand | null {
+  return birthDate ? null : (ageBand as AgeBand | null)
+}
+
 export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository {
   async listMembers(_tenantId: string, householdId: string): Promise<HouseholdMember[]> {
-    return getDemoStore().members.value.filter(m => m.householdId === householdId)
+    return getDemoStore().members.value
+      .filter(m => m.householdId === householdId)
+      .map(withDerivedAgeBand)
   }
 
   async getMember(_tenantId: string, householdId: string, memberId: string): Promise<HouseholdMember | null> {
-    return getDemoStore().members.value.find(
-      m => m.householdId === householdId && m.id === memberId,
-    ) ?? null
+    const m = getDemoStore().members.value.find(
+      x => x.householdId === householdId && x.id === memberId,
+    )
+    return m ? withDerivedAgeBand(m) : null
   }
 
   async createMember(
@@ -39,7 +56,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       householdId,
       name,
       isAdult,
-      ageBand,
+      ageBand: bandForStorage(ageBand, birthDate),
       birthDate,
       dietaryNotes,
       dietaryTags,
@@ -47,7 +64,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     }
     store.members.value.push(m)
     persistDemoStore()
-    return m
+    return withDerivedAgeBand(m)
   }
 
   async updateMember(
@@ -67,7 +84,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     if (!m) return
     m.name = name
     m.isAdult = isAdult
-    m.ageBand = ageBand
+    m.ageBand = bandForStorage(ageBand, birthDate)
     m.birthDate = birthDate
     m.dietaryNotes = dietaryNotes
     m.dietaryTags = dietaryTags

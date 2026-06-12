@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import type { MealTemplateDraft } from '~/components/GsMealTemplateModal.vue'
+import type { TaskTemplateDraft } from '~/components/GsTaskTemplateModal.vue'
 import { useProperties } from '~/composables/useProperties'
+import { useMealTemplateActions } from '~/composables/useMealPlans'
+import { useTaskTemplateActions } from '~/composables/useTaskTemplates'
 
 definePageMeta({
   layout: 'default',
@@ -47,12 +51,48 @@ function validate(): boolean {
   return !errors.propertyId && !errors.name && !errors.dates
 }
 
+// === Template drafts ===
+const mealDrafts = ref<MealTemplateDraft[]>([])
+const taskDrafts = ref<TaskTemplateDraft[]>([])
+
+const showMealModal = ref(false)
+const showTaskModal = ref(false)
+
+function addMealDraft(draft: MealTemplateDraft) {
+  mealDrafts.value.push(draft)
+}
+function addTaskDraft(draft: TaskTemplateDraft) {
+  taskDrafts.value.push(draft)
+}
+function removeMealDraft(index: number) {
+  mealDrafts.value.splice(index, 1)
+}
+function removeTaskDraft(index: number) {
+  taskDrafts.value.splice(index, 1)
+}
+
+// Temporary event-id ref used to persist drafts after creation
+const newEventId = ref('')
+const mealActions = useMealTemplateActions(newEventId, async () => {})
+const taskActions = useTaskTemplateActions(newEventId, async () => {})
+
 async function onSubmit() {
   if (!validate()) return
   const created = await createEvent(form.propertyId, form.name.trim(), form.startDate, form.endDate)
-  if (created) {
-    await navigateTo(`/app/events/${created.id}`)
-  }
+  if (!created) return
+
+  newEventId.value = created.id
+
+  await Promise.all([
+    ...mealDrafts.value.map(d =>
+      mealActions.createTemplate(d.name, d.mealTypes, d.startDate, d.endDate, d.notes, d.createMatchingTask),
+    ),
+    ...taskDrafts.value.map(d =>
+      taskActions.createTemplate(d.name, d.timeSlots, d.startDate, d.endDate, d.minimumAssignees, d.notes),
+    ),
+  ])
+
+  await navigateTo(`/app/events/${created.id}`)
 }
 </script>
 
@@ -79,33 +119,107 @@ async function onSubmit() {
       </GsEmptyState>
     </div>
 
-    <UForm v-else :state="form" class="max-w-lg space-y-5" @submit="onSubmit">
-      <UFormField :label="t('event.name')" name="name" :error="errors.name || undefined" required>
-        <UInput v-model="form.name" :placeholder="t('event.name')" required class="w-full" />
-      </UFormField>
+    <template v-else>
+      <UForm :state="form" class="max-w-lg space-y-5" @submit="onSubmit">
+        <GsEventForm
+          v-model:name="form.name"
+          v-model:property-id="form.propertyId"
+          v-model:start-date="form.startDate"
+          v-model:end-date="form.endDate"
+          :property-items="propertyItems"
+          :errors="errors"
+        />
 
-      <UFormField :label="t('property.title')" name="propertyId" :error="errors.propertyId || undefined" required>
-        <USelect v-model="form.propertyId" :items="propertyItems" class="w-full" />
-      </UFormField>
+        <div class="flex items-center gap-3 pt-2">
+          <UButton type="submit" :loading="saving">
+            {{ t('common.create') }}
+          </UButton>
+          <UButton variant="ghost" to="/app/events">
+            {{ t('common.cancel') }}
+          </UButton>
+        </div>
+      </UForm>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <UFormField :label="t('event.startDate')" name="startDate" required>
-          <UInput v-model="form.startDate" type="date" class="w-full" />
-        </UFormField>
-        <UFormField :label="t('event.endDate')" name="endDate" required>
-          <UInput v-model="form.endDate" type="date" class="w-full" />
-        </UFormField>
+      <div class="mt-10 pt-6 border-t border-default max-w-lg">
+        <p class="font-semibold mb-1">{{ t('event.templateDraftsTitle') }}</p>
+        <p class="text-sm text-muted mb-4">{{ t('event.templateDraftsHint') }}</p>
+
+        <!-- Meal drafts -->
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-3">
+            <p class="text-sm font-medium">{{ t('event.meals') }}</p>
+            <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="showMealModal = true">
+              {{ t('event.meal.addTemplate') }}
+            </UButton>
+          </div>
+          <div v-if="mealDrafts.length" class="space-y-2">
+            <GsMealTemplateCard
+              v-for="(draft, i) in mealDrafts"
+              :key="i"
+              :name="draft.name"
+              :meal-types="draft.mealTypes"
+              :start-date="draft.startDate"
+              :end-date="draft.endDate"
+              :notes="draft.notes"
+            >
+              <template #actions>
+                <UButton
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-heroicons-trash"
+                  :aria-label="t('common.delete')"
+                  @click="removeMealDraft(i)"
+                />
+              </template>
+            </GsMealTemplateCard>
+          </div>
+        </div>
+
+        <!-- Task drafts -->
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <p class="text-sm font-medium">{{ t('event.tasks') }}</p>
+            <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="showTaskModal = true">
+              {{ t('event.task.addTemplate') }}
+            </UButton>
+          </div>
+          <div v-if="taskDrafts.length" class="space-y-2">
+            <GsTaskTemplateCard
+              v-for="(draft, i) in taskDrafts"
+              :key="i"
+              :name="draft.name"
+              :time-slots="draft.timeSlots"
+              :start-date="draft.startDate"
+              :end-date="draft.endDate"
+              :minimum-assignees="draft.minimumAssignees"
+              :notes="draft.notes"
+            >
+              <template #actions>
+                <UButton
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-heroicons-trash"
+                  :aria-label="t('common.delete')"
+                  @click="removeTaskDraft(i)"
+                />
+              </template>
+            </GsTaskTemplateCard>
+          </div>
+        </div>
       </div>
-      <p v-if="errors.dates" class="text-sm text-error -mt-2">{{ errors.dates }}</p>
+    </template>
 
-      <div class="flex items-center gap-3 pt-2">
-        <UButton type="submit" :loading="saving">
-          {{ t('common.create') }}
-        </UButton>
-        <UButton variant="ghost" to="/app/events">
-          {{ t('common.cancel') }}
-        </UButton>
-      </div>
-    </UForm>
+    <GsMealTemplateModal
+      v-model:open="showMealModal"
+      draft-mode
+      @save="addMealDraft"
+    />
+    <GsTaskTemplateModal
+      v-model:open="showTaskModal"
+      draft-mode
+      @save="addTaskDraft"
+    />
   </div>
 </template>

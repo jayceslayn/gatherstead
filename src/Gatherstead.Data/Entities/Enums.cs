@@ -126,3 +126,13 @@ public enum DietaryCategory
     Allergy     = 1,
     Restriction = 2,
 }
+
+public enum AgeBand
+{
+    Age0To2   = 0,
+    Age3To5   = 1,
+    Age6To12  = 2,
+    Age13To17 = 3,
+    Age18To64 = 4,
+    Age65Plus = 5,
+}

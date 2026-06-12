@@ -1,5 +1,6 @@
 export { DemoAccommodationIntentRepository } from './DemoAccommodationIntentRepository'
 export { DemoAccommodationRepository } from './DemoAccommodationRepository'
+export { DemoAgeBandRepository } from './DemoAgeBandRepository'
 export { DemoDietaryTagRepository } from './DemoDietaryTagRepository'
 export { DemoEquipmentRepository } from './DemoEquipmentRepository'
 export { DemoEventAttendanceRepository } from './DemoEventAttendanceRepository'

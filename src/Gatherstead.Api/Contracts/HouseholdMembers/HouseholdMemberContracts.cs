@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.HouseholdMembers;
 
@@ -10,7 +11,7 @@ public record HouseholdMemberDto(
     Guid HouseholdId,
     string Name,
     bool IsAdult,
-    string? AgeBand,
+    AgeBand? AgeBand,
     DateOnly? BirthDate,
     string? DietaryNotes,
     string[] DietaryTags,
@@ -28,8 +29,7 @@ public class CreateHouseholdMemberRequest
 
     public bool IsAdult { get; init; }
 
-    [StringLength(64)]
-    public string? AgeBand { get; init; }
+    public AgeBand? AgeBand { get; init; }
 
     public DateOnly? BirthDate { get; init; }
 
@@ -59,8 +59,7 @@ public class UpdateHouseholdMemberRequest
 
     public bool IsAdult { get; init; }
 
-    [StringLength(64)]
-    public string? AgeBand { get; init; }
+    public AgeBand? AgeBand { get; init; }
 
     public DateOnly? BirthDate { get; init; }
 

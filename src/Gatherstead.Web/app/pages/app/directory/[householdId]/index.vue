@@ -2,6 +2,7 @@
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useHousehold, useHouseholdActions } from '~/composables/useHouseholds'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
+import { useAgeBands } from '~/composables/useAgeBands'
 
 definePageMeta({
   layout: 'default',
@@ -15,6 +16,7 @@ const { isManagerOrAbove } = useTenantRole()
 const householdId = computed(() => route.params.householdId as string)
 const { household, pending: householdPending, refresh: refreshHousehold } = useHousehold(householdId)
 const { members, pending: membersPending } = useHouseholdMembers(householdId)
+const { displayName: ageBandDisplayName } = useAgeBands()
 
 const pending = computed(() => householdPending.value || membersPending.value)
 
@@ -96,7 +98,7 @@ const showEdit = ref(false)
                     {{ member.isAdult ? t('member.adult') : t('member.child') }}
                   </span>
                   <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->
-                  <span v-if="member.ageBand" class="text-sm text-muted">· {{ member.ageBand }}</span>
+                  <span v-if="member.ageBand" class="text-sm text-muted">· {{ ageBandDisplayName(member.ageBand) }}</span>
                 </div>
               </div>
               <GsDietaryTags :slugs="member.dietaryTags" class="hidden sm:flex" />

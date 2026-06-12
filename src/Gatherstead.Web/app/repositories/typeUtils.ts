@@ -7,6 +7,9 @@ type S = components['schemas']
 export type MealType = NonNullable<S['MealPlanDto']['mealType']>
 export type TaskTimeSlot = NonNullable<S['TaskPlanDto']['timeSlot']>
 
+type AgeBand = NonNullable<S['HouseholdMemberDto']['ageBand']>
+type AgeBandOption = S['AgeBandOptionDto']
+
 export { MEAL_TYPE_FLAGS, TASK_SLOT_FLAGS }
 
 export const ALL_MEAL_TYPES: MealType[] = ['Breakfast', 'Lunch', 'Dinner']
@@ -30,4 +33,23 @@ export function mealTypeFlagsToTaskSlotFlags(mealTypes: number): number {
   if (mealTypes & MEAL_TYPE_FLAGS.Lunch) slots |= TASK_SLOT_FLAGS.Midday
   if (mealTypes & MEAL_TYPE_FLAGS.Dinner) slots |= TASK_SLOT_FLAGS.Evening
   return slots === 0 ? TASK_SLOT_FLAGS.Anytime : slots
+}
+
+// Buckets a birth date into an age band using the band ranges the API supplies
+// (minAge/maxAge). The band *definitions* stay authoritative on the backend — this
+// only applies them client-side so the member form can preview the band live and the
+// demo repo (which has no backend) can derive it the same way. Mirrors
+// HouseholdMember.AgeBands.DeriveFromBirthDate.
+export function deriveAgeBand(
+  birthDate: string | null | undefined,
+  options: readonly AgeBandOption[],
+): AgeBand | null {
+  if (!birthDate) return null
+  const today = new Date()
+  const birth = new Date(birthDate + 'T00:00:00')
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  const match = options.find(o => age >= o.minAge && (o.maxAge == null || age <= o.maxAge))
+  return match?.value ?? null
 }

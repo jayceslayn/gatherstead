@@ -21,6 +21,8 @@ export type AccommodationType = NonNullable<S['AccommodationDto']['type']>
 export type AccommodationIntentStatus = NonNullable<S['AccommodationIntentDto']['status']>
 export type AccommodationIntentDecision = NonNullable<S['AccommodationIntentDto']['decision']>
 export type DietaryCategory = NonNullable<S['DietaryTagDto']['category']>
+export type AgeBand = NonNullable<S['HouseholdMemberDto']['ageBand']>
+export type AgeBandOption = S['AgeBandOptionDto']
 
 // MealType and TaskTimeSlot are re-exported from typeUtils (they're also used
 // alongside the flag utility functions defined there)
@@ -100,4 +102,5 @@ export {
   ALL_TASK_SLOTS,
   taskSlotsFromFlags,
   mealTypeFlagsToTaskSlotFlags,
+  deriveAgeBand,
 } from './typeUtils'

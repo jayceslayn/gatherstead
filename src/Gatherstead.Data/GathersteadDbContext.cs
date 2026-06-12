@@ -157,6 +157,13 @@ public class GathersteadDbContext : DbContext
         });
 
         // Configure MemberRelationship to HouseholdMember relationship
+        modelBuilder.Entity<HouseholdMember>(b =>
+        {
+            b.Property(m => m.AgeBand)
+                .HasConversion<string>()
+                .HasMaxLength(32);
+        });
+
         modelBuilder.Entity<MemberRelationship>(b =>
         {
             b.HasOne(mr => mr.HouseholdMember)

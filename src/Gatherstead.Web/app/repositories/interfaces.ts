@@ -2,6 +2,7 @@ import type {
   TenantSummary,
   HouseholdSummary,
   HouseholdMember,
+  AgeBandOption,
   DietaryTag,
   EventSummary,
   AttendanceStatus,
@@ -49,6 +50,10 @@ export interface IHouseholdRepository {
   createHousehold(tenantId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<HouseholdSummary>
   updateHousehold(tenantId: string, householdId: string, name: string, notes?: string | null, attributes?: AttributeWriteEntry[] | null): Promise<void>
   deleteHousehold(tenantId: string, householdId: string): Promise<void>
+}
+
+export interface IAgeBandRepository {
+  listAgeBands(): Promise<AgeBandOption[]>
 }
 
 export interface IDietaryTagRepository {
@@ -354,6 +359,7 @@ export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
   householdMembers: IHouseholdMemberRepository
+  ageBands: IAgeBandRepository
   dietaryTags: IDietaryTagRepository
   tenantUsers: ITenantUserRepository
   events: IEventRepository

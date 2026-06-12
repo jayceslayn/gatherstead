@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { EventSummary, MealTemplate, TaskTemplate } from '~/repositories/types'
-import { mealTypesFromFlags, taskSlotsFromFlags } from '~/repositories/types'
 import { useProperties } from '~/composables/useProperties'
 import { useMealTemplates, useMealTemplateActions } from '~/composables/useMealPlans'
 import { useTaskTemplates, useTaskTemplateActions } from '~/composables/useTaskTemplates'
@@ -105,20 +104,6 @@ const { templates: taskTemplates, pending: taskTemplatesPending, refresh: refres
 const { updating: mealUpdating, deleteTemplate: deleteMealTemplate } = useMealTemplateActions(eventId, refreshMealTemplates)
 const { updating: taskUpdating, deleteTemplate: deleteTaskTemplate } = useTaskTemplateActions(eventId, refreshTaskTemplates)
 
-function formatRange(start: string | null, end: string | null): string | null {
-  if (!start || !end) return null
-  const fmt = (d: string) => new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(d + 'T00:00:00'))
-  return start === end ? fmt(start) : t('event.meal.dateRange', { start: fmt(start), end: fmt(end) })
-}
-
-function mealTypeLabels(template: MealTemplate): string {
-  return mealTypesFromFlags(template.mealTypes).map(mt => t(`event.meal.${mt.toLowerCase()}`)).join(', ')
-}
-
-function taskSlotLabels(template: TaskTemplate): string {
-  return taskSlotsFromFlags(template.timeSlots).map(s => t(`event.task.${s.toLowerCase()}`)).join(', ')
-}
-
 // === Meal template modal ===
 const showMealModal = ref(false)
 const editingMealTemplate = ref<MealTemplate | null>(null)
@@ -179,23 +164,15 @@ async function confirmDeleteTask() {
         <template #details>
           <div class="mt-4">
             <UForm :state="form" class="max-w-lg space-y-5" @submit="onSubmit">
-              <UFormField :label="t('event.name')" name="name" :error="errors.name || undefined" required>
-                <UInput v-model="form.name" :placeholder="t('event.name')" required class="w-full" />
-              </UFormField>
-
-              <UFormField :label="t('property.title')" name="propertyId" :hint="t('event.propertyLocked')">
-                <USelect v-model="form.propertyId" :items="propertyItems" disabled class="w-full" />
-              </UFormField>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <UFormField :label="t('event.startDate')" name="startDate" required>
-                  <UInput v-model="form.startDate" type="date" class="w-full" />
-                </UFormField>
-                <UFormField :label="t('event.endDate')" name="endDate" required>
-                  <UInput v-model="form.endDate" type="date" class="w-full" />
-                </UFormField>
-              </div>
-              <p v-if="errors.dates" class="text-sm text-error -mt-2">{{ errors.dates }}</p>
+              <GsEventForm
+                v-model:name="form.name"
+                v-model:property-id="form.propertyId"
+                v-model:start-date="form.startDate"
+                v-model:end-date="form.endDate"
+                :property-items="propertyItems"
+                :property-locked="true"
+                :errors="errors"
+              />
 
               <p class="text-xs text-muted">{{ t('event.dateChangeHint') }}</p>
 
@@ -241,40 +218,36 @@ async function confirmDeleteTask() {
               :title="t('event.meal.noTemplates')"
             />
             <div v-else class="space-y-3">
-              <UCard v-for="template in mealTemplates" :key="template.id">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <p class="font-semibold">{{ template.name }}</p>
-                      <span v-if="formatRange(template.startDate, template.endDate)" class="text-xs text-muted">
-                        {{ formatRange(template.startDate, template.endDate) }}
-                      </span>
-                    </div>
-                    <p class="text-sm text-muted mt-0.5">{{ mealTypeLabels(template) }}</p>
-                    <p v-if="template.notes" class="text-sm text-muted mt-1">{{ template.notes }}</p>
-                  </div>
+              <GsMealTemplateCard
+                v-for="template in mealTemplates"
+                :key="template.id"
+                :name="template.name"
+                :meal-types="template.mealTypes"
+                :start-date="template.startDate"
+                :end-date="template.endDate"
+                :notes="template.notes"
+              >
+                <template #actions>
                   <GsRoleGate min-role="Coordinator">
-                    <div class="flex items-center gap-1 shrink-0">
-                      <UButton
-                        variant="ghost"
-                        size="xs"
-                        icon="i-heroicons-pencil"
-                        :aria-label="t('common.edit')"
-                        @click="openEditMeal(template)"
-                      />
-                      <UButton
-                        color="error"
-                        variant="ghost"
-                        size="xs"
-                        icon="i-heroicons-trash"
-                        :aria-label="t('common.delete')"
-                        :loading="mealUpdating.includes(template.id)"
-                        @click="mealToDelete = template"
-                      />
-                    </div>
+                    <UButton
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-pencil"
+                      :aria-label="t('common.edit')"
+                      @click="openEditMeal(template)"
+                    />
+                    <UButton
+                      color="error"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-trash"
+                      :aria-label="t('common.delete')"
+                      :loading="mealUpdating.includes(template.id)"
+                      @click="mealToDelete = template"
+                    />
                   </GsRoleGate>
-                </div>
-              </UCard>
+                </template>
+              </GsMealTemplateCard>
             </div>
           </div>
         </template>
@@ -298,43 +271,37 @@ async function confirmDeleteTask() {
               :title="t('event.task.noTemplates')"
             />
             <div v-else class="space-y-3">
-              <UCard v-for="template in taskTemplates" :key="template.id">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                      <p class="font-semibold">{{ template.name }}</p>
-                      <span v-if="formatRange(template.startDate, template.endDate)" class="text-xs text-muted">
-                        {{ formatRange(template.startDate, template.endDate) }}
-                      </span>
-                    </div>
-                    <p class="text-sm text-muted mt-0.5">{{ taskSlotLabels(template) }}</p>
-                    <p v-if="template.minimumAssignees" class="text-xs text-muted mt-0.5">
-                      {{ t('event.task.minimumAssignees', { n: template.minimumAssignees }) }}
-                    </p>
-                    <p v-if="template.notes" class="text-sm text-muted mt-1">{{ template.notes }}</p>
-                  </div>
+              <GsTaskTemplateCard
+                v-for="template in taskTemplates"
+                :key="template.id"
+                :name="template.name"
+                :time-slots="template.timeSlots"
+                :start-date="template.startDate"
+                :end-date="template.endDate"
+                :minimum-assignees="template.minimumAssignees"
+                :notes="template.notes"
+              >
+                <template #actions>
                   <GsRoleGate min-role="Coordinator">
-                    <div class="flex items-center gap-1 shrink-0">
-                      <UButton
-                        variant="ghost"
-                        size="xs"
-                        icon="i-heroicons-pencil"
-                        :aria-label="t('common.edit')"
-                        @click="openEditTask(template)"
-                      />
-                      <UButton
-                        color="error"
-                        variant="ghost"
-                        size="xs"
-                        icon="i-heroicons-trash"
-                        :aria-label="t('common.delete')"
-                        :loading="taskUpdating.includes(template.id)"
-                        @click="taskToDelete = template"
-                      />
-                    </div>
+                    <UButton
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-pencil"
+                      :aria-label="t('common.edit')"
+                      @click="openEditTask(template)"
+                    />
+                    <UButton
+                      color="error"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-heroicons-trash"
+                      :aria-label="t('common.delete')"
+                      :loading="taskUpdating.includes(template.id)"
+                      @click="taskToDelete = template"
+                    />
                   </GsRoleGate>
-                </div>
-              </UCard>
+                </template>
+              </GsTaskTemplateCard>
             </div>
           </div>
         </template>

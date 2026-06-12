@@ -1,5 +1,6 @@
 export { LiveAccommodationIntentRepository } from './LiveAccommodationIntentRepository'
 export { LiveAccommodationRepository } from './LiveAccommodationRepository'
+export { LiveAgeBandRepository } from './LiveAgeBandRepository'
 export { LiveDietaryTagRepository } from './LiveDietaryTagRepository'
 export { LiveEquipmentRepository } from './LiveEquipmentRepository'
 export { LiveEventAttendanceRepository } from './LiveEventAttendanceRepository'

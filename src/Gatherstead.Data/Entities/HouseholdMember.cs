@@ -20,8 +20,7 @@ public class HouseholdMember : AuditableEntity
     public TenantUser? LinkedTenantUser { get; set; }
 
     public bool IsAdult { get; set; }
-    [MaxLength(64)]
-    public string? AgeBand { get; set; }
+    public AgeBand? AgeBand { get; set; }
 
     // Encrypted fields
     [Required]

@@ -94,7 +94,8 @@
     "adult": "Adult",
     "child": "Child",
     "ageBand": "Age Band",
-    "ageBandPlaceholder": "e.g. Teen, Senior",
+    "ageBandPlaceholder": "Select age band",
+    "ageBandAuto": "Auto-calculated from birth date",
     "identity": "Identity",
     "createMember": "Create Member",
     "editMember": "Edit Member",
@@ -161,6 +162,8 @@
     "propertyLocked": "The property can't be changed after creation.",
     "noPropertiesTitle": "No properties yet",
     "noPropertiesHint": "Add a property before creating an event.",
+    "templateDraftsTitle": "Template Setup (Optional)",
+    "templateDraftsHint": "You can add meal and task templates now, or set them up after creating the event.",
     "meal": {
       "breakfast": "Breakfast",
       "lunch": "Lunch",

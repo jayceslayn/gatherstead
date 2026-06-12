@@ -523,6 +523,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/age-bands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AgeBandOptionDto"][];
+                        "application/json": components["schemas"]["AgeBandOptionDto"][];
+                        "text/json": components["schemas"]["AgeBandOptionDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/{tenantId}/households/{householdId}/members/{memberId}/contacts": {
         parameters: {
             query?: never;
@@ -3756,6 +3793,17 @@ export interface components {
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
         };
+        AgeBandOptionDto: {
+            /** @enum {string} */
+            value: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus";
+            displayName: string;
+            /** Format: int32 */
+            minAge: number;
+            /** Format: int32 */
+            maxAge?: number | null;
+            /** Format: int32 */
+            sortOrder: number;
+        };
         AttributeDto: {
             /** Format: uuid */
             id?: string;
@@ -3878,7 +3926,8 @@ export interface components {
         CreateHouseholdMemberRequest: {
             name: string;
             isAdult?: boolean;
-            ageBand?: string | null;
+            /** @enum {string|null} */
+            ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             /** Format: date */
             birthDate?: string | null;
             dietaryNotes?: string | null;
@@ -4161,7 +4210,8 @@ export interface components {
             householdId?: string;
             name?: string;
             isAdult?: boolean;
-            ageBand?: string | null;
+            /** @enum {string|null} */
+            ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             /** Format: date */
             birthDate?: string | null;
             dietaryNotes?: string | null;
@@ -4584,7 +4634,8 @@ export interface components {
         UpdateHouseholdMemberRequest: {
             name: string;
             isAdult?: boolean;
-            ageBand?: string | null;
+            /** @enum {string|null} */
+            ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             /** Format: date */
             birthDate?: string | null;
             dietaryNotes?: string | null;

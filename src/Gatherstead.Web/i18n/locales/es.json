@@ -94,7 +94,8 @@
     "adult": "Adulto",
     "child": "Niño",
     "ageBand": "Rango de Edad",
-    "ageBandPlaceholder": "p. ej. Adolescente, Mayor",
+    "ageBandPlaceholder": "Seleccionar rango de edad",
+    "ageBandAuto": "Calculado automáticamente a partir de la fecha de nacimiento",
     "identity": "Identidad",
     "createMember": "Crear Miembro",
     "editMember": "Editar Miembro",
@@ -161,6 +162,8 @@
     "propertyLocked": "La propiedad no se puede cambiar después de crear el evento.",
     "noPropertiesTitle": "Aún no hay propiedades",
     "noPropertiesHint": "Agrega una propiedad antes de crear un evento.",
+    "templateDraftsTitle": "Configuración de plantillas (Opcional)",
+    "templateDraftsHint": "Puedes agregar plantillas de comida y tareas ahora, o configurarlas después de crear el evento.",
     "meal": {
       "breakfast": "Desayuno",
       "lunch": "Almuerzo",

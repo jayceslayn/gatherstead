@@ -3,18 +3,33 @@ import type { MealTemplate, MealType } from '~/repositories/types'
 import { ALL_MEAL_TYPES, MEAL_TYPE_FLAGS, mealTypesFromFlags } from '~/repositories/types'
 import { useMealTemplateActions } from '~/composables/useMealPlans'
 
+export interface MealTemplateDraft {
+  name: string
+  mealTypes: number
+  startDate: string | null
+  endDate: string | null
+  notes: string | null
+  createMatchingTask: boolean
+}
+
 const props = defineProps<{
-  eventId: string
-  refresh: () => Promise<void>
+  eventId?: string
+  refresh?: () => Promise<void>
   refreshTasks?: () => Promise<void>
   template?: MealTemplate | null
+  draftMode?: boolean
+}>()
+
+const emit = defineEmits<{
+  save: [MealTemplateDraft]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
 
-const eventId = computed(() => props.eventId)
-const { updating, createTemplate, updateTemplate } = useMealTemplateActions(eventId, props.refresh)
+const eventId = computed(() => props.eventId ?? '')
+const templateActions = props.draftMode ? null : useMealTemplateActions(eventId, props.refresh ?? (() => Promise.resolve()))
+const { updating, createTemplate, updateTemplate } = templateActions ?? { updating: ref([]), createTemplate: async () => false, updateTemplate: async () => false }
 
 const isEdit = computed(() => !!props.template)
 const saving = computed(() => updating.value.includes(props.template?.id ?? 'new'))
@@ -72,6 +87,12 @@ async function submit() {
   const start = form.useSubRange ? form.startDate : null
   const end = form.useSubRange ? form.endDate : null
   const notes = form.notes.trim() || null
+
+  if (props.draftMode) {
+    emit('save', { name: form.name.trim(), mealTypes: flags, startDate: start, endDate: end, notes, createMatchingTask: form.createMatchingTask })
+    open.value = false
+    return
+  }
 
   const ok = (isEdit.value && props.template)
     ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, notes)

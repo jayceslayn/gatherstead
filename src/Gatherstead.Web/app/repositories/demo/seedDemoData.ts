@@ -16,6 +16,14 @@ function addDays(dateStr: string, n: number): string {
   return d.toISOString().substring(0, 10)
 }
 
+// A birth date `years` ago from today, kept relative so seeded members always land in
+// the intended (mid-range) age band regardless of when the demo is loaded.
+function birthDateYearsAgo(years: number): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - years)
+  return d.toISOString().substring(0, 10)
+}
+
 export async function seedDemoData(repos: Repositories): Promise<void> {
   // 1. Property
   const property = await repos.properties.createProperty(DEMO_TENANT_ID, 'Camp Nomanisan')
@@ -40,36 +48,38 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const frozoneHousehold = await repos.households.createHousehold(DEMO_TENANT_ID, 'The Frozone Household')
   const ednaStudio = await repos.households.createHousehold(DEMO_TENANT_ID, 'Edna Mode Studio')
 
-  // 4. Members
+  // 4. Members — a deliberate mix of birth-date-derived bands and manual-only bands.
+  // Birth date present → age band is derived (and read-only in the form); birth date
+  // absent → the manual band is used as the fallback.
   const bob = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Bob Parr', true, null, null,
+    DEMO_TENANT_ID, parrFamily.id, 'Bob Parr', true, null, birthDateYearsAgo(45),
     'Large portions — saving the world burns a lot of calories.', [],
   )
   const helen = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', true, null, null, null, [],
+    DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', true, 'Age18To64', null, null, [],
   )
   const violet = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Violet Parr', false, '13-17', null,
+    DEMO_TENANT_ID, parrFamily.id, 'Violet Parr', false, null, birthDateYearsAgo(15),
     'Will not eat anything if people are watching.', [],
   )
   const dash = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Dash Parr', false, '8-12', null,
+    DEMO_TENANT_ID, parrFamily.id, 'Dash Parr', false, 'Age6To12', null,
     'Eats at top speed. Food must be secured to the plate.', [],
   )
   const jackJack = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, '0-3', null,
+    DEMO_TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, null, birthDateYearsAgo(1),
     'Baby food only. Keep away from raccoons.', [],
   )
 
   const lucius = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, null, null, null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, 'Age18To64', null, null, [],
   )
   const honey = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, null, null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, birthDateYearsAgo(42), null, [],
   )
 
   const edna = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, ednaStudio.id, 'Edna Mode', true, null, null,
+    DEMO_TENANT_ID, ednaStudio.id, 'Edna Mode', true, 'Age65Plus', null,
     'No capes. Also no gluten.', ['gluten-free'],
   )
 

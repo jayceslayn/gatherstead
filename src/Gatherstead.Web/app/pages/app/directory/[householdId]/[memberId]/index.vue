@@ -3,6 +3,7 @@ import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useHousehold } from '~/composables/useHouseholds'
 import { useMember } from '~/composables/useHouseholdMembers'
+import { useAgeBands } from '~/composables/useAgeBands'
 
 definePageMeta({
   layout: 'default',
@@ -21,6 +22,7 @@ const { member, pending } = useMember(householdId, memberId)
 const isSelf = computed(() => memberStore.linkedMemberId === memberId.value)
 const { isManagerOrAbove } = useTenantRole()
 const canEdit = computed(() => isSelf.value || isManagerOrAbove.value)
+const { displayName: ageBandDisplayName } = useAgeBands()
 
 function formatDate(date: string | null) {
   if (!date) return null
@@ -70,7 +72,7 @@ function formatDate(date: string | null) {
             </div>
             <div v-if="member.ageBand" class="flex justify-between gap-4">
               <dt class="text-muted">{{ t('member.ageBand') }}</dt>
-              <dd>{{ member.ageBand }}</dd>
+              <dd>{{ ageBandDisplayName(member.ageBand) }}</dd>
             </div>
             <div v-if="member.birthDate" class="flex justify-between gap-4">
               <dt class="text-muted">{{ t('member.birthDate') }}</dt>

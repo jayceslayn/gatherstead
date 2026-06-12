@@ -1031,6 +1031,44 @@
         }
       }
     },
+    "/api/age-bands": {
+      "get": {
+        "tags": [
+          "AgeBands"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgeBandOptionDto"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgeBandOptionDto"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgeBandOptionDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants/{tenantId}/households/{householdId}/members/{memberId}/contacts": {
       "get": {
         "tags": [
@@ -6711,6 +6749,46 @@
         },
         "additionalProperties": false
       },
+      "AgeBandOptionDto": {
+        "required": [
+          "displayName",
+          "minAge",
+          "sortOrder",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "enum": [
+              "Age0To2",
+              "Age3To5",
+              "Age6To12",
+              "Age13To17",
+              "Age18To64",
+              "Age65Plus"
+            ],
+            "type": "string"
+          },
+          "displayName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "minAge": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxAge": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "AttributeDto": {
         "type": "object",
         "properties": {
@@ -7139,8 +7217,14 @@
             "type": "boolean"
           },
           "ageBand": {
-            "maxLength": 64,
-            "minLength": 0,
+            "enum": [
+              "Age0To2",
+              "Age3To5",
+              "Age6To12",
+              "Age13To17",
+              "Age18To64",
+              "Age65Plus"
+            ],
             "type": "string",
             "nullable": true
           },
@@ -8186,6 +8270,14 @@
             "type": "boolean"
           },
           "ageBand": {
+            "enum": [
+              "Age0To2",
+              "Age3To5",
+              "Age6To12",
+              "Age13To17",
+              "Age18To64",
+              "Age65Plus"
+            ],
             "type": "string",
             "nullable": true
           },
@@ -9671,8 +9763,14 @@
             "type": "boolean"
           },
           "ageBand": {
-            "maxLength": 64,
-            "minLength": 0,
+            "enum": [
+              "Age0To2",
+              "Age3To5",
+              "Age6To12",
+              "Age13To17",
+              "Age18To64",
+              "Age65Plus"
+            ],
             "type": "string",
             "nullable": true
           },
@@ -10140,6 +10238,9 @@
     },
     {
       "name": "Addresses"
+    },
+    {
+      "name": "AgeBands"
     },
     {
       "name": "ContactMethods"

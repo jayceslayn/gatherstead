@@ -3,17 +3,32 @@ import type { TaskTemplate, TaskTimeSlot } from '~/repositories/types'
 import { ALL_TASK_SLOTS, TASK_SLOT_FLAGS, taskSlotsFromFlags } from '~/repositories/types'
 import { useTaskTemplateActions } from '~/composables/useTaskTemplates'
 
+export interface TaskTemplateDraft {
+  name: string
+  timeSlots: number
+  startDate: string | null
+  endDate: string | null
+  minimumAssignees: number | null
+  notes: string | null
+}
+
 const props = defineProps<{
-  eventId: string
-  refresh: () => Promise<void>
+  eventId?: string
+  refresh?: () => Promise<void>
   template?: TaskTemplate | null
+  draftMode?: boolean
+}>()
+
+const emit = defineEmits<{
+  save: [TaskTemplateDraft]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
 
-const eventId = computed(() => props.eventId)
-const { updating, createTemplate, updateTemplate } = useTaskTemplateActions(eventId, props.refresh)
+const eventId = computed(() => props.eventId ?? '')
+const templateActions = props.draftMode ? null : useTaskTemplateActions(eventId, props.refresh ?? (() => Promise.resolve()))
+const { updating, createTemplate, updateTemplate } = templateActions ?? { updating: ref([]), createTemplate: async () => false, updateTemplate: async () => false }
 
 const isEdit = computed(() => !!props.template)
 const saving = computed(() => updating.value.includes(props.template?.id ?? 'new'))
@@ -73,12 +88,16 @@ async function submit() {
   const min = form.minimumAssignees === '' ? null : Number(form.minimumAssignees)
   const notes = form.notes.trim() || null
 
+  if (props.draftMode) {
+    emit('save', { name: form.name.trim(), timeSlots: flags, startDate: start, endDate: end, minimumAssignees: min, notes })
+    open.value = false
+    return
+  }
+
   const ok = (isEdit.value && props.template)
     ? await updateTemplate(props.template.id, form.name.trim(), flags, start, end, min, notes)
     : await createTemplate(form.name.trim(), flags, start, end, min, notes)
 
-  // The action toasts on failure and refreshes the list on success (via the refresh prop);
-  // keep the modal open with the user's input intact when the save did not go through.
   if (!ok) return
   open.value = false
 }

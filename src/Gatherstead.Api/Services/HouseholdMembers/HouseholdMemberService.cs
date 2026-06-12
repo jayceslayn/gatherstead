@@ -8,6 +8,7 @@ using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
+using DataAgeBands = Gatherstead.Data.Entities.AgeBands;
 
 namespace Gatherstead.Api.Services.HouseholdMembers;
 
@@ -139,7 +140,7 @@ public class HouseholdMemberService : IHouseholdMemberService
             HouseholdId = householdId,
             Name = normalizedName,
             IsAdult = request.IsAdult,
-            AgeBand = request.AgeBand?.Trim(),
+            AgeBand = request.BirthDate is null ? request.AgeBand : null,
             BirthDate = request.BirthDate,
             DietaryNotes = request.DietaryNotes?.Trim(),
             DietaryTags = NormalizeDietaryTags(request.DietaryTags),
@@ -217,7 +218,7 @@ public class HouseholdMemberService : IHouseholdMemberService
 
         member.Name = normalizedName;
         member.IsAdult = request.IsAdult;
-        member.AgeBand = request.AgeBand?.Trim();
+        member.AgeBand = request.BirthDate is null ? request.AgeBand : null;
         member.BirthDate = request.BirthDate;
         member.DietaryNotes = request.DietaryNotes?.Trim();
         member.DietaryTags = NormalizeDietaryTags(request.DietaryTags);
@@ -318,17 +319,25 @@ public class HouseholdMemberService : IHouseholdMemberService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole, a.HouseholdMinRole))
             .ToList();
 
-    private HouseholdMemberDto MapToDto(HouseholdMember member, bool canReadSensitive, IReadOnlyList<AttributeDto> attributes) => new(
-        member.Id,
-        member.TenantId,
-        member.HouseholdId,
-        member.Name,
-        member.IsAdult,
-        member.AgeBand,
-        canReadSensitive ? member.BirthDate : null,
-        canReadSensitive ? member.DietaryNotes : null,
-        canReadSensitive ? member.DietaryTags : [],
-        canReadSensitive ? member.Notes : null,
-        attributes,
-        member.ToAuditInfo(_auditVisibility.IncludeAudit));
+    private HouseholdMemberDto MapToDto(HouseholdMember member, bool canReadSensitive, IReadOnlyList<AttributeDto> attributes)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var ageBand = member.BirthDate is DateOnly bd
+            ? DataAgeBands.DeriveFromBirthDate(bd, today)
+            : member.AgeBand;
+
+        return new(
+            member.Id,
+            member.TenantId,
+            member.HouseholdId,
+            member.Name,
+            member.IsAdult,
+            ageBand,
+            canReadSensitive ? member.BirthDate : null,
+            canReadSensitive ? member.DietaryNotes : null,
+            canReadSensitive ? member.DietaryTags : [],
+            canReadSensitive ? member.Notes : null,
+            attributes,
+            member.ToAuditInfo(_auditVisibility.IncludeAudit));
+    }
 }
