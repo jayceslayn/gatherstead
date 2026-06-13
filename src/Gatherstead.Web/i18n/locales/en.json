@@ -253,6 +253,8 @@
   },
   "attribute": {
     "title": "Additional Details",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
     "hint": "Optional custom fields",
     "add": "Add detail",
     "keyPlaceholder": "Label (e.g. Gate Code)",

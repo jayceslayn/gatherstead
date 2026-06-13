@@ -71,12 +71,7 @@ const showEdit = ref(false)
         </GsRoleGate>
       </GsPageHeader>
 
-      <div v-if="household.attributes.length" class="mb-6 max-w-lg">
-        <h2 class="text-sm font-semibold text-muted uppercase tracking-wide mb-2">
-          {{ t('attribute.title') }}
-        </h2>
-        <GsAttributeList :attributes="household.attributes" />
-      </div>
+      <GsAttributeSection :attributes="household.attributes" class="mb-6 max-w-lg" />
 
       <GsEmptyState
         v-if="!members.length"

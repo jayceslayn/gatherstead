@@ -107,12 +107,7 @@ function formatDate(date: string | null) {
         </UCard>
 
         <!-- Additional Details (custom attributes) -->
-        <UCard v-if="member.attributes.length" class="md:col-span-2">
-          <template #header>
-            <p class="font-semibold">{{ t('attribute.title') }}</p>
-          </template>
-          <GsAttributeList :attributes="member.attributes" />
-        </UCard>
+        <GsAttributeSection :attributes="member.attributes" class="md:col-span-2" />
       </div>
     </template>
 

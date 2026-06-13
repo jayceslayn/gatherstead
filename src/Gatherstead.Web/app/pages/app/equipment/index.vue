@@ -146,9 +146,7 @@ async function confirmDelete() {
 
           <p v-if="item.notes" class="text-sm text-muted mt-3 break-words whitespace-pre-wrap">{{ item.notes }}</p>
 
-          <div v-if="item.attributes.length" class="mt-3 pt-3 border-t border-default">
-            <GsAttributeList :attributes="item.attributes" />
-          </div>
+          <GsAttributeSection :attributes="item.attributes" class="mt-3 pt-3 border-t border-default" />
         </UCard>
       </div>
     </template>

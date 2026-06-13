@@ -253,6 +253,8 @@
   },
   "attribute": {
     "title": "Detalles Adicionales",
+    "showDetails": "Mostrar detalles",
+    "hideDetails": "Ocultar detalles",
     "hint": "Campos personalizados opcionales",
     "add": "Añadir detalle",
     "keyPlaceholder": "Etiqueta (p. ej. Código de Puerta)",

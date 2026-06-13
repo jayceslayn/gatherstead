@@ -193,12 +193,7 @@ onMounted(() => {
         </GsRoleGate>
       </div>
 
-      <div v-if="event.attributes.length" class="mb-6 max-w-lg">
-        <h2 class="text-sm font-semibold text-muted uppercase tracking-wide mb-2">
-          {{ t('attribute.title') }}
-        </h2>
-        <GsAttributeList :attributes="event.attributes" />
-      </div>
+      <GsAttributeSection :attributes="event.attributes" class="mb-6 max-w-lg" />
 
       <div v-if="manageableHouseholds.length > 1" class="flex items-center gap-3 mb-6">
         <UFormField :label="t('event.selectHousehold')">

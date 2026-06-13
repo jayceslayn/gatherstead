@@ -26,9 +26,7 @@ const { formatRange, mealTypeLabels } = useTemplateFormatting()
         </div>
         <p class="text-sm text-muted mt-0.5">{{ mealTypeLabels(mealTypes) }}</p>
         <p v-if="notes" class="text-sm text-muted mt-1 break-words whitespace-pre-wrap">{{ notes }}</p>
-        <div v-if="attributes?.length" class="mt-2">
-          <GsAttributeList :attributes="attributes" />
-        </div>
+        <GsAttributeSection :attributes="attributes ?? []" class="mt-2" />
       </div>
       <div class="flex items-center gap-1 shrink-0">
         <slot name="actions" />
