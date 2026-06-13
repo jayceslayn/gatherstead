@@ -25,20 +25,20 @@
     "nuxt": "^4.4.8",
     "nuxt-auth-utils": "^0.5.29",
     "pinia": "^3.0.4",
-    "serialize-javascript": "7.0.5",
-    "tailwindcss": "^4.2.4",
-    "vue": "^3.5.35",
+    "serialize-javascript": "^7.0.5",
+    "tailwindcss": "^4.3.0",
+    "vue": "^3.5.38",
     "vue-router": "^5.1.0"
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
     "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
     "@nuxt/eslint": "^1.16.0",
-    "@types/node": "^25.9.2",
+    "@types/node": "^25.9.3",
     "eslint": "^10.4.1",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
-    "vue-tsc": "^3.3.4",
-    "openapi-typescript": "^7.8.0"
+    "vue-tsc": "^3.3.4"
   },
-  "packageManager": "pnpm@11.5.3+sha512.7ac1c919341c213a34dc0d02afb7143c5c26ac26ee8c4782deea821b8ac64d2134a081fd8941dae6e29bbb48f58dfc2b7fbceeccc07cb2f09d219d342a4969ed"
+  "packageManager": "pnpm@11.6.0+sha512.9a36518224080c6fe5165afdcfe79bfa118c29be703f3f462b1e32efe1e98e47e8750b148e08286250aad4113cc7993ca413c4e2cd447752708c2ee5751bc95f"
 }

@@ -6,6 +6,7 @@ allowBuilds:
   vue-demi: true
 
 overrides:
+  "esbuild": ">=0.28.1"
   serialize-javascript: ">=7.0.3"
   node-forge: ">=1.4.0"
   "picomatch@2": "^2.3.2"
