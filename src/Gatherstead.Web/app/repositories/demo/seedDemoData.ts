@@ -260,6 +260,47 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     )
   }
 
+  // Honey Best (Frozone) — tentative about the whole first day: Maybe across all meals.
+  for (const plan of [
+    { plan: day1Breakfast, template: breakfastTemplate },
+    { plan: day1Lunch, template: lunchTemplate },
+    { plan: day1Dinner, template: dinnerTemplate },
+  ]) {
+    if (plan.plan) {
+      await repos.mealAttendance.upsertMealAttendance(
+        DEMO_TENANT_ID, event.id, plan.template.id, plan.plan.id,
+        frozoneHousehold.id, honey.id, 'Maybe', false,
+      )
+    }
+  }
+
+  // Lucius Best (Frozone) — present for the event but skipping every meal on day 2.
+  for (const plan of [
+    { plan: day2Breakfast, template: breakfastTemplate },
+    { plan: day2Lunch, template: lunchTemplate },
+    { plan: day2Dinner, template: dinnerTemplate },
+  ]) {
+    if (plan.plan) {
+      await repos.mealAttendance.upsertMealAttendance(
+        DEMO_TENANT_ID, event.id, plan.template.id, plan.plan.id,
+        frozoneHousehold.id, lucius.id, 'NotGoing', false,
+      )
+    }
+  }
+
+  // Edna Mode — only committed to dinner; breakfast & lunch are a Maybe.
+  for (const plan of [
+    { plan: day1Breakfast, template: breakfastTemplate },
+    { plan: day1Lunch, template: lunchTemplate },
+  ]) {
+    if (plan.plan) {
+      await repos.mealAttendance.upsertMealAttendance(
+        DEMO_TENANT_ID, event.id, plan.template.id, plan.plan.id,
+        ednaStudio.id, edna.id, 'Maybe', false,
+      )
+    }
+  }
+
   // Violet is not attending — mark NotGoing for all meals on all days
   for (const plan of [day1Breakfast, day2Breakfast, day3Breakfast]) {
     if (plan) {

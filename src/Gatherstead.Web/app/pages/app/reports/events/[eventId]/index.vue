@@ -15,7 +15,7 @@ const { isMemberOrAbove } = useTenantRole()
 
 const eventId = computed(() => route.params.eventId as string)
 const { report, pending, error } = useEventReport(eventId)
-const { formatDate } = useFormatDate()
+const { formatDateRange } = useFormatDate()
 
 const days = computed(() => report.value?.days ?? [])
 
@@ -94,6 +94,14 @@ function nextDay() {
         <UButton
           variant="outline"
           size="sm"
+          icon="i-heroicons-calendar-days"
+          :to="`/app/events/${eventId}`"
+        >
+          {{ t('report.event.viewSignup') }}
+        </UButton>
+        <UButton
+          variant="outline"
+          size="sm"
           icon="i-heroicons-printer"
           :to="`/app/reports/events/${eventId}/print`"
           target="_blank"
@@ -104,7 +112,7 @@ function nextDay() {
 
       <div class="flex items-center gap-2 text-sm text-muted mb-6 flex-wrap">
         <UIcon name="i-heroicons-calendar-days" class="size-4 shrink-0" />
-        <span>{{ t('event.dateRange', { start: formatDate(report.startDate), end: formatDate(report.endDate) }) }}</span>
+        <span>{{ formatDateRange(report.startDate, report.endDate) }}</span>
       </div>
 
       <GsEmptyState

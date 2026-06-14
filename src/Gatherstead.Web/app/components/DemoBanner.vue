@@ -11,6 +11,7 @@ const isDemoMode = __DEMO_MODE__
 const { t } = useI18n()
 const open = ref(false)
 const isResetting = ref(false)
+const isClearing = ref(false)
 
 const repos = inject<Repositories | null>(REPOSITORIES_KEY, null)
 const memberStore = useCurrentMemberStore()
@@ -28,9 +29,23 @@ async function resetDemoData() {
   await seedDemoData(repos)
   memberStore.clear()
   eventStore.clear()
+  clearNuxtData()
   open.value = false
   await navigateTo('/app')
   isResetting.value = false
+}
+
+async function clearDemoData() {
+  if (!__DEMO_MODE__ || !repos) return
+  isClearing.value = true
+  const { clearDemoStore } = await import('~/repositories/demo/DemoStore')
+  clearDemoStore()
+  memberStore.clear()
+  eventStore.clear()
+  clearNuxtData()
+  open.value = false
+  await navigateTo('/app')
+  isClearing.value = false
 }
 </script>
 
@@ -69,15 +84,26 @@ async function resetDemoData() {
       </table>
 
       <p class="text-xs text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
-      <UButton
-        variant="ghost"
-        color="warning"
-        :loading="isResetting"
-        :disabled="isResetting"
-        @click="resetDemoData"
-      >
-        {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
-      </UButton>
+      <div class="flex flex-wrap gap-2">
+        <UButton
+          variant="ghost"
+          color="warning"
+          :loading="isResetting"
+          :disabled="isResetting || isClearing"
+          @click="resetDemoData"
+        >
+          {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
+        </UButton>
+        <UButton
+          variant="ghost"
+          color="error"
+          :loading="isClearing"
+          :disabled="isResetting || isClearing"
+          @click="clearDemoData"
+        >
+          {{ isClearing ? t('demo.modal.clearing') : t('demo.modal.clearButton') }}
+        </UButton>
+      </div>
     </template>
 
     <template #footer>

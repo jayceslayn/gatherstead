@@ -20,7 +20,7 @@ const { isMemberOrAbove } = useTenantRole()
 
 const eventId = computed(() => route.params.eventId as string)
 const { report, pending, error } = useEventReport(eventId)
-const { formatDate } = useFormatDate()
+const { formatDateRange } = useFormatDate()
 
 const days = computed(() => report.value?.days ?? [])
 
@@ -123,7 +123,7 @@ watch(
                 <div class="flex items-baseline justify-between gap-x-4 gap-y-0.5 flex-wrap bg-default pt-3 pb-1.5 mb-4 border-b-2 border-primary">
                   <div class="flex items-baseline gap-x-3 gap-y-0.5 flex-wrap min-w-0">
                     <span class="text-sm font-semibold text-highlighted truncate">{{ report.eventName }}</span>
-                    <span class="text-xs text-muted">{{ t('event.dateRange', { start: formatDate(report.startDate), end: formatDate(report.endDate) }) }}</span>
+                    <span class="text-xs text-muted">{{ formatDateRange(report.startDate, report.endDate) }}</span>
                   </div>
                   <span class="text-sm font-bold uppercase tracking-wide text-primary">{{ category.label }}</span>
                 </div>

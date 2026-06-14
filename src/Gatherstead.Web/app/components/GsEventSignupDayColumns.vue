@@ -20,8 +20,9 @@ function nextDay() {
 
 <template>
   <div>
-    <!-- Desktop: day columns side by side; headers stick to page scroll. -->
-    <div class="hidden lg:flex gap-4 overflow-x-auto pb-2">
+    <!-- Desktop: day columns side by side; headers stick to page scroll.
+         pl-px keeps the first card's left border off the scroll edge so it isn't clipped. -->
+    <div class="hidden lg:flex gap-4 overflow-x-auto pb-2 pl-px">
       <div v-for="day in days" :key="day" class="w-80 shrink-0">
         <slot name="day" :day="day" />
       </div>

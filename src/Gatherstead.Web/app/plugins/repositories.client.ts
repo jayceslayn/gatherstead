@@ -32,8 +32,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
     nuxtApp.vueApp.provide(REPOSITORIES_KEY, repos)
 
+    // Seed on first load, and re-seed if the persisted demo event has drifted entirely
+    // into the past (localStorage survives across sessions but the event dates don't).
     const store = getDemoStore()
-    if (store.properties.value.length === 0) {
+    const today = new Date().toISOString().substring(0, 10)
+    const stale = store.events.value.length > 0 && store.events.value.every(e => e.endDate < today)
+    if (store.properties.value.length === 0 || stale) {
+      const { clearDemoStore } = await import('~/repositories/demo/DemoStore')
+      clearDemoStore()
       await seedDemoData(repos)
     }
   }

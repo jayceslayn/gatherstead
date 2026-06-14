@@ -21,6 +21,17 @@ const eventId = computed(() => route.params.eventId as string)
 
 const { event, pending: eventPending } = useEvent(eventId)
 
+// Per-day attendance totals (going/maybe across all households) — reuse the report
+// aggregation so the sign-up day headers match the event report exactly.
+const { report } = useEventReport(eventId)
+const attendanceByDay = computed(() => {
+  const map: Record<string, { going: number, maybe: number }> = {}
+  for (const d of report.value?.days ?? []) {
+    map[d.day] = { going: d.going, maybe: d.maybe }
+  }
+  return map
+})
+
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
 const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
 
@@ -144,11 +155,7 @@ const eventDays = computed(() => {
   return days
 })
 
-function formatHeader(date: string) {
-  return new Intl.DateTimeFormat(undefined, { month: 'long', day: 'numeric', year: 'numeric' }).format(
-    new Date(date + 'T00:00:00'),
-  )
-}
+const { formatDateRange } = useFormatDate()
 
 onMounted(() => {
   if (tabs.value.some(tab => tab.value === route.hash.substring(1))) {
@@ -179,7 +186,7 @@ onMounted(() => {
 
       <div class="flex items-center gap-2 text-sm text-muted mb-4 flex-wrap">
         <UIcon name="i-heroicons-calendar-days" class="size-4 shrink-0" />
-        <span>{{ t('event.dateRange', { start: formatHeader(event.startDate), end: formatHeader(event.endDate) }) }}</span>
+        <span>{{ formatDateRange(event.startDate, event.endDate) }}</span>
         <GsRoleGate min-role="Member">
           <UButton
             :to="`/app/reports/events/${event.id}`"
@@ -233,6 +240,7 @@ onMounted(() => {
               <template #day="{ day }">
                 <GsEventTaskSignupDay
                   :day="day"
+                  :attendance="attendanceByDay[day]"
                   :plans="taskPlansByDay[day] ?? []"
                   :members="householdMembers"
                   :is-volunteered="taskIsVolunteered"
@@ -259,6 +267,7 @@ onMounted(() => {
               <template #day="{ day }">
                 <GsEventAccommodationSignupDay
                   :day="day"
+                  :attendance="attendanceByDay[day]"
                   :accommodations="accommodations"
                   :members="householdMembers"
                   :member-intents="accMemberIntents"

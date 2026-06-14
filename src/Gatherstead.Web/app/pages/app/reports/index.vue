@@ -9,7 +9,7 @@ definePageMeta({
 const { t } = useI18n()
 const { isMemberOrAbove } = useTenantRole()
 const { events, pending } = useEvents()
-const { formatDate } = useFormatDate()
+const { formatDateRange } = useFormatDate()
 </script>
 
 <template>
@@ -50,7 +50,7 @@ const { formatDate } = useFormatDate()
               <div class="min-w-0">
                 <p class="font-semibold truncate">{{ event.name }}</p>
                 <p class="text-sm text-muted mt-0.5">
-                  {{ t('event.dateRange', { start: formatDate(event.startDate), end: formatDate(event.endDate) }) }}
+                  {{ formatDateRange(event.startDate, event.endDate) }}
                 </p>
               </div>
               <UIcon name="i-heroicons-chart-bar" class="size-5 text-muted shrink-0" />

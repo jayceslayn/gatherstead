@@ -9,6 +9,7 @@ const props = defineProps<{
   memberIntents: (accommodationId: string, night: string) => AccommodationIntent[]
   occupiedCount: (accommodationId: string, night: string) => number
   isUpdating: (key: string) => boolean
+  attendance?: { going: number, maybe: number }
 }>()
 
 const emit = defineEmits<{
@@ -47,6 +48,13 @@ function occupancyColor(acc: AccommodationSummary): 'neutral' | 'success' | 'war
   <section class="flex flex-col">
     <header class="sticky top-0 z-10 bg-default border-b border-default pb-2 mb-3">
       <h3 class="font-semibold text-highlighted">{{ formatDay(day) }}</h3>
+      <div v-if="attendance" class="flex items-center gap-3 text-sm text-muted mt-0.5">
+        <span class="inline-flex items-center gap-1">
+          <UIcon name="i-heroicons-user-group" class="size-4" />
+          {{ t('report.event.attendingCount', { n: attendance.going }) }}
+        </span>
+        <span v-if="attendance.maybe">{{ t('report.event.maybeCount', { n: attendance.maybe }) }}</span>
+      </div>
     </header>
 
     <p v-if="!accommodations.length" class="text-sm text-muted">{{ t('property.noAccommodations') }}</p>

@@ -9,6 +9,7 @@ const props = defineProps<{
   isVolunteered: (planId: string, memberId: string) => boolean
   isUpdating: (planId: string, memberId: string) => boolean
   volunteerCount: (planId: string) => number
+  attendance?: { going: number, maybe: number }
 }>()
 
 const emit = defineEmits<{ toggle: [planId: string, templateId: string, memberId: string] }>()
@@ -33,6 +34,13 @@ const sortedPlans = computed(() =>
   <section class="flex flex-col">
     <header class="sticky top-0 z-10 bg-default border-b border-default pb-2 mb-3">
       <h3 class="font-semibold text-highlighted">{{ formatDay(day) }}</h3>
+      <div v-if="attendance" class="flex items-center gap-3 text-sm text-muted mt-0.5">
+        <span class="inline-flex items-center gap-1">
+          <UIcon name="i-heroicons-user-group" class="size-4" />
+          {{ t('report.event.attendingCount', { n: attendance.going }) }}
+        </span>
+        <span v-if="attendance.maybe">{{ t('report.event.maybeCount', { n: attendance.maybe }) }}</span>
+      </div>
     </header>
 
     <p v-if="!sortedPlans.length" class="text-sm text-muted">{{ t('report.event.noTasks') }}</p>
@@ -45,10 +53,8 @@ const sortedPlans = computed(() =>
       >
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <p class="font-semibold">{{ template.name }}</p>
-              <span v-if="plan.timeSlot" class="text-xs text-muted">{{ t(`event.task.${plan.timeSlot.toLowerCase()}`) }}</span>
-            </div>
+            <p class="font-semibold">{{ template.name }}</p>
+            <span v-if="plan.timeSlot" class="block text-xs text-muted mt-0.5">{{ t(`event.task.${plan.timeSlot.toLowerCase()}`) }}</span>
             <p v-if="template.notes" class="text-xs text-muted mt-0.5">{{ template.notes }}</p>
           </div>
           <GsTaskCoverageBadge
@@ -69,12 +75,13 @@ const sortedPlans = computed(() =>
               :color="isVolunteered(plan.id, member.id) ? 'success' : 'neutral'"
               :variant="isVolunteered(plan.id, member.id) ? 'solid' : 'outline'"
               size="xs"
+              square
+              icon="i-heroicons-check"
               class="shrink-0"
               :loading="isUpdating(plan.id, member.id)"
+              :aria-label="isVolunteered(plan.id, member.id) ? t('event.task.volunteered') : t('event.task.volunteer')"
               @click="emit('toggle', plan.id, template.id, member.id)"
-            >
-              {{ isVolunteered(plan.id, member.id) ? t('event.task.volunteered') : t('event.task.volunteer') }}
-            </UButton>
+            />
           </div>
         </div>
       </UCard>

@@ -277,6 +277,7 @@
     "noAccess": "You don't have access to reports for this group.",
     "event": {
       "viewReport": "View Report",
+      "viewSignup": "View Signup",
       "title": "Event Report",
       "headcount": "Headcount",
       "attendingCount": "{n} attending",
@@ -391,7 +392,9 @@
       "dataResets": "Demo data lives in your browser's localStorage. Clearing site data or switching browsers resets everything to the original sample data.",
       "cta": "Ready to keep your gatherings?",
       "resetButton": "Reset Demo Data",
-      "resetting": "Resetting…"
+      "resetting": "Resetting…",
+      "clearButton": "Clear Demo Data",
+      "clearing": "Clearing…"
     },
     "limitReached": {
       "title": "Demo Limit Reached",

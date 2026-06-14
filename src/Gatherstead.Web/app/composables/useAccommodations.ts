@@ -180,10 +180,12 @@ export function useEventAccommodationSignup(
       .sort((a, b) => (order.get(a.householdMemberId) ?? 0) - (order.get(b.householdMemberId) ?? 0))
   }
 
-  // Total occupancy for a night across all households (declined excluded).
+  // Total occupancy for a night across all households (declined excluded; null party
+  // size counts as 1) — mirrors the event report's occupancy aggregation.
   function occupiedCount(accommodationId: string, night: string): number {
     return (intentsByAccommodation.value[accommodationId] ?? [])
-      .filter(i => i.night === night && i.decision !== 'Declined').length
+      .filter(i => i.night === night && i.decision !== 'Declined')
+      .reduce((sum, i) => sum + (i.partySize ?? 1), 0)
   }
 
   const updating = ref<string[]>([])

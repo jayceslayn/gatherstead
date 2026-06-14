@@ -277,6 +277,7 @@
     "noAccess": "No tienes acceso a los informes de este grupo.",
     "event": {
       "viewReport": "Ver Informe",
+      "viewSignup": "Ver Inscripción",
       "title": "Informe del Evento",
       "headcount": "Asistentes",
       "attendingCount": "{n} asistiendo",
@@ -391,7 +392,9 @@
       "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
       "cta": "¿Listo para guardar tus reuniones?",
       "resetButton": "Restablecer Datos de Demo",
-      "resetting": "Restableciendo…"
+      "resetting": "Restableciendo…",
+      "clearButton": "Borrar Datos de Demo",
+      "clearing": "Borrando…"
     },
     "limitReached": {
       "title": "Límite de Demo Alcanzado",

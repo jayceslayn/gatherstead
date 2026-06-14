@@ -37,11 +37,7 @@ function onEventClick(arg: EventClickArg) {
   navigateTo(`/app/events/${arg.event.id}`)
 }
 
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(
-    new Date(date + 'T00:00:00'),
-  )
-}
+const { formatDateRange } = useFormatDate()
 </script>
 
 <template>
@@ -108,7 +104,7 @@ function formatDate(date: string) {
               <div class="min-w-0">
                 <p class="font-semibold truncate">{{ event.name }}</p>
                 <p class="text-sm text-muted mt-0.5">
-                  {{ t('event.dateRange', { start: formatDate(event.startDate), end: formatDate(event.endDate) }) }}
+                  {{ formatDateRange(event.startDate, event.endDate) }}
                 </p>
               </div>
               <UIcon name="i-heroicons-chevron-right" class="size-5 text-muted shrink-0" />
