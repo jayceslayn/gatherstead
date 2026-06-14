@@ -1,0 +1,120 @@
+using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Planning;
+using Gatherstead.Api.Services.TaskPlans;
+using Gatherstead.Api.Tests.Fixtures;
+using Gatherstead.Data;
+using Gatherstead.Data.Entities;
+using Microsoft.EntityFrameworkCore;
+using Moq;
+
+namespace Gatherstead.Api.Tests.Services;
+
+public class TaskPlanServiceTests : IAsyncLifetime
+{
+    private GathersteadDbContext _dbContext = null!;
+    private readonly Guid _tenantId = Guid.NewGuid();
+    private readonly Guid _propertyId = Guid.NewGuid();
+    private readonly Guid _eventId = Guid.NewGuid();
+    private readonly Guid _templateId = Guid.NewGuid();
+
+    private static readonly DateOnly Jun1 = new(2025, 6, 1);
+    private static readonly DateOnly Jun2 = new(2025, 6, 2);
+
+    public async ValueTask InitializeAsync()
+    {
+        _dbContext = TestDbContextFactory.Create(tenantId: _tenantId);
+        _dbContext.Tenants.Add(new Tenant { Id = _tenantId, Name = "Test Tenant" });
+        _dbContext.Properties.Add(new Property { Id = _propertyId, TenantId = _tenantId, Name = "Lake House" });
+        _dbContext.Events.Add(new Event
+        {
+            Id = _eventId, TenantId = _tenantId, PropertyId = _propertyId,
+            Name = "Summer Reunion", StartDate = Jun1, EndDate = Jun2,
+        });
+        _dbContext.TaskTemplates.Add(new TaskTemplate
+        {
+            Id = _templateId, TenantId = _tenantId, EventId = _eventId,
+            Name = "Tasks", TimeSlots = TaskTimeSlotFlags.Morning,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _dbContext.Dispose();
+        return ValueTask.CompletedTask;
+    }
+
+    private TaskPlanService CreateService()
+    {
+        var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId);
+        var auth = Mock.Of<IMemberAuthorizationService>(a =>
+            a.CanManageEventAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(true)
+            && a.GetCallerTenantRoleAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult((TenantRole?)TenantRole.Owner));
+        return new TaskPlanService(_dbContext, tenantContext, auth, Mock.Of<IAuditVisibilityContext>());
+    }
+
+    private async Task<TaskPlan> AddPlanAsync()
+    {
+        var plan = new TaskPlan
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, TemplateId = _templateId,
+            Day = Jun1, TimeSlot = TaskTimeSlot.Morning,
+        };
+        _dbContext.TaskPlans.Add(plan);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return plan;
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SetsSuppressionMarker()
+    {
+        var plan = await AddPlanAsync();
+
+        var result = await CreateService().DeleteAsync(_tenantId, _templateId, plan.Id, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var stored = await _dbContext.TaskPlans.IgnoreQueryFilters()
+            .SingleAsync(p => p.Id == plan.Id, TestContext.Current.CancellationToken);
+        Assert.True(stored.IsDeleted);
+        Assert.True(stored.IsException);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ExcludesPlanFromDefaultQuery()
+    {
+        var plan = await AddPlanAsync();
+
+        await CreateService().DeleteAsync(_tenantId, _templateId, plan.Id, TestContext.Current.CancellationToken);
+
+        // The soft-delete global query filter hides the suppressed plan from normal reads.
+        var visible = await _dbContext.TaskPlans
+            .Where(p => p.TemplateId == _templateId)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(visible);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_SuppressedPlanSurvivesRegeneration()
+    {
+        var plan = await AddPlanAsync();
+        await CreateService().DeleteAsync(_tenantId, _templateId, plan.Id, TestContext.Current.CancellationToken);
+
+        var template = await _dbContext.TaskTemplates.FindAsync([_templateId], TestContext.Current.CancellationToken);
+        await new PlanSyncService(_dbContext).SyncTaskPlanAsync(_tenantId, template!, Jun1, Jun2, TestContext.Current.CancellationToken);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // The suppressed Jun1 morning slot must not be resurrected; only Jun2 morning is generated.
+        var active = await _dbContext.TaskPlans.ToListAsync(TestContext.Current.CancellationToken);
+        Assert.DoesNotContain(active, p => p.Day == Jun1);
+        Assert.Contains(active, p => p.Day == Jun2 && p.TimeSlot == TaskTimeSlot.Morning);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ReturnsNotFound_WhenPlanMissing()
+    {
+        var result = await CreateService().DeleteAsync(_tenantId, _templateId, Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Entity);
+    }
+}

@@ -91,6 +91,28 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     )
   }
 
+  async updatePlan(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    notes: string | null,
+    isException: boolean,
+    exceptionReason: string | null,
+  ): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}/plans/${planId}`,
+      { method: 'PUT', body: { notes, isException, exceptionReason } },
+    )
+  }
+
+  async deletePlan(tenantId: string, eventId: string, templateId: string, planId: string): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}/plans/${planId}`,
+      { method: 'DELETE' },
+    )
+  }
+
   async deleteIntent(
     tenantId: string,
     eventId: string,

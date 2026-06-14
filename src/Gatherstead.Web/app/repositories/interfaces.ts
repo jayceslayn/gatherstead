@@ -187,6 +187,21 @@ export interface IMealPlanRepository {
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>
+  updatePlan(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    notes: string | null,
+    isException: boolean,
+    exceptionReason: string | null,
+  ): Promise<void>
+  deletePlan(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+  ): Promise<void>
   deleteIntent(
     tenantId: string,
     eventId: string,
@@ -245,6 +260,22 @@ export interface ITaskRepository {
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
   deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void>
+  updatePlan(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+    completed: boolean,
+    notes: string | null,
+    isException: boolean,
+    exceptionReason: string | null,
+  ): Promise<void>
+  deletePlan(
+    tenantId: string,
+    eventId: string,
+    templateId: string,
+    planId: string,
+  ): Promise<void>
   deleteIntent(
     tenantId: string,
     eventId: string,

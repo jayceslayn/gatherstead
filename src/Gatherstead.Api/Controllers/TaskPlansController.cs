@@ -86,4 +86,22 @@ public class TaskPlansController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpDelete("{planId:guid}")]
+    public async Task<ActionResult<TaskPlanResponse>> DeleteTaskPlan(
+        Guid tenantId,
+        Guid templateId,
+        Guid planId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _taskPlanService.DeleteAsync(tenantId, templateId, planId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        if (response.Entity is null)
+            return NotFound(response);
+
+        return Ok(response);
+    }
 }

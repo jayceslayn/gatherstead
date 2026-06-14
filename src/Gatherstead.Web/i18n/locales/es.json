@@ -185,7 +185,14 @@
       "editTemplate": "Editar Comida",
       "deleteTemplate": "Eliminar Comida",
       "deleteConfirm": "Esto eliminará la comida y sus planes. No se puede deshacer.",
-      "createMatchingTask": "Crear también una tarea para organizar esta comida"
+      "createMatchingTask": "Crear también una tarea para organizar esta comida",
+      "plan": {
+        "manage": "Gestionar planes individuales",
+        "empty": "Aún no se han generado planes de comida.",
+        "editTitle": "Editar Plan de Comida",
+        "deleteTitle": "Eliminar Plan de Comida",
+        "deleteConfirm": "Esto elimina solo este plan de comida para este día. No se regenerará. No se puede deshacer."
+      }
     },
     "task": {
       "morning": "Mañana",
@@ -207,7 +214,14 @@
       "addTemplate": "Agregar Tarea",
       "editTemplate": "Editar Tarea",
       "deleteTemplate": "Eliminar Tarea",
-      "deleteConfirm": "Esto eliminará la tarea y sus planes. No se puede deshacer."
+      "deleteConfirm": "Esto eliminará la tarea y sus planes. No se puede deshacer.",
+      "plan": {
+        "manage": "Gestionar planes individuales",
+        "empty": "Aún no se han generado planes de tareas.",
+        "editTitle": "Editar Plan de Tarea",
+        "deleteTitle": "Eliminar Plan de Tarea",
+        "deleteConfirm": "Esto elimina solo este plan de tarea para este día. No se regenerará. No se puede deshacer."
+      }
     },
     "signup": {
       "member": "Miembro",

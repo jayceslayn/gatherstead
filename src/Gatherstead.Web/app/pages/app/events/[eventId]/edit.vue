@@ -262,6 +262,8 @@ async function confirmDeleteTask() {
                     />
                   </GsRoleGate>
                 </template>
+
+                <GsTemplatePlanList :event-id="eventId" :template-id="template.id" kind="meal" />
               </GsMealTemplateCard>
             </div>
           </div>
@@ -317,6 +319,8 @@ async function confirmDeleteTask() {
                     />
                   </GsRoleGate>
                 </template>
+
+                <GsTemplatePlanList :event-id="eventId" :template-id="template.id" kind="task" />
               </GsTaskTemplateCard>
             </div>
           </div>

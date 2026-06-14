@@ -37,5 +37,6 @@ const { formatRange, taskSlotLabels } = useTemplateFormatting()
         <slot name="actions" />
       </div>
     </div>
+    <slot />
   </UCard>
 </template>

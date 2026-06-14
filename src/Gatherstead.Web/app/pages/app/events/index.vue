@@ -10,7 +10,7 @@ const { t } = useI18n()
 const { isManagerOrAbove } = useTenantRole()
 const { events, pending } = useEvents()
 
-const viewMode = ref<'calendar' | 'list'>('calendar')
+const viewMode = ref<'calendar' | 'list'>('list')
 
 onMounted(() => {
   const saved = localStorage.getItem('gs-events-view')

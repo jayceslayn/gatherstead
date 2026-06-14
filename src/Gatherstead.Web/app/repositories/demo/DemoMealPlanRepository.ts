@@ -221,6 +221,31 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     persistDemoStore()
   }
 
+  async updatePlan(
+    _tenantId: string,
+    _eventId: string,
+    _templateId: string,
+    planId: string,
+    notes: string | null,
+    isException: boolean,
+    exceptionReason: string | null,
+  ): Promise<void> {
+    const store = getDemoStore()
+    const idx = store.mealPlans.value.findIndex(p => p.id === planId)
+    if (idx >= 0) {
+      store.mealPlans.value[idx] = { ...store.mealPlans.value[idx]!, notes, isException, exceptionReason }
+    }
+    persistDemoStore()
+  }
+
+  async deletePlan(_tenantId: string, _eventId: string, _templateId: string, planId: string): Promise<void> {
+    const store = getDemoStore()
+    store.mealAttendance.value = store.mealAttendance.value.filter(a => a.mealPlanId !== planId)
+    store.mealIntents.value = store.mealIntents.value.filter(i => i.mealPlanId !== planId)
+    store.mealPlans.value = store.mealPlans.value.filter(p => p.id !== planId)
+    persistDemoStore()
+  }
+
   async deleteIntent(
     _tenantId: string,
     _eventId: string,

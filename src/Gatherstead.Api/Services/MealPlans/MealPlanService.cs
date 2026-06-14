@@ -114,6 +114,38 @@ public class MealPlanService : IMealPlanService
         return response;
     }
 
+    public async Task<MealPlanResponse> DeleteAsync(
+        Guid tenantId,
+        Guid templateId,
+        Guid planId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new MealPlanResponse();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
+
+        var plan = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.MealPlans.Where(p => p.TenantId == tenantId && p.MealTemplateId == templateId && p.Id == planId),
+            EntityDisplayName,
+            cancellationToken);
+
+        if (plan is null) return response;
+
+        // Suppression marker: IsDeleted + IsException together tell PlanGenerator to keep this
+        // plan removed instead of regenerating it on the next sync (see PlanGenerator.DiffMealPlans).
+        plan.IsDeleted = true;
+        plan.IsException = true;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        response.SetSuccess(MapToDto(plan));
+        return response;
+    }
+
     private MealPlanDto MapToDto(Data.Entities.MealPlan p) => new(
         p.Id, p.TenantId, p.MealTemplateId, p.Day, p.MealType, p.Notes,
         p.IsException, p.ExceptionReason,

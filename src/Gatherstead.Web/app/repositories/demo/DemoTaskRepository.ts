@@ -177,6 +177,31 @@ export class DemoTaskRepository implements ITaskRepository {
     persistDemoStore()
   }
 
+  async updatePlan(
+    _tenantId: string,
+    _eventId: string,
+    _templateId: string,
+    planId: string,
+    completed: boolean,
+    notes: string | null,
+    isException: boolean,
+    exceptionReason: string | null,
+  ): Promise<void> {
+    const store = getDemoStore()
+    const idx = store.taskPlans.value.findIndex(p => p.id === planId)
+    if (idx >= 0) {
+      store.taskPlans.value[idx] = { ...store.taskPlans.value[idx]!, completed, notes, isException, exceptionReason }
+    }
+    persistDemoStore()
+  }
+
+  async deletePlan(_tenantId: string, _eventId: string, _templateId: string, planId: string): Promise<void> {
+    const store = getDemoStore()
+    store.taskIntents.value = store.taskIntents.value.filter(i => i.taskPlanId !== planId)
+    store.taskPlans.value = store.taskPlans.value.filter(p => p.id !== planId)
+    persistDemoStore()
+  }
+
   async deleteIntent(
     _tenantId: string,
     _eventId: string,

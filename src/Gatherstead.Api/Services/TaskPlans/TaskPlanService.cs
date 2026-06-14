@@ -115,6 +115,38 @@ public class TaskPlanService : ITaskPlanService
         return response;
     }
 
+    public async Task<TaskPlanResponse> DeleteAsync(
+        Guid tenantId,
+        Guid templateId,
+        Guid planId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new TaskPlanResponse();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
+
+        var plan = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.TaskPlans.Where(p => p.TenantId == tenantId && p.TemplateId == templateId && p.Id == planId),
+            EntityDisplayName,
+            cancellationToken);
+
+        if (plan is null) return response;
+
+        // Suppression marker: IsDeleted + IsException together tell PlanGenerator to keep this
+        // plan removed instead of regenerating it on the next sync (see PlanGenerator.DiffTaskPlans).
+        plan.IsDeleted = true;
+        plan.IsException = true;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        response.SetSuccess(MapToDto(plan));
+        return response;
+    }
+
     private TaskPlanDto MapToDto(Data.Entities.TaskPlan p) => new(
         p.Id, p.TenantId, p.TemplateId, p.Day, p.TimeSlot, p.Completed, p.Notes,
         p.IsException, p.ExceptionReason,

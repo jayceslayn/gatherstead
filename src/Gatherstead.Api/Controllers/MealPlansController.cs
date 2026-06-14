@@ -86,4 +86,22 @@ public class MealPlansController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpDelete("{planId:guid}")]
+    public async Task<ActionResult<MealPlanResponse>> DeleteMealPlan(
+        Guid tenantId,
+        Guid templateId,
+        Guid planId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _mealPlanService.DeleteAsync(tenantId, templateId, planId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        if (response.Entity is null)
+            return NotFound(response);
+
+        return Ok(response);
+    }
 }

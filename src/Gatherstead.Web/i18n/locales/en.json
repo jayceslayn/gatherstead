@@ -185,7 +185,14 @@
       "editTemplate": "Edit Meal",
       "deleteTemplate": "Delete Meal",
       "deleteConfirm": "This will remove the meal and its plans. This cannot be undone.",
-      "createMatchingTask": "Also create a matching task to organize this meal"
+      "createMatchingTask": "Also create a matching task to organize this meal",
+      "plan": {
+        "manage": "Manage individual plans",
+        "empty": "No meal plans generated yet.",
+        "editTitle": "Edit Meal Plan",
+        "deleteTitle": "Delete Meal Plan",
+        "deleteConfirm": "This removes just this meal plan for this day. It won't be regenerated. This cannot be undone."
+      }
     },
     "task": {
       "morning": "Morning",
@@ -207,7 +214,14 @@
       "addTemplate": "Add Task",
       "editTemplate": "Edit Task",
       "deleteTemplate": "Delete Task",
-      "deleteConfirm": "This will remove the task and its plans. This cannot be undone."
+      "deleteConfirm": "This will remove the task and its plans. This cannot be undone.",
+      "plan": {
+        "manage": "Manage individual plans",
+        "empty": "No task plans generated yet.",
+        "editTitle": "Edit Task Plan",
+        "deleteTitle": "Delete Task Plan",
+        "deleteConfirm": "This removes just this task plan for this day. It won't be regenerated. This cannot be undone."
+      }
     },
     "signup": {
       "member": "Member",

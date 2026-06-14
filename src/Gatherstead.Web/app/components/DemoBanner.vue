@@ -69,24 +69,37 @@ async function clearDemoData() {
     <template #body>
       <p class="text-sm text-muted mb-4">{{ t('demo.modal.intro') }}</p>
 
-      <h4 class="text-sm font-semibold mb-2">{{ t('demo.modal.limitsTitle') }}</h4>
-      <table class="w-full text-sm mb-4">
-        <tbody>
-          <tr
-            v-for="key in limitKeys"
-            :key="key"
-            class="border-b border-(--ui-border) last:border-0"
-          >
-            <td class="py-1.5 text-muted">{{ t(`demo.modal.limits.${key}`) }}</td>
-            <td class="py-1.5 text-right font-medium">{{ DEMO_LIMITS[key] }}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <p class="text-xs text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
-      <div class="flex flex-wrap gap-2">
+      <UCollapsible
+        class="mb-4"
+      >
         <UButton
+          :label="t('demo.modal.limitsTitle')"
           variant="ghost"
+          color="neutral"
+          trailing-icon="i-heroicons-chevron-down"
+          class="w-full"
+        />
+
+        <template #content>
+          <table class="w-full text-sm">
+            <tbody>
+              <tr
+                v-for="key in limitKeys"
+                :key="key"
+                class="border-b border-(--ui-border) last:border-0"
+              >
+                <td class="py-1.5 text-muted">{{ t(`demo.modal.limits.${key}`) }}</td>
+                <td class="py-1.5 text-right font-medium">{{ DEMO_LIMITS[key] }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </template>
+      </UCollapsible>
+
+      <p class="text-sm text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
+
+      <div class="flex flex-wrap justify-between gap-2">
+        <UButton
           color="warning"
           :loading="isResetting"
           :disabled="isResetting || isClearing"
@@ -95,7 +108,6 @@ async function clearDemoData() {
           {{ isResetting ? t('demo.modal.resetting') : t('demo.modal.resetButton') }}
         </UButton>
         <UButton
-          variant="ghost"
           color="error"
           :loading="isClearing"
           :disabled="isResetting || isClearing"
@@ -107,21 +119,18 @@ async function clearDemoData() {
     </template>
 
     <template #footer>
-      <div class="flex items-center gap-3">
+      <div class="flex justify-between items-center gap-3 w-full">
         <p v-if="config.public.liveUrl" class="text-sm text-muted flex-1">
           {{ t('demo.modal.cta') }}
         </p>
-        <div class="flex gap-2 ml-auto">
-          <UButton
-            v-if="config.public.liveUrl"
-            color="primary"
-            :to="(config.public.liveUrl as string)"
-            external
-          >
-            {{ t('demo.banner.goLive') }}
-          </UButton>
-          <UButton variant="ghost" @click="open = false">{{ t('common.cancel') }}</UButton>
-        </div>
+        <UButton
+          v-if="config.public.liveUrl"
+          color="primary"
+          :to="(config.public.liveUrl as string)"
+          external
+        >
+          {{ t('demo.banner.goLive') }}
+        </UButton>
       </div>
     </template>
   </UModal>

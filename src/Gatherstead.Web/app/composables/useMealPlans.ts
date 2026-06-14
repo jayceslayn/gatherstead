@@ -69,6 +69,46 @@ export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Prom
   return { updating, createTemplate, updateTemplate, deleteTemplate }
 }
 
+export function useMealPlanActions(eventId: Ref<string>, templateId: Ref<string>, refresh: () => Promise<void>) {
+  const tenantStore = useTenantStore()
+  const { mealPlans: repo } = useRepositories()
+  const toast = useToast()
+  const { translateError } = useApiError()
+  const updating = ref<string[]>([])
+
+  async function updatePlan(planId: string, notes: string | null, isException: boolean, exceptionReason: string | null): Promise<boolean> {
+    updating.value.push(planId)
+    try {
+      await repo.updatePlan(tenantStore.currentTenantId!, eventId.value, templateId.value, planId, notes, isException, exceptionReason)
+      await refresh()
+      return true
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== planId)
+    }
+  }
+
+  async function deletePlan(planId: string) {
+    updating.value.push(planId)
+    try {
+      await repo.deletePlan(tenantStore.currentTenantId!, eventId.value, templateId.value, planId)
+      await refresh()
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== planId)
+    }
+  }
+
+  return { updating, updatePlan, deletePlan }
+}
+
 export function useMealTemplates(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { mealPlans: repo } = useRepositories()

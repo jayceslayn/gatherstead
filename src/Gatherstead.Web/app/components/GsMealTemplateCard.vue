@@ -32,5 +32,6 @@ const { formatRange, mealTypeLabels } = useTemplateFormatting()
         <slot name="actions" />
       </div>
     </div>
+    <slot />
   </UCard>
 </template>
