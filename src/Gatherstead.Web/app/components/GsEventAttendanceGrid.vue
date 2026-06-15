@@ -17,7 +17,7 @@ const selectedDayIndex = defineModel<number>('selectedDayIndex', { default: 0 })
 const { t } = useI18n()
 const { formatDay } = useFormatDate()
 const legacy = useRuntimeConfig().public.legacyAttendanceGrid
-const { attendance, upsert: upsertDay } = useEventAttendance(computed(() => props.eventId))
+const { attendance, pending: attendancePending, upsert: upsertDay } = useEventAttendance(computed(() => props.eventId))
 const { members } = useHouseholdMembers(computed(() => props.householdId))
 const { mealPlansByDay, templateNameById, getAttendance: getMealAttendance, upsert: upsertMeal } = useEventMealData(computed(() => props.eventId))
 
@@ -61,11 +61,6 @@ const mealUpdating = ref<Record<string, boolean>>({})
 
 function cellKey(memberId: string, id: string) {
   return `${memberId}:${id}`
-}
-
-// True while any of a member's days are mid-update — drives the top quick-response bar spinner.
-function memberBulkLoading(memberId: string): boolean {
-  return props.days.some(day => dayUpdating.value[cellKey(memberId, day)])
 }
 
 // === Meal helpers ===
@@ -146,71 +141,16 @@ async function setMealCell(memberId: string, planId: string, status: AttendanceS
   }
 }
 
-// === Bulk row / column ===
-const bulkModalOpen = ref(false)
-const bulkScope = ref<'row' | 'column'>('row')
-const bulkMemberId = ref('')
-const bulkDay = ref('')
-
+// Used by the legacy GsAttendanceGrid table view only.
 async function setRow(memberId: string, status: AttendanceStatus) {
   await Promise.all(props.days.map(day => setDayCell(memberId, day, status)))
-  if (status !== 'NotGoing') {
-    bulkScope.value = 'row'
-    bulkMemberId.value = memberId
-    bulkModalOpen.value = true
-  }
 }
 
 async function setColumn(day: string, status: AttendanceStatus) {
   await Promise.all(members.value.map(m => setDayCell(m.id, day, status)))
-  if (status !== 'NotGoing') {
-    bulkScope.value = 'column'
-    bulkDay.value = day
-    bulkModalOpen.value = true
-  }
 }
 
 const MEAL_ORDER: MealType[] = ['Breakfast', 'Lunch', 'Dinner']
-
-const bulkMealTypes = computed((): MealType[] => {
-  const types = new Set<MealType>()
-  const days = bulkScope.value === 'row' ? props.days : [bulkDay.value]
-  for (const day of days) {
-    for (const plan of mealPlansByDay.value[day] ?? []) types.add(plan.mealType)
-  }
-  return MEAL_ORDER.filter(mt => types.has(mt))
-})
-
-const bulkMember = computed(() => members.value.find(m => m.id === bulkMemberId.value) ?? null)
-
-const bulkDayLabel = computed(() =>
-  bulkDay.value
-    ? new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(
-        new Date(bulkDay.value + 'T00:00:00'),
-      )
-    : '',
-)
-
-const bulkContextLine = computed(() =>
-  bulkScope.value === 'row'
-    ? t('event.attendanceModal.bulkContextRow', { name: bulkMember.value?.name ?? '' })
-    : t('event.attendanceModal.bulkContextColumn', { day: bulkDayLabel.value }),
-)
-
-async function applyBulkMeals(assignments: Partial<Record<MealType, AttendanceStatus>>) {
-  const targetDays = bulkScope.value === 'row' ? props.days : [bulkDay.value]
-  const targetMemberIds = bulkScope.value === 'row' ? [bulkMemberId.value] : members.value.map(m => m.id)
-  await Promise.all(
-    targetMemberIds.flatMap(memberId =>
-      targetDays.flatMap(day =>
-        (mealPlansByDay.value[day] ?? []).flatMap((plan) => {
-          const status = assignments[plan.mealType]
-          return status ? [setMealCell(memberId, plan.id, status)] : []
-        }),
-      ),
-    ),
-  )
-}
 
 // === Detail modal ===
 const detailOpen = ref(false)
@@ -230,6 +170,31 @@ const detailMealLoading = computed(() => {
     result[plan.id] = mealUpdating.value[cellKey(detailMember.value.id, plan.id)] ?? false
   }
   return result
+})
+
+// === Bulk wizard ===
+const wizardOpen = ref(false)
+
+// Auto-open once per household session when no attendance exists yet.
+const dismissedHouseholds = ref(new Set<string>())
+
+watch(
+  [() => props.householdId, attendancePending, () => attendance.value.length, () => members.value.length],
+  ([householdId, pending, attendanceLen, memberLen]) => {
+    if (!householdId || pending || !memberLen) return
+    if (dismissedHouseholds.value.has(householdId)) return
+    if (attendanceLen === 0) {
+      wizardOpen.value = true
+      dismissedHouseholds.value.add(householdId)
+    }
+  },
+  { immediate: true },
+)
+
+watch(wizardOpen, (isOpen) => {
+  if (!isOpen && props.householdId) {
+    dismissedHouseholds.value.add(props.householdId)
+  }
 })
 </script>
 
@@ -286,30 +251,17 @@ const detailMealLoading = computed(() => {
     </div>
 
     <template v-else>
-      <!-- Collapsible quick-response: set one member across every day at once. -->
-      <UCard class="mb-4" :ui="{ body: 'p-3 sm:p-4' }">
-        <GsCollapsible button-class="text-sm font-medium">
-          {{ t('event.attendanceGrid.respondAllDays') }}
-          <template #content>
-            <div class="grid gap-x-6 gap-y-2 sm:grid-cols-2 pt-3">
-              <div
-                v-for="member in members"
-                :key="member.id"
-                class="flex items-center justify-between gap-2"
-              >
-                <span class="text-sm min-w-0 truncate">{{ member.name }}</span>
-                <GsAttendanceToggle
-                  :model-value="null"
-                  :loading="memberBulkLoading(member.id)"
-                  size="xs"
-                  class="shrink-0"
-                  @update:model-value="setRow(member.id, $event)"
-                />
-              </div>
-            </div>
-          </template>
-        </GsCollapsible>
-      </UCard>
+      <!-- Wizard launch button -->
+      <div class="flex justify-end mb-4">
+        <UButton
+          size="sm"
+          variant="outline"
+          icon="i-heroicons-calendar-days"
+          @click="wizardOpen = true"
+        >
+          {{ t('event.attendanceGrid.bulkSetAttendance') }}
+        </UButton>
+      </div>
 
       <!-- Member swimlanes — one rule per member, day attendance + meals beneath. -->
       <GsSwimlaneGroup v-model:selected-day-index="selectedDayIndex" :days="days">
@@ -376,11 +328,29 @@ const detailMealLoading = computed(() => {
     </template>
   </template>
 
-  <!-- Bulk-meal follow-up, shared by both the quick-response bar (row) and day header (column). -->
-  <GsDayAttendanceBulkModal
-    v-model:open="bulkModalOpen"
-    :context-line="bulkContextLine"
-    :meal-types="bulkMealTypes"
-    @apply="applyBulkMeals"
+  <!-- Day detail modal (individual cell edits) -->
+  <GsDayAttendanceModal
+    v-if="detailMember && detailDay"
+    v-model:open="detailOpen"
+    :member="detailMember"
+    :day="detailDay"
+    :day-status="detailMember ? (statusByMemberColumn[detailMember.id]?.[detailDay] ?? null) : null"
+    :day-loading="detailMember ? (dayUpdating[cellKey(detailMember.id, detailDay)] ?? false) : false"
+    :meal-plans="mealPlansByDay[detailDay] ?? []"
+    :meal-statuses="detailMember ? mealStatusesForMember(detailMember.id, detailDay) : {}"
+    :meal-loading="detailMealLoading"
+    @set-day="(status) => detailMember && setDayCell(detailMember.id, detailDay, status)"
+    @set-meal="(planId, status) => detailMember && setMealCell(detailMember.id, planId, status)"
+  />
+
+  <!-- Bulk attendance wizard — uses the grid's own composable instances so updates reflect immediately. -->
+  <GsAttendanceWizardModal
+    v-model:open="wizardOpen"
+    :days="days"
+    :household-id="householdId"
+    :members="members"
+    :meal-plans-by-day="mealPlansByDay"
+    :upsert-day="upsertDay"
+    :upsert-meal="upsertMeal"
   />
 </template>

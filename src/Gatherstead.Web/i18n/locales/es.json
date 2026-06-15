@@ -17,7 +17,9 @@
     "search": "Buscar",
     "noResults": "No se encontraron resultados",
     "notes": "Notas",
-    "unsavedChanges": "Tienes cambios sin guardar. ¿Salir de todas formas?"
+    "unsavedChanges": "Tienes cambios sin guardar. ¿Salir de todas formas?",
+    "back": "Atrás",
+    "next": "Siguiente"
   },
   "collapsible": {
     "show": "Mostrar detalles",
@@ -133,18 +135,37 @@
       "columnActions": "Establecer asistencia para {day}",
       "hint": "Usa el menú ··· en cualquier fila o encabezado de columna para establecer la asistencia de una persona o día completo a la vez.",
       "hintWithModal": "Haz clic en cualquier celda para configurar la asistencia del día y comidas. Usa ··· para establecer una fila o columna completa.",
-      "respondAllDays": "Responder para todos los días"
+      "bulkSetAttendance": "Establecer asistencia en masa"
     },
     "attendanceModal": {
       "attendingDay": "Asistiendo este día",
       "meals": "Comidas",
       "mealsDisabledHint": "Establece la asistencia del día en Asistirá o Quizás para editar la asistencia a comidas.",
-      "bulkMeals": "Asistencia a Comidas",
       "setAllTo": "Establecer todas las comidas en",
-      "orByMealType": "O por tipo de comida",
-      "skipMeals": "Omitir",
-      "bulkContextRow": "{name} — todos los días del evento",
-      "bulkContextColumn": "Todos los miembros — {day}"
+      "orByMealType": "O por tipo de comida"
+    },
+    "attendanceWizard": {
+      "title": "Establecer Asistencia",
+      "stepDates": "Fechas",
+      "stepMeals": "Comidas",
+      "stepReview": "Revisión",
+      "householdDefaults": "Valores predeterminados del hogar",
+      "applyToAll": "Aplicar a todos",
+      "attending": "Asistirá",
+      "arrival": "Llegada",
+      "departure": "Salida",
+      "stayLevel": "Estado",
+      "memberMeals": "Comidas para {name}",
+      "setAllMealsTo": "Establecer todas las comidas en",
+      "allMeals": "Todas las comidas",
+      "noAttendingMembers": "Ningún miembro está configurado para asistir.",
+      "reviewSummary": "{name}: {arrival} – {departure} ({status})",
+      "reviewNoMeals": "Sin comidas",
+      "daysSelected": "{n} día seleccionado | {n} días seleccionados",
+      "detailEditReminderShort": "Las ediciones individuales de días y comidas están disponibles en la cuadrícula al finalizar.",
+      "finish": "Finalizar",
+      "applying": "Aplicando…",
+      "rerunWarning": "Volver a ejecutar este asistente sobreescribirá cualquier edición individual que hayas realizado en la cuadrícula."
     },
     "dateRange": "{start} – {end}",
     "noEvents": "Aún no hay eventos planificados",
