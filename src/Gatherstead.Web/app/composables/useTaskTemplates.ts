@@ -3,6 +3,7 @@ import type {
   TaskTemplate,
   TaskPlan,
   TaskIntent,
+  TaskTimeSlot,
   AttributeWriteEntry,
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
@@ -11,6 +12,21 @@ import { useRepositories } from '~/composables/useRepositories'
 export interface TaskPlanWithTemplate {
   plan: TaskPlan
   template: TaskTemplate
+}
+
+/** A template-first grouping for the swimlane layout: one lane per template, its plans keyed by day. */
+export interface TaskTemplateLane {
+  template: TaskTemplate
+  plansByDay: Record<string, TaskPlan[]>
+  /** Number of distinct days this template has a plan — used as a sparseness tie-breaker. */
+  activeDays: number
+}
+
+// 'Anytime' leads, then the chronological slots — matching the report/day ordering.
+const TASK_SLOT_ORDER: TaskTimeSlot[] = ['Anytime', 'Morning', 'Midday', 'Evening']
+function taskSlotRank(slot: TaskTimeSlot | null): number {
+  const i = slot ? TASK_SLOT_ORDER.indexOf(slot) : -1
+  return i === -1 ? TASK_SLOT_ORDER.length : i
 }
 
 export function useTaskTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
@@ -323,6 +339,43 @@ export function useEventTaskSignup(
     return grouped
   })
 
+  // Template-first lanes for the swimlane layout. Ordered by the template's
+  // earliest time slot, then by density (more active days first) as a
+  // tie-breaker so sparse/one-off templates sink toward the bottom, then name.
+  const templateLanes = computed<TaskTemplateLane[]>(() => {
+    const byTemplate = new Map<string, TaskTemplateLane>()
+    for (const { plan, template } of items.value) {
+      let lane = byTemplate.get(template.id)
+      if (!lane) {
+        lane = { template, plansByDay: {}, activeDays: 0 }
+        byTemplate.set(template.id, lane)
+      }
+      (lane.plansByDay[plan.day] ??= []).push(plan)
+    }
+
+    const lanes = [...byTemplate.values()]
+    for (const lane of lanes) {
+      for (const day of Object.keys(lane.plansByDay)) {
+        lane.plansByDay[day]!.sort((a, b) => taskSlotRank(a.timeSlot) - taskSlotRank(b.timeSlot))
+      }
+      lane.activeDays = Object.keys(lane.plansByDay).length
+    }
+
+    function primaryRank(lane: TaskTemplateLane): number {
+      return Math.min(
+        ...Object.values(lane.plansByDay).flat().map(p => taskSlotRank(p.timeSlot)),
+        TASK_SLOT_ORDER.length,
+      )
+    }
+
+    return lanes.sort((a, b) => {
+      const slotDiff = primaryRank(a) - primaryRank(b)
+      if (slotDiff !== 0) return slotDiff
+      if (a.activeDays !== b.activeDays) return b.activeDays - a.activeDays
+      return a.template.name.localeCompare(b.template.name)
+    })
+  })
+
   function updatingKey(planId: string, memberId: string) {
     return `${planId}:${memberId}`
   }
@@ -367,5 +420,5 @@ export function useEventTaskSignup(
   const pending = computed(() => itemsPending.value || intentsPending.value)
   const hasPlans = computed(() => items.value.length > 0)
 
-  return { plansByDay, intentMap, pending, hasPlans, isVolunteered, isUpdating, volunteerCount, toggle }
+  return { plansByDay, templateLanes, intentMap, pending, hasPlans, isVolunteered, isUpdating, volunteerCount, toggle }
 }

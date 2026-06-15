@@ -12,6 +12,17 @@ const { t } = useI18n()
 const open = ref(false)
 const isResetting = ref(false)
 const isClearing = ref(false)
+const bannerRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  if (isDemoMode && bannerRef.value) {
+    document.documentElement.style.setProperty('--gs-banner-h', `${bannerRef.value.offsetHeight}px`)
+  }
+})
+
+onBeforeUnmount(() => {
+  document.documentElement.style.removeProperty('--gs-banner-h')
+})
 
 const repos = inject<Repositories | null>(REPOSITORIES_KEY, null)
 const memberStore = useCurrentMemberStore()
@@ -52,6 +63,7 @@ async function clearDemoData() {
 <template>
   <div
     v-if="isDemoMode"
+    ref="bannerRef"
     class="sticky top-0 z-50 bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800"
   >
     <div class="max-w-screen-xl mx-auto px-4 py-1.5 flex items-center justify-between gap-4">

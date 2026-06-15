@@ -132,7 +132,8 @@
       "rowActions": "Set attendance for {name}",
       "columnActions": "Set attendance for {day}",
       "hint": "Use the ··· menu on any row or column header to set attendance for an entire person or day at once.",
-      "hintWithModal": "Click any cell to set day and meal attendance. Use ··· to set an entire row or column."
+      "hintWithModal": "Click any cell to set day and meal attendance. Use ··· to set an entire row or column.",
+      "respondAllDays": "Respond for all days"
     },
     "attendanceModal": {
       "attendingDay": "Attending this day",

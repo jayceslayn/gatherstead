@@ -10,6 +10,12 @@ export function useEventMealData(eventId: Ref<string>) {
   const { t } = useI18n()
   const { templates } = useMealTemplates(eventId)
 
+  // Plans carry only a mealType (time slot); consumers that want to label a meal
+  // by its template name resolve it through this map.
+  const templateNameById = computed<Record<string, string>>(() =>
+    Object.fromEntries(templates.value.map(tmpl => [tmpl.id, tmpl.name])),
+  )
+
   const allPlans = ref<MealPlan[]>([])
   const attendanceMap = ref<Record<string, MealAttendance[]>>({})
   const plansPending = ref(false)
@@ -113,5 +119,5 @@ export function useEventMealData(eventId: Ref<string>) {
 
   const pending = computed(() => plansPending.value || attendancePending.value)
 
-  return { allPlans, mealPlansByDay, pending, getAttendance, upsert }
+  return { allPlans, mealPlansByDay, templateNameById, pending, getAttendance, upsert }
 }

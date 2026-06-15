@@ -65,6 +65,7 @@ export default defineNuxtConfig({
     public: {
       apiBaseUrl: 'http://localhost:5000',
       demoMode: false,
+      legacyAttendanceGrid: false,
       githubUrl: '',
       docsUrl: '',
       liveUrl: '',

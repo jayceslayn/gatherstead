@@ -132,7 +132,8 @@
       "rowActions": "Establecer asistencia para {name}",
       "columnActions": "Establecer asistencia para {day}",
       "hint": "Usa el menú ··· en cualquier fila o encabezado de columna para establecer la asistencia de una persona o día completo a la vez.",
-      "hintWithModal": "Haz clic en cualquier celda para configurar la asistencia del día y comidas. Usa ··· para establecer una fila o columna completa."
+      "hintWithModal": "Haz clic en cualquier celda para configurar la asistencia del día y comidas. Usa ··· para establecer una fila o columna completa.",
+      "respondAllDays": "Responder para todos los días"
     },
     "attendanceModal": {
       "attendingDay": "Asistiendo este día",

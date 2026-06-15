@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useEventTaskSignup } from '~/composables/useTaskTemplates'
 import { useHouseholds } from '~/composables/useHouseholds'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 import { useAccommodations, useEventAccommodationSignup } from '~/composables/useAccommodations'
@@ -76,18 +75,10 @@ const householdSelectItems = computed(() =>
 // Members of the selected household — task/accommodation sign-up operates per member.
 const { members: householdMembers } = useHouseholdMembers(selectedHouseholdId)
 const memberIds = computed(() => householdMembers.value.map(m => m.id))
-const selectedHouseholdRef = computed(() => selectedHouseholdId.value || null)
 
-// Task sign-up: every plan across templates, with per-member volunteer toggles.
-const {
-  plansByDay: taskPlansByDay,
-  pending: taskSignupPending,
-  hasPlans: taskHasPlans,
-  isVolunteered: taskIsVolunteered,
-  isUpdating: taskIsUpdating,
-  volunteerCount: taskVolunteerCount,
-  toggle: taskToggle,
-} = useEventTaskSignup(eventId, selectedHouseholdRef)
+// Signup day pager — shared across the Attendance and Tasks swimlane grids so
+// switching tabs doesn't reset the mobile pager back to day one.
+const signupDayIndex = ref(0)
 
 // Accommodation sign-up: per-member stay requests across nights.
 const {
@@ -219,6 +210,7 @@ onMounted(() => {
         <template #attendance>
           <div class="mt-4">
             <GsEventAttendanceGrid
+              v-model:selected-day-index="signupDayIndex"
               :event-id="eventId"
               :days="eventDays"
               :household-id="selectedHouseholdId"
@@ -228,28 +220,13 @@ onMounted(() => {
 
         <template #tasks>
           <div class="mt-4">
-            <div v-if="taskSignupPending" class="py-8 text-center text-sm text-muted">
-              {{ t('common.loading') }}
-            </div>
-            <GsEmptyState
-              v-else-if="!taskHasPlans"
-              icon="i-heroicons-clipboard-document-list"
-              :title="t('event.task.noTemplates')"
+            <GsEventTaskSignupGrid
+              v-model:selected-day-index="signupDayIndex"
+              :event-id="eventId"
+              :days="eventDays"
+              :household-id="selectedHouseholdId"
+              :totals-by-day="attendanceByDay"
             />
-            <GsEventSignupDayColumns v-else :days="eventDays">
-              <template #day="{ day }">
-                <GsEventTaskSignupDay
-                  :day="day"
-                  :attendance="attendanceByDay[day]"
-                  :plans="taskPlansByDay[day] ?? []"
-                  :members="householdMembers"
-                  :is-volunteered="taskIsVolunteered"
-                  :is-updating="taskIsUpdating"
-                  :volunteer-count="taskVolunteerCount"
-                  @toggle="taskToggle"
-                />
-              </template>
-            </GsEventSignupDayColumns>
           </div>
         </template>
 
