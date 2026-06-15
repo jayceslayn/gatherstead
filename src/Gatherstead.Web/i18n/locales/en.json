@@ -19,6 +19,10 @@
     "notes": "Notes",
     "unsavedChanges": "You have unsaved changes. Leave anyway?"
   },
+  "collapsible": {
+    "show": "Show details",
+    "hide": "Hide details"
+  },
   "landing": {
     "heroTitle": "Plan Your Family Gatherings",
     "heroSubtitle": "One place for households, events, accommodations, and more",

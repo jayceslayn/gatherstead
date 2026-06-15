@@ -69,17 +69,8 @@ async function clearDemoData() {
     <template #body>
       <p class="text-sm text-muted mb-4">{{ t('demo.modal.intro') }}</p>
 
-      <UCollapsible
-        class="mb-4"
-      >
-        <UButton
-          :label="t('demo.modal.limitsTitle')"
-          variant="ghost"
-          color="neutral"
-          trailing-icon="i-heroicons-chevron-down"
-          class="w-full"
-        />
-
+      <GsCollapsible class="mb-4" button-class="text-sm font-medium">
+        {{ t('demo.modal.limitsTitle') }}
         <template #content>
           <table class="w-full text-sm">
             <tbody>
@@ -94,7 +85,7 @@ async function clearDemoData() {
             </tbody>
           </table>
         </template>
-      </UCollapsible>
+      </GsCollapsible>
 
       <p class="text-sm text-muted mb-6">{{ t('demo.modal.dataResets') }}</p>
 

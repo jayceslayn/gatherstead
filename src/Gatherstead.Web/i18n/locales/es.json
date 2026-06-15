@@ -19,6 +19,10 @@
     "notes": "Notas",
     "unsavedChanges": "Tienes cambios sin guardar. ¿Salir de todas formas?"
   },
+  "collapsible": {
+    "show": "Mostrar detalles",
+    "hide": "Ocultar detalles"
+  },
   "landing": {
     "heroTitle": "Planifica tus Reuniones Familiares",
     "heroSubtitle": "Un solo lugar para hogares, eventos, alojamiento y más",
