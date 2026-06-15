@@ -50,7 +50,7 @@ export default defineNuxtConfig({
       useCookie: true,
       cookieKey: 'i18n_locale',
       fallbackLocale: 'en',
-      redirectOn: 'root',
+      redirectOn: 'all',
     },
     vueI18n: './i18n.config.ts',
   },
