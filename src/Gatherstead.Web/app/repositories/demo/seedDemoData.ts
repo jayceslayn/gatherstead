@@ -218,113 +218,89 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const day2Dinner = dinnerPlans.find(p => p.day === day2)
   const day3Dinner = dinnerPlans.find(p => p.day === day3)
 
+  // Day 1 breakfast exclusion — guests arrive mid-day; meal not provided on site.
   if (day1Breakfast) {
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, breakfastTemplate.id, day1Breakfast.id,
-      parrFamily.id, bob.id, 'Going', false,
-    )
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, breakfastTemplate.id, day1Breakfast.id,
-      parrFamily.id, helen.id, 'Going', false,
-    )
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, breakfastTemplate.id, day1Breakfast.id,
-      frozoneHousehold.id, lucius.id, 'Going', false,
-    )
+    await repos.mealPlans.deletePlan(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day1Breakfast.id)
   }
 
+  // Day 1 lunch — first meal on site; a mix of Going / Maybe as people trickle in.
   if (day1Lunch) {
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id,
-      parrFamily.id, bob.id, 'Maybe', false,
-    )
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id,
-      frozoneHousehold.id, lucius.id, 'Going', false,
-    )
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, parrFamily.id, bob.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, parrFamily.id, helen.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, parrFamily.id, dash.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, parrFamily.id, jackJack.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, frozoneHousehold.id, lucius.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, frozoneHousehold.id, honey.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day1Lunch.id, ednaStudio.id, edna.id, 'Maybe', false)
   }
 
+  // Day 1 dinner — most people settled in by evening.
   if (day1Dinner) {
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id,
-      parrFamily.id, bob.id, 'Going', false,
-    )
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id,
-      parrFamily.id, helen.id, 'Going', false,
-    )
-    await repos.mealAttendance.upsertMealAttendance(
-      DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id,
-      ednaStudio.id, edna.id, 'Going', false,
-      'Gluten-free options required.',
-    )
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, parrFamily.id, bob.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, parrFamily.id, helen.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, parrFamily.id, dash.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, parrFamily.id, jackJack.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, frozoneHousehold.id, lucius.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, frozoneHousehold.id, honey.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, ednaStudio.id, edna.id, 'Going', false, 'Gluten-free options required.')
   }
 
-  // Honey Best (Frozone) — tentative about the whole first day: Maybe across all meals.
-  for (const plan of [
-    { plan: day1Breakfast, template: breakfastTemplate },
-    { plan: day1Lunch, template: lunchTemplate },
-    { plan: day1Dinner, template: dinnerTemplate },
-  ]) {
-    if (plan.plan) {
-      await repos.mealAttendance.upsertMealAttendance(
-        DEMO_TENANT_ID, event.id, plan.template.id, plan.plan.id,
-        frozoneHousehold.id, honey.id, 'Maybe', false,
-      )
-    }
+  // Day 2 breakfast — full turnout for the Parrs; Lucius skips all day-2 meals.
+  if (day2Breakfast) {
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, parrFamily.id, bob.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, parrFamily.id, helen.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, parrFamily.id, dash.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, parrFamily.id, jackJack.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, frozoneHousehold.id, lucius.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day2Breakfast.id, frozoneHousehold.id, honey.id, 'Going', false)
   }
 
-  // Lucius Best (Frozone) — present for the event but skipping every meal on day 2.
-  for (const plan of [
-    { plan: day2Breakfast, template: breakfastTemplate },
-    { plan: day2Lunch, template: lunchTemplate },
-    { plan: day2Dinner, template: dinnerTemplate },
-  ]) {
-    if (plan.plan) {
-      await repos.mealAttendance.upsertMealAttendance(
-        DEMO_TENANT_ID, event.id, plan.template.id, plan.plan.id,
-        frozoneHousehold.id, lucius.id, 'NotGoing', false,
-      )
-    }
+  // Day 2 lunch
+  if (day2Lunch) {
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, parrFamily.id, bob.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, parrFamily.id, helen.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, parrFamily.id, dash.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, parrFamily.id, jackJack.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, frozoneHousehold.id, lucius.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day2Lunch.id, frozoneHousehold.id, honey.id, 'Going', false)
   }
 
-  // Edna Mode — only committed to dinner; breakfast & lunch are a Maybe.
-  for (const plan of [
-    { plan: day1Breakfast, template: breakfastTemplate },
-    { plan: day1Lunch, template: lunchTemplate },
-  ]) {
-    if (plan.plan) {
-      await repos.mealAttendance.upsertMealAttendance(
-        DEMO_TENANT_ID, event.id, plan.template.id, plan.plan.id,
-        ednaStudio.id, edna.id, 'Maybe', false,
-      )
-    }
+  // Day 2 dinner
+  if (day2Dinner) {
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, parrFamily.id, bob.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, parrFamily.id, helen.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, parrFamily.id, dash.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, parrFamily.id, jackJack.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, frozoneHousehold.id, lucius.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, frozoneHousehold.id, honey.id, 'Going', false)
   }
 
-  // Violet is not attending — mark NotGoing for all meals on all days
-  for (const plan of [day1Breakfast, day2Breakfast, day3Breakfast]) {
-    if (plan) {
-      await repos.mealAttendance.upsertMealAttendance(
-        DEMO_TENANT_ID, event.id, breakfastTemplate.id, plan.id,
-        parrFamily.id, violet.id, 'NotGoing', false,
-      )
-    }
+  // Day 3 breakfast — last morning before packing up; Parrs still Going.
+  if (day3Breakfast) {
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day3Breakfast.id, parrFamily.id, bob.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day3Breakfast.id, parrFamily.id, helen.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day3Breakfast.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day3Breakfast.id, parrFamily.id, dash.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, breakfastTemplate.id, day3Breakfast.id, parrFamily.id, jackJack.id, 'Going', false)
   }
-  for (const plan of [day1Lunch, day2Lunch, day3Lunch]) {
-    if (plan) {
-      await repos.mealAttendance.upsertMealAttendance(
-        DEMO_TENANT_ID, event.id, lunchTemplate.id, plan.id,
-        parrFamily.id, violet.id, 'NotGoing', false,
-      )
-    }
+
+  // Day 3 lunch — heading out soon; kids are a Maybe.
+  if (day3Lunch) {
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day3Lunch.id, parrFamily.id, bob.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day3Lunch.id, parrFamily.id, helen.id, 'Going', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day3Lunch.id, parrFamily.id, violet.id, 'NotGoing', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day3Lunch.id, parrFamily.id, dash.id, 'Maybe', false)
+    await repos.mealAttendance.upsertMealAttendance(DEMO_TENANT_ID, event.id, lunchTemplate.id, day3Lunch.id, parrFamily.id, jackJack.id, 'Maybe', false)
   }
-  for (const plan of [day1Dinner, day2Dinner, day3Dinner]) {
-    if (plan) {
-      await repos.mealAttendance.upsertMealAttendance(
-        DEMO_TENANT_ID, event.id, dinnerTemplate.id, plan.id,
-        parrFamily.id, violet.id, 'NotGoing', false,
-      )
-    }
+
+  // Day 3 dinner exclusion — guests depart before evening; meal not provided on site.
+  if (day3Dinner) {
+    await repos.mealPlans.deletePlan(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day3Dinner.id)
   }
 
   // 10. Event attendance
