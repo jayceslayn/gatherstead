@@ -240,21 +240,19 @@ onMounted(() => {
               icon="i-heroicons-home"
               :title="t('property.noAccommodations')"
             />
-            <GsEventSignupDayColumns v-else :days="eventDays">
-              <template #day="{ day }">
-                <GsEventAccommodationSignupDay
-                  :day="day"
-                  :attendance="attendanceByDay[day]"
-                  :accommodations="accommodations"
-                  :members="householdMembers"
-                  :member-intents="accMemberIntents"
-                  :occupied-count="accOccupiedCount"
-                  :is-updating="accIsUpdating"
-                  @request="openRequest"
-                  @cancel="cancelStay"
-                />
-              </template>
-            </GsEventSignupDayColumns>
+            <GsEventAccommodationSignupGrid
+              v-else
+              v-model:selected-day-index="signupDayIndex"
+              :days="eventDays"
+              :accommodations="accommodations"
+              :members="householdMembers"
+              :member-intents="accMemberIntents"
+              :occupied-count="accOccupiedCount"
+              :is-updating="accIsUpdating"
+              :totals-by-day="attendanceByDay"
+              @request="openRequest"
+              @cancel="cancelStay"
+            />
 
             <GsAccommodationRequestModal
               v-model:open="requestModalOpen"

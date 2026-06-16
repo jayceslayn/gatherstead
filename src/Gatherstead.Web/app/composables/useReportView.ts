@@ -1,4 +1,4 @@
-import type { EventReportTask, EventReportAccommodation } from '~/repositories/types'
+import type { EventReportDay, EventReportTask, EventReportAccommodation, EventReportMeal } from '~/repositories/types'
 
 // ── Coverage / occupancy derivation ─────────────────────────────────────────
 // Kept in one place so the desktop strip, mobile pager, and print stack never
@@ -65,4 +65,74 @@ export function accommodationOccupancy(acc: EventReportAccommodation): Occupancy
     : null
 
   return { capacity, occupied: acc.occupied, state: occupancyState(acc.occupied, capacity) }
+}
+
+// ── Day → lane pivots ────────────────────────────────────────────────────
+// The report API is day-keyed (`EventReportDay[]`); the swimlane layout needs
+// one lane per recurring entity (meal slot / task plan / accommodation) with a
+// per-day entry. These pivots group the flat day arrays into lanes once so the
+// report grid doesn't re-scan all days per render.
+
+export interface ReportLane<T> {
+  key: string
+  title: string
+  subtitle?: string
+  byDay: Record<string, T>
+}
+
+/** Per-day going/maybe totals, keyed by day — feeds the swimlane header. */
+export function reportDayTotals(days: EventReportDay[]): Record<string, { going: number, maybe: number }> {
+  const result: Record<string, { going: number, maybe: number }> = {}
+  for (const d of days) result[d.day] = { going: d.going, maybe: d.maybe }
+  return result
+}
+
+/** Groups each day's meals into lanes by meal type + template name (the recurring "slot"). */
+export function buildMealLanes(days: EventReportDay[]): ReportLane<EventReportMeal>[] {
+  const lanes = new Map<string, ReportLane<EventReportMeal>>()
+  for (const d of days) {
+    for (const meal of d.meals) {
+      const key = `${meal.mealType}:${meal.templateName}`
+      let lane = lanes.get(key)
+      if (!lane) {
+        lane = { key, title: meal.templateName, subtitle: meal.mealType, byDay: {} }
+        lanes.set(key, lane)
+      }
+      lane.byDay[d.day] = meal
+    }
+  }
+  return [...lanes.values()]
+}
+
+/** Groups each day's tasks into lanes by template + time slot (the recurring task plan). */
+export function buildTaskLanes(days: EventReportDay[]): ReportLane<EventReportTask>[] {
+  const lanes = new Map<string, ReportLane<EventReportTask>>()
+  for (const d of days) {
+    for (const task of d.tasks) {
+      const key = `${task.templateId}:${task.timeSlot ?? ''}`
+      let lane = lanes.get(key)
+      if (!lane) {
+        lane = { key, title: task.templateName, subtitle: task.timeSlot ?? undefined, byDay: {} }
+        lanes.set(key, lane)
+      }
+      lane.byDay[d.day] = task
+    }
+  }
+  return [...lanes.values()]
+}
+
+/** Groups each day's accommodations into lanes by accommodation id. */
+export function buildAccommodationLanes(days: EventReportDay[]): ReportLane<EventReportAccommodation>[] {
+  const lanes = new Map<string, ReportLane<EventReportAccommodation>>()
+  for (const d of days) {
+    for (const acc of d.accommodations) {
+      let lane = lanes.get(acc.accommodationId)
+      if (!lane) {
+        lane = { key: acc.accommodationId, title: acc.name, byDay: {} }
+        lanes.set(acc.accommodationId, lane)
+      }
+      lane.byDay[d.day] = acc
+    }
+  }
+  return [...lanes.values()]
 }

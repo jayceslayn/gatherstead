@@ -130,18 +130,10 @@
     "taskTemplate": "Plantilla de Tareas",
     "attendance": "Asistencia",
     "attendanceGrid": {
-      "totals": "Totales del Evento",
-      "rowActions": "Establecer asistencia para {name}",
       "columnActions": "Establecer asistencia para {day}",
-      "hint": "Usa el menú ··· en cualquier fila o encabezado de columna para establecer la asistencia de una persona o día completo a la vez.",
-      "hintWithModal": "Haz clic en cualquier celda para configurar la asistencia del día y comidas. Usa ··· para establecer una fila o columna completa.",
       "bulkSetAttendance": "Establecer asistencia en masa"
     },
     "attendanceModal": {
-      "attendingDay": "Asistiendo este día",
-      "meals": "Comidas",
-      "mealsDisabledHint": "Establece la asistencia del día en Asistirá o Quizás para editar la asistencia a comidas.",
-      "setAllTo": "Establecer todas las comidas en",
       "orByMealType": "O por tipo de comida"
     },
     "attendanceWizard": {
@@ -348,8 +340,7 @@
       "occupancy": "{n}/{m} alojados",
       "occupantCount": "{n} alojados",
       "prevDay": "Día anterior",
-      "nextDay": "Día siguiente",
-      "dayOf": "Día {n} de {total}"
+      "nextDay": "Día siguiente"
     }
   },
   "accommodation": {

@@ -280,7 +280,7 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 | `GsAttendanceToggle` | Three-button Going/Maybe/NotGoing toggle group | `UButton` |
 | `GsDietaryTags` | Allergy chips (`harvest`) + restriction chips (`sage`) | `UBadge` |
 | `GsPageHeader` | Standardized h1 + optional subtitle + right-side action slot | Tailwind |
-| `GsDayIntentGrid` | Date-range × slot matrix for meal and task plan views; coverage state per cell | `UTable` or CSS grid |
+| `GsSwimlaneGroup` / `GsSwimlane` | **Standard** day × entity matrix (lane per member/template/accommodation, days as columns) for sign-up and report grids — superseded the original `GsDayIntentGrid`/table-based grids described below | CSS grid + `useSwimlane` context |
 | `GsAccommodationCard` | Accommodation card with type, capacity, intent status | `UCard`, `GsStatusBadge` |
 
 ---
@@ -310,7 +310,7 @@ The `GsStatusBadge` component centralizes all status-to-color-to-icon mapping. E
 - Tables that are too wide for mobile use horizontal scroll with `overflow-x-auto` wrapper, or collapse to a card-per-row layout.
 - The Event Detail tab bar (`UTabs`) must scroll horizontally on mobile if all four tabs don't fit.
 - Forms are already single-column — no extra work needed.
-- The `GsDayIntentGrid` (meal/task matrix) is the trickiest mobile case: it will likely need a separate mobile layout that stacks days vertically rather than showing a wide matrix.
+- Day × entity matrices (meal/task/accommodation) use the swimlane pattern (`GsSwimlaneGroup` + `GsSwimlane`): desktop shows aligned day columns, mobile shows a single-day pager — see [WEB-UI-DESIGN.md](../../WEB-UI-DESIGN.md) Component Vocabulary.
 
 ---
 

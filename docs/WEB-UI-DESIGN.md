@@ -6,7 +6,7 @@ For data-access, tenancy, and authorization rules see [ARCHITECTURE.md](ARCHITEC
 
 ## North Stars
 
-- **Mobile-first.** A high fraction of users are on phones. Start every layout single-column and expand with `md:`/`lg:` Tailwind breakpoints — never the reverse. Touch targets ≥ 44×44px (Nuxt UI's default button sizing satisfies this). Wide tables get an `overflow-x-auto` wrapper or collapse to card-per-row; wide matrices (e.g. `GsDayIntentGrid`) get a stacked mobile layout.
+- **Mobile-first.** A high fraction of users are on phones. Start every layout single-column and expand with `md:`/`lg:` Tailwind breakpoints — never the reverse. Touch targets ≥ 44×44px (Nuxt UI's default button sizing satisfies this). Wide tables get an `overflow-x-auto` wrapper or collapse to card-per-row; day × entity matrices use the swimlane pattern (`GsSwimlaneGroup` + `GsSwimlane`), which collapses to a single-day pager on mobile.
 - **Clean for members, progressively richer for managers.** Default views are simple; management controls are additively revealed by role, never crowding the member experience.
 - **Calendar is the primary information surface** for event/attendance data.
 - **Tenant switching stays tucked away** (account dropdown → "Switch group"), never prominent in the main nav.
@@ -28,6 +28,7 @@ Reach for an existing component before hand-rolling markup. Building a new page 
 | Member initials | `GsMemberAvatar` | Stackable for groups. |
 | Calendar | `GsCalendar` | FullCalendar wrapper; locale-bound, wrapped in `<ClientOnly>`. |
 | Date sub-range field | `GsTemplateDateRangeField` | Toggle + start/end date pair for template modals. |
+| Day × entity matrix | `GsSwimlaneGroup` + `GsSwimlane` | **The standard** for day-by-entity grids — one lane per member/template/accommodation, days as aligned columns on desktop, a day-pager on mobile. Used by event sign-up (Attendance, Tasks, Accommodations) and Event Reports. Don't hand-roll a new day-column or day-card layout — compose these instead. |
 
 Prefer **Nuxt UI** primitives (`UButton`, `UInput`, `UCard`, `UModal`, `UFormField`, `UBadge`, …) over native HTML elements wherever an equivalent exists.
 

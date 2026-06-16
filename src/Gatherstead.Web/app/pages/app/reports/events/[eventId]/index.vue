@@ -51,17 +51,8 @@ function toggle(id: string) {
   expanded.value = next
 }
 
-// Mobile single-day pager.
+// Shared with sibling section tabs so switching sections doesn't reset the mobile pager.
 const selectedDayIndex = ref(0)
-watch(days, (value) => {
-  if (selectedDayIndex.value > value.length - 1) selectedDayIndex.value = Math.max(0, value.length - 1)
-})
-function prevDay() {
-  selectedDayIndex.value = Math.max(0, selectedDayIndex.value - 1)
-}
-function nextDay() {
-  selectedDayIndex.value = Math.min(days.value.length - 1, selectedDayIndex.value + 1)
-}
 </script>
 
 <template>
@@ -141,55 +132,13 @@ function nextDay() {
           </button>
         </div>
 
-        <!-- Desktop: day columns side by side; headers stick to page scroll. -->
-        <div class="hidden lg:flex gap-4 overflow-x-auto pb-2">
-          <GsEventReportDay
-            v-for="day in days"
-            :key="day.day"
-            :day="day"
-            :section="activeTab"
-            :expanded="expanded"
-            class="w-80 shrink-0"
-            @toggle="toggle"
-          />
-        </div>
-
-        <!-- Mobile: one day at a time with prev/next navigation. -->
-        <div class="lg:hidden">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <UButton
-              color="neutral"
-              variant="subtle"
-              size="sm"
-              square
-              icon="i-heroicons-chevron-left"
-              :disabled="selectedDayIndex === 0"
-              :class="selectedDayIndex === 0 ? 'opacity-40' : ''"
-              :aria-label="t('report.event.prevDay')"
-              @click="prevDay"
-            />
-            <span class="text-sm font-medium text-default">{{ t('report.event.dayOf', { n: selectedDayIndex + 1, total: days.length }) }}</span>
-            <UButton
-              color="neutral"
-              variant="subtle"
-              size="sm"
-              square
-              icon="i-heroicons-chevron-right"
-              :disabled="selectedDayIndex >= days.length - 1"
-              :class="selectedDayIndex >= days.length - 1 ? 'opacity-40' : ''"
-              :aria-label="t('report.event.nextDay')"
-              @click="nextDay"
-            />
-          </div>
-          <GsEventReportDay
-            v-if="days[selectedDayIndex]"
-            :key="days[selectedDayIndex]!.day"
-            :day="days[selectedDayIndex]!"
-            :section="activeTab"
-            :expanded="expanded"
-            @toggle="toggle"
-          />
-        </div>
+        <GsEventReportGrid
+          v-model:selected-day-index="selectedDayIndex"
+          :days="days"
+          :section="activeTab"
+          :expanded="expanded"
+          @toggle="toggle"
+        />
       </template>
     </template>
 

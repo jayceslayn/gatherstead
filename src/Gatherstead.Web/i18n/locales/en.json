@@ -130,18 +130,10 @@
     "taskTemplate": "Task Template",
     "attendance": "Attendance",
     "attendanceGrid": {
-      "totals": "Event Totals",
-      "rowActions": "Set attendance for {name}",
       "columnActions": "Set attendance for {day}",
-      "hint": "Use the ··· menu on any row or column header to set attendance for an entire person or day at once.",
-      "hintWithModal": "Click any cell to set day and meal attendance. Use ··· to set an entire row or column.",
       "bulkSetAttendance": "Bulk set attendance"
     },
     "attendanceModal": {
-      "attendingDay": "Attending this day",
-      "meals": "Meals",
-      "mealsDisabledHint": "Set day attendance to Going or Maybe to edit meal attendance.",
-      "setAllTo": "Set all meals to",
       "orByMealType": "Or by meal type"
     },
     "attendanceWizard": {
@@ -348,8 +340,7 @@
       "occupancy": "{n}/{m} staying",
       "occupantCount": "{n} staying",
       "prevDay": "Previous day",
-      "nextDay": "Next day",
-      "dayOf": "Day {n} of {total}"
+      "nextDay": "Next day"
     }
   },
   "accommodation": {

@@ -3,7 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 import { useEventAttendance } from '~/composables/useEventAttendance'
 import { useEventMealData } from '~/composables/useEventMealData'
-import type { AttendanceStatus, HouseholdMember, MealPlan, MealType } from '~/repositories/types'
+import type { AttendanceStatus, MealPlan, MealType } from '~/repositories/types'
 
 const props = defineProps<{
   eventId: string
@@ -16,20 +16,9 @@ const selectedDayIndex = defineModel<number>('selectedDayIndex', { default: 0 })
 
 const { t } = useI18n()
 const { formatDay } = useFormatDate()
-const legacy = useRuntimeConfig().public.legacyAttendanceGrid
 const { attendance, pending: attendancePending, upsert: upsertDay } = useEventAttendance(computed(() => props.eventId))
 const { members } = useHouseholdMembers(computed(() => props.householdId))
 const { mealPlansByDay, templateNameById, getAttendance: getMealAttendance, upsert: upsertMeal } = useEventMealData(computed(() => props.eventId))
-
-// === Columns ===
-const columns = computed(() =>
-  props.days.map(day => ({
-    id: day,
-    label: new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(
-      new Date(day + 'T00:00:00'),
-    ),
-  })),
-)
 
 // === Day attendance ===
 const statusByMemberColumn = computed<Record<string, Record<string, AttendanceStatus | undefined>>>(() => {
@@ -64,14 +53,6 @@ function cellKey(memberId: string, id: string) {
 }
 
 // === Meal helpers ===
-function mealStatusesForMember(memberId: string, day: string): Record<string, AttendanceStatus | undefined> {
-  const result: Record<string, AttendanceStatus | undefined> = {}
-  for (const plan of mealPlansByDay.value[day] ?? []) {
-    result[plan.id] = getMealAttendance(plan.id, memberId)?.status
-  }
-  return result
-}
-
 const mealTypeI18nKey: Record<string, string> = {
   Breakfast: 'event.meal.breakfast',
   Lunch: 'event.meal.lunch',
@@ -141,36 +122,11 @@ async function setMealCell(memberId: string, planId: string, status: AttendanceS
   }
 }
 
-// Used by the legacy GsAttendanceGrid table view only.
-async function setRow(memberId: string, status: AttendanceStatus) {
-  await Promise.all(props.days.map(day => setDayCell(memberId, day, status)))
-}
-
 async function setColumn(day: string, status: AttendanceStatus) {
   await Promise.all(members.value.map(m => setDayCell(m.id, day, status)))
 }
 
 const MEAL_ORDER: MealType[] = ['Breakfast', 'Lunch', 'Dinner']
-
-// === Detail modal ===
-const detailOpen = ref(false)
-const detailMember = ref<HouseholdMember | null>(null)
-const detailDay = ref('')
-
-function openDetail(member: HouseholdMember, day: string) {
-  detailMember.value = member
-  detailDay.value = day
-  detailOpen.value = true
-}
-
-const detailMealLoading = computed(() => {
-  if (!detailMember.value) return {} as Record<string, boolean>
-  const result: Record<string, boolean> = {}
-  for (const plan of mealPlansByDay.value[detailDay.value] ?? []) {
-    result[plan.id] = mealUpdating.value[cellKey(detailMember.value.id, plan.id)] ?? false
-  }
-  return result
-})
 
 // === Bulk wizard ===
 const wizardOpen = ref(false)
@@ -199,149 +155,90 @@ watch(wizardOpen, (isOpen) => {
 </script>
 
 <template>
-  <!-- Legacy table view, retained behind the `legacyAttendanceGrid` flag for rollback. -->
-  <template v-if="legacy">
-    <GsAttendanceGrid
-      :members="members"
-      :columns="columns"
-      :status-by-member-column="statusByMemberColumn"
-      :totals="totals"
-      :updating="dayUpdating"
-      :loaded="!!householdId"
-      :hint="t('event.attendanceGrid.hintWithModal')"
-      @set-row="setRow"
-      @set-column="setColumn"
-    >
-      <template #cell="{ member, column }">
-        <GsDayAttendanceCell
-          :member="member"
-          :day="column.id"
-          :day-status="statusByMemberColumn[member.id]?.[column.id] ?? null"
-          :day-loading="dayUpdating[cellKey(member.id, column.id)] ?? false"
-          :meal-plans="mealPlansByDay[column.id] ?? []"
-          :meal-statuses="mealStatusesForMember(member.id, column.id)"
-          @open="openDetail(member, column.id)"
-        />
-      </template>
-    </GsAttendanceGrid>
+  <!-- Member swimlanes — one rule per member, day attendance + meals beneath. -->
+  <div v-if="!householdId" class="py-6 text-center text-sm text-muted">
+    {{ t('common.loading') }}
+  </div>
 
-    <GsDayAttendanceModal
-      v-if="detailMember && detailDay"
-      v-model:open="detailOpen"
-      :member="detailMember"
-      :day="detailDay"
-      :day-status="statusByMemberColumn[detailMember.id]?.[detailDay] ?? null"
-      :day-loading="dayUpdating[cellKey(detailMember.id, detailDay)] ?? false"
-      :meal-plans="mealPlansByDay[detailDay] ?? []"
-      :meal-statuses="mealStatusesForMember(detailMember.id, detailDay)"
-      :meal-loading="detailMealLoading"
-      @set-day="(status) => detailMember && setDayCell(detailMember.id, detailDay, status)"
-      @set-meal="(planId, status) => detailMember && setMealCell(detailMember.id, planId, status)"
-    />
-  </template>
+  <div v-else-if="!members.length" class="py-6 text-center text-sm text-muted">
+    {{ t('member.noMembers') }}
+  </div>
 
-  <!-- Card-based layout: swimlane matrix on desktop, day-pager on mobile. -->
   <template v-else>
-    <div v-if="!householdId" class="py-6 text-center text-sm text-muted">
-      {{ t('common.loading') }}
+    <!-- Wizard launch button -->
+    <div class="flex justify-end mb-4">
+      <UButton
+        size="sm"
+        variant="outline"
+        icon="i-heroicons-calendar-days"
+        @click="wizardOpen = true"
+      >
+        {{ t('event.attendanceGrid.bulkSetAttendance') }}
+      </UButton>
     </div>
 
-    <div v-else-if="!members.length" class="py-6 text-center text-sm text-muted">
-      {{ t('member.noMembers') }}
-    </div>
+    <GsSwimlaneGroup v-model:selected-day-index="selectedDayIndex" :days="days">
+      <template #day-header="{ day }">
+        <div class="flex items-start justify-between gap-1">
+          <p class="font-semibold text-sm text-highlighted leading-tight min-w-0">{{ formatDay(day) }}</p>
+          <UDropdownMenu :items="dayActions(day)">
+            <UButton
+              size="xs"
+              variant="ghost"
+              color="neutral"
+              icon="i-heroicons-ellipsis-vertical"
+              class="shrink-0 -mr-1"
+              :aria-label="t('event.attendanceGrid.columnActions', { day: formatDay(day) })"
+            />
+          </UDropdownMenu>
+        </div>
+      </template>
 
-    <template v-else>
-      <!-- Wizard launch button -->
-      <div class="flex justify-end mb-4">
-        <UButton
-          size="sm"
-          variant="outline"
-          icon="i-heroicons-calendar-days"
-          @click="wizardOpen = true"
-        >
-          {{ t('event.attendanceGrid.bulkSetAttendance') }}
-        </UButton>
-      </div>
+      <template #day-total="{ day }">
+        <template v-if="totals[day]">
+          <span class="inline-flex items-center gap-0.5">
+            <UIcon name="i-heroicons-user-group" class="size-3 shrink-0" />
+            {{ t('report.event.attendingCount', { n: totals[day]?.going ?? 0 }) }}
+          </span>
+          <span v-if="totals[day]?.maybe">{{ t('report.event.maybeCount', { n: totals[day]!.maybe }) }}</span>
+        </template>
+      </template>
 
-      <!-- Member swimlanes — one rule per member, day attendance + meals beneath. -->
-      <GsSwimlaneGroup v-model:selected-day-index="selectedDayIndex" :days="days">
-        <template #day-header="{ day }">
-          <div class="flex items-start justify-between gap-1">
-            <p class="font-semibold text-sm text-highlighted leading-tight min-w-0">{{ formatDay(day) }}</p>
-            <UDropdownMenu :items="dayActions(day)">
-              <UButton
+      <GsSwimlane
+        v-for="member in members"
+        :key="member.id"
+        :title="member.name"
+      >
+        <template #day="{ day }">
+          <div class="flex justify-end">
+            <GsAttendanceToggle
+              :model-value="statusByMemberColumn[member.id]?.[day] ?? null"
+              :loading="dayUpdating[cellKey(member.id, day)] ?? false"
+              size="xs"
+              @update:model-value="setDayCell(member.id, day, $event)"
+            />
+          </div>
+
+          <div v-if="mealsVisible(member.id, day)" class="mt-2 space-y-1.5 border-t border-default pt-2">
+            <div
+              v-for="plan in sortedMealPlans(day)"
+              :key="plan.id"
+              class="flex items-center justify-between gap-1"
+            >
+              <span class="text-xs text-muted min-w-0 truncate">{{ `${mealLabel(plan)} · ${mealSlotHint(plan)}` }}</span>
+              <GsAttendanceToggle
+                :model-value="getMealAttendance(plan.id, member.id)?.status ?? null"
+                :loading="mealUpdating[cellKey(member.id, plan.id)] ?? false"
                 size="xs"
-                variant="ghost"
-                color="neutral"
-                icon="i-heroicons-ellipsis-vertical"
-                class="shrink-0 -mr-1"
-                :aria-label="t('event.attendanceGrid.columnActions', { day: formatDay(day) })"
+                class="shrink-0"
+                @update:model-value="setMealCell(member.id, plan.id, $event)"
               />
-            </UDropdownMenu>
+            </div>
           </div>
         </template>
-
-        <template #day-total="{ day }">
-          <template v-if="totals[day]">
-            <span class="inline-flex items-center gap-0.5">
-              <UIcon name="i-heroicons-user-group" class="size-3 shrink-0" />
-              {{ t('report.event.attendingCount', { n: totals[day]?.going ?? 0 }) }}
-            </span>
-            <span v-if="totals[day]?.maybe">{{ t('report.event.maybeCount', { n: totals[day]!.maybe }) }}</span>
-          </template>
-        </template>
-
-        <GsSwimlane
-          v-for="member in members"
-          :key="member.id"
-          :title="member.name"
-        >
-          <template #day="{ day }">
-            <div class="flex justify-end">
-              <GsAttendanceToggle
-                :model-value="statusByMemberColumn[member.id]?.[day] ?? null"
-                :loading="dayUpdating[cellKey(member.id, day)] ?? false"
-                size="xs"
-                @update:model-value="setDayCell(member.id, day, $event)"
-              />
-            </div>
-
-            <div v-if="mealsVisible(member.id, day)" class="mt-2 space-y-1.5 border-t border-default pt-2">
-              <div
-                v-for="plan in sortedMealPlans(day)"
-                :key="plan.id"
-                class="flex items-center justify-between gap-1"
-              >
-                <span class="text-xs text-muted min-w-0 truncate">{{ `${mealLabel(plan)} · ${mealSlotHint(plan)}` }}</span>
-                <GsAttendanceToggle
-                  :model-value="getMealAttendance(plan.id, member.id)?.status ?? null"
-                  :loading="mealUpdating[cellKey(member.id, plan.id)] ?? false"
-                  size="xs"
-                  class="shrink-0"
-                  @update:model-value="setMealCell(member.id, plan.id, $event)"
-                />
-              </div>
-            </div>
-          </template>
-        </GsSwimlane>
-      </GsSwimlaneGroup>
-    </template>
+      </GsSwimlane>
+    </GsSwimlaneGroup>
   </template>
-
-  <!-- Day detail modal (individual cell edits) -->
-  <GsDayAttendanceModal
-    v-if="detailMember && detailDay"
-    v-model:open="detailOpen"
-    :member="detailMember"
-    :day="detailDay"
-    :day-status="detailMember ? (statusByMemberColumn[detailMember.id]?.[detailDay] ?? null) : null"
-    :day-loading="detailMember ? (dayUpdating[cellKey(detailMember.id, detailDay)] ?? false) : false"
-    :meal-plans="mealPlansByDay[detailDay] ?? []"
-    :meal-statuses="detailMember ? mealStatusesForMember(detailMember.id, detailDay) : {}"
-    :meal-loading="detailMealLoading"
-    @set-day="(status) => detailMember && setDayCell(detailMember.id, detailDay, status)"
-    @set-meal="(planId, status) => detailMember && setMealCell(detailMember.id, planId, status)"
-  />
 
   <!-- Bulk attendance wizard — uses the grid's own composable instances so updates reflect immediately. -->
   <GsAttendanceWizardModal
