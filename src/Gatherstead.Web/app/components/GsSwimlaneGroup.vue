@@ -17,7 +17,7 @@ const props = withDefaults(defineProps<{
   /** Desktop scroll-box max height. */
   maxHeightClass?: string
 }>(), {
-  dayColWidth: 'minmax(10rem, 1fr)',
+  dayColWidth: 'minmax(15rem, 1fr)',
   maxHeightClass: 'lg:max-h-[34rem]',
 })
 
