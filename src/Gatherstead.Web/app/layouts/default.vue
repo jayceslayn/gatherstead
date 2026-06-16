@@ -100,7 +100,7 @@ const isMoreActive = computed(() =>
 
     <div class="flex flex-1 min-h-0">
       <!-- Desktop sidebar (md+) -->
-      <aside class="hidden md:flex w-64 border-r border-(--ui-border) p-4 flex-col shrink-0">
+      <aside class="hidden md:flex w-50 border-r border-(--ui-border) p-4 flex-col shrink-0">
         <NuxtLink to="/app" class="mb-1">
           <picture>
             <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png">
@@ -115,7 +115,7 @@ const isMoreActive = computed(() =>
         <UNavigationMenu orientation="vertical" :items="primaryNavItems" highlight class="mb-2" />
         <UNavigationMenu v-if="managementNavItems.length" orientation="vertical" :items="managementNavItems" highlight class="mt-2" />
 
-        <div class="mt-auto pt-4 border-t border-(--ui-border) flex items-center gap-2">
+        <div class="mt-auto pt-4 border-t border-(--ui-border) flex flex-col align-start gap-2">
           <LocaleSwitcher />
           <UDropdownMenu :items="accountMenuItems" :ui="{ content: 'w-52' }" class="flex-1 min-w-0">
             <UUser
