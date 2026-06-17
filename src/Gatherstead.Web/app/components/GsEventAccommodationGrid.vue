@@ -33,12 +33,12 @@ const {
   requestStay,
   updateStay,
   cancelStay,
-  isUpdating: accIsUpdating,
 } = useEventAccommodationSignup(propertyId, accommodations, memberIds)
 
 // Request-stay modal state. A single tab-level button creates a stay; clicking a stay edits it.
 const requestModalOpen = ref(false)
 const requestLoading = ref(false)
+const deleteLoading = ref(false)
 const editIntent = ref<AccommodationIntent | null>(null)
 
 const defaultRequestMemberId = computed(() =>
@@ -98,6 +98,13 @@ async function submitRequest(payload: {
   requestLoading.value = false
   if (ok) requestModalOpen.value = false
 }
+
+async function deleteIntent(intent: AccommodationIntent) {
+  deleteLoading.value = true
+  const ok = await cancelStay(intent.accommodationId, intent.id)
+  deleteLoading.value = false
+  if (ok) requestModalOpen.value = false
+}
 </script>
 
 <template>
@@ -127,10 +134,8 @@ async function submitRequest(payload: {
       :members="householdMembers"
       :member-intents="accMemberIntents"
       :occupied-count="accOccupiedCount"
-      :is-updating="accIsUpdating"
       :totals-by-day="totalsByDay"
       @edit="openEdit"
-      @cancel="cancelStay"
     />
   </template>
 
@@ -142,6 +147,8 @@ async function submitRequest(payload: {
     :default-member-id="defaultRequestMemberId"
     :edit-intent="editIntent"
     :loading="requestLoading"
+    :delete-loading="deleteLoading"
     @submit="submitRequest"
+    @delete="deleteIntent"
   />
 </template>

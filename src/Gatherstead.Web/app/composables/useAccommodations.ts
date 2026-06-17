@@ -254,16 +254,18 @@ export function useEventAccommodationSignup(
     }
   }
 
-  async function cancelStay(accommodationId: string, intentId: string) {
+  async function cancelStay(accommodationId: string, intentId: string): Promise<boolean> {
     const tenantId = tenantStore.currentTenantId
-    if (!tenantId) return
+    if (!tenantId) return false
     updating.value = [...updating.value, intentId]
     try {
       await repo.deleteIntent(tenantId, propertyId.value, accommodationId, intentId)
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== intentId)

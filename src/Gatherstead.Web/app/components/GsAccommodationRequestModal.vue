@@ -10,10 +10,12 @@ const props = defineProps<{
   /** When set, the modal edits this stay as a unit instead of creating a new one. */
   editIntent?: AccommodationIntent | null
   loading?: boolean
+  deleteLoading?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
+  'delete': [intent: AccommodationIntent]
   'submit': [payload: {
     id: string | null
     accommodationId: string
@@ -41,8 +43,12 @@ const endNight = ref('')
 
 const isEditing = computed(() => !!props.editIntent)
 
+// Second-click confirmation for the destructive delete (no entity removed on a single click).
+const confirmDeleteOpen = ref(false)
+
 // Reset / hydrate the form whenever the modal opens with fresh context.
 watch(() => props.open, (isOpen) => {
+  confirmDeleteOpen.value = false
   if (!isOpen) return
   const edit = props.editIntent
   if (edit) {
@@ -106,6 +112,10 @@ function submit() {
     notes: notes.value.trim() || null,
   })
 }
+
+function confirmDelete() {
+  if (props.editIntent) emit('delete', props.editIntent)
+}
 </script>
 
 <template>
@@ -156,12 +166,35 @@ function submit() {
     </template>
 
     <template #footer>
-      <div class="flex justify-end gap-2">
-        <UButton variant="outline" @click="emit('update:open', false)">{{ t('common.cancel') }}</UButton>
-        <UButton :loading="loading" :disabled="!canSubmit" @click="submit">
-          {{ isEditing ? t('common.save') : t('accommodation.requestStay') }}
-        </UButton>
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <UButton
+            v-if="isEditing"
+            color="error"
+            variant="ghost"
+            icon="i-heroicons-trash"
+            :loading="deleteLoading"
+            @click="confirmDeleteOpen = true"
+          >
+            {{ t('accommodation.deleteStay') }}
+          </UButton>
+        </div>
+        <div class="flex gap-2">
+          <UButton variant="outline" @click="emit('update:open', false)">{{ t('common.cancel') }}</UButton>
+          <UButton :loading="loading" :disabled="!canSubmit" @click="submit">
+            {{ isEditing ? t('common.save') : t('accommodation.requestStay') }}
+          </UButton>
+        </div>
       </div>
     </template>
   </UModal>
+
+  <GsConfirmModal
+    v-model:open="confirmDeleteOpen"
+    :title="t('accommodation.deleteStay')"
+    :description="t('accommodation.deleteStayConfirm')"
+    :confirm-label="t('common.delete')"
+    danger
+    @confirm="confirmDelete"
+  />
 </template>

@@ -360,6 +360,8 @@
     "requestStay": "Solicitar Estadía",
     "editStay": "Editar Estadía",
     "updateStay": "Actualizar Estadía",
+    "deleteStay": "Eliminar Estadía",
+    "deleteStayConfirm": "Esto eliminará permanentemente esta solicitud de estadía. No se puede deshacer.",
     "status": "Estado",
     "partyAdults": "Adultos",
     "partyChildren": "Niños",

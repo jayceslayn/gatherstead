@@ -360,6 +360,8 @@
     "requestStay": "Request Stay",
     "editStay": "Edit Stay",
     "updateStay": "Update Stay",
+    "deleteStay": "Delete Stay",
+    "deleteStayConfirm": "This will permanently remove this stay request. This can't be undone.",
     "status": "Status",
     "partyAdults": "Adults",
     "partyChildren": "Children",

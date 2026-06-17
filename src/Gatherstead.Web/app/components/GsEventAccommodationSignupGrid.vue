@@ -8,14 +8,12 @@ const props = defineProps<{
   members: HouseholdMember[]
   memberIntents: (accommodationId: string, night: string) => AccommodationIntent[]
   occupiedCount: (accommodationId: string, night: string) => number
-  isUpdating: (key: string) => boolean
   /** Per-day going/maybe counts shown in the sticky header. */
   totalsByDay?: Record<string, { going: number, maybe: number }>
 }>()
 
 const emit = defineEmits<{
   edit: [intent: AccommodationIntent]
-  cancel: [accommodationId: string, intentId: string]
 }>()
 
 // Shared with sibling signup grids so switching tabs preserves the mobile day pager.
@@ -127,16 +125,6 @@ function partyLabel(intent: AccommodationIntent): string {
                   icon="i-heroicons-pencil"
                   :aria-label="t('common.edit')"
                   @click="emit('edit', intent)"
-                />
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  square
-                  icon="i-heroicons-x-mark"
-                  :loading="isUpdating(intent.id)"
-                  :aria-label="t('common.delete')"
-                  @click="emit('cancel', acc.id, intent.id)"
                 />
               </span>
             </li>
