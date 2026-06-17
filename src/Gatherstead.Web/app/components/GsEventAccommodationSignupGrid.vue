@@ -14,7 +14,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  request: [accommodationId: string, night: string]
+  edit: [intent: AccommodationIntent]
   cancel: [accommodationId: string, intentId: string]
 }>()
 
@@ -45,6 +45,13 @@ function capacity(acc: AccommodationSummary): number | null {
 function occupancyColor(acc: AccommodationSummary, day: string): 'neutral' | 'success' | 'warning' | 'error' {
   return OCCUPANCY_COLOR[occupancyState(props.occupiedCount(acc.id, day), capacity(acc))]
 }
+
+function partyLabel(intent: AccommodationIntent): string {
+  const parts: string[] = []
+  if (intent.partyAdults) parts.push(t('accommodation.adults', { n: intent.partyAdults }, intent.partyAdults))
+  if (intent.partyChildren) parts.push(t('accommodation.children', { n: intent.partyChildren }, intent.partyChildren))
+  return parts.join(' · ')
+}
 </script>
 
 <template>
@@ -72,7 +79,7 @@ function occupancyColor(acc: AccommodationSummary, day: string): 'neutral' | 'su
       :key="acc.id"
       :title="acc.name"
     >
-      <template #rule-trailing>
+      <template #rule-leading>
         <UIcon :name="typeIcon[acc.type] ?? 'i-heroicons-home'" class="size-5 text-primary" />
       </template>
 
@@ -94,9 +101,15 @@ function occupancyColor(acc: AccommodationSummary, day: string): 'neutral' | 'su
               :key="intent.id"
               class="flex items-center justify-between gap-2"
             >
-              <span class="text-sm truncate">{{ memberName(intent.householdMemberId) }}</span>
+              <button
+                type="button"
+                class="min-w-0 flex-1 text-left text-sm truncate hover:underline"
+                @click="emit('edit', intent)"
+              >
+                {{ memberName(intent.householdMemberId) }}
+              </button>
               <span class="flex items-center gap-1.5 shrink-0">
-                <span v-if="intent.partySize" class="text-xs text-muted">{{ t('accommodation.partySizeValue', { n: intent.partySize }) }}</span>
+                <span v-if="partyLabel(intent)" class="text-xs text-muted">{{ partyLabel(intent) }}</span>
                 <GsStatusBadge :status="intent.status" size="xs" />
                 <UBadge
                   v-if="intent.decision !== 'Pending'"
@@ -111,6 +124,15 @@ function occupancyColor(acc: AccommodationSummary, day: string): 'neutral' | 'su
                   variant="ghost"
                   size="xs"
                   square
+                  icon="i-heroicons-pencil"
+                  :aria-label="t('common.edit')"
+                  @click="emit('edit', intent)"
+                />
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  square
                   icon="i-heroicons-x-mark"
                   :loading="isUpdating(intent.id)"
                   :aria-label="t('common.delete')"
@@ -119,16 +141,6 @@ function occupancyColor(acc: AccommodationSummary, day: string): 'neutral' | 'su
               </span>
             </li>
           </ul>
-
-          <UButton
-            variant="outline"
-            size="xs"
-            icon="i-heroicons-plus"
-            :loading="isUpdating(acc.id)"
-            @click="emit('request', acc.id, day)"
-          >
-            {{ t('accommodation.requestStay') }}
-          </UButton>
         </div>
       </template>
     </GsSwimlane>

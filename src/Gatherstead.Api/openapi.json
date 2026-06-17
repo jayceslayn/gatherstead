@@ -6691,7 +6691,11 @@
             "type": "string",
             "format": "uuid"
           },
-          "night": {
+          "startNight": {
+            "type": "string",
+            "format": "date"
+          },
+          "endNight": {
             "type": "string",
             "format": "date"
           },
@@ -6715,7 +6719,12 @@
             ],
             "type": "string"
           },
-          "partySize": {
+          "partyAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partyChildren": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -7098,8 +7107,9 @@
       },
       "CreateAccommodationIntentRequest": {
         "required": [
+          "endNight",
           "householdMemberId",
-          "night",
+          "startNight",
           "status"
         ],
         "type": "object",
@@ -7108,7 +7118,11 @@
             "type": "string",
             "format": "uuid"
           },
-          "night": {
+          "startNight": {
+            "type": "string",
+            "format": "date"
+          },
+          "endNight": {
             "type": "string",
             "format": "date"
           },
@@ -7124,7 +7138,12 @@
             "type": "string",
             "nullable": true
           },
-          "partySize": {
+          "partyAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partyChildren": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -8224,7 +8243,12 @@
             ],
             "type": "string"
           },
-          "partySize": {
+          "partyAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partyChildren": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -9660,10 +9684,30 @@
       },
       "UpdateAccommodationIntentRequest": {
         "required": [
+          "accommodationId",
+          "endNight",
+          "householdMemberId",
+          "startNight",
           "status"
         ],
         "type": "object",
         "properties": {
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accommodationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startNight": {
+            "type": "string",
+            "format": "date"
+          },
+          "endNight": {
+            "type": "string",
+            "format": "date"
+          },
           "status": {
             "enum": [
               "Intent",
@@ -9684,7 +9728,12 @@
             ],
             "type": "string"
           },
-          "partySize": {
+          "partyAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partyChildren": {
             "type": "integer",
             "format": "int32",
             "nullable": true

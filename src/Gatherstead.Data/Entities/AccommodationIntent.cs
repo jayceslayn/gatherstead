@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Gatherstead.Data.Entities;
 
-[Index(nameof(TenantId), nameof(HouseholdMemberId), nameof(Night))]
-[Index(nameof(TenantId), nameof(AccommodationId), nameof(Night), nameof(HouseholdMemberId), IsUnique = true)]
+[Index(nameof(TenantId), nameof(HouseholdMemberId))]
+[Index(nameof(TenantId), nameof(AccommodationId), nameof(StartNight), nameof(EndNight))]
 public class AccommodationIntent : AuditableEntity
 {
     public Guid Id { get; set; }
@@ -25,12 +25,18 @@ public class AccommodationIntent : AuditableEntity
     [ForeignKey(nameof(AccommodationId))]
     public Accommodation? Accommodation { get; set; }
 
-    public DateOnly Night { get; set; }
+    /// <summary>First night of the stay (inclusive).</summary>
+    public DateOnly StartNight { get; set; }
+
+    /// <summary>Last night of the stay (inclusive). A single-night stay has StartNight == EndNight.</summary>
+    public DateOnly EndNight { get; set; }
+
     public AccommodationIntentStatus Status { get; set; }
     [MaxLength(500)]
     public string? Notes { get; set; }
 
     public AccommodationIntentDecision Decision { get; set; }
-    public int? PartySize { get; set; }
+    public int? PartyAdults { get; set; }
+    public int? PartyChildren { get; set; }
     public int? Priority { get; set; }
 }

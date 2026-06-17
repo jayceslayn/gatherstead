@@ -320,34 +320,28 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   // Edna: first day only (matches 1-night accommodation)
   await repos.eventAttendance.upsertAttendance(DEMO_TENANT_ID, event.id, ednaStudio.id, edna.id, day1, 'Going')
 
-  // 11. Accommodation intents
-  // Bob: Cabin A, 3 nights — Confirmed/Approved, party of 5
-  for (const night of [day1, day2, day3]) {
-    const intent = await repos.accommodationIntents.createIntent(
-      DEMO_TENANT_ID, property.id, cabinA.id, parrFamily.id, bob.id, night, 'Confirmed', null, 5,
-    )
-    await repos.accommodationIntents.updateIntent(
-      DEMO_TENANT_ID, property.id, cabinA.id, intent.id, 'Confirmed', 'Approved', null, 5,
-    )
-  }
-
-  // Lucius: RV Pad, 2 nights — Hold/Pending, party of 2
-  await repos.accommodationIntents.createIntent(
-    DEMO_TENANT_ID, property.id, rvPad.id, frozoneHousehold.id, lucius.id,
-    day1, 'Hold', "Honey said RV or nothing. We'll see.", 2,
-  )
-  await repos.accommodationIntents.createIntent(
-    DEMO_TENANT_ID, property.id, rvPad.id, frozoneHousehold.id, lucius.id,
-    day2, 'Hold', null, 2,
-  )
-
-  // Edna: Cabin B, 1 night — Confirmed/Approved, party of 1
-  const ednaIntent = await repos.accommodationIntents.createIntent(
-    DEMO_TENANT_ID, property.id, cabinB.id, ednaStudio.id, edna.id,
-    day1, 'Confirmed', 'Separate cabin. Non-negotiable.', 1,
+  // 11. Accommodation stays (each is a single span of nights)
+  // Bob: Cabin A, day1–day3 — Confirmed/Approved, party of 3 adults + 2 children
+  const bobStay = await repos.accommodationIntents.createIntent(
+    DEMO_TENANT_ID, property.id, cabinA.id, parrFamily.id, bob.id, day1, day3, 'Confirmed', null, 3, 2,
   )
   await repos.accommodationIntents.updateIntent(
-    DEMO_TENANT_ID, property.id, cabinB.id, ednaIntent.id,
-    'Confirmed', 'Approved', 'Separate cabin. Non-negotiable.', 1,
+    DEMO_TENANT_ID, property.id, cabinA.id, bobStay.id, bob.id, cabinA.id, day1, day3, 'Confirmed', 'Approved', null, 3, 2,
+  )
+
+  // Lucius: RV Pad, day1–day2 — Hold/Pending, party of 2 adults
+  await repos.accommodationIntents.createIntent(
+    DEMO_TENANT_ID, property.id, rvPad.id, frozoneHousehold.id, lucius.id,
+    day1, day2, 'Hold', "Honey said RV or nothing. We'll see.", 2, null,
+  )
+
+  // Edna: Cabin B, day1 only — Confirmed/Approved, party of 1 adult
+  const ednaIntent = await repos.accommodationIntents.createIntent(
+    DEMO_TENANT_ID, property.id, cabinB.id, ednaStudio.id, edna.id,
+    day1, day1, 'Confirmed', 'Separate cabin. Non-negotiable.', 1, null,
+  )
+  await repos.accommodationIntents.updateIntent(
+    DEMO_TENANT_ID, property.id, cabinB.id, ednaIntent.id, edna.id, cabinB.id,
+    day1, day1, 'Confirmed', 'Approved', 'Separate cabin. Non-negotiable.', 1, null,
   )
 }

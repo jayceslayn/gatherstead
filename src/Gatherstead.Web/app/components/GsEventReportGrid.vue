@@ -24,6 +24,18 @@ const selectedDay = computed(() => props.days[selectedDayIndex.value]?.day)
 const mealLanes = computed(() => buildMealLanes(props.days))
 const taskLanes = computed(() => buildTaskLanes(props.days))
 const accommodationLanes = computed(() => buildAccommodationLanes(props.days))
+
+const accommodationTypeIcon: Record<string, string> = {
+  Bedroom: 'i-heroicons-home',
+  Bunk: 'i-heroicons-rectangle-stack',
+  RvPad: 'i-heroicons-truck',
+  Tent: 'i-heroicons-map',
+  Offsite: 'i-heroicons-arrow-top-right-on-square',
+}
+function laneTypeIcon(lane: { byDay: Record<string, { type: string }> }): string {
+  const type = Object.values(lane.byDay)[0]?.type
+  return accommodationTypeIcon[type ?? 'Bedroom'] ?? 'i-heroicons-home'
+}
 </script>
 
 <template>
@@ -81,8 +93,10 @@ const accommodationLanes = computed(() => buildAccommodationLanes(props.days))
         v-for="lane in accommodationLanes"
         :key="lane.key"
         :title="lane.title"
-        :hide-when-empty="!selectedDay || !lane.byDay[selectedDay]"
       >
+        <template #rule-trailing>
+          <UIcon :name="laneTypeIcon(lane)" class="size-5 text-primary" />
+        </template>
         <template #day="{ day }">
           <GsReportAccommodationCell
             v-if="lane.byDay[day]"

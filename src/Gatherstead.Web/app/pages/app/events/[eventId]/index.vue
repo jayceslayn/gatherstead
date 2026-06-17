@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { useHouseholds } from '~/composables/useHouseholds'
-import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
-import { useAccommodations, useEventAccommodationSignup } from '~/composables/useAccommodations'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
 import type { TabsItem } from '@nuxt/ui'
@@ -32,7 +30,6 @@ const attendanceByDay = computed(() => {
 })
 
 const eventPropertyId = computed(() => event.value?.propertyId ?? '')
-const { accommodations, pending: accommodationsPending } = useAccommodations(eventPropertyId)
 
 // Tab state — computed so labels re-translate on locale switch.
 const tabs = computed<TabsItem[]>(() => [
@@ -72,67 +69,9 @@ const householdSelectItems = computed(() =>
   manageableHouseholds.value.map(h => ({ label: h.name, value: h.id })),
 )
 
-// Members of the selected household — task/accommodation sign-up operates per member.
-const { members: householdMembers } = useHouseholdMembers(selectedHouseholdId)
-const memberIds = computed(() => householdMembers.value.map(m => m.id))
-
-// Signup day pager — shared across the Attendance and Tasks swimlane grids so
-// switching tabs doesn't reset the mobile pager back to day one.
+// Signup day pager — shared across the Attendance, Tasks and Accommodations swimlane
+// grids so switching tabs doesn't reset the mobile pager back to day one.
 const signupDayIndex = ref(0)
-
-// Accommodation sign-up: per-member stay requests across nights.
-const {
-  pending: accommodationSignupPending,
-  memberIntents: accMemberIntents,
-  occupiedCount: accOccupiedCount,
-  requestStay,
-  cancelStay,
-  isUpdating: accIsUpdating,
-} = useEventAccommodationSignup(eventPropertyId, accommodations, memberIds)
-
-// Request-stay modal state.
-const requestModalOpen = ref(false)
-const requestAccommodationId = ref('')
-const requestNight = ref('')
-const requestLoading = ref(false)
-
-const requestAccommodation = computed(() =>
-  accommodations.value.find(a => a.id === requestAccommodationId.value) ?? null,
-)
-
-const defaultRequestMemberId = computed(() =>
-  memberStore.linkedMemberId && memberIds.value.includes(memberStore.linkedMemberId)
-    ? memberStore.linkedMemberId
-    : null,
-)
-
-function openRequest(accommodationId: string, night: string) {
-  requestAccommodationId.value = accommodationId
-  requestNight.value = night
-  requestModalOpen.value = true
-}
-
-async function submitRequest(payload: {
-  memberId: string
-  nights: string[]
-  status: import('~/repositories/types').AccommodationIntentStatus
-  partySize: number | null
-  notes: string | null
-}) {
-  if (!selectedHouseholdId.value) return
-  requestLoading.value = true
-  const ok = await requestStay(
-    requestAccommodationId.value,
-    selectedHouseholdId.value,
-    payload.memberId,
-    payload.nights,
-    payload.status,
-    payload.notes,
-    payload.partySize,
-  )
-  requestLoading.value = false
-  if (ok) requestModalOpen.value = false
-}
 
 const eventDays = computed(() => {
   if (!event.value) return []
@@ -232,37 +171,12 @@ onMounted(() => {
 
         <template #accommodations>
           <div class="mt-4">
-            <div v-if="accommodationsPending || accommodationSignupPending" class="py-8 text-center text-sm text-muted">
-              {{ t('common.loading') }}
-            </div>
-            <GsEmptyState
-              v-else-if="!accommodations.length"
-              icon="i-heroicons-home"
-              :title="t('property.noAccommodations')"
-            />
-            <GsEventAccommodationSignupGrid
-              v-else
+            <GsEventAccommodationGrid
               v-model:selected-day-index="signupDayIndex"
+              :property-id="eventPropertyId"
               :days="eventDays"
-              :accommodations="accommodations"
-              :members="householdMembers"
-              :member-intents="accMemberIntents"
-              :occupied-count="accOccupiedCount"
-              :is-updating="accIsUpdating"
+              :household-id="selectedHouseholdId"
               :totals-by-day="attendanceByDay"
-              @request="openRequest"
-              @cancel="cancelStay"
-            />
-
-            <GsAccommodationRequestModal
-              v-model:open="requestModalOpen"
-              :accommodation-name="requestAccommodation?.name ?? ''"
-              :members="householdMembers"
-              :event-days="eventDays"
-              :default-night="requestNight"
-              :default-member-id="defaultRequestMemberId"
-              :loading="requestLoading"
-              @submit="submitRequest"
             />
           </div>
         </template>

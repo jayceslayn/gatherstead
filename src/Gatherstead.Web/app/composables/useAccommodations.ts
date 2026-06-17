@@ -167,48 +167,44 @@ export function useEventAccommodationSignup(
 
   const intentsByAccommodation = computed(() => data.value ?? {})
 
-  function memberIntent(accommodationId: string, night: string, memberId: string): AccommodationIntent | null {
-    return (intentsByAccommodation.value[accommodationId] ?? [])
-      .find(i => i.night === night && i.householdMemberId === memberId) ?? null
-  }
-
-  // The selected household's own requests for a night, sorted by member order.
+  // The selected household's stays whose span covers the given night, sorted by member order.
   function memberIntents(accommodationId: string, night: string): AccommodationIntent[] {
     const order = new Map(householdMemberIds.value.map((id, i) => [id, i]))
     return (intentsByAccommodation.value[accommodationId] ?? [])
-      .filter(i => i.night === night && order.has(i.householdMemberId))
+      .filter(i => i.startNight <= night && i.endNight >= night && order.has(i.householdMemberId))
       .sort((a, b) => (order.get(a.householdMemberId) ?? 0) - (order.get(b.householdMemberId) ?? 0))
   }
 
-  // Total occupancy for a night across all households (declined excluded; null party
-  // size counts as 1) — mirrors the event report's occupancy aggregation.
+  // Total occupancy for a night across all households — every stay whose span covers the night
+  // (declined excluded; a party with no adult/child counts counts as 1). Capacity is only a soft
+  // UI flag, so this can legitimately exceed it. Mirrors the event report's occupancy aggregation.
   function occupiedCount(accommodationId: string, night: string): number {
     return (intentsByAccommodation.value[accommodationId] ?? [])
-      .filter(i => i.night === night && i.decision !== 'Declined')
-      .reduce((sum, i) => sum + (i.partySize ?? 1), 0)
+      .filter(i => i.startNight <= night && i.endNight >= night && i.decision !== 'Declined')
+      .reduce((sum, i) => sum + Math.max((i.partyAdults ?? 0) + (i.partyChildren ?? 0), 1), 0)
   }
 
   const updating = ref<string[]>([])
 
-  /** Creates a request for each night in the list, skipping nights the member already requested. */
+  /** Creates a single stay spanning [startNight, endNight]. */
   async function requestStay(
     accommodationId: string,
     householdId: string,
     memberId: string,
-    nights: string[],
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     notes: string | null,
-    partySize: number | null,
+    partyAdults: number | null,
+    partyChildren: number | null,
   ): Promise<boolean> {
     const tenantId = tenantStore.currentTenantId
     if (!tenantId) return false
     updating.value = [...updating.value, accommodationId]
     try {
-      const targets = nights.filter(night => !memberIntent(accommodationId, night, memberId))
-      await Promise.all(
-        targets.map(night =>
-          repo.createIntent(tenantId, propertyId.value, accommodationId, householdId, memberId, night, status, notes, partySize),
-        ),
+      await repo.createIntent(
+        tenantId, propertyId.value, accommodationId, householdId, memberId,
+        startNight, endNight, status, notes, partyAdults, partyChildren,
       )
       await refresh()
       return true
@@ -219,6 +215,42 @@ export function useEventAccommodationSignup(
     }
     finally {
       updating.value = updating.value.filter(k => k !== accommodationId)
+    }
+  }
+
+  /** Edits an existing stay as a unit (member + accommodation + range + party + status). */
+  async function updateStay(
+    accommodationId: string,
+    intentId: string,
+    memberId: string,
+    targetAccommodationId: string,
+    startNight: string,
+    endNight: string,
+    status: AccommodationIntentStatus,
+    decision: AccommodationIntentDecision,
+    notes: string | null,
+    partyAdults: number | null,
+    partyChildren: number | null,
+  ): Promise<boolean> {
+    const tenantId = tenantStore.currentTenantId
+    if (!tenantId) return false
+    updating.value = [...updating.value, intentId]
+    try {
+      // accommodationId is the stay's current location (path); targetAccommodationId is where it should land.
+      await repo.updateIntent(
+        tenantId, propertyId.value, accommodationId, intentId,
+        memberId, targetAccommodationId,
+        startNight, endNight, status, decision, notes, partyAdults, partyChildren,
+      )
+      await refresh()
+      return true
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== intentId)
     }
   }
 
@@ -242,7 +274,7 @@ export function useEventAccommodationSignup(
     return updating.value.includes(key)
   }
 
-  return { pending, intentsByAccommodation, memberIntent, memberIntents, occupiedCount, requestStay, cancelStay, isUpdating, refresh }
+  return { pending, intentsByAccommodation, memberIntents, occupiedCount, requestStay, updateStay, cancelStay, isUpdating, refresh }
 }
 
 export function useAccommodationIntentActions(
@@ -259,12 +291,14 @@ export function useAccommodationIntentActions(
   async function requestIntent(
     householdId: string,
     memberId: string,
-    night: string,
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     notes?: string | null,
-    partySize?: number | null,
+    partyAdults?: number | null,
+    partyChildren?: number | null,
   ) {
-    const key = `${night}-${memberId}`
+    const key = `${startNight}-${memberId}`
     updating.value.push(key)
     try {
       await repo.createIntent(
@@ -273,10 +307,12 @@ export function useAccommodationIntentActions(
         accommodationId.value,
         householdId,
         memberId,
-        night,
+        startNight,
+        endNight,
         status,
         notes,
-        partySize,
+        partyAdults,
+        partyChildren,
       )
       await refresh()
     }
@@ -290,22 +326,32 @@ export function useAccommodationIntentActions(
 
   async function promoteIntent(
     intentId: string,
+    memberId: string,
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     decision: AccommodationIntentDecision,
     notes?: string | null,
-    partySize?: number | null,
+    partyAdults?: number | null,
+    partyChildren?: number | null,
   ) {
     updating.value.push(intentId)
     try {
+      // Promotion never moves the stay, so the target accommodation is the current one.
       await repo.updateIntent(
         tenantStore.currentTenantId!,
         propertyId.value,
         accommodationId.value,
         intentId,
+        memberId,
+        accommodationId.value,
+        startNight,
+        endNight,
         status,
         decision,
         notes,
-        partySize,
+        partyAdults,
+        partyChildren,
       )
       await refresh()
     }

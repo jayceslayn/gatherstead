@@ -21,11 +21,16 @@ const { days, gridStyle, selectedDay, selectedDayIndex } = useSwimlaneContext()
 
 <template>
   <div class="border-t border-default" :class="{ 'hidden lg:block': hideWhenEmpty }">
-    <!-- Rule: title + sub-description + trailing slot. -->
+    <!-- Rule: optional leading slot + title + sub-description + trailing slot. -->
     <div class="flex items-center justify-between gap-2 px-2 pt-2 pb-1">
-      <div class="min-w-0">
-        <p class="font-medium text-sm text-highlighted leading-tight break-words">{{ title }}</p>
-        <p v-if="subtitle" class="text-xs text-muted leading-tight">{{ subtitle }}</p>
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="shrink-0 empty:hidden">
+          <slot name="rule-leading" />
+        </span>
+        <div class="min-w-0">
+          <p class="font-medium text-sm text-highlighted leading-tight break-words">{{ title }}</p>
+          <p v-if="subtitle" class="text-xs text-muted leading-tight">{{ subtitle }}</p>
+        </div>
       </div>
       <div class="shrink-0">
         <slot name="rule-trailing" />

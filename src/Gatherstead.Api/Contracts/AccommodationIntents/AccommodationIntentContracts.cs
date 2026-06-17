@@ -9,11 +9,13 @@ public record AccommodationIntentDto(
     Guid TenantId,
     Guid AccommodationId,
     Guid HouseholdMemberId,
-    DateOnly Night,
+    DateOnly StartNight,
+    DateOnly EndNight,
     AccommodationIntentStatus Status,
     string? Notes,
     AccommodationIntentDecision Decision,
-    int? PartySize,
+    int? PartyAdults,
+    int? PartyChildren,
     int? Priority,
     AuditInfo? Audit);
 
@@ -25,23 +27,41 @@ public class CreateAccommodationIntentRequest
     public Guid HouseholdMemberId { get; init; }
 
     [Required]
-    public DateOnly Night { get; init; }
+    public DateOnly StartNight { get; init; }
+
+    [Required]
+    public DateOnly EndNight { get; init; }
 
     [Required]
     public AccommodationIntentStatus Status { get; init; }
 
     public string? Notes { get; init; }
-    public int? PartySize { get; init; }
+    public int? PartyAdults { get; init; }
+    public int? PartyChildren { get; init; }
     public int? Priority { get; init; }
 }
 
 public class UpdateAccommodationIntentRequest
 {
     [Required]
+    public Guid HouseholdMemberId { get; init; }
+
+    /// <summary>Desired (target) accommodation; differs from the route's accommodationId to move the stay.</summary>
+    [Required]
+    public Guid AccommodationId { get; init; }
+
+    [Required]
+    public DateOnly StartNight { get; init; }
+
+    [Required]
+    public DateOnly EndNight { get; init; }
+
+    [Required]
     public AccommodationIntentStatus Status { get; init; }
 
     public string? Notes { get; init; }
     public AccommodationIntentDecision Decision { get; init; }
-    public int? PartySize { get; init; }
+    public int? PartyAdults { get; init; }
+    public int? PartyChildren { get; init; }
     public int? Priority { get; init; }
 }

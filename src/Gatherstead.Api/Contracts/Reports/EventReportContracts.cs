@@ -42,9 +42,10 @@ public record EventReportTaskDto(
     [property: Required] IReadOnlyList<string> Assignees);
 
 /// <summary>
-/// An accommodation and who is staying in it on a given night. Only emitted for nights with at
-/// least one non-declined occupant. Vacant / full is derived client-side from <see cref="Occupied"/>
-/// versus capacity.
+/// An accommodation and who is staying in it on a given night. Emitted for every accommodation on
+/// every event day (a vacant night reports <see cref="Occupied"/> 0 with no occupants) so the
+/// occupancy badge renders on all days. Vacant / full / over is derived client-side from
+/// <see cref="Occupied"/> versus capacity; over-capacity is a soft flag, never blocked.
 /// </summary>
 public record EventReportAccommodationDto(
     [property: Required] Guid AccommodationId,
@@ -61,7 +62,8 @@ public record EventReportOccupantDto(
     [property: Required] string Name,
     [property: Required] AccommodationIntentStatus Status,
     [property: Required] AccommodationIntentDecision Decision,
-    int? PartySize);
+    int? PartyAdults,
+    int? PartyChildren);
 
 public record EventReportMealDto(
     [property: Required] Guid MealPlanId,

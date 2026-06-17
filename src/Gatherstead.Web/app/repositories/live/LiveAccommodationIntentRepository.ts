@@ -37,16 +37,18 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
     accommodationId: string,
     householdId: string,
     memberId: string,
-    night: string,
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     notes?: string | null,
-    partySize?: number | null,
+    partyAdults?: number | null,
+    partyChildren?: number | null,
   ): Promise<AccommodationIntent> {
     const r = await $fetch<ApiResponse<AccommodationIntent>>(
       `/api/proxy/tenants/${tenantId}/properties/${propertyId}/accommodations/${accommodationId}/intents?householdId=${encodeURIComponent(householdId)}`,
       {
         method: 'POST',
-        body: { householdMemberId: memberId, night, status, notes, partySize },
+        body: { householdMemberId: memberId, startNight, endNight, status, notes, partyAdults, partyChildren },
       },
     )
     return r.entity
@@ -57,16 +59,23 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
     propertyId: string,
     accommodationId: string,
     intentId: string,
+    memberId: string,
+    targetAccommodationId: string,
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     decision: AccommodationIntentDecision,
     notes?: string | null,
-    partySize?: number | null,
+    partyAdults?: number | null,
+    partyChildren?: number | null,
   ): Promise<void> {
+    // The path identifies the intent's current accommodation; the body carries the desired
+    // member + accommodation so a stay can be reassigned or moved.
     await $fetch(
       `/api/proxy/tenants/${tenantId}/properties/${propertyId}/accommodations/${accommodationId}/intents/${intentId}`,
       {
         method: 'PUT',
-        body: { status, decision, notes, partySize },
+        body: { householdMemberId: memberId, accommodationId: targetAccommodationId, startNight, endNight, status, decision, notes, partyAdults, partyChildren },
       },
     )
   }

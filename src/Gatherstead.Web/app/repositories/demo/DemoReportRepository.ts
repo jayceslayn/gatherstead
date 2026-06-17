@@ -155,21 +155,24 @@ export class DemoReportRepository implements IReportRepository {
           { slotRank: taskSlotRank(b.timeSlot), ...taskOrderKey.get(`${b.templateId}:${b.timeSlot ?? ''}`)!, title: b.templateName },
         ))
 
-      // Accommodations occupied this night (declined excluded; null party size counts as 1).
+      // Every accommodation is emitted on every day (vacant ones report occupied 0) so the badge
+      // renders on all days; occupants are the stays whose span covers this night (declined
+      // excluded; a party with no adults/children counts as 1).
       const accommodations: EventReportAccommodation[] = eventAccommodations
-        .map((accommodation): EventReportAccommodation | null => {
+        .map((accommodation): EventReportAccommodation => {
           const occupants: EventReportOccupant[] = store.accommodationIntents.value
-            .filter(i => i.accommodationId === accommodation.id && i.night === day && i.decision !== 'Declined')
+            .filter(i => i.accommodationId === accommodation.id
+              && i.startNight <= day && i.endNight >= day
+              && i.decision !== 'Declined')
             .map((i): EventReportOccupant => ({
               memberId: i.householdMemberId,
               name: memberById.get(i.householdMemberId)?.name ?? '',
               status: i.status ?? 'Intent',
               decision: i.decision ?? 'Pending',
-              partySize: i.partySize ?? null,
+              partyAdults: i.partyAdults ?? null,
+              partyChildren: i.partyChildren ?? null,
             }))
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
-
-          if (occupants.length === 0) return null
 
           return {
             accommodationId: accommodation.id,
@@ -177,11 +180,10 @@ export class DemoReportRepository implements IReportRepository {
             type: accommodation.type ?? 'Bedroom',
             capacityAdults: accommodation.capacityAdults ?? null,
             capacityChildren: accommodation.capacityChildren ?? null,
-            occupied: occupants.reduce((sum, o) => sum + (o.partySize ?? 1), 0),
+            occupied: occupants.reduce((sum, o) => sum + Math.max((o.partyAdults ?? 0) + (o.partyChildren ?? 0), 1), 0),
             occupants,
           }
         })
-        .filter((a): a is EventReportAccommodation => a !== null)
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 
       days.push({ day, going, maybe, meals, tasks, accommodations })

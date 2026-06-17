@@ -37,32 +37,28 @@ export class DemoAccommodationIntentRepository implements IAccommodationIntentRe
     accommodationId: string,
     _householdId: string,
     memberId: string,
-    night: string,
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     notes?: string | null,
-    partySize?: number | null,
+    partyAdults?: number | null,
+    partyChildren?: number | null,
   ): Promise<AccommodationIntent> {
     const store = getDemoStore()
-    const existing = store.accommodationIntents.value.find(
-      i => i.accommodationId === accommodationId && i.householdMemberId === memberId && i.night === night,
-    )
-    if (existing) {
-      existing.status = status
-      existing.notes = notes ?? null
-      existing.partySize = partySize ?? null
-      persistDemoStore()
-      return existing
-    }
+    // A stay is a span; overlapping stays are allowed (capacity is only a soft UI flag), so each
+    // request creates a distinct record.
     const intent: AccommodationIntent = {
       id: demoId(),
       tenantId,
       accommodationId,
       householdMemberId: memberId,
-      night,
+      startNight,
+      endNight,
       status,
       notes: notes ?? null,
       decision: 'Pending',
-      partySize: partySize ?? null,
+      partyAdults: partyAdults ?? null,
+      partyChildren: partyChildren ?? null,
       priority: null,
     }
     store.accommodationIntents.value.push(intent)
@@ -75,18 +71,28 @@ export class DemoAccommodationIntentRepository implements IAccommodationIntentRe
     _propertyId: string,
     _accommodationId: string,
     intentId: string,
+    memberId: string,
+    targetAccommodationId: string,
+    startNight: string,
+    endNight: string,
     status: AccommodationIntentStatus,
     decision: AccommodationIntentDecision,
     notes?: string | null,
-    partySize?: number | null,
+    partyAdults?: number | null,
+    partyChildren?: number | null,
   ): Promise<void> {
     const store = getDemoStore()
     const intent = store.accommodationIntents.value.find(i => i.id === intentId)
     if (!intent) return
+    intent.householdMemberId = memberId
+    intent.accommodationId = targetAccommodationId
+    intent.startNight = startNight
+    intent.endNight = endNight
     intent.status = status
     intent.decision = decision
     intent.notes = notes ?? null
-    intent.partySize = partySize ?? null
+    intent.partyAdults = partyAdults ?? null
+    intent.partyChildren = partyChildren ?? null
     persistDemoStore()
   }
 

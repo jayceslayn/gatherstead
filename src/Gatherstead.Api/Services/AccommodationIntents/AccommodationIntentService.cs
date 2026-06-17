@@ -106,15 +106,11 @@ public class AccommodationIntentService : IAccommodationIntentService
             return response;
         }
 
-        var duplicateExists = await _dbContext.AccommodationIntents
-            .AsNoTracking()
-            .AnyAsync(i => i.TenantId == tenantId && i.AccommodationId == accommodationId && i.HouseholdMemberId == request.HouseholdMemberId && i.Night == request.Night, cancellationToken);
-
-        if (duplicateExists)
-        {
-            response.AddResponseMessage(MessageType.ERROR, "An accommodation intent for this member and night already exists.");
+        // A stay is a span of nights; capacity is a soft UI signal, so overlapping stays in the
+        // same accommodation are intentionally allowed (families may share, and over-capacity is
+        // only flagged in the UI). The only structural rule is a non-inverted span.
+        if (!ValidateSpan(request.StartNight, request.EndNight, response))
             return response;
-        }
 
         var intent = new AccommodationIntent
         {
@@ -122,10 +118,12 @@ public class AccommodationIntentService : IAccommodationIntentService
             TenantId = tenantId,
             AccommodationId = accommodationId,
             HouseholdMemberId = request.HouseholdMemberId,
-            Night = request.Night,
+            StartNight = request.StartNight,
+            EndNight = request.EndNight,
             Status = request.Status,
             Notes = request.Notes?.Trim(),
-            PartySize = request.PartySize,
+            PartyAdults = request.PartyAdults,
+            PartyChildren = request.PartyChildren,
             Priority = request.Priority,
         };
 
@@ -159,13 +157,37 @@ public class AccommodationIntentService : IAccommodationIntentService
 
         if (intent is null) return response;
 
-        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, intent.HouseholdMemberId, cancellationToken))
+        // Authorize against the (possibly new) member the stay is being assigned to.
+        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, request.HouseholdMemberId, cancellationToken))
             return response;
 
+        if (!ValidateSpan(request.StartNight, request.EndNight, response))
+            return response;
+
+        // Moving the stay to a different accommodation — verify the target exists for the tenant.
+        if (request.AccommodationId != accommodationId)
+        {
+            var targetExists = await _dbContext.Accommodations
+                .AsNoTracking()
+                .AnyAsync(a => a.TenantId == tenantId && a.Id == request.AccommodationId, cancellationToken);
+
+            if (!targetExists)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "Accommodation not found.");
+                return response;
+            }
+
+            intent.AccommodationId = request.AccommodationId;
+        }
+
+        intent.HouseholdMemberId = request.HouseholdMemberId;
+        intent.StartNight = request.StartNight;
+        intent.EndNight = request.EndNight;
         intent.Status = request.Status;
         intent.Notes = request.Notes?.Trim();
         intent.Decision = request.Decision;
-        intent.PartySize = request.PartySize;
+        intent.PartyAdults = request.PartyAdults;
+        intent.PartyChildren = request.PartyChildren;
         intent.Priority = request.Priority;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -211,7 +233,18 @@ public class AccommodationIntentService : IAccommodationIntentService
     }
 
     private AccommodationIntentDto MapToDto(AccommodationIntent i) => new(
-        i.Id, i.TenantId, i.AccommodationId, i.HouseholdMemberId, i.Night, i.Status, i.Notes,
-        i.Decision, i.PartySize, i.Priority,
+        i.Id, i.TenantId, i.AccommodationId, i.HouseholdMemberId, i.StartNight, i.EndNight, i.Status, i.Notes,
+        i.Decision, i.PartyAdults, i.PartyChildren, i.Priority,
         i.ToAuditInfo(_auditVisibility.IncludeAudit));
+
+    private static bool ValidateSpan(DateOnly startNight, DateOnly endNight, AccommodationIntentResponse response)
+    {
+        if (startNight > endNight)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "StartNight must not be after EndNight.");
+            return false;
+        }
+
+        return true;
+    }
 }

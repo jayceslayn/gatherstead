@@ -31,24 +31,22 @@ const { intents, pending, refresh } = useAccommodationIntents(propertyId, accomm
 const { updating, requestIntent, promoteIntent } = useAccommodationIntentActions(propertyId, accommodationId, refresh)
 
 const { memberMap, pending: membersPending } = useAllMembers()
+const { formatDateRange } = useFormatDate()
 
 function memberName(id: string): string {
   return memberMap.value.get(id)?.name ?? id.slice(-8)
 }
 
-const nightGroups = computed(() => {
-  const map = new Map<string, AccommodationIntent[]>()
-  for (const intent of intents.value) {
-    const group = map.get(intent.night) ?? []
-    group.push(intent)
-    map.set(intent.night, group)
-  }
-  return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-})
+// One card per stay (a [startNight, endNight] span), earliest first.
+const stays = computed(() =>
+  [...intents.value].sort((a, b) => a.startNight.localeCompare(b.startNight)),
+)
 
-function formatNight(dateStr: string): string {
-  return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'long', day: 'numeric' })
-    .format(new Date(dateStr + 'T00:00:00'))
+function partyLabel(intent: AccommodationIntent): string {
+  const parts: string[] = []
+  if (intent.partyAdults) parts.push(t('accommodation.adults', { n: intent.partyAdults }, intent.partyAdults))
+  if (intent.partyChildren) parts.push(t('accommodation.children', { n: intent.partyChildren }, intent.partyChildren))
+  return parts.join(' · ')
 }
 
 // Status promotion flow for managers
@@ -69,19 +67,21 @@ async function handlePromote(intent: AccommodationIntent) {
   const next = nextStatus(intent.status)
   if (!next) return
   const decision = DECISION_FOR_STATUS[next] ?? 'Pending'
-  await promoteIntent(intent.id, next, decision, intent.notes, intent.partySize)
+  await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, next, decision, intent.notes, intent.partyAdults, intent.partyChildren)
 }
 
 async function handleDecline(intent: AccommodationIntent) {
-  await promoteIntent(intent.id, intent.status, 'Declined', intent.notes, intent.partySize)
+  await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, intent.status, 'Declined', intent.notes, intent.partyAdults, intent.partyChildren)
 }
 
 // Request modal for members
 const showRequestModal = ref(false)
-const requestNight = ref('')
+const requestStartNight = ref('')
+const requestEndNight = ref('')
 const requestStatus = ref<AccommodationIntentStatus>('Intent')
 const requestNotes = ref('')
-const requestPartySize = ref<number | null>(null)
+const requestAdults = ref<number | null>(null)
+const requestChildren = ref<number | null>(null)
 const requestLoading = ref(false)
 
 const statusOptions: { label: string; value: AccommodationIntentStatus }[] = [
@@ -89,24 +89,31 @@ const statusOptions: { label: string; value: AccommodationIntentStatus }[] = [
   { label: t('status.hold'), value: 'Hold' },
 ]
 
-function openRequestModal(night?: string) {
-  requestNight.value = night ?? ''
+function openRequestModal() {
+  requestStartNight.value = ''
+  requestEndNight.value = ''
   requestStatus.value = 'Intent'
   requestNotes.value = ''
-  requestPartySize.value = null
+  requestAdults.value = null
+  requestChildren.value = null
   showRequestModal.value = true
 }
 
 async function submitRequest() {
-  if (!memberStore.linkedMemberId || !memberStore.linkedHouseholdId || !requestNight.value) return
+  if (!memberStore.linkedMemberId || !memberStore.linkedHouseholdId || !requestStartNight.value) return
+  // Default a single-night stay when only the first night is chosen, and keep the span non-inverted.
+  const start = requestStartNight.value
+  const end = requestEndNight.value && requestEndNight.value >= start ? requestEndNight.value : start
   requestLoading.value = true
   await requestIntent(
     memberStore.linkedHouseholdId,
     memberStore.linkedMemberId,
-    requestNight.value,
+    start,
+    end,
     requestStatus.value,
     requestNotes.value || null,
-    requestPartySize.value,
+    requestAdults.value,
+    requestChildren.value,
   )
   requestLoading.value = false
   showRequestModal.value = false
@@ -170,98 +177,90 @@ async function submitRequest() {
       </UButton>
     </GsEmptyState>
 
-    <div v-else class="space-y-6">
-      <div
-        v-for="[night, group] in nightGroups"
-        :key="night"
+    <div v-else class="flex flex-col gap-3">
+      <UCard
+        v-for="intent in stays"
+        :key="intent.id"
       >
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-semibold text-muted">
-            {{ formatNight(night) }}
-          </h3>
-          <UButton
-            v-if="memberStore.linkedMemberId && !isManagerOrAbove"
-            variant="ghost"
-            size="xs"
-            icon="i-heroicons-plus"
-            @click="openRequestModal(night)"
-          >
-            {{ t('accommodation.requestStay') }}
-          </UButton>
-        </div>
-
-        <div class="flex flex-col gap-3">
-          <UCard
-            v-for="intent in group"
-            :key="intent.id"
-          >
-            <div class="flex items-center gap-3 flex-wrap">
-              <GsMemberAvatar :name="memberName(intent.householdMemberId)" size="sm" />
-              <div class="flex-1 min-w-0">
-                <p class="font-medium text-sm truncate">{{ memberName(intent.householdMemberId) }}</p>
-                <div class="flex flex-wrap gap-2 mt-0.5">
-                  <GsStatusBadge :status="intent.status" size="xs" />
-                  <UBadge
-                    v-if="intent.decision !== 'Pending'"
-                    :color="intent.decision === 'Approved' ? 'success' : 'error'"
-                    variant="soft"
-                    size="xs"
-                  >
-                    {{ t(`accommodation.decision.${intent.decision.toLowerCase()}`) }}
-                  </UBadge>
-                  <span v-if="intent.partySize" class="text-xs text-muted self-center">
-                    {{ t('accommodation.partySizeValue', { n: intent.partySize }) }}
-                  </span>
-                </div>
-                <p v-if="intent.notes" class="text-xs text-muted mt-1">{{ intent.notes }}</p>
-              </div>
-
-              <!-- Manager promotion controls -->
-              <GsRoleGate min-role="Manager">
-                <div class="flex items-center gap-1 shrink-0">
-                  <UButton
-                    v-if="nextStatus(intent.status)"
-                    size="xs"
-                    color="success"
-                    variant="soft"
-                    :loading="updating.includes(intent.id)"
-                    @click="handlePromote(intent)"
-                  >
-                    {{ t('accommodation.promote') }}
-                  </UButton>
-                  <UButton
-                    v-if="intent.decision !== 'Declined'"
-                    size="xs"
-                    color="error"
-                    variant="soft"
-                    :loading="updating.includes(intent.id)"
-                    @click="handleDecline(intent)"
-                  >
-                    {{ t('accommodation.decline') }}
-                  </UButton>
-                </div>
-              </GsRoleGate>
+        <div class="flex items-center gap-3 flex-wrap">
+          <GsMemberAvatar :name="memberName(intent.householdMemberId)" size="sm" />
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate">{{ memberName(intent.householdMemberId) }}</p>
+            <p class="text-xs text-muted mt-0.5 flex items-center gap-1">
+              <UIcon name="i-heroicons-calendar-days" class="size-3.5 shrink-0" />
+              {{ formatDateRange(intent.startNight, intent.endNight) }}
+            </p>
+            <div class="flex flex-wrap gap-2 mt-1">
+              <GsStatusBadge :status="intent.status" size="xs" />
+              <UBadge
+                v-if="intent.decision !== 'Pending'"
+                :color="intent.decision === 'Approved' ? 'success' : 'error'"
+                variant="soft"
+                size="xs"
+              >
+                {{ t(`accommodation.decision.${intent.decision.toLowerCase()}`) }}
+              </UBadge>
+              <span v-if="partyLabel(intent)" class="text-xs text-muted self-center">
+                {{ partyLabel(intent) }}
+              </span>
             </div>
-          </UCard>
+            <p v-if="intent.notes" class="text-xs text-muted mt-1">{{ intent.notes }}</p>
+          </div>
+
+          <!-- Manager promotion controls -->
+          <GsRoleGate min-role="Manager">
+            <div class="flex items-center gap-1 shrink-0">
+              <UButton
+                v-if="nextStatus(intent.status)"
+                size="xs"
+                color="success"
+                variant="soft"
+                :loading="updating.includes(intent.id)"
+                @click="handlePromote(intent)"
+              >
+                {{ t('accommodation.promote') }}
+              </UButton>
+              <UButton
+                v-if="intent.decision !== 'Declined'"
+                size="xs"
+                color="error"
+                variant="soft"
+                :loading="updating.includes(intent.id)"
+                @click="handleDecline(intent)"
+              >
+                {{ t('accommodation.decline') }}
+              </UButton>
+            </div>
+          </GsRoleGate>
         </div>
-      </div>
+      </UCard>
     </div>
 
     <!-- Request stay modal (members) -->
     <UModal v-model:open="showRequestModal" :title="t('accommodation.requestStay')">
       <template #body>
         <div class="space-y-4">
-          <UFormField :label="t('accommodation.nightOf', { date: '' })">
-            <UInput v-model="requestNight" type="date" />
-          </UFormField>
+          <div class="grid grid-cols-2 gap-3">
+            <UFormField :label="t('event.signup.firstNight')">
+              <UInput v-model="requestStartNight" type="date" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('event.signup.lastNight')">
+              <UInput v-model="requestEndNight" type="date" class="w-full" />
+            </UFormField>
+          </div>
           <UFormField :label="t('accommodation.status')">
-            <USelect v-model="requestStatus" :items="statusOptions" />
+            <USelect v-model="requestStatus" :items="statusOptions" class="w-full" />
           </UFormField>
-          <UFormField :label="t('accommodation.partySize')">
-            <UInput v-model.number="requestPartySize" type="number" min="1" />
-          </UFormField>
+          <div class="grid grid-cols-2 gap-3">
+            <UFormField :label="t('accommodation.partyAdults')">
+              <UInput v-model.number="requestAdults" type="number" min="0" class="w-full" />
+            </UFormField>
+            <UFormField :label="t('accommodation.partyChildren')">
+              <UInput v-model.number="requestChildren" type="number" min="0" class="w-full" />
+            </UFormField>
+          </div>
           <UFormField :label="t('common.notes')">
-            <UTextarea v-model="requestNotes" :rows="2" />
+            <UTextarea v-model="requestNotes" :rows="2" class="w-full" />
           </UFormField>
         </div>
       </template>

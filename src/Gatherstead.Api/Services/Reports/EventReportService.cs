@@ -106,12 +106,14 @@ public class EventReportService : IEventReportService
 
         var accommodationIds = accommodations.Select(a => a.Id).ToList();
 
+        // A stay is a [StartNight, EndNight] span; pull every stay whose span overlaps the event so
+        // each event day can be filled by date-range overlap below.
         var accommodationIntents = await _dbContext.AccommodationIntents
             .AsNoTracking()
             .Where(i => i.TenantId == tenantId
                 && accommodationIds.Contains(i.AccommodationId)
-                && i.Night >= @event.StartDate
-                && i.Night <= @event.EndDate)
+                && i.StartNight <= @event.EndDate
+                && i.EndNight >= @event.StartDate)
             .ToListAsync(cancellationToken);
 
         // Members referenced by any attendance, task intent, or accommodation intent, plus
@@ -174,8 +176,8 @@ public class EventReportService : IEventReportService
             .GroupBy(i => i.TaskPlanId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
-        var accommodationIntentsByNight = accommodationIntents
-            .GroupBy(i => (i.AccommodationId, i.Night))
+        var accommodationIntentsByAccommodation = accommodationIntents
+            .GroupBy(i => i.AccommodationId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var days = new List<EventReportDayDto>();
@@ -205,15 +207,15 @@ public class EventReportService : IEventReportService
                 .Select(p => BuildTask(p, taskTemplateById.GetValueOrDefault(p.TemplateId), taskIntentsByPlan.GetValueOrDefault(p.Id, []), memberById))
                 .ToList();
 
-            // Only emit an accommodation for nights that actually have non-declined occupants,
-            // otherwise every day fills with empty cabins.
+            // Emit every accommodation each day (occupied 0 when empty) so the occupancy badge
+            // renders on all days; occupants are the stays whose span covers this night.
             var dayAccommodations = new List<EventReportAccommodationDto>();
             foreach (var accommodation in accommodations.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
             {
-                var nightIntents = accommodationIntentsByNight.GetValueOrDefault((accommodation.Id, day), []);
-                var built = BuildAccommodation(accommodation, nightIntents, memberById);
-                if (built is not null)
-                    dayAccommodations.Add(built);
+                var nightIntents = accommodationIntentsByAccommodation.GetValueOrDefault(accommodation.Id, [])
+                    .Where(i => i.StartNight <= day && i.EndNight >= day)
+                    .ToList();
+                dayAccommodations.Add(BuildAccommodation(accommodation, nightIntents, memberById));
             }
 
             days.Add(new EventReportDayDto(day, going, maybe, meals, tasks, dayAccommodations));
@@ -314,7 +316,7 @@ public class EventReportService : IEventReportService
             assignees);
     }
 
-    private static EventReportAccommodationDto? BuildAccommodation(
+    private static EventReportAccommodationDto BuildAccommodation(
         Accommodation accommodation,
         List<AccommodationIntent> nightIntents,
         IReadOnlyDictionary<Guid, HouseholdMember> memberById)
@@ -327,15 +329,13 @@ public class EventReportService : IEventReportService
                 memberById.GetValueOrDefault(i.HouseholdMemberId)?.Name ?? string.Empty,
                 i.Status,
                 i.Decision,
-                i.PartySize))
+                i.PartyAdults,
+                i.PartyChildren))
             .OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        if (occupants.Count == 0)
-            return null;
-
-        // A null party size still occupies one slot (the requesting member).
-        var occupied = occupants.Sum(o => o.PartySize ?? 1);
+        // A party with no adults/children counts still occupies one slot (the requesting member).
+        var occupied = occupants.Sum(o => Math.Max((o.PartyAdults ?? 0) + (o.PartyChildren ?? 0), 1));
 
         return new EventReportAccommodationDto(
             accommodation.Id,

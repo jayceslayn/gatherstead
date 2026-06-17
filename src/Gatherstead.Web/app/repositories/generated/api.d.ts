@@ -3792,14 +3792,18 @@ export interface components {
             /** Format: uuid */
             householdMemberId?: string;
             /** Format: date */
-            night?: string;
+            startNight?: string;
+            /** Format: date */
+            endNight?: string;
             /** @enum {string} */
             status?: "Intent" | "Hold" | "Confirmed";
             notes?: string | null;
             /** @enum {string} */
             decision?: "Pending" | "Approved" | "Declined";
             /** Format: int32 */
-            partySize?: number | null;
+            partyAdults?: number | null;
+            /** Format: int32 */
+            partyChildren?: number | null;
             /** Format: int32 */
             priority?: number | null;
             audit?: components["schemas"]["AuditInfo"];
@@ -3922,12 +3926,16 @@ export interface components {
             /** Format: uuid */
             householdMemberId: string;
             /** Format: date */
-            night: string;
+            startNight: string;
+            /** Format: date */
+            endNight: string;
             /** @enum {string} */
             status: "Intent" | "Hold" | "Confirmed";
             notes?: string | null;
             /** Format: int32 */
-            partySize?: number | null;
+            partyAdults?: number | null;
+            /** Format: int32 */
+            partyChildren?: number | null;
             /** Format: int32 */
             priority?: number | null;
         };
@@ -4212,7 +4220,9 @@ export interface components {
             /** @enum {string} */
             decision: "Pending" | "Approved" | "Declined";
             /** Format: int32 */
-            partySize?: number | null;
+            partyAdults?: number | null;
+            /** Format: int32 */
+            partyChildren?: number | null;
         };
         EventReportResponse: {
             entity?: components["schemas"]["EventReportDto"];
@@ -4634,13 +4644,23 @@ export interface components {
             readonly messages?: components["schemas"]["ResponseMessage"][];
         };
         UpdateAccommodationIntentRequest: {
+            /** Format: uuid */
+            householdMemberId: string;
+            /** Format: uuid */
+            accommodationId: string;
+            /** Format: date */
+            startNight: string;
+            /** Format: date */
+            endNight: string;
             /** @enum {string} */
             status: "Intent" | "Hold" | "Confirmed";
             notes?: string | null;
             /** @enum {string} */
             decision?: "Pending" | "Approved" | "Declined";
             /** Format: int32 */
-            partySize?: number | null;
+            partyAdults?: number | null;
+            /** Format: int32 */
+            partyChildren?: number | null;
             /** Format: int32 */
             priority?: number | null;
         };
