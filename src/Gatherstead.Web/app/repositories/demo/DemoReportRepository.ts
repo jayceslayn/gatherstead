@@ -8,20 +8,25 @@ import type {
   EventReportTask,
   EventReportAccommodation,
   EventReportOccupant,
-  MealType,
 } from '../types'
 import { getDemoStore } from './DemoStore'
 import { enumDays } from './DemoHelpers'
 import { DEMO_DIETARY_TAGS } from './DemoDietaryTagRepository'
+import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '../../composables/useTemplateOrder'
 
 const SLUG_TO_DISPLAY_NAME = new Map(DEMO_DIETARY_TAGS.map(t => [t.slug.toLowerCase(), t.displayName]))
 
-const MEAL_TYPE_ORDER: Record<MealType, number> = { Breakfast: 0, Lunch: 1, Dinner: 2 }
-
-// "Anytime" (and unslotted) tasks lead, then the timed slots in order (mirrors the backend sort).
-const TASK_SLOT_ORDER: Record<string, number> = { Anytime: -1, Morning: 0, Midday: 1, Evening: 2 }
-function taskSlotRank(slot: string | null | undefined): number {
-  return slot ? TASK_SLOT_ORDER[slot] ?? 99 : -1
+// Groups plans by a (slot, template) key and reduces each group to its ordering aggregate.
+function aggregateByKey<T extends { day: string, isException?: boolean | null }>(
+  plans: T[], keyOf: (p: T) => string,
+): Map<string, { firstEffectiveDay: string, effectiveCount: number }> {
+  const groups = new Map<string, T[]>()
+  for (const p of plans) {
+    const arr = groups.get(keyOf(p))
+    if (arr) arr.push(p)
+    else groups.set(keyOf(p), [p])
+  }
+  return new Map([...groups].map(([k, g]) => [k, planAggregate(g)]))
 }
 
 export class DemoReportRepository implements IReportRepository {
@@ -34,17 +39,18 @@ export class DemoReportRepository implements IReportRepository {
 
     const memberById = new Map(store.members.value.map(m => [m.id, m]))
     const templateNameById = new Map(store.mealTemplates.value.map(t => [t.id, t.name]))
-    const planIds = new Set(
-      store.mealPlans.value
-        .filter(p => templateNameById.has(p.mealTemplateId))
-        .map(p => p.id),
-    )
+    const eventMealPlans = store.mealPlans.value.filter(p => templateNameById.has(p.mealTemplateId))
+    const planIds = new Set(eventMealPlans.map(p => p.id))
 
     // Task templates → plans → intents for this event.
     const taskTemplateById = new Map(
       store.taskTemplates.value.filter(t => t.eventId === eventId).map(t => [t.id, t]),
     )
     const taskPlansForEvent = store.taskPlans.value.filter(p => taskTemplateById.has(p.templateId))
+
+    // Per (slot, template) ordering aggregates so days order templates by the shared scheme.
+    const mealOrderKey = aggregateByKey(eventMealPlans, p => `${p.mealType}:${p.mealTemplateId}`)
+    const taskOrderKey = aggregateByKey(taskPlansForEvent, p => `${p.templateId}:${p.timeSlot ?? ''}`)
     const intentsByPlan = new Map<string, string[]>()
     for (const intent of store.taskIntents.value) {
       const names = intentsByPlan.get(intent.taskPlanId) ?? []
@@ -74,9 +80,12 @@ export class DemoReportRepository implements IReportRepository {
       const going = dayEventAttendance.filter(a => a.status === 'Going').length
       const maybe = dayEventAttendance.filter(a => a.status === 'Maybe').length
 
-      const dayPlans = store.mealPlans.value
-        .filter(p => templateNameById.has(p.mealTemplateId) && p.day === day)
-        .sort((a, b) => MEAL_TYPE_ORDER[a.mealType] - MEAL_TYPE_ORDER[b.mealType])
+      const dayPlans = eventMealPlans
+        .filter(p => p.day === day)
+        .sort((a, b) => compareOrderKeys(
+          { slotRank: mealSlotRank(a.mealType), ...mealOrderKey.get(`${a.mealType}:${a.mealTemplateId}`)!, title: templateNameById.get(a.mealTemplateId) ?? '' },
+          { slotRank: mealSlotRank(b.mealType), ...mealOrderKey.get(`${b.mealType}:${b.mealTemplateId}`)!, title: templateNameById.get(b.mealTemplateId) ?? '' },
+        ))
 
       const meals: EventReportMeal[] = dayPlans.map((plan) => {
         const planAttendance = store.mealAttendance.value.filter(a => planIds.has(a.mealPlanId) && a.mealPlanId === plan.id)
@@ -108,8 +117,10 @@ export class DemoReportRepository implements IReportRepository {
 
         return {
           mealPlanId: plan.id,
+          templateId: plan.mealTemplateId,
           templateName: templateNameById.get(plan.mealTemplateId) ?? '',
           mealType: plan.mealType,
+          isException: plan.isException ?? false,
           going: planAttendance.filter(a => a.status === 'Going').length,
           maybe: planAttendance.filter(a => a.status === 'Maybe').length,
           notGoing: planAttendance.filter(a => a.status === 'NotGoing').length,
@@ -119,7 +130,7 @@ export class DemoReportRepository implements IReportRepository {
         }
       })
 
-      // Tasks for this day, ordered by slot then template name (mirrors backend).
+      // Tasks for this day, ordered by the shared template scheme (mirrors backend).
       const tasks: EventReportTask[] = taskPlansForEvent
         .filter(p => p.day === day)
         .map((plan): EventReportTask => {
@@ -139,9 +150,10 @@ export class DemoReportRepository implements IReportRepository {
             assignees,
           }
         })
-        .sort((a, b) =>
-          taskSlotRank(a.timeSlot) - taskSlotRank(b.timeSlot)
-          || a.templateName.localeCompare(b.templateName, undefined, { sensitivity: 'base' }))
+        .sort((a, b) => compareOrderKeys(
+          { slotRank: taskSlotRank(a.timeSlot), ...taskOrderKey.get(`${a.templateId}:${a.timeSlot ?? ''}`)!, title: a.templateName },
+          { slotRank: taskSlotRank(b.timeSlot), ...taskOrderKey.get(`${b.templateId}:${b.timeSlot ?? ''}`)!, title: b.templateName },
+        ))
 
       // Accommodations occupied this night (declined excluded; null party size counts as 1).
       const accommodations: EventReportAccommodation[] = eventAccommodations

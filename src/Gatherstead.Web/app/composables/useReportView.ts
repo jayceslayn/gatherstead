@@ -1,4 +1,5 @@
 import type { EventReportDay, EventReportTask, EventReportAccommodation, EventReportMeal } from '~/repositories/types'
+import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '~/composables/useTemplateOrder'
 
 // ── Coverage / occupancy derivation ─────────────────────────────────────────
 // Kept in one place so the desktop strip, mobile pager, and print stack never
@@ -87,12 +88,16 @@ export function reportDayTotals(days: EventReportDay[]): Record<string, { going:
   return result
 }
 
-/** Groups each day's meals into lanes by meal type + template name (the recurring "slot"). */
+/**
+ * Groups each day's meals into lanes by meal type + template (the recurring "slot"),
+ * ordered by the shared template scheme (slot → earliest effective day → most effective
+ * plans → title) so the report matches the sign-up and management views.
+ */
 export function buildMealLanes(days: EventReportDay[]): ReportLane<EventReportMeal>[] {
   const lanes = new Map<string, ReportLane<EventReportMeal>>()
   for (const d of days) {
     for (const meal of d.meals) {
-      const key = `${meal.mealType}:${meal.templateName}`
+      const key = `${meal.mealType}:${meal.templateId}`
       let lane = lanes.get(key)
       if (!lane) {
         lane = { key, title: meal.templateName, subtitle: meal.mealType, byDay: {} }
@@ -101,10 +106,18 @@ export function buildMealLanes(days: EventReportDay[]): ReportLane<EventReportMe
       lane.byDay[d.day] = meal
     }
   }
-  return [...lanes.values()]
+  return [...lanes.values()].sort((a, b) => {
+    const aSlot = Object.values(a.byDay)[0]!.mealType
+    const bSlot = Object.values(b.byDay)[0]!.mealType
+    return compareOrderKeys(laneOrderKey(a, mealSlotRank(aSlot)), laneOrderKey(b, mealSlotRank(bSlot)))
+  })
 }
 
-/** Groups each day's tasks into lanes by template + time slot (the recurring task plan). */
+/**
+ * Groups each day's tasks into lanes by template + time slot (the recurring task plan),
+ * ordered by the shared template scheme (slot → earliest effective day → most effective
+ * plans → title).
+ */
 export function buildTaskLanes(days: EventReportDay[]): ReportLane<EventReportTask>[] {
   const lanes = new Map<string, ReportLane<EventReportTask>>()
   for (const d of days) {
@@ -118,7 +131,20 @@ export function buildTaskLanes(days: EventReportDay[]): ReportLane<EventReportTa
       lane.byDay[d.day] = task
     }
   }
-  return [...lanes.values()]
+  return [...lanes.values()].sort((a, b) => {
+    const aSlot = Object.values(a.byDay)[0]!.timeSlot
+    const bSlot = Object.values(b.byDay)[0]!.timeSlot
+    return compareOrderKeys(laneOrderKey(a, taskSlotRank(aSlot)), laneOrderKey(b, taskSlotRank(bSlot)))
+  })
+}
+
+/** Builds an OrderKey from a lane's per-day cells (day = key, exception flag off the cell). */
+function laneOrderKey(
+  lane: ReportLane<{ isException?: boolean }>,
+  slotRank: number,
+): { slotRank: number, firstEffectiveDay: string, effectiveCount: number, title: string } {
+  const plans = Object.entries(lane.byDay).map(([day, cell]) => ({ day, isException: cell.isException }))
+  return { slotRank, ...planAggregate(plans), title: lane.title }
 }
 
 /** Groups each day's accommodations into lanes by accommodation id. */

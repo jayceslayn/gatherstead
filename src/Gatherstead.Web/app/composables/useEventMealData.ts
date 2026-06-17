@@ -3,6 +3,7 @@ import type { MealPlan, MealAttendance, AttendanceStatus } from '~/repositories/
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 import { useMealTemplates } from '~/composables/useMealPlans'
+import { compareOrderKeys, mealSlotRank, planAggregate } from '~/composables/useTemplateOrder'
 
 export function useEventMealData(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
@@ -68,7 +69,26 @@ export function useEventMealData(eventId: Ref<string>) {
     }
   }, { immediate: true })
 
-  const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner'] as const
+  // Per (meal type, template) ordering aggregates — earliest effective plan day and
+  // effective plan count — so days order templates consistently with the report.
+  const mealOrderByKey = computed<Record<string, { firstEffectiveDay: string, effectiveCount: number }>>(() => {
+    const groups: Record<string, MealPlan[]> = {}
+    for (const p of allPlans.value) {
+      (groups[`${p.mealType}:${p.mealTemplateId}`] ??= []).push(p)
+    }
+    return Object.fromEntries(Object.entries(groups).map(([k, plans]) => [k, planAggregate(plans)]))
+  })
+
+  // Slot order, then the template with the earliest effective plan, then more effective
+  // plans, then template title.
+  function compareMealPlans(a: MealPlan, b: MealPlan): number {
+    const ak = mealOrderByKey.value[`${a.mealType}:${a.mealTemplateId}`]!
+    const bk = mealOrderByKey.value[`${b.mealType}:${b.mealTemplateId}`]!
+    return compareOrderKeys(
+      { slotRank: mealSlotRank(a.mealType), ...ak, title: templateNameById.value[a.mealTemplateId] ?? '' },
+      { slotRank: mealSlotRank(b.mealType), ...bk, title: templateNameById.value[b.mealTemplateId] ?? '' },
+    )
+  }
 
   const mealPlansByDay = computed<Record<string, MealPlan[]>>(() => {
     const result: Record<string, MealPlan[]> = {}
@@ -76,13 +96,7 @@ export function useEventMealData(eventId: Ref<string>) {
       if (!result[plan.day]) result[plan.day] = []
       result[plan.day]!.push(plan)
     }
-    for (const day of Object.keys(result)) {
-      result[day]!.sort(
-        (a, b) =>
-          MEAL_ORDER.indexOf(a.mealType as typeof MEAL_ORDER[number])
-          - MEAL_ORDER.indexOf(b.mealType as typeof MEAL_ORDER[number]),
-      )
-    }
+    for (const day of Object.keys(result)) result[day]!.sort(compareMealPlans)
     return result
   })
 

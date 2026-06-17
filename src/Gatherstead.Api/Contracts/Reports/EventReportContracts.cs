@@ -65,8 +65,10 @@ public record EventReportOccupantDto(
 
 public record EventReportMealDto(
     [property: Required] Guid MealPlanId,
+    [property: Required] Guid TemplateId,
     [property: Required] string TemplateName,
     [property: Required] MealType MealType,
+    [property: Required] bool IsException,
     [property: Required] int Going,
     [property: Required] int Maybe,
     [property: Required] int NotGoing,

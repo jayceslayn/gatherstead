@@ -4186,9 +4186,12 @@ export interface components {
         EventReportMealDto: {
             /** Format: uuid */
             mealPlanId: string;
+            /** Format: uuid */
+            templateId: string;
             templateName: string;
             /** @enum {string} */
             mealType: "Breakfast" | "Lunch" | "Dinner";
+            isException: boolean;
             /** Format: int32 */
             going: number;
             /** Format: int32 */

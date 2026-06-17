@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
-import { useEventTaskSignup } from '~/composables/useTaskTemplates'
-import type { TaskTemplate } from '~/repositories/types'
+import { useEventTaskSignup, type TaskTemplateLane } from '~/composables/useTaskTemplates'
 
 const props = defineProps<{
   eventId: string
@@ -29,10 +28,13 @@ const {
 
 const selectedDay = computed(() => props.days[selectedDayIndex.value] ?? '')
 
-function laneSubtitle(template: TaskTemplate): string | undefined {
+// Each lane is a single time slot, so the slot label leads the subtitle (with the
+// minimum-assignees and notes hints), replacing the per-plan slot label.
+function laneSubtitle(lane: TaskTemplateLane): string | undefined {
   const parts: string[] = []
-  if (template.minimumAssignees) parts.push(t('event.task.minimumAssignees', { n: template.minimumAssignees }))
-  if (template.notes) parts.push(template.notes)
+  if (lane.timeSlot) parts.push(t(`event.task.${lane.timeSlot.toLowerCase()}`))
+  if (lane.template.minimumAssignees) parts.push(t('event.task.minimumAssignees', { n: lane.template.minimumAssignees }))
+  if (lane.template.notes) parts.push(lane.template.notes)
   return parts.length ? parts.join(' · ') : undefined
 }
 </script>
@@ -56,7 +58,6 @@ function laneSubtitle(template: TaskTemplate): string | undefined {
     v-else
     v-model:selected-day-index="selectedDayIndex"
     :days="days"
-    day-col-width="minmax(12rem, 1fr)"
   >
     <template #day-total="{ day }">
       <template v-if="totalsByDay?.[day]">
@@ -70,9 +71,9 @@ function laneSubtitle(template: TaskTemplate): string | undefined {
 
     <GsSwimlane
       v-for="lane in templateLanes"
-      :key="lane.template.id"
+      :key="`${lane.template.id}:${lane.timeSlot ?? ''}`"
       :title="lane.template.name"
-      :subtitle="laneSubtitle(lane.template)"
+      :subtitle="laneSubtitle(lane)"
       :hide-when-empty="!(lane.plansByDay[selectedDay] ?? []).length"
     >
       <template #day="{ day }">
@@ -83,7 +84,6 @@ function laneSubtitle(template: TaskTemplate): string | undefined {
             class="space-y-1"
           >
             <div class="flex items-center justify-between gap-1">
-              <span v-if="plan.timeSlot" class="text-xs text-dimmed">{{ t(`event.task.${plan.timeSlot.toLowerCase()}`) }}</span>
               <GsTaskCoverageBadge
                 :assignee-count="volunteerCount(plan.id)"
                 :minimum-assignees="lane.template.minimumAssignees"

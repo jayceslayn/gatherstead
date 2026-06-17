@@ -7,6 +7,7 @@ import type {
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { compareOrderKeys, mealTemplatePrimarySlotRank, planAggregate } from '~/composables/useTemplateOrder'
 
 export function useMealTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
   const tenantStore = useTenantStore()
@@ -120,6 +121,41 @@ export function useMealTemplates(eventId: Ref<string>) {
   )
 
   return { templates: computed(() => data.value ?? []), pending, error, refresh }
+}
+
+/**
+ * Meal templates plus their plans, ordered by the shared template scheme (primary slot →
+ * earliest effective plan day → most effective plans → name) for the management list.
+ * Loads every template's plans up front so the tie-breakers can be computed; adding or
+ * editing a template re-orders it on refresh.
+ */
+export function useSortedMealTemplates(eventId: Ref<string>) {
+  const tenantStore = useTenantStore()
+  const { mealPlans: repo } = useRepositories()
+
+  const { data, pending, error, refresh } = useAsyncData(
+    () => `meal-templates-sorted-${tenantStore.currentTenantId}-${eventId.value}`,
+    async () => {
+      const tenantId = tenantStore.currentTenantId!
+      const templates = await repo.listMealTemplates(tenantId, eventId.value)
+      const planLists = await Promise.all(
+        templates.map(tpl => repo.listPlans(tenantId, eventId.value, tpl.id).catch(() => [] as MealPlan[])),
+      )
+      return templates.map((template, i) => ({ template, plans: planLists[i] ?? [] }))
+    },
+    { watch: [eventId, () => tenantStore.currentTenantId] },
+  )
+
+  const templates = computed<MealTemplate[]>(() =>
+    [...(data.value ?? [])]
+      .sort((a, b) => compareOrderKeys(
+        { slotRank: mealTemplatePrimarySlotRank(a.template.mealTypes ?? 0), ...planAggregate(a.plans), title: a.template.name ?? '' },
+        { slotRank: mealTemplatePrimarySlotRank(b.template.mealTypes ?? 0), ...planAggregate(b.plans), title: b.template.name ?? '' },
+      ))
+      .map(e => e.template),
+  )
+
+  return { templates, pending, error, refresh }
 }
 
 export function useMealPlanSection(

@@ -153,12 +153,23 @@ public class EventReportService : IEventReportService
 
         var plansByDay = plans
             .GroupBy(p => p.Day)
-            .ToDictionary(g => g.Key, g => g.OrderBy(p => p.MealType).ToList());
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Per (template, slot) ordering aggregates — earliest non-exception ("effective")
+        // plan day and the count of effective plans — so the report orders meal/task lanes
+        // identically to the sign-up and management views.
+        var mealOrderKey = plans
+            .GroupBy(p => (p.MealTemplateId, p.MealType))
+            .ToDictionary(g => g.Key, g => OrderAggregate(g, p => p.IsException, p => p.Day));
 
         var taskTemplateById = taskTemplates.ToDictionary(t => t.Id);
         var taskPlansByDay = taskPlans
             .GroupBy(p => p.Day)
             .ToDictionary(g => g.Key, g => g.ToList());
+
+        var taskOrderKey = taskPlans
+            .GroupBy(p => (p.TemplateId, p.TimeSlot))
+            .ToDictionary(g => g.Key, g => OrderAggregate(g, p => p.IsException, p => p.Day));
         var taskIntentsByPlan = taskIntents
             .GroupBy(i => i.TaskPlanId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -174,16 +185,22 @@ public class EventReportService : IEventReportService
             var going = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Going);
             var maybe = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Maybe);
 
-            var meals = new List<EventReportMealDto>();
-            foreach (var plan in plansByDay.GetValueOrDefault(day, []))
-            {
-                var planAttendance = attendancesByPlan.GetValueOrDefault(plan.Id, []);
-                meals.Add(BuildMeal(plan, templateNames.GetValueOrDefault(plan.MealTemplateId, string.Empty), planAttendance, memberById, dietaryByMember));
-            }
+            // Slot order (Breakfast→Lunch→Dinner), then the template with the earliest effective
+            // plan, then the template with more effective plans, then name.
+            var meals = plansByDay.GetValueOrDefault(day, [])
+                .OrderBy(p => p.MealType)
+                .ThenBy(p => mealOrderKey[(p.MealTemplateId, p.MealType)].FirstDay)
+                .ThenByDescending(p => mealOrderKey[(p.MealTemplateId, p.MealType)].EffectiveCount)
+                .ThenBy(p => templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), StringComparer.OrdinalIgnoreCase)
+                .Select(p => BuildMeal(p, templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), attendancesByPlan.GetValueOrDefault(p.Id, []), memberById, dietaryByMember))
+                .ToList();
 
-            // "Anytime" (and unslotted) tasks lead, then the timed slots in order; ties by name.
+            // Timed slots lead in order, then "Anytime"/unslotted; within a slot, the template
+            // with the earliest effective plan, then more effective plans, then name.
             var tasks = taskPlansByDay.GetValueOrDefault(day, [])
                 .OrderBy(p => TaskSlotRank(p.TimeSlot))
+                .ThenBy(p => taskOrderKey[(p.TemplateId, p.TimeSlot)].FirstDay)
+                .ThenByDescending(p => taskOrderKey[(p.TemplateId, p.TimeSlot)].EffectiveCount)
                 .ThenBy(p => taskTemplateById.GetValueOrDefault(p.TemplateId)?.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
                 .Select(p => BuildTask(p, taskTemplateById.GetValueOrDefault(p.TemplateId), taskIntentsByPlan.GetValueOrDefault(p.Id, []), memberById))
                 .ToList();
@@ -246,16 +263,28 @@ public class EventReportService : IEventReportService
             .ToList();
 
         return new EventReportMealDto(
-            plan.Id, templateName, plan.MealType,
+            plan.Id, plan.MealTemplateId, templateName, plan.MealType, plan.IsException,
             going, maybe, notGoing, bringOwnFood,
             dietary, attendees);
     }
 
-    // "Anytime" and unslotted tasks lead (rank -1) since they apply to the whole day; the timed
-    // slots then follow in their natural Morning → Midday → Evening order.
+    // Earliest "effective" (non-exception) plan day and the count of effective plans for a
+    // (template, slot) group; falls back to all plans when the group is exception-only so it
+    // still sorts deterministically.
+    private static (DateOnly FirstDay, int EffectiveCount) OrderAggregate<T>(
+        IEnumerable<T> plans, Func<T, bool> isException, Func<T, DateOnly> day)
+    {
+        var list = plans.ToList();
+        var effective = list.Where(p => !isException(p)).ToList();
+        var source = effective.Count > 0 ? effective : list;
+        return (source.Min(day), effective.Count);
+    }
+
+    // Timed slots lead in their natural Morning → Midday → Evening order; "Anytime" (and
+    // unslotted) tasks sort last so the day's scheduled work reads top-to-bottom.
     private static int TaskSlotRank(TaskTimeSlot? slot) => slot switch
     {
-        null or TaskTimeSlot.Anytime => -1,
+        null or TaskTimeSlot.Anytime => (int)TaskTimeSlot.Anytime,
         _ => (int)slot,
     };
 

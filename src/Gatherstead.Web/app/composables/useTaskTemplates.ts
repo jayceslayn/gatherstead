@@ -8,25 +8,18 @@ import type {
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { compareOrderKeys, planAggregate, taskSlotRank, taskTemplatePrimarySlotRank } from '~/composables/useTemplateOrder'
 
 export interface TaskPlanWithTemplate {
   plan: TaskPlan
   template: TaskTemplate
 }
 
-/** A template-first grouping for the swimlane layout: one lane per template, its plans keyed by day. */
+/** One lane per (template, time slot) for the swimlane layout, its plans keyed by day — mirrors the report. */
 export interface TaskTemplateLane {
   template: TaskTemplate
+  timeSlot: TaskTimeSlot | null
   plansByDay: Record<string, TaskPlan[]>
-  /** Number of distinct days this template has a plan — used as a sparseness tie-breaker. */
-  activeDays: number
-}
-
-// 'Anytime' leads, then the chronological slots — matching the report/day ordering.
-const TASK_SLOT_ORDER: TaskTimeSlot[] = ['Anytime', 'Morning', 'Midday', 'Evening']
-function taskSlotRank(slot: TaskTimeSlot | null): number {
-  const i = slot ? TASK_SLOT_ORDER.indexOf(slot) : -1
-  return i === -1 ? TASK_SLOT_ORDER.length : i
 }
 
 export function useTaskTemplateActions(eventId: Ref<string>, refresh: () => Promise<void>) {
@@ -141,6 +134,41 @@ export function useTaskTemplates(eventId: Ref<string>) {
   )
 
   return { templates: computed(() => data.value ?? []), pending, error, refresh }
+}
+
+/**
+ * Task templates plus their plans, ordered by the shared template scheme (primary slot →
+ * earliest effective plan day → most effective plans → name) for the management list.
+ * Loads every template's plans up front so the tie-breakers can be computed; adding or
+ * editing a template re-orders it on refresh.
+ */
+export function useSortedTaskTemplates(eventId: Ref<string>) {
+  const tenantStore = useTenantStore()
+  const { tasks: repo } = useRepositories()
+
+  const { data, pending, error, refresh } = useAsyncData(
+    () => `task-templates-sorted-${tenantStore.currentTenantId}-${eventId.value}`,
+    async () => {
+      const tenantId = tenantStore.currentTenantId!
+      const templates = await repo.listTaskTemplates(tenantId, eventId.value)
+      const planLists = await Promise.all(
+        templates.map(tpl => repo.listPlans(tenantId, eventId.value, tpl.id).catch(() => [] as TaskPlan[])),
+      )
+      return templates.map((template, i) => ({ template, plans: planLists[i] ?? [] }))
+    },
+    { watch: [eventId, () => tenantStore.currentTenantId] },
+  )
+
+  const templates = computed<TaskTemplate[]>(() =>
+    [...(data.value ?? [])]
+      .sort((a, b) => compareOrderKeys(
+        { slotRank: taskTemplatePrimarySlotRank(a.template.timeSlots ?? 0), ...planAggregate(a.plans), title: a.template.name ?? '' },
+        { slotRank: taskTemplatePrimarySlotRank(b.template.timeSlots ?? 0), ...planAggregate(b.plans), title: b.template.name ?? '' },
+      ))
+      .map(e => e.template),
+  )
+
+  return { templates, pending, error, refresh }
 }
 
 export function useTaskPlanSection(
@@ -339,41 +367,28 @@ export function useEventTaskSignup(
     return grouped
   })
 
-  // Template-first lanes for the swimlane layout. Ordered by the template's
-  // earliest time slot, then by density (more active days first) as a
-  // tie-breaker so sparse/one-off templates sink toward the bottom, then name.
+  // One lane per (template, time slot) for the swimlane layout, ordered by the shared
+  // template scheme (slot → earliest effective day → most effective plans → name) so
+  // sign-up matches the report and management views.
   const templateLanes = computed<TaskTemplateLane[]>(() => {
-    const byTemplate = new Map<string, TaskTemplateLane>()
+    const byKey = new Map<string, TaskTemplateLane>()
     for (const { plan, template } of items.value) {
-      let lane = byTemplate.get(template.id)
+      const slot = plan.timeSlot ?? null
+      const key = `${template.id}:${slot ?? ''}`
+      let lane = byKey.get(key)
       if (!lane) {
-        lane = { template, plansByDay: {}, activeDays: 0 }
-        byTemplate.set(template.id, lane)
+        lane = { template, timeSlot: slot, plansByDay: {} }
+        byKey.set(key, lane)
       }
       (lane.plansByDay[plan.day] ??= []).push(plan)
     }
 
-    const lanes = [...byTemplate.values()]
-    for (const lane of lanes) {
-      for (const day of Object.keys(lane.plansByDay)) {
-        lane.plansByDay[day]!.sort((a, b) => taskSlotRank(a.timeSlot) - taskSlotRank(b.timeSlot))
-      }
-      lane.activeDays = Object.keys(lane.plansByDay).length
+    function orderKey(lane: TaskTemplateLane) {
+      const plans = Object.values(lane.plansByDay).flat()
+      return { slotRank: taskSlotRank(lane.timeSlot), ...planAggregate(plans), title: lane.template.name }
     }
 
-    function primaryRank(lane: TaskTemplateLane): number {
-      return Math.min(
-        ...Object.values(lane.plansByDay).flat().map(p => taskSlotRank(p.timeSlot)),
-        TASK_SLOT_ORDER.length,
-      )
-    }
-
-    return lanes.sort((a, b) => {
-      const slotDiff = primaryRank(a) - primaryRank(b)
-      if (slotDiff !== 0) return slotDiff
-      if (a.activeDays !== b.activeDays) return b.activeDays - a.activeDays
-      return a.template.name.localeCompare(b.template.name)
-    })
+    return [...byKey.values()].sort((a, b) => compareOrderKeys(orderKey(a), orderKey(b)))
   })
 
   function updatingKey(planId: string, memberId: string) {

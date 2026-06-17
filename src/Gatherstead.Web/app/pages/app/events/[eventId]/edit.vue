@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { EventSummary, MealTemplate, TaskTemplate, AttributeWriteEntry } from '~/repositories/types'
 import { useProperties } from '~/composables/useProperties'
-import { useMealTemplates, useMealTemplateActions } from '~/composables/useMealPlans'
-import { useTaskTemplates, useTaskTemplateActions } from '~/composables/useTaskTemplates'
+import { useSortedMealTemplates, useMealTemplateActions } from '~/composables/useMealPlans'
+import { useSortedTaskTemplates, useTaskTemplateActions } from '~/composables/useTaskTemplates'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { toAttributeWriteEntries, cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
 import type { TabsItem } from '@nuxt/ui'
@@ -106,8 +106,8 @@ onMounted(() => {
 })
 
 // === Template data ===
-const { templates: mealTemplates, pending: mealTemplatesPending, refresh: refreshMealTemplates } = useMealTemplates(eventId)
-const { templates: taskTemplates, pending: taskTemplatesPending, refresh: refreshTaskTemplates } = useTaskTemplates(eventId)
+const { templates: mealTemplates, pending: mealTemplatesPending, refresh: refreshMealTemplates } = useSortedMealTemplates(eventId)
+const { templates: taskTemplates, pending: taskTemplatesPending, refresh: refreshTaskTemplates } = useSortedTaskTemplates(eventId)
 
 const { updating: mealUpdating, deleteTemplate: deleteMealTemplate } = useMealTemplateActions(eventId, refreshMealTemplates)
 const { updating: taskUpdating, deleteTemplate: deleteTaskTemplate } = useTaskTemplateActions(eventId, refreshTaskTemplates)

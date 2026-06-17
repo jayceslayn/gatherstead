@@ -3,7 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 import { useEventAttendance } from '~/composables/useEventAttendance'
 import { useEventMealData } from '~/composables/useEventMealData'
-import type { AttendanceStatus, MealPlan, MealType } from '~/repositories/types'
+import type { AttendanceStatus, MealPlan } from '~/repositories/types'
 
 const props = defineProps<{
   eventId: string
@@ -69,13 +69,9 @@ function mealSlotHint(plan: MealPlan): string {
   return t(mealTypeI18nKey[plan.mealType] ?? plan.mealType)
 }
 
-// Sub-rows ordered by template name, then time slot for stability.
+// Sub-rows are already ordered by the shared template scheme in useEventMealData.
 function sortedMealPlans(day: string): MealPlan[] {
-  return [...(mealPlansByDay.value[day] ?? [])].sort((a, b) => {
-    const nameDiff = mealLabel(a).localeCompare(mealLabel(b))
-    if (nameDiff !== 0) return nameDiff
-    return MEAL_ORDER.indexOf(a.mealType) - MEAL_ORDER.indexOf(b.mealType)
-  })
+  return mealPlansByDay.value[day] ?? []
 }
 
 function mealsVisible(memberId: string, day: string): boolean {
@@ -125,8 +121,6 @@ async function setMealCell(memberId: string, planId: string, status: AttendanceS
 async function setColumn(day: string, status: AttendanceStatus) {
   await Promise.all(members.value.map(m => setDayCell(m.id, day, status)))
 }
-
-const MEAL_ORDER: MealType[] = ['Breakfast', 'Lunch', 'Dinner']
 
 // === Bulk wizard ===
 const wizardOpen = ref(false)

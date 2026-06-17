@@ -8127,15 +8127,21 @@
           "bringOwnFood",
           "dietary",
           "going",
+          "isException",
           "maybe",
           "mealPlanId",
           "mealType",
           "notGoing",
+          "templateId",
           "templateName"
         ],
         "type": "object",
         "properties": {
           "mealPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateId": {
             "type": "string",
             "format": "uuid"
           },
@@ -8150,6 +8156,9 @@
               "Dinner"
             ],
             "type": "string"
+          },
+          "isException": {
+            "type": "boolean"
           },
           "going": {
             "type": "integer",
