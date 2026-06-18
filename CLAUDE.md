@@ -5,6 +5,29 @@ This repository uses Azure-first architecture with a C# .NET 10 API and a Vue 3 
 Read `.agents/skills/project-bootstrap/SKILL.md` at the start of every task before exploring the codebase.
 It provides quick facts, a directory map, task-type routing to the right docs, and the non-negotiable conventions — use it to target what to read next rather than broad codebase exploration.
 
+## Working Style
+
+### Planning
+- Load as much context as required, but as little as necessary — target your reads using the project-bootstrap skill and doc routing rather than broad codebase exploration.
+- Search for existing functions, utilities, and patterns and reuse them before proposing new code; avoid duplication.
+- Resolve open architecture questions and likely pitfalls *before* drafting a detailed implementation plan, and make key assumptions explicit so the user can correct them.
+- Batch independent reads and searches into a single message; delegate broad fan-out searches to Explore subagents and relay only their conclusions to keep the main context lean.
+- Stay within the requested scope — surface tangential issues for the user to decide rather than fixing them inline.
+- Define explicit stop signals: conditions under which implementation should halt and report back because reality is diverging from the plan (e.g. expected APIs/utilities are absent, tests invalidate a core assumption, or scope expands beyond the plan).
+- Include verification steps and unit tests in the plan wherever possible.
+
+### Implementation
+- Honour the stop signals defined during planning — pause and surface the divergence instead of pressing on.
+- Write code that reads like the surrounding code — match naming, idioms, and comment density rather than introducing new styles.
+- Verify as you go; do not defer all checking to the end.
+- Trust harness state: don't re-read files you just edited to confirm a change, and don't re-derive facts already established in the conversation.
+- Report outcomes faithfully: if tests fail, show the output; note skipped steps; don't claim work is done without verification.
+
+### Efficiency (context & output)
+- Prefer targeted tools, diffs, and patches over loading or rewriting whole files. Use search to find the minimal relevant span and edit in place rather than regenerating files wholesale.
+- For larger files or inputs, consider generating a deterministic script to parse or modify them rather than reading them in full.
+- In internal reasoning and user-facing discussion, use clear, dense, precise, technical-leaning language. Avoid unnecessary verbosity.
+
 ## Project Documentation
 Before making changes, consult the following documentation to understand the project's vision, architecture, and conventions:
 
