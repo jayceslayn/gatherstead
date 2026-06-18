@@ -4,7 +4,7 @@ import { useAccommodations, useAccommodationIntents, useAccommodationIntentActio
 import { useAllMembers } from '~/composables/useHouseholdMembers'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
-import type { AccommodationIntent, AccommodationIntentStatus, AccommodationIntentDecision } from '~/repositories/types'
+import type { AccommodationIntent, AccommodationIntentStatus, AccommodationIntentDecision, HouseholdMember } from '~/repositories/types'
 
 definePageMeta({ layout: 'default' })
 
@@ -74,46 +74,37 @@ async function handleDecline(intent: AccommodationIntent) {
   await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, intent.status, 'Declined', intent.notes, intent.partyAdults, intent.partyChildren)
 }
 
-// Request modal for members
+// Request modal for members — reuses GsAccommodationRequestModal in free-date mode (no event context).
 const showRequestModal = ref(false)
-const requestStartNight = ref('')
-const requestEndNight = ref('')
-const requestStatus = ref<AccommodationIntentStatus>('Intent')
-const requestNotes = ref('')
-const requestAdults = ref<number | null>(null)
-const requestChildren = ref<number | null>(null)
 const requestLoading = ref(false)
 
-const statusOptions: { label: string; value: AccommodationIntentStatus }[] = [
-  { label: t('status.intent'), value: 'Intent' },
-  { label: t('status.hold'), value: 'Hold' },
-]
+// The member requests their own stay, so the modal's member picker has a single fixed option.
+const selfMembers = computed<HouseholdMember[]>(() => {
+  const id = memberStore.linkedMemberId
+  const self = id ? memberMap.value.get(id) : undefined
+  return self ? [self] : []
+})
 
-function openRequestModal() {
-  requestStartNight.value = ''
-  requestEndNight.value = ''
-  requestStatus.value = 'Intent'
-  requestNotes.value = ''
-  requestAdults.value = null
-  requestChildren.value = null
-  showRequestModal.value = true
-}
-
-async function submitRequest() {
-  if (!memberStore.linkedMemberId || !memberStore.linkedHouseholdId || !requestStartNight.value) return
-  // Default a single-night stay when only the first night is chosen, and keep the span non-inverted.
-  const start = requestStartNight.value
-  const end = requestEndNight.value && requestEndNight.value >= start ? requestEndNight.value : start
+async function submitRequest(payload: {
+  memberId: string
+  startNight: string
+  endNight: string
+  status: AccommodationIntentStatus
+  partyAdults: number | null
+  partyChildren: number | null
+  notes: string | null
+}) {
+  if (!memberStore.linkedHouseholdId) return
   requestLoading.value = true
   await requestIntent(
     memberStore.linkedHouseholdId,
-    memberStore.linkedMemberId,
-    start,
-    end,
-    requestStatus.value,
-    requestNotes.value || null,
-    requestAdults.value,
-    requestChildren.value,
+    payload.memberId,
+    payload.startNight,
+    payload.endNight,
+    payload.status,
+    payload.notes,
+    payload.partyAdults,
+    payload.partyChildren,
   )
   requestLoading.value = false
   showRequestModal.value = false
@@ -153,7 +144,7 @@ async function submitRequest() {
         v-if="memberStore.linkedMemberId && !isManagerOrAbove"
         size="sm"
         icon="i-heroicons-plus"
-        @click="openRequestModal()"
+        @click="showRequestModal = true"
       >
         {{ t('accommodation.requestStay') }}
       </UButton>
@@ -171,7 +162,7 @@ async function submitRequest() {
       <UButton
         v-if="memberStore.linkedMemberId && !isManagerOrAbove"
         icon="i-heroicons-plus"
-        @click="openRequestModal()"
+        @click="showRequestModal = true"
       >
         {{ t('accommodation.requestStay') }}
       </UButton>
@@ -236,40 +227,15 @@ async function submitRequest() {
       </UCard>
     </div>
 
-    <!-- Request stay modal (members) -->
-    <UModal v-model:open="showRequestModal" :title="t('accommodation.requestStay')">
-      <template #body>
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-3">
-            <UFormField :label="t('event.signup.firstNight')">
-              <UInput v-model="requestStartNight" type="date" class="w-full" />
-            </UFormField>
-            <UFormField :label="t('event.signup.lastNight')">
-              <UInput v-model="requestEndNight" type="date" class="w-full" />
-            </UFormField>
-          </div>
-          <UFormField :label="t('accommodation.status')">
-            <USelect v-model="requestStatus" :items="statusOptions" class="w-full" />
-          </UFormField>
-          <div class="grid grid-cols-2 gap-3">
-            <UFormField :label="t('accommodation.partyAdults')">
-              <UInput v-model.number="requestAdults" type="number" min="0" class="w-full" />
-            </UFormField>
-            <UFormField :label="t('accommodation.partyChildren')">
-              <UInput v-model.number="requestChildren" type="number" min="0" class="w-full" />
-            </UFormField>
-          </div>
-          <UFormField :label="t('common.notes')">
-            <UTextarea v-model="requestNotes" :rows="2" class="w-full" />
-          </UFormField>
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton variant="outline" @click="showRequestModal = false">{{ t('common.cancel') }}</UButton>
-          <UButton :loading="requestLoading" @click="submitRequest">{{ t('accommodation.requestStay') }}</UButton>
-        </div>
-      </template>
-    </UModal>
+    <!-- Request stay modal (members) — shared modal in free-date mode (no event-day list) -->
+    <GsAccommodationRequestModal
+      v-model:open="showRequestModal"
+      :accommodations="accommodation ? [accommodation] : []"
+      :members="selfMembers"
+      :event-days="[]"
+      :default-member-id="memberStore.linkedMemberId"
+      :loading="requestLoading"
+      @submit="submitRequest"
+    />
   </div>
 </template>

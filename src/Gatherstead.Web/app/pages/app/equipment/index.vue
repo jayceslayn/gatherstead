@@ -10,7 +10,7 @@ const { t } = useI18n()
 const { isManagerOrAbove } = useTenantRole()
 const { equipment, pending, refresh } = useEquipment()
 const { properties, pending: propertiesPending } = useProperties()
-const { updating, deleteEquipment } = useEquipmentActions(refresh)
+const { deleteEquipment } = useEquipmentActions(refresh)
 
 const propertyItems = computed(() => properties.value.map(p => ({ label: p.name, value: p.id })))
 function propertyName(id: string | null): string {
@@ -42,6 +42,7 @@ const filteredEquipment = computed(() => {
 })
 
 const showModal = ref(false)
+const showDeleteConfirm = ref(false)
 const editing = ref<EquipmentSummary | null>(null)
 const toDelete = ref<EquipmentSummary | null>(null)
 
@@ -53,6 +54,12 @@ function openEdit(item: EquipmentSummary) {
   editing.value = item
   showModal.value = true
 }
+function onModalDelete(item: EquipmentSummary) {
+  toDelete.value = item
+  showModal.value = false
+  showDeleteConfirm.value = true
+}
+
 async function confirmDelete() {
   const item = toDelete.value
   toDelete.value = null
@@ -123,24 +130,13 @@ async function confirmDelete() {
               <p class="text-xs text-muted truncate">{{ propertyName(item.propertyId) }}</p>
             </div>
             <GsRoleGate min-role="Manager">
-              <div class="flex items-center shrink-0">
-                <UButton
-                  variant="ghost"
-                  size="xs"
-                  icon="i-heroicons-pencil"
-                  :aria-label="t('common.edit')"
-                  @click="openEdit(item)"
-                />
-                <UButton
-                  color="error"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-heroicons-trash"
-                  :aria-label="t('common.delete')"
-                  :loading="updating.includes(item.id)"
-                  @click="toDelete = item"
-                />
-              </div>
+              <UButton
+                variant="ghost"
+                size="xs"
+                icon="i-heroicons-pencil"
+                :aria-label="t('common.edit')"
+                @click="openEdit(item)"
+              />
             </GsRoleGate>
           </div>
 
@@ -156,15 +152,15 @@ async function confirmDelete() {
       :equipment="editing"
       :property-items="propertyItems"
       :refresh="refresh"
+      @delete="onModalDelete"
     />
 
     <GsConfirmModal
-      :open="!!toDelete"
+      v-model:open="showDeleteConfirm"
       :title="t('equipment.deleteTitle')"
       :description="t('equipment.deleteConfirm')"
       :confirm-label="t('common.delete')"
       danger
-      @update:open="(val: boolean) => { if (!val) toDelete = null }"
       @confirm="confirmDelete"
     />
   </div>

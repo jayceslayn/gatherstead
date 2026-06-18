@@ -20,14 +20,12 @@ const { t } = useI18n()
     </template>
 
     <template #footer>
-      <div class="flex justify-end gap-3 w-full">
-        <UButton variant="ghost" :disabled="loading" @click="open = false">
-          {{ t('common.cancel') }}
-        </UButton>
-        <UButton :loading="loading" @click="emit('submit')">
-          {{ t('common.save') }}
-        </UButton>
-      </div>
+      <GsFormFooter
+        :submit-label="t('common.save')"
+        :loading="loading"
+        @submit="emit('submit')"
+        @cancel="open = false"
+      />
     </template>
   </UModal>
 </template>

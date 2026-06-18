@@ -17,9 +17,17 @@ const memberId = computed(() => route.params.memberId as string)
 const { household } = useHousehold(householdId)
 const { member, pending } = useMember(householdId, memberId)
 const { refresh } = useHouseholdMembers(householdId)
-const { updating, updateMember } = useHouseholdMemberActions(householdId, refresh)
+const { updating, updateMember, deleteMember } = useHouseholdMemberActions(householdId, refresh)
 
 const saving = computed(() => updating.value.includes(memberId.value))
+const deleting = computed(() => updating.value.includes(memberId.value))
+const showDeleteConfirm = ref(false)
+
+async function confirmDelete() {
+  showDeleteConfirm.value = false
+  await deleteMember(memberId.value)
+  await navigateTo(`/app/directory/${householdId.value}`)
+}
 
 const form = reactive({
   name: '',
@@ -111,13 +119,36 @@ async function onSubmit() {
         :submit-label="t('common.save')"
         @submit="onSubmit"
         @clear-name-error="nameError = ''"
-      />
+      >
+        <template #delete>
+          <GsRoleGate min-role="Manager">
+            <UButton
+              color="error"
+              variant="ghost"
+              icon="i-heroicons-trash"
+              :loading="deleting"
+              @click="showDeleteConfirm = true"
+            >
+              {{ t('member.deleteTitle') }}
+            </UButton>
+          </GsRoleGate>
+        </template>
+      </GsMemberForm>
     </template>
 
     <GsEmptyState
       v-else
       icon="i-heroicons-exclamation-triangle"
       :title="t('error.notFound')"
+    />
+
+    <GsConfirmModal
+      v-model:open="showDeleteConfirm"
+      :title="t('member.deleteTitle')"
+      :description="t('member.deleteConfirm')"
+      :confirm-label="t('common.delete')"
+      danger
+      @confirm="confirmDelete"
     />
   </div>
 </template>

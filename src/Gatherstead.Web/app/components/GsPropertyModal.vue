@@ -9,6 +9,10 @@ const props = defineProps<{
   property?: PropertySummary | null
 }>()
 
+const emit = defineEmits<{
+  delete: [property: PropertySummary]
+}>()
+
 const open = defineModel<boolean>('open', { default: false })
 const { t } = useI18n()
 
@@ -75,14 +79,24 @@ async function submit() {
     </template>
 
     <template #footer>
-      <div class="flex justify-end gap-3 w-full">
-        <UButton variant="ghost" :disabled="saving" @click="open = false">
-          {{ t('common.cancel') }}
-        </UButton>
-        <UButton :loading="saving" @click="submit">
-          {{ isEdit ? t('common.save') : t('common.create') }}
-        </UButton>
-      </div>
+      <GsFormFooter
+        :submit-label="isEdit ? t('common.save') : t('common.create')"
+        :loading="saving"
+        @submit="submit"
+        @cancel="open = false"
+      >
+        <template v-if="isEdit && property" #delete>
+          <UButton
+            color="error"
+            variant="ghost"
+            icon="i-heroicons-trash"
+            :disabled="saving"
+            @click="emit('delete', property!)"
+          >
+            {{ t('property.deleteTitle') }}
+          </UButton>
+        </template>
+      </GsFormFooter>
     </template>
   </UModal>
 </template>

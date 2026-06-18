@@ -70,20 +70,22 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
     capacityAdults: number | null,
     capacityChildren: number | null,
     notes: string | null,
-  ) {
+  ): Promise<boolean> {
     updating.value.push('new')
     try {
       await repo.createAccommodation(
         tenantStore.currentTenantId!, propertyId.value, name, type, capacityAdults, capacityChildren, notes,
       )
       await refresh()
+      return true
     }
     catch (e) {
       if (e instanceof DemoLimitError) {
         toast.add({ title: t('demo.limitReached.title'), description: t('demo.limitReached.description'), color: 'warning' })
-        return
+        return false
       }
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== 'new')
@@ -97,16 +99,18 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
     capacityAdults: number | null,
     capacityChildren: number | null,
     notes: string | null,
-  ) {
+  ): Promise<boolean> {
     updating.value.push(accommodationId)
     try {
       await repo.updateAccommodation(
         tenantStore.currentTenantId!, propertyId.value, accommodationId, name, type, capacityAdults, capacityChildren, notes,
       )
       await refresh()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== accommodationId)

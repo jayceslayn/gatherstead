@@ -21,18 +21,21 @@ const { displayName: ageBandDisplayName } = useAgeBands()
 const pending = computed(() => householdPending.value || membersPending.value)
 
 const showDeleteConfirm = ref(false)
-const { updating, deleteHousehold } = useHouseholdActions(async () => {
-  await router.push('/app/directory')
-})
-const deleting = computed(() => updating.value.includes(householdId.value))
+const { deleteHousehold } = useHouseholdActions(refreshHousehold)
 
 async function confirmDelete() {
   showDeleteConfirm.value = false
   await deleteHousehold(householdId.value)
+  await router.push('/app/directory')
 }
 
 // Rename / edit — handled by the shared GsHouseholdModal in edit mode.
 const showEdit = ref(false)
+
+function onModalDelete() {
+  showEdit.value = false
+  showDeleteConfirm.value = true
+}
 </script>
 
 <template>
@@ -110,19 +113,6 @@ const showEdit = ref(false)
         </NuxtLink>
       </div>
 
-      <GsRoleGate min-role="Manager">
-        <div class="mt-12 pt-6 border-t border-default">
-          <UButton
-            color="error"
-            variant="ghost"
-            icon="i-heroicons-trash"
-            :loading="deleting"
-            @click="showDeleteConfirm = true"
-          >
-            {{ t('household.deleteTitle') }}
-          </UButton>
-        </div>
-      </GsRoleGate>
     </template>
 
     <GsEmptyState
@@ -144,6 +134,7 @@ const showEdit = ref(false)
       v-model:open="showEdit"
       :household="household"
       :refresh="refreshHousehold"
+      @delete="onModalDelete"
     />
   </div>
 </template>

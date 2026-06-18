@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useProperty, usePropertyActions } from '~/composables/useProperties'
-import { useAccommodations } from '~/composables/useAccommodations'
+import { useAccommodations, useAccommodationActions } from '~/composables/useAccommodations'
 import { useTenantRole } from '~/composables/useTenantRole'
 import type { AccommodationSummary, AccommodationType } from '~/repositories/types'
 
@@ -13,8 +13,9 @@ const { isManagerOrAbove } = useTenantRole()
 
 const propertyId = computed(() => route.params.propertyId as string)
 const { property, pending: propertyPending, refresh } = useProperty(propertyId)
-const { accommodations, pending: accommodationsPending } = useAccommodations(propertyId)
-const { updating, deleteProperty } = usePropertyActions(refresh)
+const { accommodations, pending: accommodationsPending, refresh: refreshAccommodations } = useAccommodations(propertyId)
+const { deleteProperty } = usePropertyActions(refresh)
+const { updating: accommodationUpdating, deleteAccommodation } = useAccommodationActions(propertyId, refreshAccommodations)
 
 const showEdit = ref(false)
 const showDeleteConfirm = ref(false)
@@ -23,6 +24,11 @@ async function confirmDelete() {
   showDeleteConfirm.value = false
   await deleteProperty(propertyId.value)
   await router.push('/app/properties')
+}
+
+function onPropertyModalDelete() {
+  showEdit.value = false
+  showDeleteConfirm.value = true
 }
 
 const TYPE_ORDER: AccommodationType[] = ['Bedroom', 'Bunk', 'RvPad', 'Tent', 'Offsite']
@@ -39,6 +45,37 @@ const grouped = computed(() => {
 function typeLabel(type: AccommodationType): string {
   const key = type.charAt(0).toLowerCase() + type.slice(1)
   return t(`accommodation.types.${key}`)
+}
+
+// Accommodation modal
+const showAccommodationModal = ref(false)
+const editingAccommodation = ref<AccommodationSummary | null>(null)
+const defaultAccommodationType = ref<AccommodationType>('Bedroom')
+const toDeleteAccommodation = ref<AccommodationSummary | null>(null)
+const showAccommodationDeleteConfirm = ref(false)
+
+function openCreateAccommodation(type: AccommodationType) {
+  editingAccommodation.value = null
+  defaultAccommodationType.value = type
+  showAccommodationModal.value = true
+}
+
+function openEditAccommodation(accommodation: AccommodationSummary) {
+  editingAccommodation.value = accommodation
+  showAccommodationModal.value = true
+}
+
+function onAccommodationModalDelete(accommodation: AccommodationSummary) {
+  toDeleteAccommodation.value = accommodation
+  showAccommodationModal.value = false
+  showAccommodationDeleteConfirm.value = true
+}
+
+async function confirmDeleteAccommodation() {
+  const acc = toDeleteAccommodation.value
+  toDeleteAccommodation.value = null
+  showAccommodationDeleteConfirm.value = false
+  if (acc) await deleteAccommodation(acc.id)
 }
 </script>
 
@@ -62,15 +99,8 @@ function typeLabel(type: AccommodationType): string {
             <UButton variant="outline" size="sm" icon="i-heroicons-pencil" @click="showEdit = true">
               {{ t('common.edit') }}
             </UButton>
-            <UButton
-              color="error"
-              variant="ghost"
-              size="sm"
-              icon="i-heroicons-trash"
-              :loading="updating.includes(propertyId)"
-              @click="showDeleteConfirm = true"
-            >
-              {{ t('property.deleteTitle') }}
+            <UButton size="sm" icon="i-heroicons-plus" @click="openCreateAccommodation('Bedroom')">
+              {{ t('accommodation.createTitle') }}
             </UButton>
           </div>
         </GsRoleGate>
@@ -87,43 +117,34 @@ function typeLabel(type: AccommodationType): string {
         icon="i-heroicons-home"
         :title="t('property.noAccommodations')"
         :description="isManagerOrAbove ? t('property.noAccommodationsHintManager') : undefined"
-      >
-        <UButton
-          v-if="isManagerOrAbove"
-          :to="`/app/properties/${property.id}/accommodations/create`"
-          icon="i-heroicons-plus"
-        >
-          {{ t('property.createAccommodation') }}
-        </UButton>
-      </GsEmptyState>
+      />
 
       <div v-else class="space-y-6">
         <div
           v-for="[type, group] in grouped"
           :key="type"
         >
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-muted uppercase tracking-wide">
-              {{ typeLabel(type) }}
-            </h2>
-            <GsRoleGate min-role="Manager">
-              <UButton
-                :to="`/app/properties/${property.id}/accommodations/create?type=${type}`"
-                variant="ghost"
-                size="xs"
-                icon="i-heroicons-plus"
-              >
-                {{ t('property.createAccommodation') }}
-              </UButton>
-            </GsRoleGate>
-          </div>
+          <h2 class="text-sm font-semibold text-muted uppercase tracking-wide mb-3">
+            {{ typeLabel(type) }}
+          </h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <GsAccommodationCard
               v-for="accommodation in group"
               :key="accommodation.id"
               :accommodation="accommodation"
               :link-to="`/app/properties/${property.id}/accommodations/${accommodation.id}/intents`"
-            />
+            >
+              <template v-if="isManagerOrAbove" #actions>
+                <UButton
+                  variant="ghost"
+                  size="xs"
+                  icon="i-heroicons-pencil"
+                  :aria-label="t('common.edit')"
+                  :loading="accommodationUpdating.includes(accommodation.id)"
+                  @click.prevent="openEditAccommodation(accommodation)"
+                />
+              </template>
+            </GsAccommodationCard>
           </div>
         </div>
       </div>
@@ -135,7 +156,12 @@ function typeLabel(type: AccommodationType): string {
       :title="t('error.notFound')"
     />
 
-    <GsPropertyModal v-model:open="showEdit" :property="property" :refresh="refresh" />
+    <GsPropertyModal
+      v-model:open="showEdit"
+      :property="property"
+      :refresh="refresh"
+      @delete="onPropertyModalDelete"
+    />
 
     <GsConfirmModal
       v-model:open="showDeleteConfirm"
@@ -144,6 +170,24 @@ function typeLabel(type: AccommodationType): string {
       :confirm-label="t('common.delete')"
       danger
       @confirm="confirmDelete"
+    />
+
+    <GsAccommodationModal
+      v-model:open="showAccommodationModal"
+      :property-id="propertyId"
+      :accommodation="editingAccommodation"
+      :default-type="defaultAccommodationType"
+      :refresh="refreshAccommodations"
+      @delete="onAccommodationModalDelete"
+    />
+
+    <GsConfirmModal
+      v-model:open="showAccommodationDeleteConfirm"
+      :title="t('accommodation.deleteTitle')"
+      :description="t('accommodation.deleteConfirm')"
+      :confirm-label="t('common.delete')"
+      danger
+      @confirm="confirmDeleteAccommodation"
     />
   </div>
 </template>

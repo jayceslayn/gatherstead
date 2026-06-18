@@ -112,13 +112,15 @@ watch(birthDate, (bd) => {
 
     <GsAttributeField v-model="attributes" />
 
-    <div class="flex items-center gap-3 pt-2">
-      <UButton type="submit" :loading="props.loading">
-        {{ props.submitLabel }}
-      </UButton>
-      <UButton variant="ghost" :to="props.cancelTo">
-        {{ t('common.cancel') }}
-      </UButton>
-    </div>
+    <GsFormFooter
+      submit-type="submit"
+      :submit-label="props.submitLabel"
+      :loading="props.loading"
+      :cancel-to="props.cancelTo"
+    >
+      <template v-if="$slots.delete" #delete>
+        <slot name="delete" />
+      </template>
+    </GsFormFooter>
   </UForm>
 </template>

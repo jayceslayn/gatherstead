@@ -113,7 +113,9 @@
     "dietaryInfo": "Información Dietética",
     "noDietaryInfo": "No hay información dietética registrada.",
     "dietaryTags": "Etiquetas Dietéticas",
-    "dietaryTagsPlaceholder": "Seleccionar etiquetas dietéticas…"
+    "dietaryTagsPlaceholder": "Seleccionar etiquetas dietéticas…",
+    "deleteTitle": "Eliminar Miembro",
+    "deleteConfirm": "Esto eliminará permanentemente a este miembro y todos sus datos de eventos. No se puede deshacer."
   },
   "dietaryCategory": {
     "allergy": "Alergias",
@@ -365,6 +367,14 @@
     "status": "Estado",
     "partyAdults": "Adultos",
     "partyChildren": "Niños",
+    "name": "Nombre del Alojamiento",
+    "type": "Tipo",
+    "capacityAdultsLabel": "Capacidad de Adultos",
+    "capacityChildrenLabel": "Capacidad de Niños",
+    "createTitle": "Crear Alojamiento",
+    "editTitle": "Editar Alojamiento",
+    "deleteTitle": "Eliminar Alojamiento",
+    "deleteConfirm": "Esto eliminará permanentemente este alojamiento y todas sus estadías. No se puede deshacer.",
     "promote": "Aprobar",
     "decline": "Rechazar",
     "decision": {

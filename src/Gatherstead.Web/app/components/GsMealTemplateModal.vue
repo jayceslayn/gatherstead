@@ -24,6 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [MealTemplateDraft]
+  delete: [template: MealTemplate]
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -152,14 +153,24 @@ async function submit() {
     </template>
 
     <template #footer>
-      <div class="flex justify-end gap-3 w-full">
-        <UButton variant="ghost" :disabled="saving" @click="open = false">
-          {{ t('common.cancel') }}
-        </UButton>
-        <UButton :loading="saving" @click="submit">
-          {{ isEdit ? t('common.save') : t('common.create') }}
-        </UButton>
-      </div>
+      <GsFormFooter
+        :submit-label="isEdit ? t('common.save') : t('common.create')"
+        :loading="saving"
+        @submit="submit"
+        @cancel="open = false"
+      >
+        <template v-if="isEdit && template" #delete>
+          <UButton
+            color="error"
+            variant="ghost"
+            icon="i-heroicons-trash"
+            :disabled="saving"
+            @click="emit('delete', template!)"
+          >
+            {{ t('event.meal.deleteTemplate') }}
+          </UButton>
+        </template>
+      </GsFormFooter>
     </template>
   </UModal>
 </template>

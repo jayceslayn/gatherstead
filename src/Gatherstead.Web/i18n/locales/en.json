@@ -113,7 +113,9 @@
     "dietaryInfo": "Dietary Information",
     "noDietaryInfo": "No dietary information on file.",
     "dietaryTags": "Dietary Tags",
-    "dietaryTagsPlaceholder": "Select dietary tags…"
+    "dietaryTagsPlaceholder": "Select dietary tags…",
+    "deleteTitle": "Delete Member",
+    "deleteConfirm": "This will permanently remove this member and all their event data. This cannot be undone."
   },
   "dietaryCategory": {
     "allergy": "Allergies",
@@ -365,6 +367,14 @@
     "status": "Status",
     "partyAdults": "Adults",
     "partyChildren": "Children",
+    "name": "Accommodation Name",
+    "type": "Type",
+    "capacityAdultsLabel": "Adult Capacity",
+    "capacityChildrenLabel": "Child Capacity",
+    "createTitle": "Create Accommodation",
+    "editTitle": "Edit Accommodation",
+    "deleteTitle": "Delete Accommodation",
+    "deleteConfirm": "This will permanently remove this accommodation and all its stays. This cannot be undone.",
     "promote": "Approve",
     "decline": "Decline",
     "decision": {

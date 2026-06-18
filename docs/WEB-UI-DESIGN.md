@@ -29,6 +29,8 @@ Reach for an existing component before hand-rolling markup. Building a new page 
 | Calendar | `GsCalendar` | FullCalendar wrapper; locale-bound, wrapped in `<ClientOnly>`. |
 | Date sub-range field | `GsTemplateDateRangeField` | Toggle + start/end date pair for template modals. |
 | Day × entity matrix | `GsSwimlaneGroup` + `GsSwimlane` | **The standard** for day-by-entity grids — one lane per member/template/accommodation, days as aligned columns on desktop, a day-pager on mobile. Used by event sign-up (Attendance, Tasks, Accommodations) and Event Reports. Don't hand-roll a new day-column or day-card layout — compose these instead. |
+| Form / modal footer | `GsFormFooter` | Renders `[Cancel][Save]` right-aligned; optional `#delete` slot left-aligned. Use on every form page and modal — never hand-roll a flex footer. |
+| Accommodation create/edit | `GsAccommodationModal` | Create + edit in one component (`accommodation` prop drives edit mode); emits `delete` for the parent to confirm and execute. |
 
 Prefer **Nuxt UI** primitives (`UButton`, `UInput`, `UCard`, `UModal`, `UFormField`, `UBadge`, …) over native HTML elements wherever an equivalent exists.
 
@@ -58,6 +60,66 @@ Color tokens (from `app.config.ts`): `primary=forest`, `secondary=harvest`, `suc
 - **Gate the next step on success — never assume it.** Mutating actions in `useXxxActions` (create *and* update) catch errors, surface a toast, and **return a boolean** (or the entity / `null`). The caller only advances on success: a modal does `if (ok) open.value = false`; a page does `if (ok) await navigateTo(…)`. A validation/server failure keeps the modal open or the user on the form with their input intact. Never close-or-navigate-then-discover-failure.
 - **Destructive deletes always confirm.** Route every delete through `GsConfirmModal` with `danger` and a body that names what will be destroyed. No entity is deleted on a single click.
 - **Toast feedback for every action result.** Use `useToast()`; translate errors via `useApiError().translateError()`. Demo-limit hits surface a friendly warning toast.
+
+## Action & Button Placement Conventions
+
+Visual consistency for actions across all pages and modals.
+
+### Placement by surface
+
+| Surface | Add / Create | Edit | Save / Cancel | Delete |
+|---|---|---|---|---|
+| **List / detail page** | Upper-right, in `GsPageHeader` slot | Upper-right, in `GsPageHeader` slot | — | — |
+| **Edit form page** | — | — | Lower-right via `GsFormFooter` | Lower-left via `GsFormFooter #delete` slot |
+| **Edit modal** | — | — | Lower-right via `GsFormFooter` | Lower-left via `GsFormFooter #delete` slot |
+| **Inline list row / card** | — | Trailing-edge icon-only pencil, `size="xs"` | — | — |
+
+**Key rules:**
+- Delete is always inside the edit form or modal (edit mode only) — never standalone on a detail page.
+- Edit modals **emit `delete`**; the parent page owns the `GsConfirmModal` and performs the deletion.
+- Inline rows/cards show **Edit only** (pencil); Delete is accessed by opening the edit modal the pencil opens.
+- Gate all management actions with `GsRoleGate`.
+
+### Standard actions: icons, colors, variants
+
+| Action | Icon | `color` | `variant` | `size` |
+|---|---|---|---|---|
+| **Create / Add** | `i-heroicons-plus` | default (primary) | solid | `sm` (header), default (form) |
+| **Edit** | `i-heroicons-pencil` | default (primary) | `outline` (header), `ghost` (inline) | `sm` (header), `xs` (inline) |
+| **Save** | — | default (primary) | solid | default |
+| **Cancel** | — | default (neutral) | `ghost` | default |
+| **Delete** | `i-heroicons-trash` | `error` | `ghost` | default (form/modal), `xs` (never shown inline) |
+
+### `GsFormFooter` — the shared footer component
+
+Use `GsFormFooter` for every form and modal footer. It renders `[Cancel]` then `[Save]` right-aligned and an optional `#delete` slot left-aligned.
+
+```vue
+<!-- Page form -->
+<GsFormFooter
+  submit-type="submit"
+  :submit-label="t('common.save')"
+  :loading="saving"
+  :cancel-to="`/app/…`"
+>
+  <template #delete>
+    <UButton color="error" variant="ghost" icon="i-heroicons-trash" @click="showDeleteConfirm = true">
+      {{ t('entity.deleteTitle') }}
+    </UButton>
+  </template>
+</GsFormFooter>
+
+<!-- Modal footer -->
+<template #footer>
+  <GsFormFooter :submit-label="…" :loading="saving" @submit="submit" @cancel="open = false">
+    <template v-if="isEdit && entity" #delete>
+      <UButton color="error" variant="ghost" icon="i-heroicons-trash" @click="emit('delete', entity!)">
+        {{ t('entity.deleteTitle') }}
+      </UButton>
+    </template>
+  </GsFormFooter>
+</template>
+```
 
 ## Role Gating
 
@@ -89,4 +151,5 @@ Color tokens (from `app.config.ts`): `primary=forest`, `secondary=harvest`, `suc
 7. Data via repository composables; results/errors surface via toast.
 8. Every string is an i18n key (en + es parity); locale-reactive labels are `computed`; dates/numbers formatted via the locale-aware helper, not `undefined`.
 9. Mobile-first layout verified at a narrow viewport; touch targets adequate; wide tables/grids handled.
-10. `pnpm run lint` and `pnpm build` clean.
+10. Form / modal footers use `GsFormFooter`; Delete is in the edit form/modal lower-left (edit mode only), never on a list or detail page standalone.
+11. `pnpm run lint` and `pnpm build` clean.

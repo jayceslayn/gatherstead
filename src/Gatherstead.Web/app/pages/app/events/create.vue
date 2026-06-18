@@ -143,14 +143,12 @@ async function onSubmit() {
 
         <GsAttributeField v-model="form.attributes" />
 
-        <div class="flex items-center gap-3 pt-2">
-          <UButton type="submit" :loading="saving">
-            {{ t('common.create') }}
-          </UButton>
-          <UButton variant="ghost" to="/app/events">
-            {{ t('common.cancel') }}
-          </UButton>
-        </div>
+        <GsFormFooter
+          submit-type="submit"
+          :submit-label="t('common.create')"
+          :loading="saving"
+          cancel-to="/app/events"
+        />
       </UForm>
 
       <div class="mt-10 pt-6 border-t border-default max-w-lg">

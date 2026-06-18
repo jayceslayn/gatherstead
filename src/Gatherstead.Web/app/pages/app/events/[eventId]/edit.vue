@@ -109,8 +109,8 @@ onMounted(() => {
 const { templates: mealTemplates, pending: mealTemplatesPending, refresh: refreshMealTemplates } = useSortedMealTemplates(eventId)
 const { templates: taskTemplates, pending: taskTemplatesPending, refresh: refreshTaskTemplates } = useSortedTaskTemplates(eventId)
 
-const { updating: mealUpdating, deleteTemplate: deleteMealTemplate } = useMealTemplateActions(eventId, refreshMealTemplates)
-const { updating: taskUpdating, deleteTemplate: deleteTaskTemplate } = useTaskTemplateActions(eventId, refreshTaskTemplates)
+const { deleteTemplate: deleteMealTemplate } = useMealTemplateActions(eventId, refreshMealTemplates)
+const { deleteTemplate: deleteTaskTemplate } = useTaskTemplateActions(eventId, refreshTaskTemplates)
 
 // === Meal template modal ===
 const showMealModal = ref(false)
@@ -139,6 +139,16 @@ function openEditTask(template: TaskTemplate) {
 // === Delete confirms ===
 const mealToDelete = ref<MealTemplate | null>(null)
 const taskToDelete = ref<TaskTemplate | null>(null)
+
+function onMealModalDelete(template: MealTemplate) {
+  mealToDelete.value = template
+  showMealModal.value = false
+}
+function onTaskModalDelete(template: TaskTemplate) {
+  taskToDelete.value = template
+  showTaskModal.value = false
+}
+
 async function confirmDeleteMeal() {
   const tpl = mealToDelete.value
   mealToDelete.value = null
@@ -190,26 +200,25 @@ async function confirmDeleteTask() {
 
               <GsAttributeField v-model="form.attributes" />
 
-              <div class="flex items-center gap-3 pt-2">
-                <UButton type="submit" :loading="saving">
-                  {{ t('common.save') }}
-                </UButton>
-                <UButton variant="ghost" :to="`/app/events/${eventId}`">
-                  {{ t('common.cancel') }}
-                </UButton>
-              </div>
-            </UForm>
-
-            <div class="mt-12 pt-6 border-t border-default">
-              <UButton
-                color="error"
-                variant="ghost"
-                icon="i-heroicons-trash"
-                @click="showDeleteConfirm = true"
+              <GsFormFooter
+                submit-type="submit"
+                :submit-label="t('common.save')"
+                :loading="saving"
+                :cancel-to="`/app/events/${eventId}`"
               >
-                {{ t('event.deleteTitle') }}
-              </UButton>
-            </div>
+                <template #delete>
+                  <UButton
+                    color="error"
+                    variant="ghost"
+                    icon="i-heroicons-trash"
+                    :disabled="saving"
+                    @click="showDeleteConfirm = true"
+                  >
+                    {{ t('event.deleteTitle') }}
+                  </UButton>
+                </template>
+              </GsFormFooter>
+            </UForm>
           </div>
         </template>
 
@@ -250,15 +259,6 @@ async function confirmDeleteTask() {
                       icon="i-heroicons-pencil"
                       :aria-label="t('common.edit')"
                       @click="openEditMeal(template)"
-                    />
-                    <UButton
-                      color="error"
-                      variant="ghost"
-                      size="xs"
-                      icon="i-heroicons-trash"
-                      :aria-label="t('common.delete')"
-                      :loading="mealUpdating.includes(template.id)"
-                      @click="mealToDelete = template"
                     />
                   </GsRoleGate>
                 </template>
@@ -308,15 +308,6 @@ async function confirmDeleteTask() {
                       :aria-label="t('common.edit')"
                       @click="openEditTask(template)"
                     />
-                    <UButton
-                      color="error"
-                      variant="ghost"
-                      size="xs"
-                      icon="i-heroicons-trash"
-                      :aria-label="t('common.delete')"
-                      :loading="taskUpdating.includes(template.id)"
-                      @click="taskToDelete = template"
-                    />
                   </GsRoleGate>
                 </template>
 
@@ -349,12 +340,14 @@ async function confirmDeleteTask() {
       :template="editingMealTemplate"
       :refresh="refreshMealTemplates"
       :refresh-tasks="refreshTaskTemplates"
+      @delete="onMealModalDelete"
     />
     <GsTaskTemplateModal
       v-model:open="showTaskModal"
       :event-id="eventId"
       :template="editingTaskTemplate"
       :refresh="refreshTaskTemplates"
+      @delete="onTaskModalDelete"
     />
     <GsConfirmModal
       :open="!!mealToDelete"

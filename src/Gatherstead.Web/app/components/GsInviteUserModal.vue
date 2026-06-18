@@ -65,10 +65,9 @@ async function submit() {
 </script>
 
 <template>
-  <UModal v-model:open="open">
-    <template #content>
-      <div class="p-6 space-y-5">
-        <h3 class="text-lg font-semibold">{{ t('tenantUser.invite.title') }}</h3>
+  <UModal v-model:open="open" :title="t('tenantUser.invite.title')">
+    <template #body>
+      <div class="space-y-5">
         <p class="text-sm text-muted">{{ t('tenantUser.invite.hint') }}</p>
 
         <UFormField :label="t('tenantUser.invite.email')" :error="emailError || undefined" required>
@@ -92,16 +91,16 @@ async function submit() {
         <UFormField v-if="form.householdId" :label="t('tenantUser.invite.householdRole')">
           <USelect v-model="form.householdRole" :items="householdRoleItems" class="w-full" />
         </UFormField>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton variant="ghost" :disabled="saving" @click="open = false">
-            {{ t('common.cancel') }}
-          </UButton>
-          <UButton :loading="saving" @click="submit">
-            {{ t('tenantUser.invite.send') }}
-          </UButton>
-        </div>
       </div>
+    </template>
+
+    <template #footer>
+      <GsFormFooter
+        :submit-label="t('tenantUser.invite.send')"
+        :loading="saving"
+        @submit="submit"
+        @cancel="open = false"
+      />
     </template>
   </UModal>
 </template>

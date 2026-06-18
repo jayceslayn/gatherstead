@@ -18,6 +18,8 @@ const typeIcon: Record<string, string> = {
   Offsite: 'i-heroicons-arrow-top-right-on-square',
 }
 
+const NuxtLink = resolveComponent('NuxtLink')
+
 const icon = computed(() => typeIcon[props.accommodation.type] ?? 'i-heroicons-home')
 
 const capacityLabel = computed(() => {
@@ -31,7 +33,7 @@ const capacityLabel = computed(() => {
 
 <template>
   <component
-    :is="linkTo ? 'NuxtLink' : 'div'"
+    :is="linkTo ? NuxtLink : 'div'"
     :to="linkTo"
     class="block"
   >
@@ -56,6 +58,7 @@ const capacityLabel = computed(() => {
           <span v-if="intentCount !== undefined && intentCount > 0" class="text-xs text-muted">
             {{ t('accommodation.intentCount', { n: intentCount }, intentCount) }}
           </span>
+          <slot name="actions" />
           <UIcon v-if="linkTo" name="i-heroicons-chevron-right" class="size-4 text-muted mt-auto" />
         </div>
       </div>

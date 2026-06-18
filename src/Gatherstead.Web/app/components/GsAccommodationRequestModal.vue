@@ -43,6 +43,10 @@ const endNight = ref('')
 
 const isEditing = computed(() => !!props.editIntent)
 
+// No event context (e.g. the property accommodation page) → pick nights with free date inputs
+// instead of selecting from a fixed event-day list.
+const isFreeDates = computed(() => props.eventDays.length === 0)
+
 // Second-click confirmation for the destructive delete (no entity removed on a single click).
 const confirmDeleteOpen = ref(false)
 
@@ -92,6 +96,11 @@ const orderedNights = computed(() => {
 const nightCount = computed(() => {
   const { start, end } = orderedNights.value
   if (!start || !end) return 0
+  if (isFreeDates.value) {
+    const ms = Date.parse(end) - Date.parse(start)
+    if (Number.isNaN(ms) || ms < 0) return 0
+    return Math.floor(ms / 86_400_000) + 1
+  }
   return props.eventDays.filter(d => d >= start && d <= end).length
 })
 
@@ -136,10 +145,12 @@ function confirmDelete() {
 
         <div class="grid grid-cols-2 gap-3">
           <UFormField :label="t('event.signup.firstNight')">
-            <USelect v-model="startNight" :items="nightItems" class="w-full" />
+            <UInput v-if="isFreeDates" v-model="startNight" type="date" class="w-full" />
+            <USelect v-else v-model="startNight" :items="nightItems" class="w-full" />
           </UFormField>
           <UFormField :label="t('event.signup.lastNight')">
-            <USelect v-model="endNight" :items="nightItems" class="w-full" />
+            <UInput v-if="isFreeDates" v-model="endNight" type="date" class="w-full" />
+            <USelect v-else v-model="endNight" :items="nightItems" class="w-full" />
           </UFormField>
         </div>
         <p class="text-xs text-muted -mt-2">
@@ -166,10 +177,15 @@ function confirmDelete() {
     </template>
 
     <template #footer>
-      <div class="flex items-center justify-between gap-2">
-        <div>
+      <GsFormFooter
+        :submit-label="isEditing ? t('common.save') : t('accommodation.requestStay')"
+        :loading="loading"
+        :disabled="!canSubmit"
+        @submit="submit"
+        @cancel="emit('update:open', false)"
+      >
+        <template v-if="isEditing" #delete>
           <UButton
-            v-if="isEditing"
             color="error"
             variant="ghost"
             icon="i-heroicons-trash"
@@ -178,14 +194,8 @@ function confirmDelete() {
           >
             {{ t('accommodation.deleteStay') }}
           </UButton>
-        </div>
-        <div class="flex gap-2">
-          <UButton variant="outline" @click="emit('update:open', false)">{{ t('common.cancel') }}</UButton>
-          <UButton :loading="loading" :disabled="!canSubmit" @click="submit">
-            {{ isEditing ? t('common.save') : t('accommodation.requestStay') }}
-          </UButton>
-        </div>
-      </div>
+        </template>
+      </GsFormFooter>
     </template>
   </UModal>
 
