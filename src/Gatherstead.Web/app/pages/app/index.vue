@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
-import type { EventClickArg } from '@fullcalendar/core'
 
 definePageMeta({
   layout: 'default',
@@ -10,32 +9,14 @@ const { t } = useI18n()
 const { isManagerOrAbove } = useTenantRole()
 const { upcomingEvents, pending } = useEvents()
 
-const previewEvents = computed(() => upcomingEvents.value.slice(0, 3))
+const viewMode = ref<'calendar' | 'list'>('list')
 
-const calendarEvents = computed(() =>
-  upcomingEvents.value.map(e => ({
-    id: e.id,
-    title: e.name,
-    start: e.startDate,
-    end: e.endDate,
-  })),
-)
+onMounted(() => {
+  const saved = localStorage.getItem('gs-events-view')
+  if (saved === 'list' || saved === 'calendar') viewMode.value = saved
+})
 
-const firstEventDate = computed(() => upcomingEvents.value[0]?.startDate)
-
-function formatDateRange(start: string, end: string) {
-  const s = new Date(start + 'T00:00:00')
-  const e = new Date(end + 'T00:00:00')
-  if (start === end) {
-    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(s)
-  }
-  const fmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
-  return `${fmt.format(s)} – ${fmt.format(e)}, ${new Intl.DateTimeFormat(undefined, { year: 'numeric' }).format(e)}`
-}
-
-function onCalendarEventClick(arg: EventClickArg) {
-  navigateTo(`/app/events/${arg.event.id}`)
-}
+watch(viewMode, v => localStorage.setItem('gs-events-view', v))
 </script>
 
 <template>
@@ -61,49 +42,9 @@ function onCalendarEventClick(arg: EventClickArg) {
       </UButton>
     </GsEmptyState>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- Upcoming Events -->
-      <div class="space-y-3">
-        <h2 class="text-xs font-semibold text-muted uppercase tracking-wider">
-          {{ t('dashboard.upcomingEvents') }}
-        </h2>
-        <UCard
-          v-for="event in previewEvents"
-          :key="event.id"
-          class="cursor-pointer hover:ring-1 hover:ring-primary transition-all"
-          @click="navigateTo(`/app/events/${event.id}`)"
-        >
-          <p class="font-semibold text-sm truncate">{{ event.name }}</p>
-          <p class="text-xs text-muted mt-0.5">{{ formatDateRange(event.startDate, event.endDate) }}</p>
-        </UCard>
-        <UButton
-          v-if="upcomingEvents.length > 3"
-          to="/app/events"
-          variant="ghost"
-          size="sm"
-          class="w-full"
-          trailing-icon="i-heroicons-arrow-right"
-        >
-          {{ t('dashboard.viewAll') }}
-        </UButton>
-      </div>
-
-      <!-- Calendar -->
-      <div>
-        <h2 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
-          {{ t('nav.events') }}
-        </h2>
-        <GsCalendar
-          :events="calendarEvents"
-          initial-view="listWeek"
-          :initial-date="firstEventDate"
-          :compact="true"
-          @event-click="onCalendarEventClick"
-        />
-      </div>
-
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- My Tasks -->
-      <div>
+      <div class="lg:col-span-1">
         <h2 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
           {{ t('dashboard.myTasks') }}
         </h2>
@@ -111,6 +52,18 @@ function onCalendarEventClick(arg: EventClickArg) {
           <UIcon name="i-heroicons-clipboard-document-list" class="size-8 text-muted" />
           <p class="text-sm text-muted">{{ t('dashboard.tasksComingSoon') }}</p>
         </div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <div class="lg:col-span-2">
+        <h2 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+          {{ t('dashboard.upcomingEvents') }}
+        </h2>
+        <GsEventCalendarList
+          v-model:view-mode="viewMode"
+          :events="upcomingEvents"
+          :initial-date="upcomingEvents[0]?.startDate"
+        />
       </div>
     </div>
   </div>

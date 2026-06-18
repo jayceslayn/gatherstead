@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
-import type { EventClickArg } from '@fullcalendar/core'
 
 definePageMeta({
   layout: 'default',
@@ -18,26 +17,6 @@ onMounted(() => {
 })
 
 watch(viewMode, v => localStorage.setItem('gs-events-view', v))
-
-const calendarEvents = computed(() =>
-  events.value.map(e => ({
-    id: e.id,
-    title: e.name,
-    start: e.startDate,
-    end: (() => {
-      // FullCalendar end is exclusive for all-day events
-      const d = new Date(e.endDate + 'T00:00:00')
-      d.setDate(d.getDate() + 1)
-      return d.toISOString().split('T')[0]
-    })(),
-  })),
-)
-
-function onEventClick(arg: EventClickArg) {
-  navigateTo(`/app/events/${arg.event.id}`)
-}
-
-const { formatDateRange } = useFormatDate()
 </script>
 
 <template>
@@ -85,33 +64,11 @@ const { formatDateRange } = useFormatDate()
       </UButton>
     </GsEmptyState>
 
-    <template v-else>
-      <GsCalendar
-        v-if="viewMode === 'calendar'"
-        :events="calendarEvents"
-        initial-view="dayGridMonth"
-        @event-click="onEventClick"
-      />
-
-      <div v-else class="flex flex-col gap-3">
-        <NuxtLink
-          v-for="event in events"
-          :key="event.id"
-          :to="`/app/events/${event.id}`"
-        >
-          <UCard class="hover:ring-1 hover:ring-primary transition-all cursor-pointer">
-            <div class="flex items-center justify-between gap-4">
-              <div class="min-w-0">
-                <p class="font-semibold truncate">{{ event.name }}</p>
-                <p class="text-sm text-muted mt-0.5">
-                  {{ formatDateRange(event.startDate, event.endDate) }}
-                </p>
-              </div>
-              <UIcon name="i-heroicons-chevron-right" class="size-5 text-muted shrink-0" />
-            </div>
-          </UCard>
-        </NuxtLink>
-      </div>
-    </template>
+    <GsEventCalendarList
+      v-else
+      v-model:view-mode="viewMode"
+      :events="events"
+      :show-toggle="false"
+    />
   </div>
 </template>
