@@ -1,5 +1,6 @@
 import type { IEventAttendanceRepository } from '../interfaces'
 import type { AttendanceRecord, AttendanceStatus } from '../types'
+import { trackPersistence } from '../../utils/telemetry'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -26,6 +27,7 @@ export class LiveEventAttendanceRepository implements IEventAttendanceRepository
         body: { householdMemberId: memberId, day, status },
       },
     )
+    trackPersistence('attendance', 'set', { status })
   }
 
   async deleteAttendance(tenantId: string, eventId: string, attendanceId: string): Promise<void> {
@@ -33,5 +35,6 @@ export class LiveEventAttendanceRepository implements IEventAttendanceRepository
       `/api/proxy/tenants/${tenantId}/events/${eventId}/attendance/${attendanceId}`,
       { method: 'DELETE' },
     )
+    trackPersistence('attendance', 'delete')
   }
 }

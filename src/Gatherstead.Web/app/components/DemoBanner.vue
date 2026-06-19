@@ -9,6 +9,7 @@ import { useEventStore } from '~/stores/event'
 const config = useRuntimeConfig()
 const isDemoMode = __DEMO_MODE__
 const { t } = useI18n()
+const { trackEvent } = useAnalytics()
 const open = ref(false)
 const isResetting = ref(false)
 const isClearing = ref(false)
@@ -131,6 +132,7 @@ async function clearDemoData() {
           color="primary"
           :to="(config.public.liveUrl as string)"
           external
+          @click="trackEvent('demo_go_live_click')"
         >
           {{ t('demo.banner.goLive') }}
         </UButton>

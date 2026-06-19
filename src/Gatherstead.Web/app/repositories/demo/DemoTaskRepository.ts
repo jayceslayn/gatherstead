@@ -3,6 +3,7 @@ import type { TaskTemplate, TaskPlan, TaskIntent, AttributeWriteEntry, Attribute
 import { taskSlotsFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
+import { trackPersistence } from '../../utils/telemetry'
 
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
   if (!writes) return []
@@ -65,6 +66,7 @@ export class DemoTaskRepository implements ITaskRepository {
       })
     }
     persistDemoStore()
+    trackPersistence('task_volunteer', 'set', { volunteered: volunteered ? 1 : 0 })
   }
 
   async createTemplate(
@@ -108,6 +110,7 @@ export class DemoTaskRepository implements ITaskRepository {
     }
 
     persistDemoStore()
+    trackPersistence('task_template', 'create')
     return t
   }
 
@@ -166,6 +169,7 @@ export class DemoTaskRepository implements ITaskRepository {
     t.endDate = endDate
     if (attributes !== undefined) t.attributes = toAttributeEntries(attributes)
     persistDemoStore()
+    trackPersistence('task_template', 'update')
   }
 
   async deleteTemplate(_tenantId: string, _eventId: string, templateId: string): Promise<void> {
@@ -175,6 +179,7 @@ export class DemoTaskRepository implements ITaskRepository {
     store.taskPlans.value = store.taskPlans.value.filter(p => p.templateId !== templateId)
     store.taskTemplates.value = store.taskTemplates.value.filter(t => t.id !== templateId)
     persistDemoStore()
+    trackPersistence('task_template', 'delete')
   }
 
   async updatePlan(
@@ -193,6 +198,7 @@ export class DemoTaskRepository implements ITaskRepository {
       store.taskPlans.value[idx] = { ...store.taskPlans.value[idx]!, completed, notes, isException, exceptionReason }
     }
     persistDemoStore()
+    trackPersistence('task_plan', 'update', { completed: completed ? 1 : 0, isException: isException ? 1 : 0 })
   }
 
   async deletePlan(_tenantId: string, _eventId: string, _templateId: string, planId: string): Promise<void> {
@@ -200,6 +206,7 @@ export class DemoTaskRepository implements ITaskRepository {
     store.taskIntents.value = store.taskIntents.value.filter(i => i.taskPlanId !== planId)
     store.taskPlans.value = store.taskPlans.value.filter(p => p.id !== planId)
     persistDemoStore()
+    trackPersistence('task_plan', 'delete')
   }
 
   async deleteIntent(
@@ -212,5 +219,6 @@ export class DemoTaskRepository implements ITaskRepository {
     const store = getDemoStore()
     store.taskIntents.value = store.taskIntents.value.filter(i => i.id !== intentId)
     persistDemoStore()
+    trackPersistence('task_intent', 'delete')
   }
 }

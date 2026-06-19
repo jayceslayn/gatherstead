@@ -97,6 +97,9 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'WEBSITE_RUN_FROM_PACKAGE', value: '1' }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
         { name: 'ApplicationInsightsAgent_EXTENSION_VERSION', value: '~3' }
+        // Browser-facing key for the App Insights JS SDK (runtimeConfig.public.appInsightsConnectionString).
+        // Same prod App Insights as the backend → end-to-end frontend/backend trace correlation.
+        { name: 'NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
       ]
     }
   }

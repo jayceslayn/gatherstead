@@ -68,6 +68,48 @@ When reviewing any PR that touches logging, verify:
 - [ ] New attribute keys are either in the existing allowlist or have been explicitly added with a justification comment.
 - [ ] Exception messages caught and logged do not originate from user-controlled input that could embed PII.
 
+## Frontend telemetry
+
+The Nuxt frontend uses the **Application Insights JavaScript SDK**
+(`@microsoft/applicationinsights-web`), initialized in
+[`app/plugins/analytics.client.ts`](../src/Gatherstead.Web/app/plugins/analytics.client.ts)
+and consumed through the [`useAnalytics()`](../src/Gatherstead.Web/app/composables/useAnalytics.ts)
+composable. It is **client-only** and **no-ops** when no connection string is configured
+(local dev).
+
+Conventions:
+
+- **Cookieless.** `disableCookiesUsage: true` — no consent banner, no persistent identifiers.
+- **Separate destinations.** Demo → its own App Insights component (`gat-ai-demo-*`); Prod →
+  the shared `gat-ai-*` (same resource as the backend, giving end-to-end frontend↔backend
+  trace correlation). Every item is tagged with `ai.cloud.role` (`gatherstead-web` /
+  `gatherstead-web-demo`).
+- **Session/user stitching (hybrid).** Demo and anonymous Prod pages group a visit by an
+  in-memory session GUID (resets on full reload). Authenticated Prod users are stitched via
+  `setAuthenticatedUserContext(userId, tenantId, /*storeInCookie*/ false)` — no cookie.
+- **The one rule still applies.** Custom event names, property values, and the `setUser`
+  arguments must be opaque IDs / enums / counts / short metadata only — never member names,
+  emails, notes, birth dates, or any other entity field value.
+- **Two instrumentation layers.**
+  - *Within-SPA non-persisted interactions* (modal opens, view toggles, the demo→live CTA)
+    are tracked in components/composables via `useAnalytics().trackEvent(...)` and fire in
+    both modes — they never reach the backend, so the frontend is the only place they exist.
+  - *Persisted actions* (create/update/delete) are tracked at the **repository layer** via
+    `trackPersistence(entity, action, props?)` in
+    [`app/utils/telemetry.ts`](../src/Gatherstead.Web/app/utils/telemetry.ts) — a module-level
+    accessor because repos run outside Vue/Nuxt context. They fire in both modes: in Demo
+    they are the only record (no backend); in Prod they intentionally complement the backend
+    API trace with frontend-session funnel correlation. Event names match across Demo and
+    Live repos (e.g. `event_create`, `attendance_set`) so the two destinations align.
+    Extend coverage by calling `trackPersistence` from additional repo write methods.
+- **Demographics are PII-safe.** Coarse geo (city/region/country) is derived at ingestion and
+  the IP is not stored; browser/OS come from the User-Agent; `language`/`locale` are sent as
+  custom dimensions. None identify an individual.
+
+The connection string is delivered as `NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING` — a web-app
+app setting in Prod (read at runtime) and a GitHub Actions secret baked into the static Demo
+build at `pnpm generate` time. It is an ingestion-only key and safe to expose in client code.
+
 ## Verification
 
 The allowlist is validated by unit tests in [`PiiRedactionLogProcessorTests`](../tests/Gatherstead.Api.Tests/Observability/PiiRedactionLogProcessorTests.cs) and [`PiiRedactionActivityProcessorTests`](../tests/Gatherstead.Api.Tests/Observability/PiiRedactionActivityProcessorTests.cs). Run `dotnet test` to confirm all assertions pass after any allowlist change.

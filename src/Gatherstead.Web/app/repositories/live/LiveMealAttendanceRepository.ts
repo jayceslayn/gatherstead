@@ -1,5 +1,6 @@
 import type { IMealAttendanceRepository } from '../interfaces'
 import type { MealAttendance, AttendanceStatus } from '../types'
+import { trackPersistence } from '../../utils/telemetry'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -34,6 +35,7 @@ export class LiveMealAttendanceRepository implements IMealAttendanceRepository {
         body: { householdMemberId: memberId, status, bringOwnFood, notes },
       },
     )
+    trackPersistence('meal_attendance', 'set', { status })
     return r.entity
   }
 
@@ -48,5 +50,6 @@ export class LiveMealAttendanceRepository implements IMealAttendanceRepository {
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}/plans/${planId}/attendance/${attendanceId}`,
       { method: 'DELETE' },
     )
+    trackPersistence('meal_attendance', 'delete')
   }
 }

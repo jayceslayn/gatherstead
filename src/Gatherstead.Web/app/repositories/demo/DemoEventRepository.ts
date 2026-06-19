@@ -1,6 +1,7 @@
 import type { IEventRepository } from '../interfaces'
 import type { EventSummary, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+import { trackPersistence } from '../../utils/telemetry'
 
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
   if (!writes) return []
@@ -40,6 +41,7 @@ export class DemoEventRepository implements IEventRepository {
     const e: EventSummary = { id: demoId(), tenantId, propertyId, name, startDate, endDate, notes: notes ?? null, attributes: toAttributeEntries(attributes) }
     store.events.value.push(e)
     persistDemoStore()
+    trackPersistence('event', 'create')
     return e
   }
 
@@ -61,6 +63,7 @@ export class DemoEventRepository implements IEventRepository {
     e.notes = notes ?? null
     if (attributes !== undefined) e.attributes = toAttributeEntries(attributes)
     persistDemoStore()
+    trackPersistence('event', 'update')
   }
 
   async deleteEvent(_tenantId: string, eventId: string): Promise<void> {
@@ -84,5 +87,6 @@ export class DemoEventRepository implements IEventRepository {
     store.attendance.value = store.attendance.value.filter(a => a.eventId !== eventId)
     store.events.value = store.events.value.filter(e => e.id !== eventId)
     persistDemoStore()
+    trackPersistence('event', 'delete')
   }
 }

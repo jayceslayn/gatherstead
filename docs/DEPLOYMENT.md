@@ -157,10 +157,17 @@ A build-time `__DEMO_MODE__` constant (set via `vite.define` when `NUXT_PUBLIC_D
 
 ### Infrastructure
 
-`infrastructure/modules/staticwebapp.bicep` provisions the Static Web App resource, gated behind a `deployDemo` parameter in `main.bicep` so it is only created when explicitly enabled.
+`infrastructure/modules/staticwebapp.bicep` provisions the Static Web App resource, gated behind a `deployDemo` parameter in `main.bicep` so it is only created when explicitly enabled. The same `deployDemo` flag also provisions a separate App Insights component (`gat-ai-demo-*`, in `observability.bicep`) so anonymous demo traffic never mixes with prod product metrics.
 
 ### CI/CD
 
 `.github/workflows/deploy-demo.yml` builds and deploys the demo on push to `main`, keeping it in sync with the latest code.
+
+### Frontend telemetry
+
+Browser telemetry uses the App Insights JS SDK (see [OBSERVABILITY.md](OBSERVABILITY.md#frontend-telemetry)), delivered via `NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING`:
+
+- **Prod** — set automatically as a web-app app setting in `appservice.bicep` (points at the shared `gat-ai-*`, enabling frontend↔backend trace correlation).
+- **Demo** — copy the `demoAppInsightsConnectionString` deployment output into the `DEMO_APPINSIGHTS_CONNECTION_STRING` GitHub Actions secret; `deploy-demo.yml` bakes it into the static build at `pnpm generate` time. It is an ingestion-only key and safe to expose.
 
 See [DEMO_SITE.md](agents/plans/DEMO_SITE.md) for full architecture and implementation details.

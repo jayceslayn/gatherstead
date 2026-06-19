@@ -1,6 +1,7 @@
 import type { IEventAttendanceRepository } from '../interfaces'
 import type { AttendanceRecord, AttendanceStatus } from '../types'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
+import { trackPersistence } from '../../utils/telemetry'
 
 export class DemoEventAttendanceRepository implements IEventAttendanceRepository {
   async listAttendance(_tenantId: string, eventId: string): Promise<AttendanceRecord[]> {
@@ -26,11 +27,13 @@ export class DemoEventAttendanceRepository implements IEventAttendanceRepository
       store.attendance.value.push({ id: demoId(), eventId, householdMemberId: memberId, day, status })
     }
     persistDemoStore()
+    trackPersistence('attendance', 'set', { status })
   }
 
   async deleteAttendance(_tenantId: string, _eventId: string, attendanceId: string): Promise<void> {
     const store = getDemoStore()
     store.attendance.value = store.attendance.value.filter(a => a.id !== attendanceId)
     persistDemoStore()
+    trackPersistence('attendance', 'delete')
   }
 }

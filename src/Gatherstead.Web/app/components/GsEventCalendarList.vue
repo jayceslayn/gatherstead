@@ -18,6 +18,14 @@ const viewMode = defineModel<'calendar' | 'list'>('viewMode', { default: 'list' 
 
 const { t } = useI18n()
 const { formatDateRange } = useFormatDate()
+const { trackEvent } = useAnalytics()
+
+// Within-SPA interaction (no persistence) — invisible to the backend, valuable in both modes.
+function setViewMode(view: 'calendar' | 'list') {
+  if (viewMode.value === view) return
+  viewMode.value = view
+  trackEvent('calendar_view_toggle', { view })
+}
 
 const calendarEvents = computed(() =>
   props.events.map(e => ({
@@ -49,7 +57,7 @@ function onEventClick(arg: EventClickArg) {
           size="sm"
           :aria-label="t('event.calendarView')"
           class="rounded-none"
-          @click="viewMode = 'calendar'"
+          @click="setViewMode('calendar')"
         />
         <UButton
           :color="viewMode === 'list' ? 'primary' : 'neutral'"
@@ -58,7 +66,7 @@ function onEventClick(arg: EventClickArg) {
           size="sm"
           :aria-label="t('event.listView')"
           class="rounded-none border-l border-(--ui-border)"
-          @click="viewMode = 'list'"
+          @click="setViewMode('list')"
         />
       </div>
     </div>

@@ -1,6 +1,7 @@
 import type { IMealAttendanceRepository } from '../interfaces'
 import type { MealAttendance, AttendanceStatus } from '../types'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
+import { trackPersistence } from '../../utils/telemetry'
 
 export class DemoMealAttendanceRepository implements IMealAttendanceRepository {
   async listMealAttendance(
@@ -31,6 +32,7 @@ export class DemoMealAttendanceRepository implements IMealAttendanceRepository {
       const updated = { ...store.mealAttendance.value[idx]!, status, bringOwnFood, notes: notes ?? null }
       store.mealAttendance.value[idx] = updated
       persistDemoStore()
+      trackPersistence('meal_attendance', 'set', { status })
       return updated
     }
     const record: MealAttendance = {
@@ -44,6 +46,7 @@ export class DemoMealAttendanceRepository implements IMealAttendanceRepository {
     }
     store.mealAttendance.value.push(record)
     persistDemoStore()
+    trackPersistence('meal_attendance', 'create', { status })
     return record
   }
 
@@ -57,5 +60,6 @@ export class DemoMealAttendanceRepository implements IMealAttendanceRepository {
     const store = getDemoStore()
     store.mealAttendance.value = store.mealAttendance.value.filter(a => a.id !== attendanceId)
     persistDemoStore()
+    trackPersistence('meal_attendance', 'delete')
   }
 }

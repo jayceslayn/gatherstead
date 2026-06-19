@@ -4,6 +4,7 @@ import type {
   AccommodationIntentStatus,
   AccommodationIntentDecision,
 } from '../types'
+import { trackPersistence } from '../../utils/telemetry'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -51,6 +52,7 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
         body: { householdMemberId: memberId, startNight, endNight, status, notes, partyAdults, partyChildren },
       },
     )
+    trackPersistence('accommodation_intent', 'create', { status })
     return r.entity
   }
 
@@ -78,6 +80,7 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
         body: { householdMemberId: memberId, accommodationId: targetAccommodationId, startNight, endNight, status, decision, notes, partyAdults, partyChildren },
       },
     )
+    trackPersistence('accommodation_intent', 'update', { status, decision })
   }
 
   async deleteIntent(

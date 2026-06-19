@@ -1,5 +1,6 @@
 import type { IEventRepository } from '../interfaces'
 import type { EventSummary, AttributeWriteEntry } from '../types'
+import { trackPersistence } from '../../utils/telemetry'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -27,6 +28,7 @@ export class LiveEventRepository implements IEventRepository {
       `/api/proxy/tenants/${tenantId}/events`,
       { method: 'POST', body: { propertyId, name, startDate, endDate, notes: notes ?? null, attributes: attributes ?? null } },
     )
+    trackPersistence('event', 'create')
     return r.entity
   }
 
@@ -43,9 +45,11 @@ export class LiveEventRepository implements IEventRepository {
       method: 'PUT',
       body: { name, startDate, endDate, notes: notes ?? null, attributes: attributes ?? null },
     })
+    trackPersistence('event', 'update')
   }
 
   async deleteEvent(tenantId: string, eventId: string): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/events/${eventId}`, { method: 'DELETE' })
+    trackPersistence('event', 'delete')
   }
 }

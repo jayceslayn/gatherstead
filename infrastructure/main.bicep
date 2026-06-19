@@ -51,6 +51,7 @@ module observability 'modules/observability.bicep' = {
     logRetentionDays: logRetentionDays
     oncallEmail: oncallEmail
     appManagedIdentityPrincipalId: identity.outputs.principalId
+    deployDemo: deployDemo
   }
 }
 
@@ -113,3 +114,5 @@ output webAppUrl string = appservice.outputs.webAppUrl
 output appInsightsId string = observability.outputs.appInsightsId
 output logAnalyticsWorkspaceId string = observability.outputs.workspaceId
 output demoSiteUrl string = deployDemo ? demo.outputs.demoSiteUrl : ''
+// Copy this into the DEMO_APPINSIGHTS_CONNECTION_STRING GitHub Actions secret used by deploy-demo.yml.
+output demoAppInsightsConnectionString string = observability.outputs.demoAppInsightsConnectionString

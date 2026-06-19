@@ -69,6 +69,9 @@ export default defineNuxtConfig({
       docsUrl: '',
       liveUrl: '',
       demoUrl: '',
+      // App Insights JS SDK connection string (browser telemetry). Bound from
+      // NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING. Empty = telemetry disabled (local dev).
+      appInsightsConnectionString: '',
     },
   },
 })

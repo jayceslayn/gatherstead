@@ -12,8 +12,12 @@ param oncallEmail string
 @description('Principal ID of the app managed identity (granted Monitoring Metrics Publisher on App Insights).')
 param appManagedIdentityPrincipalId string
 
+@description('Whether to provision a separate App Insights component for the demo static site.')
+param deployDemo bool = false
+
 var workspaceName = 'gat-law-${uniqueString(resourceGroup().id)}'
 var appInsightsName = 'gat-ai-${uniqueString(resourceGroup().id)}'
+var demoAppInsightsName = 'gat-ai-demo-${uniqueString(resourceGroup().id)}'
 
 // Built-in: Monitoring Metrics Publisher — allows the managed identity to ingest telemetry via AAD auth
 var monitoringMetricsPublisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb'
@@ -34,6 +38,23 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
 
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   name: appInsightsName
+  location: location
+  kind: 'web'
+  properties: {
+    Application_Type: 'web'
+    WorkspaceResourceId: workspace.id
+    IngestionMode: 'LogAnalytics'
+    publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForQuery: 'Enabled'
+  }
+}
+
+// Separate destination for the demo static site so anonymous marketing traffic never
+// pollutes prod product metrics. Shares the Log Analytics workspace (cost-neutral) but is
+// a distinct App Insights component for its own dashboards. Ingests with the public
+// connection string baked into the static build — no managed-identity role needed.
+resource demoAppInsights 'Microsoft.Insights/components@2020-02-02' = if (deployDemo) {
+  name: demoAppInsightsName
   location: location
   kind: 'web'
   properties: {
@@ -149,3 +170,4 @@ output workspaceId string = workspace.id
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 output appInsightsId string = appInsights.id
 output actionGroupId string = actionGroup.id
+output demoAppInsightsConnectionString string = deployDemo ? demoAppInsights!.properties.ConnectionString : ''

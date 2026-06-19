@@ -1,5 +1,6 @@
 import type { ITaskRepository } from '../interfaces'
 import type { TaskTemplate, TaskPlan, TaskIntent, AttributeWriteEntry } from '../types'
+import { trackPersistence } from '../../utils/telemetry'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -59,6 +60,7 @@ export class LiveTaskRepository implements ITaskRepository {
         body: { householdMemberId: memberId, volunteered },
       },
     )
+    trackPersistence('task_volunteer', 'set', { volunteered: volunteered ? 1 : 0 })
   }
 
   async createTemplate(
@@ -76,6 +78,7 @@ export class LiveTaskRepository implements ITaskRepository {
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates`,
       { method: 'POST', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes, attributes: attributes ?? null } },
     )
+    trackPersistence('task_template', 'create')
     return r.entity
   }
 
@@ -95,6 +98,7 @@ export class LiveTaskRepository implements ITaskRepository {
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}`,
       { method: 'PUT', body: { name, timeSlots, startDate, endDate, minimumAssignees, notes, attributes: attributes ?? null } },
     )
+    trackPersistence('task_template', 'update')
   }
 
   async deleteTemplate(tenantId: string, eventId: string, templateId: string): Promise<void> {
@@ -118,6 +122,7 @@ export class LiveTaskRepository implements ITaskRepository {
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}`,
       { method: 'PUT', body: { completed, notes, isException, exceptionReason } },
     )
+    trackPersistence('task_plan', 'update', { completed: completed ? 1 : 0, isException: isException ? 1 : 0 })
   }
 
   async deletePlan(tenantId: string, eventId: string, templateId: string, planId: string): Promise<void> {
@@ -125,6 +130,7 @@ export class LiveTaskRepository implements ITaskRepository {
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}`,
       { method: 'DELETE' },
     )
+    trackPersistence('task_plan', 'delete')
   }
 
   async deleteIntent(
@@ -138,5 +144,6 @@ export class LiveTaskRepository implements ITaskRepository {
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}/intents/${intentId}`,
       { method: 'DELETE' },
     )
+    trackPersistence('task_intent', 'delete')
   }
 }
