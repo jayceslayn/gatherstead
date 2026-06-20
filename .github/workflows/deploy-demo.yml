@@ -32,6 +32,9 @@ jobs:
         working-directory: src/Gatherstead.Web
         env:
           NUXT_PUBLIC_DEMO_MODE: 'true'
+          # Demo App Insights (gat-ai-demo-*) — populate from the bicep
+          # demoAppInsightsConnectionString output. Ingestion-only; safe to bake into the static build.
+          NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.DEMO_APPINSIGHTS_CONNECTION_STRING }}
         run: pnpm generate
 
       - name: Deploy to Azure Static Web Apps
