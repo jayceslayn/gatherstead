@@ -17,12 +17,21 @@ public record ShoppingItemDto(
     string? Unit,
     decimal? QuantityProvided,
     ShoppingItemStatus Status,
-    Guid? ClaimedByMemberId,
     DateOnly? NeededByDate,
     string? Category,
     string? Notes,
     IReadOnlyList<AttributeDto> Attributes,
+    IReadOnlyList<ShoppingItemIntentDto> Intents,
     AuditInfo? Audit);
+
+/// <summary>One member's contribution toward an item. <see cref="QuantityProvided"/> on the parent
+/// is the sum of these, and the parent's status is derived from them.</summary>
+public record ShoppingItemIntentDto(
+    Guid Id,
+    Guid HouseholdMemberId,
+    decimal? Quantity,
+    ShoppingItemIntentStatus Status,
+    string? Notes);
 
 public class ShoppingItemResponse : BaseEntityResponse<ShoppingItemDto> { }
 
@@ -81,15 +90,18 @@ public class UpdateShoppingItemRequest
 }
 
 /// <summary>
-/// Updates an item's fulfillment state (open to any tenant member). Re-flagging a needed item is
-/// just setting <see cref="Status"/> back to Needed / lowering <see cref="QuantityProvided"/>.
+/// Creates or updates a single member's contribution toward an item (open to any tenant member).
+/// The parent item's provided total and status are derived from its intents — removing the intent
+/// (DELETE) un-claims the member's share.
 /// </summary>
-public class UpdateFulfillmentRequest
+public class UpsertShoppingItemIntentRequest
 {
+    /// <summary>Amount this member is bringing. Null = the whole/unspecified quantity.</summary>
+    public decimal? Quantity { get; init; }
+
     [Required]
-    public ShoppingItemStatus Status { get; init; }
+    public ShoppingItemIntentStatus Status { get; init; }
 
-    public decimal? QuantityProvided { get; init; }
-
-    public Guid? ClaimedByMemberId { get; init; }
+    [StringLength(500)]
+    public string? Notes { get; init; }
 }

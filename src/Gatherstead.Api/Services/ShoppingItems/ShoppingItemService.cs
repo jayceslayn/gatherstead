@@ -53,17 +53,21 @@ public class ShoppingItemService : IShoppingItemService
 
         var query = _dbContext.ShoppingItems
             .AsNoTracking()
+            .Include(i => i.Intents)
             .Where(i => i.TenantId == tenantId);
 
         if (eventId is Guid ev) query = query.Where(i => i.EventId == ev);
         if (propertyId is Guid prop) query = query.Where(i => i.PropertyId == prop);
         if (mealPlanId is Guid plan) query = query.Where(i => i.MealPlanId == plan);
-        if (status is ShoppingItemStatus st) query = query.Where(i => i.Status == st);
 
         var items = await query.ToListAsync(cancellationToken);
+        var dtos = items.Select(i => MapToDto(i, [])).ToList();
 
-        return BaseEntityResponse<IReadOnlyCollection<ShoppingItemDto>>.SuccessfulResponse(
-            items.Select(i => MapToDto(i, [])).ToList());
+        // Status is derived from intents, so it can't be a SQL predicate — filter the mapped DTOs.
+        if (status is ShoppingItemStatus st)
+            dtos = dtos.Where(d => d.Status == st).ToList();
+
+        return BaseEntityResponse<IReadOnlyCollection<ShoppingItemDto>>.SuccessfulResponse(dtos);
     }
 
     public async Task<ShoppingItemResponse> GetAsync(Guid tenantId, Guid itemId, CancellationToken cancellationToken = default)
@@ -77,6 +81,7 @@ public class ShoppingItemService : IShoppingItemService
             response,
             _dbContext.ShoppingItems.AsNoTracking()
                 .Include(i => i.Attributes)
+                .Include(i => i.Intents)
                 .Where(i => i.TenantId == tenantId && i.Id == itemId),
             EntityDisplayName,
             cancellationToken);
@@ -117,7 +122,6 @@ public class ShoppingItemService : IShoppingItemService
             Name = normalizedName,
             QuantityNeeded = request.QuantityNeeded,
             Unit = request.Unit?.Trim(),
-            Status = ShoppingItemStatus.Needed,
             NeededByDate = request.NeededByDate,
             Category = request.Category?.Trim(),
             Notes = request.Notes?.Trim(),
@@ -207,7 +211,9 @@ public class ShoppingItemService : IShoppingItemService
 
         var item = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ShoppingItems.Where(i => i.TenantId == tenantId && i.Id == itemId),
+            _dbContext.ShoppingItems
+                .Include(i => i.Intents)
+                .Where(i => i.TenantId == tenantId && i.Id == itemId),
             EntityDisplayName,
             cancellationToken);
 
@@ -238,41 +244,109 @@ public class ShoppingItemService : IShoppingItemService
         return response;
     }
 
-    public async Task<ShoppingItemResponse> UpdateFulfillmentAsync(Guid tenantId, Guid itemId, UpdateFulfillmentRequest request, CancellationToken cancellationToken = default)
+    public async Task<ShoppingItemResponse> UpsertIntentAsync(Guid tenantId, Guid itemId, Guid memberId, UpsertShoppingItemIntentRequest request, CancellationToken cancellationToken = default)
     {
         var response = new ShoppingItemResponse();
 
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
-        if (!ServiceGuards.RequireRequest(request, "update shopping item fulfillment", response))
+        if (!ServiceGuards.RequireRequest(request, "upsert shopping item intent", response))
             return response;
 
-        // Fulfillment (claim / covered / re-flag needed) is intentionally open to anyone with tenant
+        // Intent changes (claim / provide / un-claim) are intentionally open to anyone with tenant
         // access — RequireTenantAccess on the controller is the gate; no extra role is required.
         var item = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.ShoppingItems.Where(i => i.TenantId == tenantId && i.Id == itemId),
+            _dbContext.ShoppingItems.AsNoTracking().Where(i => i.TenantId == tenantId && i.Id == itemId),
             EntityDisplayName,
             cancellationToken);
 
         if (item is null) return response;
 
-        if (request.ClaimedByMemberId is Guid memberId)
+        var memberExists = await _dbContext.HouseholdMembers.AsNoTracking()
+            .AnyAsync(m => m.TenantId == tenantId && m.Id == memberId, cancellationToken);
+        if (!memberExists)
         {
-            var memberExists = await _dbContext.HouseholdMembers.AsNoTracking()
-                .AnyAsync(m => m.TenantId == tenantId && m.Id == memberId, cancellationToken);
-            if (!memberExists)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "The specified member does not exist.");
-                return response;
-            }
+            response.AddResponseMessage(MessageType.ERROR, "The specified member does not exist.");
+            return response;
         }
 
-        item.Status = request.Status;
-        item.QuantityProvided = request.QuantityProvided;
-        item.ClaimedByMemberId = request.ClaimedByMemberId;
+        // Find-or-revive the member's intent. Bypass the soft-delete filter so a previously removed
+        // intent is reused instead of inserting a duplicate (the unique index spans soft-deleted rows).
+        var intent = await _dbContext.ShoppingItemIntents
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                x => x.TenantId == tenantId && x.ShoppingItemId == itemId && x.HouseholdMemberId == memberId,
+                cancellationToken);
+
+        if (intent is null)
+        {
+            intent = new ShoppingItemIntent
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                ShoppingItemId = itemId,
+                HouseholdMemberId = memberId,
+            };
+            _dbContext.ShoppingItemIntents.Add(intent);
+        }
+        else if (intent.IsDeleted)
+        {
+            intent.IsDeleted = false;
+        }
+
+        intent.Quantity = request.Quantity;
+        intent.Status = request.Status;
+        intent.Notes = request.Notes?.Trim();
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return await BuildItemResponseAsync(tenantId, itemId, cancellationToken);
+    }
+
+    public async Task<ShoppingItemResponse> RemoveIntentAsync(Guid tenantId, Guid itemId, Guid memberId, CancellationToken cancellationToken = default)
+    {
+        var response = new ShoppingItemResponse();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+
+        var item = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.ShoppingItems.AsNoTracking().Where(i => i.TenantId == tenantId && i.Id == itemId),
+            EntityDisplayName,
+            cancellationToken);
+
+        if (item is null) return response;
+
+        // Idempotent un-claim: soft-delete the member's contribution if present, otherwise no-op.
+        var intent = await _dbContext.ShoppingItemIntents
+            .FirstOrDefaultAsync(
+                x => x.TenantId == tenantId && x.ShoppingItemId == itemId && x.HouseholdMemberId == memberId,
+                cancellationToken);
+
+        if (intent is not null)
+        {
+            intent.IsDeleted = true;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return await BuildItemResponseAsync(tenantId, itemId, cancellationToken);
+    }
+
+    /// <summary>Re-reads an item with its live intents and maps it to a (derived) response DTO.</summary>
+    private async Task<ShoppingItemResponse> BuildItemResponseAsync(Guid tenantId, Guid itemId, CancellationToken cancellationToken)
+    {
+        var response = new ShoppingItemResponse();
+        var item = await ServiceGuards.LoadOrNotFoundAsync(
+            response,
+            _dbContext.ShoppingItems.AsNoTracking()
+                .Include(i => i.Intents)
+                .Where(i => i.TenantId == tenantId && i.Id == itemId),
+            EntityDisplayName,
+            cancellationToken);
+
+        if (item is null) return response;
 
         response.SetSuccess(MapToDto(item, []));
         return response;
@@ -308,6 +382,11 @@ public class ShoppingItemService : IShoppingItemService
             .Where(a => a.ShoppingItemId == itemId).ToListAsync(cancellationToken);
         foreach (var attr in childAttrs)
             attr.IsDeleted = true;
+
+        var childIntents = await _dbContext.ShoppingItemIntents
+            .Where(x => x.ShoppingItemId == itemId).ToListAsync(cancellationToken);
+        foreach (var intent in childIntents)
+            intent.IsDeleted = true;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -345,22 +424,72 @@ public class ShoppingItemService : IShoppingItemService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private ShoppingItemDto MapToDto(ShoppingItem i, IReadOnlyList<AttributeDto> attributes) => new(
-        i.Id,
-        i.TenantId,
-        i.Origin,
-        i.PropertyId,
-        i.EventId,
-        i.MealPlanId,
-        i.Name,
-        i.QuantityNeeded,
-        i.Unit,
-        i.QuantityProvided,
-        i.Status,
-        i.ClaimedByMemberId,
-        i.NeededByDate,
-        i.Category,
-        i.Notes,
-        attributes,
-        i.ToAuditInfo(_auditVisibility.IncludeAudit));
+    private ShoppingItemDto MapToDto(ShoppingItem i, IReadOnlyList<AttributeDto> attributes)
+    {
+        // Derive status / provided total from the live intents (a tracked collection may still hold
+        // an in-memory soft-deleted row, so filter defensively).
+        var liveIntents = i.Intents.Where(x => !x.IsDeleted).ToList();
+        var (status, provided) = DeriveFulfillment(i.QuantityNeeded, liveIntents);
+
+        var intentDtos = liveIntents
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new ShoppingItemIntentDto(x.Id, x.HouseholdMemberId, x.Quantity, x.Status, x.Notes))
+            .ToList();
+
+        return new(
+            i.Id,
+            i.TenantId,
+            i.Origin,
+            i.PropertyId,
+            i.EventId,
+            i.MealPlanId,
+            i.Name,
+            i.QuantityNeeded,
+            i.Unit,
+            provided,
+            status,
+            i.NeededByDate,
+            i.Category,
+            i.Notes,
+            attributes,
+            intentDtos,
+            i.ToAuditInfo(_auditVisibility.IncludeAudit));
+    }
+
+    /// <summary>
+    /// Derives an item's status and provided total from its (live) intents. A <c>Provided</c> intent
+    /// with no quantity is treated as covering the whole need.
+    /// </summary>
+    private static (ShoppingItemStatus Status, decimal? Provided) DeriveFulfillment(
+        decimal? quantityNeeded, IReadOnlyCollection<ShoppingItemIntent> intents)
+    {
+        if (intents.Count == 0)
+            return (ShoppingItemStatus.Needed, null);
+
+        decimal providedQty = 0m;
+        var hasProvided = false;
+        var coversWholeNeed = false;
+
+        foreach (var intent in intents)
+        {
+            if (intent.Status != ShoppingItemIntentStatus.Provided)
+                continue;
+
+            hasProvided = true;
+            if (intent.Quantity is decimal q)
+                providedQty += q;
+            else
+                coversWholeNeed = true;
+        }
+
+        decimal? provided = hasProvided ? providedQty : null;
+
+        ShoppingItemStatus status;
+        if (quantityNeeded is decimal need && need > 0)
+            status = coversWholeNeed || providedQty >= need ? ShoppingItemStatus.Covered : ShoppingItemStatus.Claimed;
+        else
+            status = hasProvided ? ShoppingItemStatus.Covered : ShoppingItemStatus.Claimed;
+
+        return (status, provided);
+    }
 }

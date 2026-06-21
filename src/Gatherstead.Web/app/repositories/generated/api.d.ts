@@ -3107,7 +3107,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/tenants/{tenantId}/shopping-items/{itemId}/fulfillment": {
+    "/api/tenants/{tenantId}/shopping-items/{itemId}/intents/{memberId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3122,14 +3122,15 @@ export interface paths {
                 path: {
                     tenantId: string;
                     itemId: string;
+                    memberId: string;
                 };
                 cookie?: never;
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["UpdateFulfillmentRequest"];
-                    "text/json": components["schemas"]["UpdateFulfillmentRequest"];
-                    "application/*+json": components["schemas"]["UpdateFulfillmentRequest"];
+                    "application/json": components["schemas"]["UpsertShoppingItemIntentRequest"];
+                    "text/json": components["schemas"]["UpsertShoppingItemIntentRequest"];
+                    "application/*+json": components["schemas"]["UpsertShoppingItemIntentRequest"];
                 };
             };
             responses: {
@@ -3147,7 +3148,32 @@ export interface paths {
             };
         };
         post?: never;
-        delete?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    itemId: string;
+                    memberId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemResponse"];
+                        "application/json": components["schemas"]["ShoppingItemResponse"];
+                        "text/json": components["schemas"]["ShoppingItemResponse"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -4774,19 +4800,29 @@ export interface components {
             quantityProvided?: number | null;
             /** @enum {string} */
             status?: "Needed" | "Claimed" | "Covered";
-            /** Format: uuid */
-            claimedByMemberId?: string | null;
             /** Format: date */
             neededByDate?: string | null;
             category?: string | null;
             notes?: string | null;
             attributes?: components["schemas"]["AttributeDto"][];
+            intents?: components["schemas"]["ShoppingItemIntentDto"][];
             audit?: components["schemas"]["AuditInfo"];
         };
         ShoppingItemDtoIReadOnlyCollectionBaseEntityResponse: {
             entity?: components["schemas"]["ShoppingItemDto"][] | null;
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
+        ShoppingItemIntentDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            householdMemberId?: string;
+            /** Format: double */
+            quantity?: number | null;
+            /** @enum {string} */
+            status?: "Claimed" | "Provided";
+            notes?: string | null;
         };
         ShoppingItemResponse: {
             entity?: components["schemas"]["ShoppingItemDto"];
@@ -4976,14 +5012,6 @@ export interface components {
             notes?: string | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
         };
-        UpdateFulfillmentRequest: {
-            /** @enum {string} */
-            status: "Needed" | "Claimed" | "Covered";
-            /** Format: double */
-            quantityProvided?: number | null;
-            /** Format: uuid */
-            claimedByMemberId?: string | null;
-        };
         UpdateHouseholdMemberRequest: {
             name: string;
             isAdult?: boolean;
@@ -5099,6 +5127,13 @@ export interface components {
             /** Format: uuid */
             householdMemberId: string;
             volunteered?: boolean;
+        };
+        UpsertShoppingItemIntentRequest: {
+            /** Format: double */
+            quantity?: number | null;
+            /** @enum {string} */
+            status: "Claimed" | "Provided";
+            notes?: string | null;
         };
         UpsertTaskIntentRequest: {
             /** Format: uuid */

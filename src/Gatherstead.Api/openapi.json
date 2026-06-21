@@ -5557,7 +5557,7 @@
         }
       }
     },
-    "/api/tenants/{tenantId}/shopping-items/{itemId}/fulfillment": {
+    "/api/tenants/{tenantId}/shopping-items/{itemId}/intents/{memberId}": {
       "put": {
         "tags": [
           "ShoppingItems"
@@ -5580,27 +5580,92 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateFulfillmentRequest"
+                "$ref": "#/components/schemas/UpsertShoppingItemIntentRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateFulfillmentRequest"
+                "$ref": "#/components/schemas/UpsertShoppingItemIntentRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateFulfillmentRequest"
+                "$ref": "#/components/schemas/UpsertShoppingItemIntentRequest"
               }
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingItemResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingItemResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingItemResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "ShoppingItems"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "itemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -9757,11 +9822,6 @@
             ],
             "type": "string"
           },
-          "claimedByMemberId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          },
           "neededByDate": {
             "type": "string",
             "format": "date",
@@ -9779,6 +9839,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/AttributeDto"
+            }
+          },
+          "intents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShoppingItemIntentDto"
             }
           },
           "audit": {
@@ -9806,6 +9872,36 @@
               "$ref": "#/components/schemas/ResponseMessage"
             },
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ShoppingItemIntentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "status": {
+            "enum": [
+              "Claimed",
+              "Provided"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -10492,33 +10588,6 @@
         },
         "additionalProperties": false
       },
-      "UpdateFulfillmentRequest": {
-        "required": [
-          "status"
-        ],
-        "type": "object",
-        "properties": {
-          "status": {
-            "enum": [
-              "Needed",
-              "Claimed",
-              "Covered"
-            ],
-            "type": "string"
-          },
-          "quantityProvided": {
-            "type": "number",
-            "format": "double",
-            "nullable": true
-          },
-          "claimedByMemberId": {
-            "type": "string",
-            "format": "uuid",
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
       "UpdateHouseholdMemberRequest": {
         "required": [
           "name"
@@ -10988,6 +11057,33 @@
           },
           "volunteered": {
             "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "UpsertShoppingItemIntentRequest": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "status": {
+            "enum": [
+              "Claimed",
+              "Provided"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "maxLength": 500,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false

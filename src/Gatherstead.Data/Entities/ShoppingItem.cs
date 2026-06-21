@@ -51,17 +51,6 @@ public class ShoppingItem : AuditableEntity
     [MaxLength(50)]
     public string? Unit { get; set; }
 
-    /// <summary>Running supplied total; enables partial fulfillment (e.g. 5 of 10 provided).</summary>
-    public decimal? QuantityProvided { get; set; }
-
-    public ShoppingItemStatus Status { get; set; } = ShoppingItemStatus.Needed;
-
-    /// <summary>The member currently handling (claimed/bringing) this item, if any.</summary>
-    public Guid? ClaimedByMemberId { get; set; }
-
-    [ForeignKey(nameof(ClaimedByMemberId))]
-    public HouseholdMember? ClaimedByMember { get; set; }
-
     /// <summary>Auto-derived from <see cref="MealPlan"/>.Day for meal items; manual otherwise.</summary>
     public DateOnly? NeededByDate { get; set; }
 
@@ -72,4 +61,7 @@ public class ShoppingItem : AuditableEntity
     public string? Notes { get; set; }
 
     public ICollection<ShoppingItemAttribute> Attributes { get; set; } = new List<ShoppingItemAttribute>();
+
+    /// <summary>Per-member contributions. The item's status and provided total are derived from these.</summary>
+    public ICollection<ShoppingItemIntent> Intents { get; set; } = new List<ShoppingItemIntent>();
 }

@@ -20,7 +20,9 @@ public interface IShoppingItemService
 
     Task<ShoppingItemResponse> UpdateAsync(Guid tenantId, Guid itemId, UpdateShoppingItemRequest request, CancellationToken cancellationToken = default);
 
-    Task<ShoppingItemResponse> UpdateFulfillmentAsync(Guid tenantId, Guid itemId, UpdateFulfillmentRequest request, CancellationToken cancellationToken = default);
+    Task<ShoppingItemResponse> UpsertIntentAsync(Guid tenantId, Guid itemId, Guid memberId, UpsertShoppingItemIntentRequest request, CancellationToken cancellationToken = default);
+
+    Task<ShoppingItemResponse> RemoveIntentAsync(Guid tenantId, Guid itemId, Guid memberId, CancellationToken cancellationToken = default);
 
     Task<ShoppingItemResponse> DeleteAsync(Guid tenantId, Guid itemId, CancellationToken cancellationToken = default);
 }

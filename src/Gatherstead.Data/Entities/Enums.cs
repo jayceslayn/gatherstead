@@ -150,3 +150,9 @@ public enum ShoppingItemStatus
     Claimed = 1,
     Covered = 2,
 }
+
+public enum ShoppingItemIntentStatus
+{
+    Claimed  = 0,   // committed to bring, not yet delivered
+    Provided = 1,   // actually brought / delivered
+}

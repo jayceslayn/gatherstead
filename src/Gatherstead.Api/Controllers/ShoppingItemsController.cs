@@ -81,10 +81,24 @@ public class ShoppingItemsController : ControllerBase
         return Ok(response);
     }
 
-    [HttpPut("{itemId:guid}/fulfillment")]
-    public async Task<ActionResult<ShoppingItemResponse>> UpdateFulfillment(Guid tenantId, Guid itemId, [FromBody] UpdateFulfillmentRequest request, CancellationToken cancellationToken)
+    [HttpPut("{itemId:guid}/intents/{memberId:guid}")]
+    public async Task<ActionResult<ShoppingItemResponse>> UpsertIntent(Guid tenantId, Guid itemId, Guid memberId, [FromBody] UpsertShoppingItemIntentRequest request, CancellationToken cancellationToken)
     {
-        var response = await _shoppingItemService.UpdateFulfillmentAsync(tenantId, itemId, request, cancellationToken);
+        var response = await _shoppingItemService.UpsertIntentAsync(tenantId, itemId, memberId, request, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        if (response.Entity is null)
+            return NotFound(response);
+
+        return Ok(response);
+    }
+
+    [HttpDelete("{itemId:guid}/intents/{memberId:guid}")]
+    public async Task<ActionResult<ShoppingItemResponse>> RemoveIntent(Guid tenantId, Guid itemId, Guid memberId, CancellationToken cancellationToken)
+    {
+        var response = await _shoppingItemService.RemoveIntentAsync(tenantId, itemId, memberId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
