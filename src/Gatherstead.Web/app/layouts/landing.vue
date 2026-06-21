@@ -11,8 +11,8 @@ const isDemoMode = __DEMO_MODE__
   <UHeader to="/" :toggle="!isDemoMode">
     <template #title>
       <picture>
-        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full_wide.png">
-        <img src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-10 w-auto">
+        <source media="(min-width: 640px)" srcset="/images/gatherstead_logo2_full_wide.png">
+        <img src="/images/gatherstead_logo2_small.png" :alt="t('common.appName')" class="h-10 w-auto">
       </picture>
     </template>
     <template #right>

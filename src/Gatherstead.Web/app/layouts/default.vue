@@ -103,8 +103,8 @@ const isMoreActive = computed(() =>
       <aside class="hidden md:flex w-50 border-r border-(--ui-border) p-4 flex-col shrink-0">
         <NuxtLink to="/app" class="mb-1">
           <picture>
-            <source media="(min-width: 640px)" srcset="/images/gatherstead_logo_full.png">
-            <img src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-12 w-auto">
+            <source media="(min-width: 640px)" srcset="/images/gatherstead_logo2_full.png">
+            <img src="/images/gatherstead_logo2_small.png" :alt="t('common.appName')" class="h-12 w-auto">
           </picture>
         </NuxtLink>
 
@@ -133,7 +133,7 @@ const isMoreActive = computed(() =>
         <!-- Mobile top bar -->
         <div class="md:hidden flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
-            <img src="/images/gatherstead_logo_small.png" :alt="t('common.appName')" class="h-8 w-auto">
+            <img src="/images/gatherstead_logo2_small.png" :alt="t('common.appName')" class="h-8 w-auto">
             <span v-if="tenantStore.currentTenantName" class="text-sm font-medium truncate max-w-40">
               {{ tenantStore.currentTenantName }}
             </span>
