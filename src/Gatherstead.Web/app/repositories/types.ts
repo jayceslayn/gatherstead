@@ -83,6 +83,11 @@ export type TaskTemplate = OmitAudit<S['TaskTemplateDto']>
 export type TaskPlan = OmitAudit<S['TaskPlanDto']>
 export type TaskIntent = OmitAudit<S['TaskIntentDto']>
 
+// ── Shopping ──────────────────────────────────────────────────────────────
+export type ShoppingItem = OmitAudit<S['ShoppingItemDto']>
+export type ShoppingItemOrigin = NonNullable<S['ShoppingItemDto']['origin']>
+export type ShoppingItemStatus = NonNullable<S['ShoppingItemDto']['status']>
+
 // ── Reports ───────────────────────────────────────────────────────────────
 export type EventReport = S['EventReportDto']
 export type EventReportDay = S['EventReportDayDto']

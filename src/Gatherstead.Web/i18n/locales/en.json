@@ -397,6 +397,46 @@
     "confirmed": "Confirmed",
     "declined": "Declined"
   },
+  "shopping": {
+    "title": "Shopping",
+    "list": "List",
+    "addItem": "Add item",
+    "editItem": "Edit item",
+    "itemName": "Item",
+    "itemNamePlaceholder": "e.g. Potatoes, paper towels, ice…",
+    "quantity": "Quantity",
+    "quantityPlaceholder": "e.g. 10",
+    "unit": "Unit",
+    "unitPlaceholder": "e.g. lbs, bags, sticks",
+    "neededBy": "Needed by",
+    "category": "Category",
+    "categoryPlaceholder": "e.g. Food, Supplies",
+    "eventSupplies": "Event supplies",
+    "propertySupplies": "Property staples",
+    "emptySection": "Nothing here yet.",
+    "hideCovered": "Hide covered",
+    "refresh": "Refresh",
+    "got": "Got",
+    "claim": "I'll get it",
+    "covered": "Covered",
+    "reopen": "Still needed",
+    "updatedSecondsAgo": "Updated {count}s ago",
+    "updatedMinutesAgo": "Updated {count}m ago",
+    "staleTitle": "This list may be out of date",
+    "staleDescription": "Others may have claimed or bought items since you last refreshed.",
+    "quantitySummary": "{provided} of {needed} {unit}",
+    "remaining": "{count} {unit} still needed",
+    "origin": {
+      "meal": "Meal",
+      "event": "Event",
+      "property": "Property"
+    },
+    "status": {
+      "needed": "Needed",
+      "claimed": "Claimed",
+      "covered": "Covered"
+    }
+  },
   "validation": {
     "required": "{field} is required",
     "maxLength": "{field} must be {max} characters or fewer",
@@ -431,7 +471,8 @@
         "taskTemplatesPerEvent": "Task templates per event",
         "propertiesPerTenant": "Properties per group",
         "accommodationsPerProperty": "Accommodations per property",
-        "equipmentPerTenant": "Equipment items per group"
+        "equipmentPerTenant": "Equipment items per group",
+        "shoppingItemsPerTenant": "Shopping items per group"
       },
       "dataResets": "Demo data lives in your browser's localStorage. Clearing site data or switching browsers resets everything to the original sample data.",
       "cta": "Ready to keep your gatherings?",

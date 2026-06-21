@@ -27,6 +27,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       accommodations: new demoRepos.DemoAccommodationRepository(),
       accommodationIntents: new demoRepos.DemoAccommodationIntentRepository(),
       equipment: new demoRepos.DemoEquipmentRepository(),
+      shoppingItems: new demoRepos.DemoShoppingItemRepository(),
       reports: new demoRepos.DemoReportRepository(),
     }
 
@@ -62,6 +63,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       accommodations: new liveRepos.LiveAccommodationRepository(),
       accommodationIntents: new liveRepos.LiveAccommodationIntentRepository(),
       equipment: new liveRepos.LiveEquipmentRepository(),
+      shoppingItems: new liveRepos.LiveShoppingItemRepository(),
       reports: new liveRepos.LiveReportRepository(),
     }
 

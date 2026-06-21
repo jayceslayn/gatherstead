@@ -28,6 +28,8 @@ import type {
   AttributeWriteEntry,
   EventReport,
   InvitationSummary,
+  ShoppingItem,
+  ShoppingItemStatus,
 } from './types'
 
 export const REPOSITORIES_KEY = Symbol('repositories')
@@ -393,6 +395,48 @@ export interface IReportRepository {
   getEventMealReport(tenantId: string, eventId: string): Promise<EventReport | null>
 }
 
+/** Exactly one scope id identifies a shopping item's origin (property / event / meal plan). */
+export interface ShoppingItemScope {
+  propertyId?: string | null
+  eventId?: string | null
+  mealPlanId?: string | null
+}
+
+export interface CreateShoppingItemInput extends ShoppingItemScope {
+  name: string
+  quantityNeeded?: number | null
+  unit?: string | null
+  neededByDate?: string | null
+  category?: string | null
+  notes?: string | null
+  attributes?: AttributeWriteEntry[] | null
+}
+
+export interface UpdateShoppingItemInput {
+  name: string
+  quantityNeeded?: number | null
+  unit?: string | null
+  neededByDate?: string | null
+  category?: string | null
+  notes?: string | null
+  attributes?: AttributeWriteEntry[] | null
+}
+
+export interface IShoppingItemRepository {
+  listByEvent(tenantId: string, eventId: string): Promise<ShoppingItem[]>
+  listByProperty(tenantId: string, propertyId: string): Promise<ShoppingItem[]>
+  create(tenantId: string, input: CreateShoppingItemInput): Promise<ShoppingItem>
+  updateItem(tenantId: string, itemId: string, input: UpdateShoppingItemInput): Promise<void>
+  updateFulfillment(
+    tenantId: string,
+    itemId: string,
+    status: ShoppingItemStatus,
+    quantityProvided: number | null,
+    claimedByMemberId: string | null,
+  ): Promise<ShoppingItem>
+  deleteItem(tenantId: string, itemId: string): Promise<void>
+}
+
 export interface Repositories {
   tenants: ITenantRepository
   households: IHouseholdRepository
@@ -409,5 +453,6 @@ export interface Repositories {
   accommodations: IAccommodationRepository
   accommodationIntents: IAccommodationIntentRepository
   equipment: IEquipmentRepository
+  shoppingItems: IShoppingItemRepository
   reports: IReportRepository
 }

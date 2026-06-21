@@ -50,6 +50,8 @@ public class GathersteadDbContext : DbContext
     public DbSet<ContactMethod> ContactMethods => Set<ContactMethod>();
     public DbSet<HouseholdMemberAttribute> HouseholdMemberAttributes => Set<HouseholdMemberAttribute>();
     public DbSet<Equipment> Equipment => Set<Equipment>();
+    public DbSet<ShoppingItem> ShoppingItems => Set<ShoppingItem>();
+    public DbSet<ShoppingItemAttribute> ShoppingItemAttributes => Set<ShoppingItemAttribute>();
     public DbSet<TenantAttribute> TenantAttributes => Set<TenantAttribute>();
     public DbSet<PropertyAttribute> PropertyAttributes => Set<PropertyAttribute>();
     public DbSet<AccommodationAttribute> AccommodationAttributes => Set<AccommodationAttribute>();

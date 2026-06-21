@@ -120,6 +120,21 @@ public static class ServiceGuards
         return true;
     }
 
+    public static async Task<bool> AuthorizeMealPlanMenuAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        Guid tenantId,
+        Guid mealPlanId,
+        CancellationToken cancellationToken)
+    {
+        if (!await authorizationService.CanEditMealPlanMenuAsync(tenantId, mealPlanId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this meal's menu.");
+            return false;
+        }
+        return true;
+    }
+
     public static async Task<bool> AuthorizeIntentAssignAsync<T>(
         BaseEntityResponse<T> response,
         IMemberAuthorizationService authorizationService,

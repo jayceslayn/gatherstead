@@ -93,7 +93,8 @@ public class MealPlanService : IMealPlanService
             return response;
         if (!ServiceGuards.RequireRequest(request, "update meal plan", response))
             return response;
-        if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+        // Notes (the shared planned menu) are editable by event managers OR the meal's volunteer cook.
+        if (!await ServiceGuards.AuthorizeMealPlanMenuAsync(response, _memberAuthorizationService, tenantId, planId, cancellationToken))
             return response;
 
         var plan = await ServiceGuards.LoadOrNotFoundAsync(
@@ -104,9 +105,22 @@ public class MealPlanService : IMealPlanService
 
         if (plan is null) return response;
 
+        var newExceptionReason = request.ExceptionReason?.Trim();
+        var exceptionChanged = plan.IsException != request.IsException
+            || !string.Equals(plan.ExceptionReason, newExceptionReason, StringComparison.Ordinal);
+
+        // IsException / ExceptionReason alter plan structure (PlanGenerator suppression), so they
+        // remain Coordinator+-only even though a volunteer cook may edit the menu Notes.
+        if (exceptionChanged
+            && !await _memberAuthorizationService.CanManageEventAsync(tenantId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to change this meal plan's exception status.");
+            return response;
+        }
+
         plan.Notes = request.Notes?.Trim();
         plan.IsException = request.IsException;
-        plan.ExceptionReason = request.ExceptionReason?.Trim();
+        plan.ExceptionReason = newExceptionReason;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

@@ -344,4 +344,32 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     DEMO_TENANT_ID, property.id, cabinB.id, ednaIntent.id, edna.id, cabinB.id,
     day1, day1, 'Confirmed', 'Approved', 'Separate cabin. Non-negotiable.', 1, null,
   )
+
+  // 12. Shopping items — one property staple, one event supply, and a couple of meal
+  // ingredients on the dinner plans, in a mix of fulfillment states to show the flow.
+  await repos.shoppingItems.create(DEMO_TENANT_ID, {
+    propertyId: property.id, name: 'Aluminum foil', quantityNeeded: 2, unit: 'rolls',
+    category: 'Supplies', notes: 'Running low in Cabin A kitchen.',
+  })
+  await repos.shoppingItems.create(DEMO_TENANT_ID, {
+    eventId: event.id, name: 'Party balloons', quantityNeeded: 3, unit: 'bags',
+    category: 'Supplies', notes: 'Red and black — for the Saturday banquet.',
+  })
+
+  if (day1Dinner) {
+    const potatoes = await repos.shoppingItems.create(DEMO_TENANT_ID, {
+      mealPlanId: day1Dinner.id, name: 'Potatoes', quantityNeeded: 10, unit: 'lbs', category: 'Food',
+    })
+    // Partially supplied: 5 of 10 lbs already provided — someone still needs the rest.
+    await repos.shoppingItems.updateFulfillment(DEMO_TENANT_ID, potatoes.id, 'Claimed', 5, bob.id)
+    await repos.shoppingItems.create(DEMO_TENANT_ID, {
+      mealPlanId: day1Dinner.id, name: 'Butter', quantityNeeded: 2, unit: 'sticks', category: 'Food',
+    })
+  }
+  if (day2Dinner) {
+    const steaks = await repos.shoppingItems.create(DEMO_TENANT_ID, {
+      mealPlanId: day2Dinner.id, name: 'Ribeye steaks', quantityNeeded: 12, unit: 'count', category: 'Food',
+    })
+    await repos.shoppingItems.updateFulfillment(DEMO_TENANT_ID, steaks.id, 'Covered', 12, helen.id)
+  }
 }

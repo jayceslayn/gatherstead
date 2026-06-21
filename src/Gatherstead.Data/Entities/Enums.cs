@@ -136,3 +136,17 @@ public enum AgeBand
     Age18To64 = 4,
     Age65Plus = 5,
 }
+
+public enum ShoppingItemOrigin
+{
+    Property = 0,
+    Event    = 1,
+    Meal     = 2,
+}
+
+public enum ShoppingItemStatus
+{
+    Needed  = 0,
+    Claimed = 1,
+    Covered = 2,
+}

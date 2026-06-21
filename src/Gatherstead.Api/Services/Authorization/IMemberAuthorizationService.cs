@@ -40,6 +40,14 @@ public interface IMemberAuthorizationService
     Task<bool> CanManageEventAsync(Guid tenantId, CancellationToken ct = default);
 
     /// <summary>
+    /// Determines if the current user can edit a specific meal plan's menu — its ingredient
+    /// shopping items and the shared <c>MealPlan.Notes</c> (planned menu / description).
+    /// Returns true if: <see cref="CanManageEventAsync"/> (App Admin or Owner/Manager/Coordinator),
+    /// OR the caller's linked member has a volunteered <c>MealIntent</c> on that plan (the cook).
+    /// </summary>
+    Task<bool> CanEditMealPlanMenuAsync(Guid tenantId, Guid mealPlanId, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns the caller's sensitive read scope for household member data.
     /// Global  — TenantRole.Member+: can read all sensitive fields across the tenant.
     /// ForHouseholds — TenantRole.Guest with HouseholdUser entries: sensitive fields only for those households.

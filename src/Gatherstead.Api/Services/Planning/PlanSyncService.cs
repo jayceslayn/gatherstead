@@ -112,5 +112,20 @@ public class PlanSyncService
 
         foreach (var plan in diff.ToPrune)
             plan.IsDeleted = true;
+
+        // A pruned meal plan takes its menu's shopping items with it, so the merged list never
+        // references a day/meal that no longer exists.
+        var prunedPlanIds = diff.ToPrune.Select(p => p.Id).ToList();
+        if (prunedPlanIds.Count > 0)
+        {
+            var orphanedItems = await _dbContext.ShoppingItems
+                .Where(i => i.TenantId == tenantId
+                    && i.MealPlanId != null
+                    && prunedPlanIds.Contains(i.MealPlanId.Value)
+                    && !i.IsDeleted)
+                .ToListAsync(cancellationToken);
+            foreach (var item in orphanedItems)
+                item.IsDeleted = true;
+        }
     }
 }

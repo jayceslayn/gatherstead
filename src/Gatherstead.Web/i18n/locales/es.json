@@ -397,6 +397,46 @@
     "confirmed": "Confirmado",
     "declined": "Rechazado"
   },
+  "shopping": {
+    "title": "Compras",
+    "list": "Lista",
+    "addItem": "Añadir artículo",
+    "editItem": "Editar artículo",
+    "itemName": "Artículo",
+    "itemNamePlaceholder": "p. ej. Patatas, toallas de papel, hielo…",
+    "quantity": "Cantidad",
+    "quantityPlaceholder": "p. ej. 10",
+    "unit": "Unidad",
+    "unitPlaceholder": "p. ej. kg, bolsas, barras",
+    "neededBy": "Necesario para",
+    "category": "Categoría",
+    "categoryPlaceholder": "p. ej. Comida, Suministros",
+    "eventSupplies": "Suministros del evento",
+    "propertySupplies": "Básicos de la propiedad",
+    "emptySection": "Aún no hay nada aquí.",
+    "hideCovered": "Ocultar cubiertos",
+    "refresh": "Actualizar",
+    "got": "Tengo",
+    "claim": "Yo lo llevo",
+    "covered": "Cubierto",
+    "reopen": "Aún se necesita",
+    "updatedSecondsAgo": "Actualizado hace {count}s",
+    "updatedMinutesAgo": "Actualizado hace {count}min",
+    "staleTitle": "Esta lista puede estar desactualizada",
+    "staleDescription": "Otros pueden haber reclamado o comprado artículos desde la última actualización.",
+    "quantitySummary": "{provided} de {needed} {unit}",
+    "remaining": "Faltan {count} {unit}",
+    "origin": {
+      "meal": "Comida",
+      "event": "Evento",
+      "property": "Propiedad"
+    },
+    "status": {
+      "needed": "Necesario",
+      "claimed": "Reclamado",
+      "covered": "Cubierto"
+    }
+  },
   "validation": {
     "required": "{field} es obligatorio",
     "maxLength": "{field} debe tener {max} caracteres o menos",
@@ -431,7 +471,8 @@
         "taskTemplatesPerEvent": "Plantillas de tareas por evento",
         "propertiesPerTenant": "Propiedades por grupo",
         "accommodationsPerProperty": "Alojamientos por propiedad",
-        "equipmentPerTenant": "Equipos por grupo"
+        "equipmentPerTenant": "Equipos por grupo",
+        "shoppingItemsPerTenant": "Artículos de compra por grupo"
       },
       "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
       "cta": "¿Listo para guardar tus reuniones?",

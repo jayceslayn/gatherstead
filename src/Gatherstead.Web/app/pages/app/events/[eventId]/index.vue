@@ -36,6 +36,7 @@ const tabs = computed<TabsItem[]>(() => [
   { label: t('event.attendance'), value: 'attendance', slot: 'attendance' },
   { label: t('event.tasks'), value: 'tasks', slot: 'tasks' },
   { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations' },
+  { label: t('shopping.title'), value: 'shopping', slot: 'shopping' },
 ])
 
 const activeTab = ref<string | number>(tabs.value[0]?.value ?? 0)
@@ -178,6 +179,12 @@ onMounted(() => {
               :household-id="selectedHouseholdId"
               :totals-by-day="attendanceByDay"
             />
+          </div>
+        </template>
+
+        <template #shopping>
+          <div class="mt-4">
+            <GsShoppingList :event-id="eventId" />
           </div>
         </template>
       </UTabs>

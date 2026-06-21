@@ -30,4 +30,5 @@ export const DEMO_LIMITS = {
   propertiesPerTenant: 2,
   accommodationsPerProperty: 6,
   equipmentPerTenant: 10,
+  shoppingItemsPerTenant: 60,
 } as const

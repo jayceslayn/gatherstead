@@ -27,6 +27,7 @@ using Gatherstead.Api.Services.HouseholdUsers;
 using Gatherstead.Api.Services.TenantUsers;
 using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Services.Equipment;
+using Gatherstead.Api.Services.ShoppingItems;
 using Gatherstead.Api.Services.Reports;
 using Gatherstead.Api.Services.Invitations;
 using Gatherstead.Api.Services.Provisioning;
@@ -88,6 +89,7 @@ builder.Services.AddScoped<IAccommodationIntentService, AccommodationIntentServi
 builder.Services.AddScoped<ITokenRevocationService, TokenRevocationService>();
 builder.Services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
+builder.Services.AddScoped<IShoppingItemService, ShoppingItemService>();
 builder.Services.AddScoped<IEventReportService, EventReportService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();

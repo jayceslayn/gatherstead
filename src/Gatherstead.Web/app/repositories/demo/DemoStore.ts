@@ -20,6 +20,7 @@ import type {
   AccommodationIntent,
   EquipmentSummary,
   InvitationSummary,
+  ShoppingItem,
 } from '../types'
 import { DEMO_TENANT, DEMO_USER } from './demoConstants'
 import type { DEMO_LIMITS } from './demoConstants'
@@ -62,6 +63,7 @@ interface DemoState {
   accommodations: AccommodationSummary[]
   accommodationIntents: AccommodationIntent[]
   equipment: EquipmentSummary[]
+  shoppingItems: ShoppingItem[]
   invitations: InvitationSummary[]
 }
 
@@ -84,6 +86,7 @@ export interface ReactiveState {
   accommodations: Ref<AccommodationSummary[]>
   accommodationIntents: Ref<AccommodationIntent[]>
   equipment: Ref<EquipmentSummary[]>
+  shoppingItems: Ref<ShoppingItem[]>
   invitations: Ref<InvitationSummary[]>
 }
 
@@ -107,6 +110,7 @@ function emptyState(): DemoState {
     accommodations: [],
     accommodationIntents: [],
     equipment: [],
+    shoppingItems: [],
     invitations: [],
   }
 }
@@ -146,6 +150,7 @@ function buildReactiveRefs(state: DemoState): ReactiveState {
     accommodations: ref(withAttributes(state.accommodations ?? []) as AccommodationSummary[]),
     accommodationIntents: ref(state.accommodationIntents ?? []),
     equipment: ref(withAttributes(state.equipment ?? []) as EquipmentSummary[]),
+    shoppingItems: ref(withAttributes(state.shoppingItems ?? []) as ShoppingItem[]),
     invitations: ref(state.invitations ?? []),
   }
 }
@@ -170,6 +175,7 @@ function snapshot(state: ReactiveState): DemoState {
     accommodations: state.accommodations.value,
     accommodationIntents: state.accommodationIntents.value,
     equipment: state.equipment.value,
+    shoppingItems: state.shoppingItems.value,
     invitations: state.invitations.value,
   }
 }
@@ -208,6 +214,7 @@ export function clearDemoStore(): void {
   _state.accommodations.value = []
   _state.accommodationIntents.value = []
   _state.equipment.value = []
+  _state.shoppingItems.value = []
   _state.invitations.value = []
   localStorage.removeItem(STORAGE_KEY)
 }

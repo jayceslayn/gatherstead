@@ -2940,6 +2940,219 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenants/{tenantId}/shopping-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    eventId?: string;
+                    propertyId?: string;
+                    mealPlanId?: string;
+                    status?: "Needed" | "Claimed" | "Covered";
+                };
+                header?: never;
+                path: {
+                    tenantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "application/json": components["schemas"]["ShoppingItemDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "text/json": components["schemas"]["ShoppingItemDtoIReadOnlyCollectionBaseEntityResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateShoppingItemRequest"];
+                    "text/json": components["schemas"]["CreateShoppingItemRequest"];
+                    "application/*+json": components["schemas"]["CreateShoppingItemRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemResponse"];
+                        "application/json": components["schemas"]["ShoppingItemResponse"];
+                        "text/json": components["schemas"]["ShoppingItemResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/{tenantId}/shopping-items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemResponse"];
+                        "application/json": components["schemas"]["ShoppingItemResponse"];
+                        "text/json": components["schemas"]["ShoppingItemResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateShoppingItemRequest"];
+                    "text/json": components["schemas"]["UpdateShoppingItemRequest"];
+                    "application/*+json": components["schemas"]["UpdateShoppingItemRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemResponse"];
+                        "application/json": components["schemas"]["ShoppingItemResponse"];
+                        "text/json": components["schemas"]["ShoppingItemResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemResponse"];
+                        "application/json": components["schemas"]["ShoppingItemResponse"];
+                        "text/json": components["schemas"]["ShoppingItemResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/{tenantId}/shopping-items/{itemId}/fulfillment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateFulfillmentRequest"];
+                    "text/json": components["schemas"]["UpdateFulfillmentRequest"];
+                    "application/*+json": components["schemas"]["UpdateFulfillmentRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoppingItemResponse"];
+                        "application/json": components["schemas"]["ShoppingItemResponse"];
+                        "text/json": components["schemas"]["ShoppingItemResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/{tenantId}/events/{eventId}/task-templates/{templateId}/plans/{planId}/intents": {
         parameters: {
             query?: never;
@@ -4034,6 +4247,23 @@ export interface components {
             notes?: string | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
         };
+        CreateShoppingItemRequest: {
+            /** Format: uuid */
+            propertyId?: string | null;
+            /** Format: uuid */
+            eventId?: string | null;
+            /** Format: uuid */
+            mealPlanId?: string | null;
+            name: string;
+            /** Format: double */
+            quantityNeeded?: number | null;
+            unit?: string | null;
+            /** Format: date */
+            neededByDate?: string | null;
+            category?: string | null;
+            notes?: string | null;
+            attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
+        };
         CreateTaskTemplateRequest: {
             name: string;
             /** @enum {string} */
@@ -4523,6 +4753,46 @@ export interface components {
             /** Format: uuid */
             memberId?: string | null;
         };
+        ShoppingItemDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            tenantId?: string;
+            /** @enum {string} */
+            origin?: "Property" | "Event" | "Meal";
+            /** Format: uuid */
+            propertyId?: string | null;
+            /** Format: uuid */
+            eventId?: string | null;
+            /** Format: uuid */
+            mealPlanId?: string | null;
+            name?: string;
+            /** Format: double */
+            quantityNeeded?: number | null;
+            unit?: string | null;
+            /** Format: double */
+            quantityProvided?: number | null;
+            /** @enum {string} */
+            status?: "Needed" | "Claimed" | "Covered";
+            /** Format: uuid */
+            claimedByMemberId?: string | null;
+            /** Format: date */
+            neededByDate?: string | null;
+            category?: string | null;
+            notes?: string | null;
+            attributes?: components["schemas"]["AttributeDto"][];
+            audit?: components["schemas"]["AuditInfo"];
+        };
+        ShoppingItemDtoIReadOnlyCollectionBaseEntityResponse: {
+            entity?: components["schemas"]["ShoppingItemDto"][] | null;
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
+        ShoppingItemResponse: {
+            entity?: components["schemas"]["ShoppingItemDto"];
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
         TaskIntentDto: {
             /** Format: uuid */
             id?: string;
@@ -4706,6 +4976,14 @@ export interface components {
             notes?: string | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
         };
+        UpdateFulfillmentRequest: {
+            /** @enum {string} */
+            status: "Needed" | "Claimed" | "Covered";
+            /** Format: double */
+            quantityProvided?: number | null;
+            /** Format: uuid */
+            claimedByMemberId?: string | null;
+        };
         UpdateHouseholdMemberRequest: {
             name: string;
             isAdult?: boolean;
@@ -4746,6 +5024,17 @@ export interface components {
         };
         UpdatePropertyRequest: {
             name: string;
+            notes?: string | null;
+            attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
+        };
+        UpdateShoppingItemRequest: {
+            name: string;
+            /** Format: double */
+            quantityNeeded?: number | null;
+            unit?: string | null;
+            /** Format: date */
+            neededByDate?: string | null;
+            category?: string | null;
             notes?: string | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
         };

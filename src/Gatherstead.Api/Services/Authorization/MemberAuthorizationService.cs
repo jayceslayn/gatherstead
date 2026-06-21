@@ -141,6 +141,30 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         return info?.Role <= TenantRole.Coordinator;
     }
 
+    public async Task<bool> CanEditMealPlanMenuAsync(Guid tenantId, Guid mealPlanId, CancellationToken ct = default)
+    {
+        // Event managers (App Admin / Owner / Manager / Coordinator) can always edit the menu.
+        if (await CanManageEventAsync(tenantId, ct))
+            return true;
+
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return false;
+
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+        if (info?.LinkedMemberId is not Guid linkedMemberId)
+            return false;
+
+        // The volunteer cook for this plan may set its menu. (A member could temporarily volunteer
+        // to gain this — an accepted, non-critical loophole.)
+        return await _dbContext.MealIntents
+            .AsNoTracking()
+            .AnyAsync(
+                mi => mi.MealPlanId == mealPlanId
+                    && mi.HouseholdMemberId == linkedMemberId
+                    && mi.Volunteered,
+                ct);
+    }
+
     public async Task<SensitiveReadScope> GetSensitiveReadScopeAsync(Guid tenantId, CancellationToken ct = default)
     {
         var userId = _currentUserContext.UserId;

@@ -165,6 +165,112 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         Assert.False(await service.CanManageEventAsync(_tenantId, TestContext.Current.CancellationToken));
     }
 
+    // ── CanEditMealPlanMenuAsync ─────────────────────────────────────────────
+
+    private async Task<Guid> SeedMealPlanAsync(Guid? mealPlanId = null)
+    {
+        var propertyId = Guid.NewGuid();
+        var eventId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
+        var planId = mealPlanId ?? Guid.NewGuid();
+        _dbContext.Properties.Add(new Property { Id = propertyId, TenantId = _tenantId, Name = $"Property {propertyId}" });
+        _dbContext.Events.Add(new Event
+        {
+            Id = eventId, TenantId = _tenantId, PropertyId = propertyId,
+            Name = "Event", StartDate = new DateOnly(2025, 6, 1), EndDate = new DateOnly(2025, 6, 2),
+        });
+        _dbContext.MealTemplates.Add(new MealTemplate
+        {
+            Id = templateId, TenantId = _tenantId, EventId = eventId,
+            Name = "Meals", MealTypes = MealTypeFlags.Dinner,
+        });
+        _dbContext.MealPlans.Add(new MealPlan
+        {
+            Id = planId, TenantId = _tenantId, MealTemplateId = templateId,
+            Day = new DateOnly(2025, 6, 1), MealType = MealType.Dinner,
+        });
+        await _dbContext.SaveChangesAsync();
+        return planId;
+    }
+
+    private async Task SeedMealIntentAsync(Guid planId, Guid memberId, bool volunteered)
+    {
+        _dbContext.MealIntents.Add(new MealIntent
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId,
+            MealPlanId = planId, HouseholdMemberId = memberId, Volunteered = volunteered,
+        });
+        await _dbContext.SaveChangesAsync();
+    }
+
+    [Theory]
+    [InlineData(TenantRole.Owner)]
+    [InlineData(TenantRole.Manager)]
+    [InlineData(TenantRole.Coordinator)]
+    public async Task CanEditMealPlanMenuAsync_EventManager_ReturnsTrue(TenantRole role)
+    {
+        var planId = await SeedMealPlanAsync();
+        await SeedTenantUserAsync(role);
+        var service = CreateService(_userId);
+        Assert.True(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CanEditMealPlanMenuAsync_VolunteerCook_ReturnsTrue()
+    {
+        var planId = await SeedMealPlanAsync();
+        var memberId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+        await SeedMealIntentAsync(planId, memberId, volunteered: true);
+
+        var service = CreateService(_userId);
+        Assert.True(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CanEditMealPlanMenuAsync_PlainMemberWithoutVolunteer_ReturnsFalse()
+    {
+        var planId = await SeedMealPlanAsync();
+        var memberId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+
+        var service = CreateService(_userId);
+        Assert.False(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CanEditMealPlanMenuAsync_MemberDeclinedToCook_ReturnsFalse()
+    {
+        var planId = await SeedMealPlanAsync();
+        var memberId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+        await SeedMealIntentAsync(planId, memberId, volunteered: false);
+
+        var service = CreateService(_userId);
+        Assert.False(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task CanEditMealPlanMenuAsync_VolunteeredOnDifferentPlan_ReturnsFalse()
+    {
+        var planId = await SeedMealPlanAsync();
+        var otherPlanId = await SeedMealPlanAsync();
+        var memberId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+        await SeedMealIntentAsync(otherPlanId, memberId, volunteered: true);
+
+        var service = CreateService(_userId);
+        Assert.False(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
+    }
+
     // ── CanEditMemberAsync ───────────────────────────────────────────────────
 
     [Fact]
