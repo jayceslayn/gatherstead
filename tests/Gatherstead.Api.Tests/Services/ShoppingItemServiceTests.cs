@@ -105,14 +105,15 @@ public class ShoppingItemServiceTests : IAsyncLifetime
     // ── Property origin ──────────────────────────────────────────────────────
 
     [Fact]
-    public async Task CreateAsync_PropertyOrigin_RequiresTenantManage()
+    public async Task CreateAsync_PropertyOrigin_RequiresEventManage()
     {
+        // Property-level lists are editable by Coordinators+ (event-manage), not only Managers (tenant-manage).
         var request = new CreateShoppingItemRequest { Name = "Motor oil", PropertyId = _propertyId };
-        var denied = await CreateService(canManageTenant: false)
+        var denied = await CreateService(canManageEvent: false, canManageTenant: true)
             .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
         Assert.False(denied.Successful);
 
-        var allowed = await CreateService(canManageTenant: true)
+        var allowed = await CreateService(canManageEvent: true)
             .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
         Assert.True(allowed.Successful);
         Assert.Equal(ShoppingItemOrigin.Property, allowed.Entity!.Origin);
@@ -384,7 +385,7 @@ public class ShoppingItemServiceTests : IAsyncLifetime
             new UpsertShoppingItemIntentRequest { Quantity = 1m, Status = ShoppingItemIntentStatus.Claimed },
             TestContext.Current.CancellationToken);
 
-        var result = await CreateService(canManageTenant: true)
+        var result = await CreateService(canManageEvent: true)
             .DeleteAsync(_tenantId, item.Id, TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);

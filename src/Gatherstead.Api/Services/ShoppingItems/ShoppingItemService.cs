@@ -129,7 +129,8 @@ public class ShoppingItemService : IShoppingItemService
 
         if (request.PropertyId is Guid propertyId)
         {
-            if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            // Property-level lists are editable by Coordinators+ (same bar as event-level lists).
+            if (!await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
                 return response;
             var exists = await _dbContext.Properties.AsNoTracking()
                 .AnyAsync(p => p.TenantId == tenantId && p.Id == propertyId, cancellationToken);
@@ -401,9 +402,8 @@ public class ShoppingItemService : IShoppingItemService
         {
             ShoppingItemOrigin.Meal when item.MealPlanId is Guid planId
                 => await ServiceGuards.AuthorizeMealPlanMenuAsync(response, _memberAuthorizationService, tenantId, planId, ct),
-            ShoppingItemOrigin.Event
-                => await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, ct),
-            _ => await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, ct),
+            // Both Event- and Property-origin items require Coordinator+ to edit.
+            _ => await ServiceGuards.AuthorizeEventManageAsync(response, _memberAuthorizationService, tenantId, ct),
         };
 
     private Task SyncAttributesAsync(Guid itemId, Guid tenantId, IReadOnlyList<AttributeWriteEntry> attributes, TenantRole? callerRole, CancellationToken ct)
