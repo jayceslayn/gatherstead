@@ -12,11 +12,11 @@
     "generate:types": "openapi-typescript ../../src/Gatherstead.Api/openapi.json -o app/repositories/generated/api.d.ts"
   },
   "dependencies": {
-    "@fullcalendar/core": "^6.1.20",
-    "@fullcalendar/daygrid": "^6.1.20",
-    "@fullcalendar/list": "^6.1.20",
-    "@fullcalendar/vue3": "^6.1.20",
-    "@microsoft/applicationinsights-web": "^3.4.1",
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/list": "^6.1.21",
+    "@fullcalendar/vue3": "^6.1.21",
+    "@microsoft/applicationinsights-web": "^3.4.2",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/icon": "^2.2.3",
     "@nuxt/image": "^2.0.0",
@@ -26,8 +26,8 @@
     "nuxt": "^4.4.8",
     "nuxt-auth-utils": "^0.5.29",
     "pinia": "^3.0.4",
-    "serialize-javascript": "^7.0.5",
-    "tailwindcss": "^4.3.0",
+    "serialize-javascript": "^7.0.6",
+    "tailwindcss": "^4.3.1",
     "vue": "^3.5.38",
     "vue-router": "^5.1.0"
   },
@@ -39,7 +39,7 @@
     "eslint": "^10.4.1",
     "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
-    "vue-tsc": "^3.3.4"
+    "vue-tsc": "^3.3.5"
   },
   "packageManager": "pnpm@11.8.0+sha512.c1f5e7c4cb241c8f174b743851d82f42b802324afc8b0f116b96adb15aa06664948dde36960a3ba1079ba5b4b29dd0140135b94b5b5f5263592249d68e555f26"
 }
