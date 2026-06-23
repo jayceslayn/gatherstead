@@ -422,6 +422,7 @@
     "shopMode": "Comprar",
     "editMode": "Editar",
     "unfulfilledOnly": "Solo pendientes",
+    "showPast": "Mostrar anteriores",
     "whoCovering": "¿Quién lo lleva?",
     "renameLocked": "Este artículo ya se reclamó o compró, así que su nombre está bloqueado. Para renombrarlo, elimínalo y agrega uno nuevo.",
     "deleteItemTitle": "¿Eliminar artículo?",

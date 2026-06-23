@@ -422,6 +422,7 @@
     "shopMode": "Shop",
     "editMode": "Edit",
     "unfulfilledOnly": "Unfulfilled only",
+    "showPast": "Show past",
     "whoCovering": "Who's getting this?",
     "renameLocked": "This item has been claimed or bought, so its name is locked. To rename it, delete it and add a new one.",
     "deleteItemTitle": "Delete item?",

@@ -33,12 +33,28 @@ const unfulfilledOnly = ref(false)
 const selectedDate = ref<string>('all')
 const selectedSource = ref<'all' | ShoppingItemOrigin>('all')
 
+// Forward-looking by default: items whose need-by date has passed are "expired" and hidden
+// unless Show past is on (or explicitly surfaced via a specific date). Undated items (property
+// staples, undated event items) never expire. Local today as YYYY-MM-DD; en-CA formats as ISO.
+const showPast = ref(false)
+const today = new Date().toLocaleDateString('en-CA')
+function isExpired(item: ShoppingItem): boolean {
+  return !!item.neededByDate && item.neededByDate < today
+}
+
 const dateOptions = computed(() => {
-  const dates = [...new Set(allItems.value.map(i => i.neededByDate).filter((d): d is string => !!d))].sort()
+  const dates = [...new Set(allItems.value.map(i => i.neededByDate).filter((d): d is string => !!d))]
+    .filter(d => showPast.value || d >= today)
+    .sort()
   return [
     { label: t('shopping.allDates'), value: 'all' },
     ...dates.map(d => ({ label: formatDate(d), value: d })),
   ]
+})
+
+// If the selected date drops out of the list (e.g. Show past toggled off), fall back to All dates.
+watch(dateOptions, (opts) => {
+  if (!opts.some(o => o.value === selectedDate.value)) selectedDate.value = 'all'
 })
 
 // Only offer source options for origins actually present, and only when more than one exists.
@@ -62,12 +78,15 @@ const visibleSections = computed<ShoppingSection[]>(() =>
       ...s,
       items: s.items.filter(i =>
         (!unfulfilledOnly.value || i.status !== 'Covered' || recentlyActed.value.has(i.id))
-        && (selectedDate.value === 'all' || i.neededByDate === selectedDate.value),
+        && (selectedDate.value === 'all'
+          ? (showPast.value || !isExpired(i) || recentlyActed.value.has(i.id))
+          : i.neededByDate === selectedDate.value),
       ),
     }))
     // When filtering, drop empty sections; otherwise keep the always-present scope sections.
     .filter(s => s.items.length > 0
-      || (!unfulfilledOnly.value && selectedDate.value === 'all' && selectedSource.value === 'all')),
+      || (!unfulfilledOnly.value && selectedDate.value === 'all'
+        && selectedSource.value === 'all' && showPast.value)),
 )
 
 function doRefresh() {
@@ -193,6 +212,7 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
           class="min-w-36"
         />
         <UCheckbox v-model="unfulfilledOnly" :label="t('shopping.unfulfilledOnly')" />
+        <UCheckbox v-model="showPast" :label="t('shopping.showPast')" />
       </div>
       <div class="flex items-center gap-3">
         <span v-if="lastUpdatedAt" class="text-sm text-muted">{{ updatedLabel }}</span>
