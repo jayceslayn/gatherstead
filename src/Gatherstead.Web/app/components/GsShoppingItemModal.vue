@@ -20,6 +20,10 @@ const { t } = useI18n()
 const isEdit = computed(() => !!props.item)
 const scopes = computed(() => props.scopeOptions ?? [])
 
+// Once an item is claimed/covered, renaming it would silently change what others pledged
+// against (e.g. "vegetable oil" → "olive oil"), so the name is locked; editors delete + recreate.
+const nameLocked = computed(() => isEdit.value && props.item?.status !== 'Needed')
+
 const form = reactive({
   scopeIndex: 0,
   name: '',
@@ -55,7 +59,9 @@ function reset() {
 watch(open, (isOpen) => { if (isOpen) reset() })
 
 function parseQuantity(): number | null {
-  const trimmed = form.quantityNeeded.trim()
+  // A type="number" UInput hands back a number once edited, but reset() seeds a string —
+  // coerce so .trim() is always safe.
+  const trimmed = String(form.quantityNeeded ?? '').trim()
   if (!trimmed) return null
   const n = Number(trimmed)
   return Number.isFinite(n) ? n : null
@@ -101,8 +107,18 @@ function submit() {
           <USelect v-model="form.scopeIndex" :items="scopeSelectItems" class="w-full" />
         </UFormField>
 
-        <UFormField :label="t('shopping.itemName')" :error="errors.name || undefined" required>
-          <UInput v-model="form.name" :placeholder="t('shopping.itemNamePlaceholder')" class="w-full" />
+        <UFormField
+          :label="t('shopping.itemName')"
+          :error="errors.name || undefined"
+          :description="nameLocked ? t('shopping.renameLocked') : undefined"
+          :required="!nameLocked"
+        >
+          <UInput
+            v-model="form.name"
+            :placeholder="t('shopping.itemNamePlaceholder')"
+            :disabled="nameLocked"
+            class="w-full"
+          />
         </UFormField>
 
         <div class="flex gap-3">

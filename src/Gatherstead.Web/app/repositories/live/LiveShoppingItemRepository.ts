@@ -2,8 +2,9 @@ import type {
   IShoppingItemRepository,
   CreateShoppingItemInput,
   UpdateShoppingItemInput,
+  ShoppingItemIntentInput,
 } from '../interfaces'
-import type { ShoppingItem, ShoppingItemStatus } from '../types'
+import type { ShoppingItem } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -37,16 +38,18 @@ export class LiveShoppingItemRepository implements IShoppingItemRepository {
     })
   }
 
-  async updateFulfillment(
-    tenantId: string,
-    itemId: string,
-    status: ShoppingItemStatus,
-    quantityProvided: number | null,
-    claimedByMemberId: string | null,
-  ): Promise<ShoppingItem> {
+  async upsertIntent(tenantId: string, itemId: string, memberId: string, input: ShoppingItemIntentInput): Promise<ShoppingItem> {
     const r = await $fetch<ApiResponse<ShoppingItem>>(
-      `/api/proxy/tenants/${tenantId}/shopping-items/${itemId}/fulfillment`,
-      { method: 'PUT', body: { status, quantityProvided, claimedByMemberId } },
+      `/api/proxy/tenants/${tenantId}/shopping-items/${itemId}/intents/${memberId}`,
+      { method: 'PUT', body: { quantity: input.quantity ?? null, status: input.status, notes: input.notes ?? null } },
+    )
+    return r.entity
+  }
+
+  async removeIntent(tenantId: string, itemId: string, memberId: string): Promise<ShoppingItem> {
+    const r = await $fetch<ApiResponse<ShoppingItem>>(
+      `/api/proxy/tenants/${tenantId}/shopping-items/${itemId}/intents/${memberId}`,
+      { method: 'DELETE' },
     )
     return r.entity
   }

@@ -87,6 +87,10 @@ export type TaskIntent = OmitAudit<S['TaskIntentDto']>
 export type ShoppingItem = OmitAudit<S['ShoppingItemDto']>
 export type ShoppingItemOrigin = NonNullable<S['ShoppingItemDto']['origin']>
 export type ShoppingItemStatus = NonNullable<S['ShoppingItemDto']['status']>
+// Matches the element type carried on ShoppingItem.intents (openapi-typescript keeps DTO
+// fields optional, so we use the raw DTO rather than OmitAudit's Required<> here).
+export type ShoppingItemIntent = S['ShoppingItemIntentDto']
+export type ShoppingItemIntentStatus = NonNullable<S['ShoppingItemIntentDto']['status']>
 
 // ── Reports ───────────────────────────────────────────────────────────────
 export type EventReport = S['EventReportDto']

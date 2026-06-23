@@ -360,8 +360,8 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     const potatoes = await repos.shoppingItems.create(DEMO_TENANT_ID, {
       mealPlanId: day1Dinner.id, name: 'Potatoes', quantityNeeded: 10, unit: 'lbs', category: 'Food',
     })
-    // Partially supplied: 5 of 10 lbs already provided — someone still needs the rest.
-    await repos.shoppingItems.updateFulfillment(DEMO_TENANT_ID, potatoes.id, 'Claimed', 5, bob.id)
+    // Partially supplied: Bob has brought 5 of 10 lbs — someone still needs the rest.
+    await repos.shoppingItems.upsertIntent(DEMO_TENANT_ID, potatoes.id, bob.id, { status: 'Provided', quantity: 5 })
     await repos.shoppingItems.create(DEMO_TENANT_ID, {
       mealPlanId: day1Dinner.id, name: 'Butter', quantityNeeded: 2, unit: 'sticks', category: 'Food',
     })
@@ -370,6 +370,6 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     const steaks = await repos.shoppingItems.create(DEMO_TENANT_ID, {
       mealPlanId: day2Dinner.id, name: 'Ribeye steaks', quantityNeeded: 12, unit: 'count', category: 'Food',
     })
-    await repos.shoppingItems.updateFulfillment(DEMO_TENANT_ID, steaks.id, 'Covered', 12, helen.id)
+    await repos.shoppingItems.upsertIntent(DEMO_TENANT_ID, steaks.id, helen.id, { status: 'Provided', quantity: 12 })
   }
 }

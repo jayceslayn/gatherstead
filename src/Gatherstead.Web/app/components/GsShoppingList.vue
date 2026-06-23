@@ -1,34 +1,119 @@
 <script setup lang="ts">
-import type { ShoppingItem } from '~/repositories/types'
-import type { ShoppingScopeOption } from '~/composables/useShoppingList'
+import type { ShoppingItem, ShoppingItemOrigin } from '~/repositories/types'
+import type { ShoppingScope, ShoppingScopeOption, ShoppingSection } from '~/composables/useShoppingList'
 import { useShoppingList } from '~/composables/useShoppingList'
-import { useCurrentMemberStore } from '~/stores/member'
+import { useTenantRole } from '~/composables/useTenantRole'
+import { useAllMembers } from '~/composables/useHouseholdMembers'
 
-const props = defineProps<{ eventId: string }>()
+const props = defineProps<{ scope: ShoppingScope | null }>()
 const { t } = useI18n()
-const memberStore = useCurrentMemberStore()
+const { formatDate } = useFormatDate()
+const { isCoordinatorOrAbove } = useTenantRole()
 
-const eventIdRef = toRef(props, 'eventId')
+const scopeRef = computed(() => props.scope)
 const {
-  sections, pending, updating, lastUpdatedAt, propertyId, mealScopeOptions,
-  refresh, setFulfillment, createItem, updateItem, deleteItem,
-} = useShoppingList(eventIdRef)
+  sections, allItems, pending, updating, lastUpdatedAt, propertyId, mealScopeOptions,
+  myMemberId, refresh, myIntent, remaining, canEditMealPlan, claim, provide, unclaim,
+  createItem, updateItem, deleteItem,
+} = useShoppingList(scopeRef)
 
-const hideCovered = ref(false)
+const { memberMap } = useAllMembers()
+function memberName(id: string): string {
+  return memberMap.value.get(id)?.name ?? id.slice(-8)
+}
 
-const visibleSections = computed(() =>
+// ── Mode (Shop = stripped-down in-store check-off; Edit = full CRUD for editors) ──
+const mode = ref<'shop' | 'edit'>('shop')
+const canEditAny = computed(() => canAdd.value || sections.value.some(canEditSection))
+
+// ── Filters ──────────────────────────────────────────────────────────────────
+const unfulfilledOnly = ref(false)
+// 'all' = no date filter. A non-empty sentinel is required because USelect (reka-ui)
+// forbids item values of '' (reserved for clearing the selection).
+const selectedDate = ref<string>('all')
+const selectedSource = ref<'all' | ShoppingItemOrigin>('all')
+
+const dateOptions = computed(() => {
+  const dates = [...new Set(allItems.value.map(i => i.neededByDate).filter((d): d is string => !!d))].sort()
+  return [
+    { label: t('shopping.allDates'), value: 'all' },
+    ...dates.map(d => ({ label: formatDate(d), value: d })),
+  ]
+})
+
+// Only offer source options for origins actually present, and only when more than one exists.
+const presentOrigins = computed(() => new Set(sections.value.map(s => s.origin)))
+const sourceOptions = computed(() => [
+  { label: t('shopping.allSources'), value: 'all' as const },
+  ...(['Meal', 'Event', 'Property'] as const)
+    .filter(o => presentOrigins.value.has(o))
+    .map(o => ({ label: t(`shopping.origin.${o.toLowerCase()}`), value: o })),
+])
+const showSourceFilter = computed(() => sourceOptions.value.length > 2)
+
+// Items the current member just acted on stay visible (even when "Unfulfilled only" would hide
+// them) so they can refer back during a shop run; cleared on manual refresh and on mode switch.
+const recentlyActed = ref<Set<string>>(new Set())
+
+const visibleSections = computed<ShoppingSection[]>(() =>
   sections.value
-    .map(s => ({ ...s, items: hideCovered.value ? s.items.filter(i => i.status !== 'Covered') : s.items }))
-    .filter(s => s.items.length > 0 || s.origin === 'Event' || s.origin === 'Property'),
+    .filter(s => selectedSource.value === 'all' || s.origin === selectedSource.value)
+    .map(s => ({
+      ...s,
+      items: s.items.filter(i =>
+        (!unfulfilledOnly.value || i.status !== 'Covered' || recentlyActed.value.has(i.id))
+        && (selectedDate.value === 'all' || i.neededByDate === selectedDate.value),
+      ),
+    }))
+    // When filtering, drop empty sections; otherwise keep the always-present scope sections.
+    .filter(s => s.items.length > 0
+      || (!unfulfilledOnly.value && selectedDate.value === 'all' && selectedSource.value === 'all')),
 )
 
-// Scope options offered by the "Add item" modal: the event itself, any meal occurrence,
-// and (when resolvable) the event's property.
+function doRefresh() {
+  recentlyActed.value = new Set()
+  void refresh()
+}
+watch(mode, () => { recentlyActed.value = new Set() })
+
+// ── Shop-mode actions (record the item so it stays visible after committing) ──
+function markActed(itemId: string) {
+  recentlyActed.value = new Set(recentlyActed.value).add(itemId)
+}
+async function shopCover(item: ShoppingItem, quantity: number | null) {
+  await provide(item, quantity)
+  markActed(item.id)
+}
+async function shopClaim(item: ShoppingItem, quantity: number | null) {
+  await claim(item, quantity)
+  markActed(item.id)
+}
+async function shopUndo(item: ShoppingItem) {
+  await unclaim(item)
+  markActed(item.id)
+}
+
+// ── Create scopes offered by the modal (respecting who may create where) ──────
 const createScopes = computed<ShoppingScopeOption[]>(() => {
-  const opts: ShoppingScopeOption[] = [{ label: t('shopping.eventSupplies'), eventId: props.eventId }]
-  if (propertyId.value) opts.push({ label: t('shopping.propertySupplies'), propertyId: propertyId.value })
-  return [...opts, ...mealScopeOptions.value]
+  const s = props.scope
+  if (!s) return []
+  const opts: ShoppingScopeOption[] = []
+  if (isCoordinatorOrAbove.value) {
+    if (s.kind === 'event' && s.eventId) opts.push({ label: t('shopping.eventSupplies'), eventId: s.eventId })
+    if (propertyId.value) opts.push({ label: t('shopping.propertySupplies'), propertyId: propertyId.value })
+    opts.push(...mealScopeOptions.value)
+  }
+  else {
+    // Volunteers may only add to meal lists they are responsible for.
+    opts.push(...mealScopeOptions.value.filter(o => o.mealPlanId && canEditMealPlan(o.mealPlanId)))
+  }
+  return opts
 })
+const canAdd = computed(() => createScopes.value.length > 0)
+
+function canEditSection(section: ShoppingSection): boolean {
+  return section.origin === 'Meal' ? canEditMealPlan(section.planId) : isCoordinatorOrAbove.value
+}
 
 // ── Staleness label (ticks so "updated Ns ago" stays current) ────────────────
 const now = ref(Date.now())
@@ -59,25 +144,20 @@ function openEdit(item: ShoppingItem) {
   modalOpen.value = true
 }
 
-function remaining(item: ShoppingItem): number | null {
-  if (item.quantityNeeded == null) return null
-  return item.quantityNeeded - (item.quantityProvided ?? 0)
+// ── Delete confirmation ──────────────────────────────────────────────────────
+const deleteModalOpen = ref(false)
+const pendingDelete = ref<ShoppingItem | null>(null)
+function askDelete(item: ShoppingItem) {
+  pendingDelete.value = item
+  deleteModalOpen.value = true
 }
-
-function claim(item: ShoppingItem) {
-  setFulfillment(item, 'Claimed', item.quantityProvided ?? null, memberStore.linkedMemberId)
-}
-function markCovered(item: ShoppingItem) {
-  setFulfillment(item, 'Covered', item.quantityNeeded ?? item.quantityProvided ?? null, item.claimedByMemberId ?? memberStore.linkedMemberId)
-}
-function reopen(item: ShoppingItem) {
-  setFulfillment(item, 'Needed', item.quantityProvided ?? null, null)
-}
-function setProvided(item: ShoppingItem, value: string) {
-  const n = value.trim() ? Number(value) : null
-  const qty = n != null && Number.isFinite(n) ? n : null
-  const status = qty != null && item.quantityNeeded != null && qty >= item.quantityNeeded ? 'Covered' : item.status ?? 'Claimed'
-  setFulfillment(item, status, qty, item.claimedByMemberId ?? memberStore.linkedMemberId)
+const deleteWarning = computed(() =>
+  pendingDelete.value && pendingDelete.value.status !== 'Needed'
+    ? t('shopping.deleteItemClaimedWarning')
+    : t('shopping.deleteItemConfirm'),
+)
+function confirmDelete() {
+  if (pendingDelete.value) void deleteItem(pendingDelete.value.id)
 }
 
 const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
@@ -88,21 +168,44 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-3 flex-wrap">
-      <div class="flex items-center gap-3 text-sm text-muted">
-        <span v-if="lastUpdatedAt">{{ updatedLabel }}</span>
+      <div class="flex items-center gap-3 flex-wrap">
+        <UFieldGroup v-if="canEditAny" size="sm">
+          <UButton :variant="mode === 'shop' ? 'solid' : 'outline'" icon="i-heroicons-shopping-cart" @click="mode = 'shop'">
+            {{ t('shopping.shopMode') }}
+          </UButton>
+          <UButton :variant="mode === 'edit' ? 'solid' : 'outline'" icon="i-heroicons-pencil-square" @click="mode = 'edit'">
+            {{ t('shopping.editMode') }}
+          </UButton>
+        </UFieldGroup>
+        <USelect
+          v-model="selectedDate"
+          :items="dateOptions"
+          size="sm"
+          :icon="'i-heroicons-calendar-days'"
+          class="min-w-40"
+        />
+        <USelect
+          v-if="showSourceFilter"
+          v-model="selectedSource"
+          :items="sourceOptions"
+          size="sm"
+          :icon="'i-heroicons-funnel'"
+          class="min-w-36"
+        />
+        <UCheckbox v-model="unfulfilledOnly" :label="t('shopping.unfulfilledOnly')" />
+      </div>
+      <div class="flex items-center gap-3">
+        <span v-if="lastUpdatedAt" class="text-sm text-muted">{{ updatedLabel }}</span>
         <UButton
           variant="ghost"
           size="xs"
           icon="i-heroicons-arrow-path"
           :loading="pending"
-          @click="refresh"
+          @click="doRefresh"
         >
           {{ t('shopping.refresh') }}
         </UButton>
-      </div>
-      <div class="flex items-center gap-3">
-        <UCheckbox v-model="hideCovered" :label="t('shopping.hideCovered')" />
-        <UButton icon="i-heroicons-plus" size="sm" @click="openAdd">
+        <UButton v-if="mode === 'edit' && canAdd" icon="i-heroicons-plus" size="sm" @click="openAdd">
           {{ t('shopping.addItem') }}
         </UButton>
       </div>
@@ -117,11 +220,15 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
       :description="t('shopping.staleDescription')"
     >
       <template #actions>
-        <UButton color="warning" size="xs" :loading="pending" @click="refresh">
+        <UButton color="warning" size="xs" :loading="pending" @click="doRefresh">
           {{ t('shopping.refresh') }}
         </UButton>
       </template>
     </UAlert>
+
+    <p v-if="visibleSections.length === 0" class="text-sm text-muted">
+      {{ t('shopping.emptySection') }}
+    </p>
 
     <div v-for="section in visibleSections" :key="section.id" class="space-y-2">
       <div class="flex items-center gap-2">
@@ -140,7 +247,24 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
         {{ t('shopping.emptySection') }}
       </p>
 
-      <ul class="space-y-2">
+      <!-- Shop mode: stripped-down, few-tap check-off rows. -->
+      <ul v-if="mode === 'shop'" class="space-y-2">
+        <GsShoppingShopItem
+          v-for="item in section.items"
+          :key="item.id"
+          :item="item"
+          :my-intent="myIntent(item)"
+          :busy="updating.includes(item.id)"
+          :can-act="!!myMemberId"
+          :member-name="memberName"
+          @claim="qty => shopClaim(item, qty)"
+          @cover="qty => shopCover(item, qty)"
+          @undo="shopUndo(item)"
+        />
+      </ul>
+
+      <!-- Edit mode: full item management for editors. -->
+      <ul v-else class="space-y-2">
         <li
           v-for="item in section.items"
           :key="item.id"
@@ -167,52 +291,9 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
             <p v-if="item.notes" class="text-sm text-muted">{{ item.notes }}</p>
           </div>
 
-          <div class="flex items-center gap-1 shrink-0">
-            <UInput
-              v-if="item.quantityNeeded != null"
-              :model-value="item.quantityProvided != null ? String(item.quantityProvided) : ''"
-              type="number"
-              step="any"
-              size="xs"
-              class="w-20"
-              :placeholder="t('shopping.got')"
-              @change="setProvided(item, ($event.target as HTMLInputElement).value)"
-            />
-            <UButton
-              v-if="item.status !== 'Claimed'"
-              variant="ghost"
-              size="xs"
-              :loading="updating.includes(item.id)"
-              @click="claim(item)"
-            >
-              {{ t('shopping.claim') }}
-            </UButton>
-            <UButton
-              v-if="item.status !== 'Covered'"
-              variant="ghost"
-              size="xs"
-              color="success"
-              icon="i-heroicons-check"
-              :loading="updating.includes(item.id)"
-              @click="markCovered(item)"
-            >
-              {{ t('shopping.covered') }}
-            </UButton>
-            <UButton
-              v-else
-              variant="ghost"
-              size="xs"
-              icon="i-heroicons-arrow-uturn-left"
-              :loading="updating.includes(item.id)"
-              @click="reopen(item)"
-            >
-              {{ t('shopping.reopen') }}
-            </UButton>
-
-            <GsRoleGate min-role="Coordinator">
-              <UButton variant="ghost" size="xs" icon="i-heroicons-pencil" @click="openEdit(item)" />
-              <UButton variant="ghost" size="xs" color="error" icon="i-heroicons-trash" @click="deleteItem(item.id)" />
-            </GsRoleGate>
+          <div v-if="canEditSection(section)" class="flex items-center gap-1 shrink-0">
+            <UButton variant="ghost" size="xs" icon="i-heroicons-pencil" @click="openEdit(item)" />
+            <UButton variant="ghost" size="xs" color="error" icon="i-heroicons-trash" @click="askDelete(item)" />
           </div>
         </li>
       </ul>
@@ -225,6 +306,15 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
       :busy="updating.includes('new') || (editing ? updating.includes(editing.id) : false)"
       @create="input => createItem(input)"
       @update="payload => updateItem(payload.itemId, payload.input)"
+    />
+
+    <GsConfirmModal
+      v-model:open="deleteModalOpen"
+      :title="t('shopping.deleteItemTitle')"
+      :description="deleteWarning"
+      :confirm-label="t('common.delete')"
+      danger
+      @confirm="confirmDelete"
     />
   </div>
 </template>

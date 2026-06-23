@@ -2,11 +2,13 @@ import type {
   IShoppingItemRepository,
   CreateShoppingItemInput,
   UpdateShoppingItemInput,
+  ShoppingItemIntentInput,
 } from '../interfaces'
 import type {
   ShoppingItem,
   ShoppingItemOrigin,
   ShoppingItemStatus,
+  ShoppingItemIntent,
   AttributeWriteEntry,
   AttributeEntry,
 } from '../types'
@@ -15,6 +17,38 @@ import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } f
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
   if (!writes) return []
   return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
+
+/** Mirrors the backend DeriveFulfillment: status + provided total are derived from live intents. */
+function deriveFulfillment(quantityNeeded: number | null, intents: ShoppingItemIntent[]): { status: ShoppingItemStatus, quantityProvided: number | null } {
+  if (intents.length === 0) return { status: 'Needed', quantityProvided: null }
+
+  let providedQty = 0
+  let hasProvided = false
+  let coversWholeNeed = false
+  for (const intent of intents) {
+    if (intent.status !== 'Provided') continue
+    hasProvided = true
+    if (intent.quantity != null) providedQty += intent.quantity
+    else coversWholeNeed = true
+  }
+
+  const quantityProvided = hasProvided ? providedQty : null
+  let status: ShoppingItemStatus
+  if (quantityNeeded != null && quantityNeeded > 0)
+    status = coversWholeNeed || providedQty >= quantityNeeded ? 'Covered' : 'Claimed'
+  else
+    status = hasProvided ? 'Covered' : 'Claimed'
+
+  return { status, quantityProvided }
+}
+
+/** Re-applies derived fields to an item after its intents change. */
+function applyFulfillment(item: ShoppingItem): ShoppingItem {
+  const { status, quantityProvided } = deriveFulfillment(item.quantityNeeded ?? null, item.intents ?? [])
+  item.status = status
+  item.quantityProvided = quantityProvided
+  return item
 }
 
 export class DemoShoppingItemRepository implements IShoppingItemRepository {
@@ -68,11 +102,11 @@ export class DemoShoppingItemRepository implements IShoppingItemRepository {
       unit: input.unit ?? null,
       quantityProvided: null,
       status: 'Needed',
-      claimedByMemberId: null,
       neededByDate,
       category: input.category ?? null,
       notes: input.notes ?? null,
       attributes: toAttributeEntries(input.attributes),
+      intents: [],
     }
     store.shoppingItems.value.push(item)
     persistDemoStore()
@@ -94,19 +128,38 @@ export class DemoShoppingItemRepository implements IShoppingItemRepository {
     persistDemoStore()
   }
 
-  async updateFulfillment(
-    _tenantId: string,
-    itemId: string,
-    status: ShoppingItemStatus,
-    quantityProvided: number | null,
-    claimedByMemberId: string | null,
-  ): Promise<ShoppingItem> {
+  async upsertIntent(_tenantId: string, itemId: string, memberId: string, input: ShoppingItemIntentInput): Promise<ShoppingItem> {
     const store = getDemoStore()
     const item = store.shoppingItems.value.find(i => i.id === itemId)
     if (!item) throw new Error('Shopping item not found')
-    item.status = status
-    item.quantityProvided = quantityProvided
-    item.claimedByMemberId = claimedByMemberId
+    item.intents = item.intents ?? []
+    // One intent per member: update in place, otherwise append.
+    const existing = item.intents.find(x => x.householdMemberId === memberId)
+    if (existing) {
+      existing.quantity = input.quantity ?? null
+      existing.status = input.status
+      existing.notes = input.notes ?? null
+    }
+    else {
+      item.intents.push({
+        id: demoId(),
+        householdMemberId: memberId,
+        quantity: input.quantity ?? null,
+        status: input.status,
+        notes: input.notes ?? null,
+      })
+    }
+    applyFulfillment(item)
+    persistDemoStore()
+    return item
+  }
+
+  async removeIntent(_tenantId: string, itemId: string, memberId: string): Promise<ShoppingItem> {
+    const store = getDemoStore()
+    const item = store.shoppingItems.value.find(i => i.id === itemId)
+    if (!item) throw new Error('Shopping item not found')
+    item.intents = (item.intents ?? []).filter(x => x.householdMemberId !== memberId)
+    applyFulfillment(item)
     persistDemoStore()
     return item
   }

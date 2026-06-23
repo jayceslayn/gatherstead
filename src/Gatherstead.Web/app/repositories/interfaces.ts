@@ -29,7 +29,7 @@ import type {
   EventReport,
   InvitationSummary,
   ShoppingItem,
-  ShoppingItemStatus,
+  ShoppingItemIntentStatus,
 } from './types'
 
 export const REPOSITORIES_KEY = Symbol('repositories')
@@ -422,18 +422,20 @@ export interface UpdateShoppingItemInput {
   attributes?: AttributeWriteEntry[] | null
 }
 
+/** One member's contribution toward an item (claim or provide), upserted by member id. */
+export interface ShoppingItemIntentInput {
+  quantity?: number | null
+  status: ShoppingItemIntentStatus
+  notes?: string | null
+}
+
 export interface IShoppingItemRepository {
   listByEvent(tenantId: string, eventId: string): Promise<ShoppingItem[]>
   listByProperty(tenantId: string, propertyId: string): Promise<ShoppingItem[]>
   create(tenantId: string, input: CreateShoppingItemInput): Promise<ShoppingItem>
   updateItem(tenantId: string, itemId: string, input: UpdateShoppingItemInput): Promise<void>
-  updateFulfillment(
-    tenantId: string,
-    itemId: string,
-    status: ShoppingItemStatus,
-    quantityProvided: number | null,
-    claimedByMemberId: string | null,
-  ): Promise<ShoppingItem>
+  upsertIntent(tenantId: string, itemId: string, memberId: string, input: ShoppingItemIntentInput): Promise<ShoppingItem>
+  removeIntent(tenantId: string, itemId: string, memberId: string): Promise<ShoppingItem>
   deleteItem(tenantId: string, itemId: string): Promise<void>
 }
 

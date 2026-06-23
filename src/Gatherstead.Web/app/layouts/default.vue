@@ -15,6 +15,7 @@ const primaryNavItems = computed(() => [[
   { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
   { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
   { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
+  { label: t('nav.shopping'), icon: 'i-heroicons-shopping-bag', to: '/app/shopping' },
 ]])
 
 const managementNavItems = computed(() => isManagerOrAbove.value
@@ -72,6 +73,7 @@ const mobileNavItems = computed(() => [
 const mobileMoreItems = computed(() => {
   const groups: Array<Array<{ label: string; icon: string; to: string }>> = [[
     { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
+    { label: t('nav.shopping'), icon: 'i-heroicons-shopping-bag', to: '/app/shopping' },
   ]]
   if (isManagerOrAbove.value) {
     groups.push([
@@ -89,6 +91,7 @@ function isActive(path: string) {
 }
 const isMoreActive = computed(() =>
   route.path.startsWith('/app/equipment')
+  || route.path.startsWith('/app/shopping')
   || route.path.startsWith('/app/reports')
   || route.path.startsWith('/app/settings'),
 )

@@ -1,17 +1,26 @@
 import { useTenantStore } from '~/stores/tenant'
+import { useCurrentMemberStore } from '~/stores/member'
+import { useTenantRole } from '~/composables/useTenantRole'
 import type {
   ShoppingItem,
-  ShoppingItemStatus,
+  ShoppingItemIntent,
   MealPlan,
+  MealTemplate,
 } from '~/repositories/types'
 import type {
   CreateShoppingItemInput,
   UpdateShoppingItemInput,
+  ShoppingItemIntentInput,
 } from '~/repositories/interfaces'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
-import { useEvent } from '~/composables/useEvents'
-import { useMealTemplates } from '~/composables/useMealPlans'
+
+/** Which list is being viewed/edited. Event scope also carries its property so trip staples merge in. */
+export interface ShoppingScope {
+  kind: 'event' | 'property'
+  eventId: string | null
+  propertyId: string | null
+}
 
 export interface ShoppingScopeOption {
   label: string
@@ -26,71 +35,103 @@ export interface ShoppingSection {
   title: string
   subtitle: string | null
   needByKey: string
+  planId: string | null
   items: ShoppingItem[]
 }
 
 const REFRESH_INTERVAL_MS = 45_000
 
-export function useShoppingList(eventId: Ref<string>) {
+export function useShoppingList(scope: Ref<ShoppingScope | null>) {
   const tenantStore = useTenantStore()
+  const memberStore = useCurrentMemberStore()
+  const { isCoordinatorOrAbove } = useTenantRole()
   const { shoppingItems: repo, mealPlans: mealRepo } = useRepositories()
   const { t } = useI18n()
   const { translateError } = useApiError()
+  const { formatDate } = useFormatDate()
   const toast = useToast()
-  const { event } = useEvent(eventId)
-  const { templates } = useMealTemplates(eventId)
 
-  const propertyId = computed(() => event.value?.propertyId ?? null)
+  const eventId = computed(() => (scope.value?.kind === 'event' ? scope.value.eventId : null))
+  const propertyId = computed(() => scope.value?.propertyId ?? null)
+  const myMemberId = computed(() => memberStore.linkedMemberId)
 
   const eventItems = ref<ShoppingItem[]>([])
   const propertyItems = ref<ShoppingItem[]>([])
   const planLabels = ref<Record<string, { title: string, subtitle: string }>>({})
   const mealScopeOptions = ref<ShoppingScopeOption[]>([])
+  const volunteeredPlanIds = ref<Set<string>>(new Set())
   const pending = ref(false)
   const lastUpdatedAt = ref<number>(0)
   const updating = ref<string[]>([])
 
-  const { formatDate } = useFormatDate()
-  const templateNameById = computed<Record<string, string>>(() =>
-    Object.fromEntries(templates.value.map(tpl => [tpl.id, tpl.name ?? ''])),
-  )
-
-  async function loadPlanLabels() {
+  // Loads meal-plan labels (for grouping) and, for non-coordinators, which plans the current
+  // member volunteered for (so they may edit those meal lists). Only relevant for event scope.
+  async function loadMealMeta() {
     const tenantId = tenantStore.currentTenantId
-    if (!tenantId || !templates.value.length) {
+    if (!tenantId || !eventId.value) {
       planLabels.value = {}
       mealScopeOptions.value = []
+      volunteeredPlanIds.value = new Set()
       return
     }
+    const evId = eventId.value
+    const templates = await mealRepo.listMealTemplates(tenantId, evId).catch(() => [] as MealTemplate[])
+    const nameById = Object.fromEntries(templates.map(tpl => [tpl.id, tpl.name ?? '']))
     const planLists = await Promise.all(
-      templates.value.map(tpl => mealRepo.listPlans(tenantId, eventId.value, tpl.id).catch(() => [] as MealPlan[])),
+      templates.map(tpl =>
+        mealRepo.listPlans(tenantId, evId, tpl.id)
+          .then(plans => ({ templateId: tpl.id, plans }))
+          .catch(() => ({ templateId: tpl.id, plans: [] as MealPlan[] })),
+      ),
     )
+
     const labels: Record<string, { title: string, subtitle: string }> = {}
     const options: ShoppingScopeOption[] = []
-    for (const plans of planLists) {
+    const volunteered = new Set<string>()
+    const memberId = myMemberId.value
+    const needsVolunteerCheck = !!memberId && !isCoordinatorOrAbove.value
+
+    for (const { templateId, plans } of planLists) {
       for (const plan of plans) {
-        const title = templateNameById.value[plan.mealTemplateId] ?? t('event.meal.title')
+        const title = nameById[plan.mealTemplateId] ?? t('event.meal.title')
         const subtitle = `${formatDate(plan.day)} · ${t(`event.meal.${(plan.mealType ?? 'Dinner').toLowerCase()}`)}`
         labels[plan.id] = { title, subtitle }
         options.push({ label: `${title} — ${subtitle}`, mealPlanId: plan.id })
+      }
+      if (needsVolunteerCheck) {
+        await Promise.all(plans.map(async (plan) => {
+          try {
+            const intents = await mealRepo.listIntentsForMember(tenantId, evId, templateId, plan.id, memberId!)
+            if (intents.some(i => i.householdMemberId === memberId && i.volunteered)) volunteered.add(plan.id)
+          }
+          catch { /* best-effort gating; backend still enforces */ }
+        }))
       }
     }
     options.sort((a, b) => a.label.localeCompare(b.label))
     planLabels.value = labels
     mealScopeOptions.value = options
+    volunteeredPlanIds.value = volunteered
   }
 
   async function load() {
     const tenantId = tenantStore.currentTenantId
-    if (!tenantId || !eventId.value) return
+    const s = scope.value
+    if (!tenantId || !s) return
     pending.value = true
     try {
-      const [evItems, prItems] = await Promise.all([
-        repo.listByEvent(tenantId, eventId.value),
-        propertyId.value ? repo.listByProperty(tenantId, propertyId.value) : Promise.resolve([] as ShoppingItem[]),
-      ])
-      eventItems.value = evItems
-      propertyItems.value = prItems
+      if (s.kind === 'event' && s.eventId) {
+        const [evItems, prItems] = await Promise.all([
+          repo.listByEvent(tenantId, s.eventId),
+          s.propertyId ? repo.listByProperty(tenantId, s.propertyId) : Promise.resolve([] as ShoppingItem[]),
+        ])
+        eventItems.value = evItems
+        propertyItems.value = prItems
+      }
+      else if (s.kind === 'property' && s.propertyId) {
+        eventItems.value = []
+        propertyItems.value = await repo.listByProperty(tenantId, s.propertyId)
+      }
       lastUpdatedAt.value = Date.now()
     }
     finally {
@@ -98,12 +139,9 @@ export function useShoppingList(eventId: Ref<string>) {
     }
   }
 
-  // Reload when the event/property resolves; rebuild meal labels when templates change.
-  watch([eventId, propertyId], () => { void load() }, { immediate: true })
-  watch(templates, () => { void loadPlanLabels() }, { immediate: true })
+  watch(scope, () => { void load(); void loadMealMeta() }, { immediate: true })
 
-  // ── Staleness: poll on an interval and on tab re-focus (kind to mobile data —
-  //    only the active event's two scopes are refetched). ──────────────────────
+  // ── Staleness: poll on an interval and on tab re-focus. ──────────────────────
   let timer: ReturnType<typeof setInterval> | null = null
   function onVisible() {
     if (document.visibilityState === 'visible') void load()
@@ -123,58 +161,75 @@ export function useShoppingList(eventId: Ref<string>) {
   const sections = computed<ShoppingSection[]>(() => {
     const result: ShoppingSection[] = []
 
-    const mealGroups = new Map<string, ShoppingItem[]>()
-    const eventOnly: ShoppingItem[] = []
-    for (const item of eventItems.value) {
-      if (item.origin === 'Meal' && item.mealPlanId) {
-        const list = mealGroups.get(item.mealPlanId) ?? []
-        list.push(item)
-        mealGroups.set(item.mealPlanId, list)
+    if (scope.value?.kind === 'event') {
+      const mealGroups = new Map<string, ShoppingItem[]>()
+      const eventOnly: ShoppingItem[] = []
+      for (const item of eventItems.value) {
+        if (item.origin === 'Meal' && item.mealPlanId) {
+          const list = mealGroups.get(item.mealPlanId) ?? []
+          list.push(item)
+          mealGroups.set(item.mealPlanId, list)
+        }
+        else {
+          eventOnly.push(item)
+        }
       }
-      else {
-        eventOnly.push(item)
-      }
-    }
 
-    for (const [planId, items] of mealGroups) {
-      const label = planLabels.value[planId]
+      const mealSections: ShoppingSection[] = []
+      for (const [planId, items] of mealGroups) {
+        const label = planLabels.value[planId]
+        mealSections.push({
+          id: `meal:${planId}`,
+          origin: 'Meal',
+          title: label?.title ?? t('event.meal.title'),
+          subtitle: label?.subtitle ?? null,
+          needByKey: items[0]?.neededByDate ?? '',
+          planId,
+          items: sortItems(items),
+        })
+      }
+      mealSections.sort((a, b) => a.needByKey.localeCompare(b.needByKey))
+      result.push(...mealSections)
+
       result.push({
-        id: `meal:${planId}`,
-        origin: 'Meal',
-        title: label?.title ?? t('event.meal.title'),
-        subtitle: label?.subtitle ?? null,
-        needByKey: items[0]?.neededByDate ?? '',
-        items: sortItems(items),
+        id: 'event',
+        origin: 'Event',
+        title: t('shopping.eventSupplies'),
+        subtitle: null,
+        needByKey: '~event',
+        planId: null,
+        items: sortItems(eventOnly),
       })
     }
-    result.sort((a, b) => a.needByKey.localeCompare(b.needByKey))
 
-    result.push({
-      id: 'event',
-      origin: 'Event',
-      title: t('shopping.eventSupplies'),
-      subtitle: null,
-      needByKey: '~event',
-      items: sortItems(eventOnly),
-    })
-    result.push({
-      id: 'property',
-      origin: 'Property',
-      title: t('shopping.propertySupplies'),
-      subtitle: null,
-      needByKey: '~property',
-      items: sortItems(propertyItems.value),
-    })
+    if (propertyId.value) {
+      result.push({
+        id: 'property',
+        origin: 'Property',
+        title: t('shopping.propertySupplies'),
+        subtitle: null,
+        needByKey: '~property',
+        planId: null,
+        items: sortItems(propertyItems.value),
+      })
+    }
 
     return result
   })
 
+  // Date-first, then alphabetical. Status only styles a row — never reorders it — so an item
+  // stays put when claimed/covered, in both Shop and Edit views.
   function sortItems(items: ShoppingItem[]): ShoppingItem[] {
-    const statusRank: Record<ShoppingItemStatus, number> = { Needed: 0, Claimed: 1, Covered: 2 }
     return [...items].sort((a, b) =>
-      (statusRank[a.status ?? 'Needed'] - statusRank[b.status ?? 'Needed'])
+      (a.neededByDate ?? '').localeCompare(b.neededByDate ?? '')
       || (a.name ?? '').localeCompare(b.name ?? ''),
     )
+  }
+
+  /** Quantity still outstanding (needed − provided), or null when the item is unquantified. */
+  function remaining(item: ShoppingItem): number | null {
+    if (item.quantityNeeded == null) return null
+    return item.quantityNeeded - (item.quantityProvided ?? 0)
   }
 
   function patchLocal(updated: ShoppingItem) {
@@ -184,10 +239,52 @@ export function useShoppingList(eventId: Ref<string>) {
     }
   }
 
-  async function setFulfillment(item: ShoppingItem, status: ShoppingItemStatus, quantityProvided: number | null, claimedByMemberId: string | null) {
+  /** The current member's own contribution to an item, if any. */
+  function myIntent(item: ShoppingItem): ShoppingItemIntent | null {
+    const id = myMemberId.value
+    if (!id) return null
+    return (item.intents ?? []).find(i => i.householdMemberId === id) ?? null
+  }
+
+  /** Whether the current member may edit/delete a meal-plan item (Coordinator+ or a volunteer). */
+  function canEditMealPlan(planId: string | null): boolean {
+    if (isCoordinatorOrAbove.value) return true
+    return planId != null && volunteeredPlanIds.value.has(planId)
+  }
+
+  async function applyIntent(item: ShoppingItem, input: ShoppingItemIntentInput) {
+    const memberId = myMemberId.value
+    if (!memberId) {
+      toast.add({ title: t('shopping.noMemberLink'), color: 'warning' })
+      return
+    }
     updating.value.push(item.id)
     try {
-      const updated = await repo.updateFulfillment(tenantStore.currentTenantId!, item.id, status, quantityProvided, claimedByMemberId)
+      const updated = await repo.upsertIntent(tenantStore.currentTenantId!, item.id, memberId, input)
+      patchLocal(updated)
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+    }
+    finally {
+      updating.value = updating.value.filter(id => id !== item.id)
+    }
+  }
+
+  function claim(item: ShoppingItem, quantity: number | null = null) {
+    return applyIntent(item, { status: 'Claimed', quantity })
+  }
+
+  function provide(item: ShoppingItem, quantity: number | null = null) {
+    return applyIntent(item, { status: 'Provided', quantity })
+  }
+
+  async function unclaim(item: ShoppingItem) {
+    const memberId = myMemberId.value
+    if (!memberId) return
+    updating.value.push(item.id)
+    try {
+      const updated = await repo.removeIntent(tenantStore.currentTenantId!, item.id, memberId)
       patchLocal(updated)
     }
     catch (e) {
@@ -256,8 +353,14 @@ export function useShoppingList(eventId: Ref<string>) {
     lastUpdatedAt,
     propertyId,
     mealScopeOptions,
+    myMemberId,
     refresh: load,
-    setFulfillment,
+    myIntent,
+    remaining,
+    canEditMealPlan,
+    claim,
+    provide,
+    unclaim,
     createItem,
     updateItem,
     deleteItem,
