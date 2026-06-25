@@ -49,6 +49,7 @@
     "households": "Hogares",
     "events": "Eventos",
     "properties": "Propiedades",
+    "accommodations": "Alojamientos",
     "equipment": "Equipos",
     "shopping": "Compras",
     "reports": "Informes",
@@ -64,7 +65,13 @@
     "createEvent": "Crear Evento",
     "upcomingEvents": "Próximos Eventos",
     "viewAll": "Ver Todos",
-    "myTasks": "Mis Tareas",
+    "myTasks": "Mis Próximas Tareas",
+    "myStays": "Mis Próximas Estancias",
+    "myShopping": "Mis Próximas Compras",
+    "noTasks": "No tienes tareas próximas.",
+    "noStays": "No tienes estancias próximas.",
+    "noShopping": "Aún no has reclamado ninguna compra.",
+    "findStay": "Buscar alojamiento",
     "tasksComingSoon": "Tu disponibilidad, intenciones de comida y tareas aparecerán aquí."
   },
   "tenant": {
@@ -173,6 +180,9 @@
     "meals": "Comidas",
     "tasks": "Tareas",
     "accommodations": "Alojamiento",
+    "accommodationsCtaTitle": "¿Buscas un lugar para alojarte?",
+    "accommodationsCtaBody": "Explora y solicita estancias en la sección de Alojamientos — rellenaremos las fechas de este evento para que veas lo que encaja.",
+    "accommodationsCtaButton": "Buscar alojamiento",
     "myAttendance": "Mi Asistencia",
     "selectHousehold": "Seleccionar hogar",
     "tabsComingSoon": "Esta sección estará disponible pronto.",
@@ -346,6 +356,25 @@
       "prevDay": "Día anterior",
       "nextDay": "Día siguiente"
     }
+  },
+  "accommodations": {
+    "title": "Alojamientos",
+    "subtitle": "Encuentra un lugar para alojarte — indica tu grupo y fechas para ver la disponibilidad.",
+    "checkIn": "Primera noche",
+    "checkOut": "Última noche",
+    "onlyAvailable": "Mostrar solo opciones con espacio",
+    "available": "Disponible",
+    "full": "Lleno",
+    "unlimited": "Ilimitado",
+    "remainingOf": "{remaining} de {capacity} disponibles",
+    "resultCount": "{n} opción | {n} opciones",
+    "forParty": "para {adults} adultos, {children} niños",
+    "noResults": "Ningún alojamiento coincide",
+    "noResultsHint": "Prueba a ampliar tus fechas o desactivar el filtro de capacidad para ver todas las opciones.",
+    "startTitle": "Busca un alojamiento",
+    "startHint": "Elige el tamaño de tu grupo y las fechas, luego busca para ver la disponibilidad.",
+    "linkRequired": "Vincula tu perfil de miembro para solicitar una estancia.",
+    "stayRequested": "Estancia solicitada"
   },
   "accommodation": {
     "types": {

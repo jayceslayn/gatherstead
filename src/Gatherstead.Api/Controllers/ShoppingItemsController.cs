@@ -29,9 +29,10 @@ public class ShoppingItemsController : ControllerBase
         [FromQuery] Guid? propertyId,
         [FromQuery] Guid? mealPlanId,
         [FromQuery] ShoppingItemStatus? status,
+        [FromQuery] Guid? claimedByMemberId,
         CancellationToken cancellationToken)
     {
-        var response = await _shoppingItemService.ListAsync(tenantId, eventId, propertyId, mealPlanId, status, cancellationToken);
+        var response = await _shoppingItemService.ListAsync(tenantId, eventId, propertyId, mealPlanId, status, claimedByMemberId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);

@@ -56,6 +56,52 @@ public class AccommodationIntentService : IAccommodationIntentService
         return BaseEntityResponse<IReadOnlyCollection<AccommodationIntentDto>>.SuccessfulResponse(intents);
     }
 
+    public async Task<BaseEntityResponse<IReadOnlyCollection<MyStayDto>>> ListForTenantAsync(
+        Guid tenantId,
+        IEnumerable<Guid>? memberIds = null,
+        DateOnly? fromNight = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<IReadOnlyCollection<MyStayDto>>();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+
+        var query = _dbContext.AccommodationIntents
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId);
+
+        if (memberIds is not null)
+        {
+            var memberIdList = memberIds.ToList();
+            if (memberIdList.Count > 0)
+                query = query.Where(i => memberIdList.Contains(i.HouseholdMemberId));
+        }
+
+        if (fromNight is DateOnly from)
+            query = query.Where(i => i.EndNight >= from);
+
+        var stays = await query
+            .OrderBy(i => i.StartNight)
+            .ThenBy(i => i.EndNight)
+            .Select(i => new MyStayDto(
+                i.Id,
+                i.AccommodationId,
+                i.Accommodation!.Name,
+                i.Accommodation.PropertyId,
+                i.Accommodation.Property!.Name,
+                i.HouseholdMemberId,
+                i.StartNight,
+                i.EndNight,
+                i.Status,
+                i.Decision,
+                i.PartyAdults,
+                i.PartyChildren))
+            .ToListAsync(cancellationToken);
+
+        return BaseEntityResponse<IReadOnlyCollection<MyStayDto>>.SuccessfulResponse(stays);
+    }
+
     public async Task<AccommodationIntentResponse> GetAsync(
         Guid tenantId,
         Guid accommodationId,

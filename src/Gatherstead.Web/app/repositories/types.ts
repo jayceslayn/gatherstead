@@ -64,6 +64,9 @@ export type PropertySummary = OmitAudit<S['PropertyDto']>
 // ── Accommodations ────────────────────────────────────────────────────────
 export type AccommodationSummary = OmitAudit<S['AccommodationDto']>
 export type AccommodationIntent = OmitAudit<S['AccommodationIntentDto']>
+export type AccommodationAvailability = OmitAudit<S['AccommodationAvailabilityDto']>
+export type MyStay = OmitAudit<S['MyStayDto']>
+export type MyTask = OmitAudit<S['MyTaskDto']>
 
 // ── Equipment ─────────────────────────────────────────────────────────────
 export type EquipmentSummary = OmitAudit<S['EquipmentDto']>

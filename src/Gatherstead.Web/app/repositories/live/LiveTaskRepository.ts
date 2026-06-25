@@ -1,10 +1,18 @@
 import type { ITaskRepository } from '../interfaces'
-import type { TaskTemplate, TaskPlan, TaskIntent, AttributeWriteEntry } from '../types'
+import type { TaskTemplate, TaskPlan, TaskIntent, MyTask, AttributeWriteEntry } from '../types'
 import { trackPersistence } from '../../utils/telemetry'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
 export class LiveTaskRepository implements ITaskRepository {
+  async listMyTasks(tenantId: string, memberId: string, fromDay: string): Promise<MyTask[]> {
+    const params = new URLSearchParams({ memberIds: memberId, fromDay })
+    const r = await $fetch<ApiResponse<MyTask[]>>(
+      `/api/proxy/tenants/${tenantId}/task-intents?${params.toString()}`,
+    )
+    return r.entity ?? []
+  }
+
   async listTaskTemplates(tenantId: string, eventId: string): Promise<TaskTemplate[]> {
     const r = await $fetch<ApiResponse<TaskTemplate[]>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates`,

@@ -1,5 +1,5 @@
 import type { ITaskRepository } from '../interfaces'
-import type { TaskTemplate, TaskPlan, TaskIntent, AttributeWriteEntry, AttributeEntry } from '../types'
+import type { TaskTemplate, TaskPlan, TaskIntent, MyTask, AttributeWriteEntry, AttributeEntry } from '../types'
 import { taskSlotsFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
@@ -11,6 +11,35 @@ function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): A
 }
 
 export class DemoTaskRepository implements ITaskRepository {
+  async listMyTasks(tenantId: string, memberId: string, fromDay: string): Promise<MyTask[]> {
+    const store = getDemoStore()
+    const plan = (id: string) => store.taskPlans.value.find(p => p.id === id)
+    const template = (id: string | undefined) => store.taskTemplates.value.find(t => t.id === id)
+    const eventName = (id: string | undefined) => store.events.value.find(e => e.id === id)?.name ?? ''
+
+    return store.taskIntents.value
+      .filter(i => i.tenantId === tenantId && i.householdMemberId === memberId && i.volunteered)
+      .map((i): MyTask | null => {
+        const p = plan(i.taskPlanId)
+        if (!p || p.day < fromDay) return null
+        const t = template(p.templateId)
+        return {
+          id: i.id,
+          taskPlanId: i.taskPlanId,
+          householdMemberId: i.householdMemberId,
+          taskName: t?.name ?? '',
+          eventId: t?.eventId ?? '',
+          eventName: eventName(t?.eventId),
+          day: p.day,
+          timeSlot: p.timeSlot,
+          completed: p.completed,
+          volunteered: i.volunteered,
+        }
+      })
+      .filter((t): t is MyTask => t !== null)
+      .sort((x, y) => x.day.localeCompare(y.day))
+  }
+
   async listTaskTemplates(_tenantId: string, eventId: string): Promise<TaskTemplate[]> {
     return getDemoStore().taskTemplates.value.filter(t => t.eventId === eventId)
   }

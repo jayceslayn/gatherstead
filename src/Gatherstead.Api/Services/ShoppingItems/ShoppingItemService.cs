@@ -38,6 +38,7 @@ public class ShoppingItemService : IShoppingItemService
         Guid? propertyId,
         Guid? mealPlanId,
         ShoppingItemStatus? status,
+        Guid? claimedByMemberId = null,
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<ShoppingItemDto>>();
@@ -45,9 +46,9 @@ public class ShoppingItemService : IShoppingItemService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
-        if (eventId is null && propertyId is null && mealPlanId is null)
+        if (eventId is null && propertyId is null && mealPlanId is null && claimedByMemberId is null)
         {
-            response.AddResponseMessage(MessageType.ERROR, "At least one of eventId, propertyId, or mealPlanId is required.");
+            response.AddResponseMessage(MessageType.ERROR, "At least one of eventId, propertyId, mealPlanId, or claimedByMemberId is required.");
             return response;
         }
 
@@ -59,6 +60,11 @@ public class ShoppingItemService : IShoppingItemService
         if (eventId is Guid ev) query = query.Where(i => i.EventId == ev);
         if (propertyId is Guid prop) query = query.Where(i => i.PropertyId == prop);
         if (mealPlanId is Guid plan) query = query.Where(i => i.MealPlanId == plan);
+
+        // "My shopping": items where this member has an active Claimed contribution. The global query
+        // filter scopes the Intents navigation to non-deleted rows.
+        if (claimedByMemberId is Guid member)
+            query = query.Where(i => i.Intents.Any(x => x.HouseholdMemberId == member && x.Status == ShoppingItemIntentStatus.Claimed));
 
         var items = await query.ToListAsync(cancellationToken);
         var dtos = items.Select(i => MapToDto(i, [])).ToList();

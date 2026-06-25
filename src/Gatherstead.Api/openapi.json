@@ -364,6 +364,61 @@
         }
       }
     },
+    "/api/tenants/{tenantId}/accommodation-intents": {
+      "get": {
+        "tags": [
+          "AccommodationIntentsQuery"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromNight",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyStayDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyStayDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyStayDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants/{tenantId}/properties/{propertyId}/accommodations": {
       "get": {
         "tags": [
@@ -668,6 +723,85 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccommodationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/accommodations/availability": {
+      "get": {
+        "tags": [
+          "AccommodationSearch"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "startNight",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endNight",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "partyAdults",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "partyChildren",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "requireCapacity",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccommodationAvailabilityDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccommodationAvailabilityDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccommodationAvailabilityDtoIReadOnlyCollectionBaseEntityResponse"
                 }
               }
             }
@@ -5312,6 +5446,14 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "claimedByMemberId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -5991,6 +6133,61 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TaskIntentResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/task-intents": {
+      "get": {
+        "tags": [
+          "TaskIntentsQuery"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTaskDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTaskDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyTaskDtoIReadOnlyCollectionBaseEntityResponse"
                 }
               }
             }
@@ -7023,6 +7220,98 @@
   },
   "components": {
     "schemas": {
+      "AccommodationAvailabilityDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "propertyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "propertyName": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "Bedroom",
+              "Bunk",
+              "RvPad",
+              "Tent",
+              "Offsite"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacityAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "capacityChildren": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "claimedAdults": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "claimedChildren": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remainingAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "remainingChildren": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "hasSufficientCapacity": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccommodationAvailabilityDtoIReadOnlyCollectionBaseEntityResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccommodationAvailabilityDto"
+            },
+            "nullable": true
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "AccommodationDto": {
         "type": "object",
         "properties": {
@@ -9599,6 +9888,162 @@
         },
         "additionalProperties": false
       },
+      "MyStayDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accommodationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accommodationName": {
+            "type": "string"
+          },
+          "propertyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "propertyName": {
+            "type": "string"
+          },
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startNight": {
+            "type": "string",
+            "format": "date"
+          },
+          "endNight": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "enum": [
+              "Intent",
+              "Hold",
+              "Confirmed"
+            ],
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "Pending",
+              "Approved",
+              "Declined"
+            ],
+            "type": "string"
+          },
+          "partyAdults": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "partyChildren": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MyStayDtoIReadOnlyCollectionBaseEntityResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyStayDto"
+            },
+            "nullable": true
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MyTaskDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskName": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "timeSlot": {
+            "enum": [
+              "Morning",
+              "Midday",
+              "Evening",
+              "Anytime"
+            ],
+            "type": "string",
+            "nullable": true
+          },
+          "completed": {
+            "type": "boolean"
+          },
+          "volunteered": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MyTaskDtoIReadOnlyCollectionBaseEntityResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyTaskDto"
+            },
+            "nullable": true
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "PropertyDto": {
         "type": "object",
         "properties": {
@@ -11150,7 +11595,13 @@
       "name": "AccommodationIntents"
     },
     {
+      "name": "AccommodationIntentsQuery"
+    },
+    {
       "name": "Accommodations"
+    },
+    {
+      "name": "AccommodationSearch"
     },
     {
       "name": "Addresses"
@@ -11217,6 +11668,9 @@
     },
     {
       "name": "TaskIntents"
+    },
+    {
+      "name": "TaskIntentsQuery"
     },
     {
       "name": "TaskPlans"

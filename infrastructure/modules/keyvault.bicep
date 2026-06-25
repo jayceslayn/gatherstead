@@ -13,7 +13,7 @@ param workspaceId string
 // Built-in role definition IDs
 var keyVaultAdministratorRoleId = '00482a5a-887f-4fb3-b363-3b7fe8e74483'
 var keyVaultCryptoUserRoleId = '12338af0-0e69-4776-bea7-57ae8d297424'
-var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e0'
+var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 
 var keyVaultName = 'gat-kv-${uniqueString(resourceGroup().id)}'
 

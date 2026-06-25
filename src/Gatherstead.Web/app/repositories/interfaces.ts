@@ -20,6 +20,9 @@ import type {
   AccommodationIntent,
   AccommodationIntentStatus,
   AccommodationIntentDecision,
+  AccommodationAvailability,
+  MyStay,
+  MyTask,
   TenantRole,
   HouseholdRole,
   TenantUserSummary,
@@ -214,6 +217,8 @@ export interface IMealPlanRepository {
 }
 
 export interface ITaskRepository {
+  /** A member's volunteered tasks across all events, on or after `fromDay`. */
+  listMyTasks(tenantId: string, memberId: string, fromDay: string): Promise<MyTask[]>
   listTaskTemplates(tenantId: string, eventId: string): Promise<TaskTemplate[]>
   listPlans(tenantId: string, eventId: string, templateId: string): Promise<TaskPlan[]>
   listIntentsForMember(
@@ -317,9 +322,24 @@ export interface IPropertyRepository {
   deleteProperty(tenantId: string, propertyId: string): Promise<void>
 }
 
+/** Intake for the "Expedia-like" availability search (party size + night span). */
+export interface AccommodationAvailabilityQuery {
+  startNight: string
+  endNight: string
+  partyAdults?: number | null
+  partyChildren?: number | null
+  /** When true, only accommodations that can fit the party are returned; when false, all are
+   * returned with a `hasSufficientCapacity` flag. */
+  requireCapacity: boolean
+}
+
 export interface IAccommodationRepository {
   listAccommodations(tenantId: string, propertyId: string): Promise<AccommodationSummary[]>
   getAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<AccommodationSummary | null>
+  /** Tenant-wide availability search across all properties for the given party + dates. */
+  searchAvailability(tenantId: string, query: AccommodationAvailabilityQuery): Promise<AccommodationAvailability[]>
+  /** A member's stays across all accommodations, ending on or after `fromNight`. */
+  listMyStays(tenantId: string, memberId: string, fromNight: string): Promise<MyStay[]>
   createAccommodation(
     tenantId: string,
     propertyId: string,
@@ -432,6 +452,8 @@ export interface ShoppingItemIntentInput {
 export interface IShoppingItemRepository {
   listByEvent(tenantId: string, eventId: string): Promise<ShoppingItem[]>
   listByProperty(tenantId: string, propertyId: string): Promise<ShoppingItem[]>
+  /** Items the member has an active Claimed intent on (the "My Upcoming Shopping" widget). */
+  listClaimedByMember(tenantId: string, memberId: string): Promise<ShoppingItem[]>
   create(tenantId: string, input: CreateShoppingItemInput): Promise<ShoppingItem>
   updateItem(tenantId: string, itemId: string, input: UpdateShoppingItemInput): Promise<void>
   upsertIntent(tenantId: string, itemId: string, memberId: string, input: ShoppingItemIntentInput): Promise<ShoppingItem>

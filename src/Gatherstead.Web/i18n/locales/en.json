@@ -49,6 +49,7 @@
     "households": "Households",
     "events": "Events",
     "properties": "Properties",
+    "accommodations": "Accommodations",
     "equipment": "Equipment",
     "shopping": "Shopping",
     "reports": "Reports",
@@ -64,7 +65,13 @@
     "createEvent": "Create Event",
     "upcomingEvents": "Upcoming Events",
     "viewAll": "View All",
-    "myTasks": "My Tasks",
+    "myTasks": "My Upcoming Tasks",
+    "myStays": "My Upcoming Stays",
+    "myShopping": "My Upcoming Shopping",
+    "noTasks": "You have no upcoming tasks.",
+    "noStays": "You have no upcoming stays.",
+    "noShopping": "You haven't claimed any shopping yet.",
+    "findStay": "Find a stay",
     "tasksComingSoon": "Availability, meal intents, and task sign-ups will appear here."
   },
   "tenant": {
@@ -173,6 +180,9 @@
     "meals": "Meals",
     "tasks": "Tasks",
     "accommodations": "Accommodations",
+    "accommodationsCtaTitle": "Looking for a place to stay?",
+    "accommodationsCtaBody": "Browse and request stays from the Accommodations area — we'll prefill this event's dates so you can see what fits.",
+    "accommodationsCtaButton": "Find a stay",
     "myAttendance": "My Attendance",
     "selectHousehold": "Select household",
     "tabsComingSoon": "This section is coming soon.",
@@ -346,6 +356,25 @@
       "prevDay": "Previous day",
       "nextDay": "Next day"
     }
+  },
+  "accommodations": {
+    "title": "Accommodations",
+    "subtitle": "Find a place to stay — set your party and dates to see what's available.",
+    "checkIn": "First night",
+    "checkOut": "Last night",
+    "onlyAvailable": "Only show options with room",
+    "available": "Available",
+    "full": "Full",
+    "unlimited": "Unlimited",
+    "remainingOf": "{remaining} of {capacity} left",
+    "resultCount": "{n} option | {n} options",
+    "forParty": "for {adults} adults, {children} children",
+    "noResults": "No accommodations match",
+    "noResultsHint": "Try widening your dates or turning off the capacity filter to see every option.",
+    "startTitle": "Search for a stay",
+    "startHint": "Choose your party size and dates, then search to see availability.",
+    "linkRequired": "Link your member profile to request a stay.",
+    "stayRequested": "Stay requested"
   },
   "accommodation": {
     "types": {

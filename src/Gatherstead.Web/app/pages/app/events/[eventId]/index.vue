@@ -29,8 +29,6 @@ const attendanceByDay = computed(() => {
   return map
 })
 
-const eventPropertyId = computed(() => event.value?.propertyId ?? '')
-
 // Tab state — computed so labels re-translate on locale switch.
 const tabs = computed<TabsItem[]>(() => [
   { label: t('event.attendance'), value: 'attendance', slot: 'attendance' },
@@ -171,13 +169,23 @@ onMounted(() => {
 
         <template #accommodations>
           <div class="mt-4">
-            <GsEventAccommodationGrid
-              v-model:selected-day-index="signupDayIndex"
-              :property-id="eventPropertyId"
-              :days="eventDays"
-              :household-id="selectedHouseholdId"
-              :totals-by-day="attendanceByDay"
-            />
+            <UCard>
+              <div class="flex flex-col items-center text-center gap-3 py-6">
+                <div class="rounded-lg bg-primary/10 p-3">
+                  <UIcon name="i-heroicons-home-modern" class="size-7 text-primary" />
+                </div>
+                <div class="max-w-md">
+                  <p class="font-semibold">{{ t('event.accommodationsCtaTitle') }}</p>
+                  <p class="text-sm text-muted mt-1">{{ t('event.accommodationsCtaBody') }}</p>
+                </div>
+                <UButton
+                  :to="`/app/accommodations?startNight=${event.startDate}&endNight=${event.endDate}`"
+                  icon="i-heroicons-magnifying-glass"
+                >
+                  {{ t('event.accommodationsCtaButton') }}
+                </UButton>
+              </div>
+            </UCard>
           </div>
         </template>
 

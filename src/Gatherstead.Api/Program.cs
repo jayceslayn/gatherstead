@@ -77,6 +77,7 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<PlanSyncService>();
 builder.Services.AddScoped<IPropertyService, PropertyService>();
 builder.Services.AddScoped<IAccommodationService, AccommodationService>();
+builder.Services.AddScoped<IAccommodationAvailabilityService, AccommodationAvailabilityService>();
 builder.Services.AddScoped<IEventAttendanceService, EventAttendanceService>();
 builder.Services.AddScoped<IMealTemplateService, MealTemplateService>();
 builder.Services.AddScoped<ITaskTemplateService, TaskTemplateService>();

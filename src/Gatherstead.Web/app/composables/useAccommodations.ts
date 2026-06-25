@@ -5,8 +5,10 @@ import type {
   AccommodationIntent,
   AccommodationIntentStatus,
   AccommodationIntentDecision,
+  AccommodationAvailability,
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
+import type { AccommodationAvailabilityQuery } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
 
@@ -21,6 +23,83 @@ export function useAccommodations(propertyId: Ref<string>) {
   )
 
   return { accommodations: computed(() => data.value ?? []), pending, error, refresh }
+}
+
+/**
+ * Drives the top-level "Expedia-like" availability search. Call `search(query)` with party size +
+ * nights; `results` then holds every accommodation with its remaining capacity for that window.
+ */
+export function useAccommodationSearch() {
+  const tenantStore = useTenantStore()
+  const { accommodations: repo } = useRepositories()
+
+  const params = ref<AccommodationAvailabilityQuery | null>(null)
+
+  const { data, pending, error, refresh } = useAsyncData<AccommodationAvailability[]>(
+    () => `accom-availability-${tenantStore.currentTenantId}-${params.value ? JSON.stringify(params.value) : 'none'}`,
+    () => {
+      const tenantId = tenantStore.currentTenantId
+      if (!tenantId || !params.value) return Promise.resolve([])
+      return repo.searchAvailability(tenantId, params.value)
+    },
+    { watch: [() => tenantStore.currentTenantId, params] },
+  )
+
+  function search(query: AccommodationAvailabilityQuery) {
+    params.value = { ...query }
+  }
+
+  return {
+    results: computed(() => data.value ?? []),
+    hasSearched: computed(() => params.value !== null),
+    params: computed(() => params.value),
+    pending,
+    error,
+    refresh,
+    search,
+  }
+}
+
+/** Creates a stay request for any accommodation (property resolved from the search result). */
+export function useAccommodationStayRequest() {
+  const tenantStore = useTenantStore()
+  const { accommodationIntents: repo } = useRepositories()
+  const toast = useToast()
+  const { translateError } = useApiError()
+  const submitting = ref(false)
+
+  async function requestStay(
+    propertyId: string,
+    accommodationId: string,
+    householdId: string,
+    memberId: string,
+    startNight: string,
+    endNight: string,
+    status: AccommodationIntentStatus,
+    partyAdults: number | null,
+    partyChildren: number | null,
+    notes: string | null,
+  ): Promise<boolean> {
+    const tenantId = tenantStore.currentTenantId
+    if (!tenantId) return false
+    submitting.value = true
+    try {
+      await repo.createIntent(
+        tenantId, propertyId, accommodationId, householdId, memberId,
+        startNight, endNight, status, notes, partyAdults, partyChildren,
+      )
+      return true
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
+    }
+    finally {
+      submitting.value = false
+    }
+  }
+
+  return { submitting, requestStay }
 }
 
 export function useAccommodationIntents(
@@ -132,155 +211,6 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
   }
 
   return { updating, createAccommodation, updateAccommodation, deleteAccommodation }
-}
-
-/**
- * Aggregates stay-request intents across every accommodation of a property and
- * exposes per-member lookups + bulk request/cancel actions — powering the event
- * sign-up day columns where each night lists accommodations and member requests.
- */
-export function useEventAccommodationSignup(
-  propertyId: Ref<string>,
-  accommodations: Ref<AccommodationSummary[]>,
-  householdMemberIds: Ref<string[]>,
-) {
-  const tenantStore = useTenantStore()
-  const { accommodationIntents: repo } = useRepositories()
-  const toast = useToast()
-  const { translateError } = useApiError()
-
-  const accommodationIds = computed(() => accommodations.value.map(a => a.id))
-
-  // accommodationId → every intent (all households, all nights).
-  const { data, pending, refresh } = useAsyncData<Record<string, AccommodationIntent[]>>(
-    () => `accom-signup-${tenantStore.currentTenantId}-${propertyId.value}`,
-    async () => {
-      const tenantId = tenantStore.currentTenantId
-      if (!tenantId || !propertyId.value || !accommodations.value.length) return {}
-      const lists = await Promise.all(
-        accommodations.value.map(a =>
-          repo.listIntents(tenantId, propertyId.value, a.id).catch(() => [] as AccommodationIntent[]),
-        ),
-      )
-      const map: Record<string, AccommodationIntent[]> = {}
-      accommodations.value.forEach((a, i) => { map[a.id] = lists[i] ?? [] })
-      return map
-    },
-    { watch: [propertyId, () => tenantStore.currentTenantId, () => accommodationIds.value.join(',')] },
-  )
-
-  const intentsByAccommodation = computed(() => data.value ?? {})
-
-  // The selected household's stays whose span covers the given night, sorted by member order.
-  function memberIntents(accommodationId: string, night: string): AccommodationIntent[] {
-    const order = new Map(householdMemberIds.value.map((id, i) => [id, i]))
-    return (intentsByAccommodation.value[accommodationId] ?? [])
-      .filter(i => i.startNight <= night && i.endNight >= night && order.has(i.householdMemberId))
-      .sort((a, b) => (order.get(a.householdMemberId) ?? 0) - (order.get(b.householdMemberId) ?? 0))
-  }
-
-  // Total occupancy for a night across all households — every stay whose span covers the night
-  // (declined excluded; a party with no adult/child counts counts as 1). Capacity is only a soft
-  // UI flag, so this can legitimately exceed it. Mirrors the event report's occupancy aggregation.
-  function occupiedCount(accommodationId: string, night: string): number {
-    return (intentsByAccommodation.value[accommodationId] ?? [])
-      .filter(i => i.startNight <= night && i.endNight >= night && i.decision !== 'Declined')
-      .reduce((sum, i) => sum + Math.max((i.partyAdults ?? 0) + (i.partyChildren ?? 0), 1), 0)
-  }
-
-  const updating = ref<string[]>([])
-
-  /** Creates a single stay spanning [startNight, endNight]. */
-  async function requestStay(
-    accommodationId: string,
-    householdId: string,
-    memberId: string,
-    startNight: string,
-    endNight: string,
-    status: AccommodationIntentStatus,
-    notes: string | null,
-    partyAdults: number | null,
-    partyChildren: number | null,
-  ): Promise<boolean> {
-    const tenantId = tenantStore.currentTenantId
-    if (!tenantId) return false
-    updating.value = [...updating.value, accommodationId]
-    try {
-      await repo.createIntent(
-        tenantId, propertyId.value, accommodationId, householdId, memberId,
-        startNight, endNight, status, notes, partyAdults, partyChildren,
-      )
-      await refresh()
-      return true
-    }
-    catch (e) {
-      toast.add({ title: translateError(e), color: 'error' })
-      return false
-    }
-    finally {
-      updating.value = updating.value.filter(k => k !== accommodationId)
-    }
-  }
-
-  /** Edits an existing stay as a unit (member + accommodation + range + party + status). */
-  async function updateStay(
-    accommodationId: string,
-    intentId: string,
-    memberId: string,
-    targetAccommodationId: string,
-    startNight: string,
-    endNight: string,
-    status: AccommodationIntentStatus,
-    decision: AccommodationIntentDecision,
-    notes: string | null,
-    partyAdults: number | null,
-    partyChildren: number | null,
-  ): Promise<boolean> {
-    const tenantId = tenantStore.currentTenantId
-    if (!tenantId) return false
-    updating.value = [...updating.value, intentId]
-    try {
-      // accommodationId is the stay's current location (path); targetAccommodationId is where it should land.
-      await repo.updateIntent(
-        tenantId, propertyId.value, accommodationId, intentId,
-        memberId, targetAccommodationId,
-        startNight, endNight, status, decision, notes, partyAdults, partyChildren,
-      )
-      await refresh()
-      return true
-    }
-    catch (e) {
-      toast.add({ title: translateError(e), color: 'error' })
-      return false
-    }
-    finally {
-      updating.value = updating.value.filter(k => k !== intentId)
-    }
-  }
-
-  async function cancelStay(accommodationId: string, intentId: string): Promise<boolean> {
-    const tenantId = tenantStore.currentTenantId
-    if (!tenantId) return false
-    updating.value = [...updating.value, intentId]
-    try {
-      await repo.deleteIntent(tenantId, propertyId.value, accommodationId, intentId)
-      await refresh()
-      return true
-    }
-    catch (e) {
-      toast.add({ title: translateError(e), color: 'error' })
-      return false
-    }
-    finally {
-      updating.value = updating.value.filter(k => k !== intentId)
-    }
-  }
-
-  function isUpdating(key: string): boolean {
-    return updating.value.includes(key)
-  }
-
-  return { pending, intentsByAccommodation, memberIntents, occupiedCount, requestStay, updateStay, cancelStay, isUpdating, refresh }
 }
 
 export function useAccommodationIntentActions(

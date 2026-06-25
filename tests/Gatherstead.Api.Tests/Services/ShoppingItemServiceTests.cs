@@ -423,7 +423,7 @@ public class ShoppingItemServiceTests : IAsyncLifetime
         });
 
         var result = await CreateService()
-            .ListAsync(_tenantId, _eventId, null, null, null, TestContext.Current.CancellationToken);
+            .ListAsync(_tenantId, _eventId, null, null, null, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
         Assert.Equal(2, result.Entity!.Count);
@@ -449,7 +449,7 @@ public class ShoppingItemServiceTests : IAsyncLifetime
             TestContext.Current.CancellationToken);
 
         var result = await CreateService()
-            .ListAsync(_tenantId, _eventId, null, null, ShoppingItemStatus.Needed, TestContext.Current.CancellationToken);
+            .ListAsync(_tenantId, _eventId, null, null, ShoppingItemStatus.Needed, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
         Assert.Single(result.Entity!);
@@ -460,8 +460,56 @@ public class ShoppingItemServiceTests : IAsyncLifetime
     public async Task ListAsync_NoScope_ReturnsError()
     {
         var result = await CreateService()
-            .ListAsync(_tenantId, null, null, null, null, TestContext.Current.CancellationToken);
+            .ListAsync(_tenantId, null, null, null, null, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Successful);
+    }
+
+    [Fact]
+    public async Task ListAsync_ClaimedByMember_ReturnsOnlyItemsTheMemberClaimed()
+    {
+        var claimed = await AddItemAsync(new ShoppingItem
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, Origin = ShoppingItemOrigin.Event,
+            EventId = _eventId, Name = "Claimed by Alice",
+        });
+        var other = await AddItemAsync(new ShoppingItem
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, Origin = ShoppingItemOrigin.Event,
+            EventId = _eventId, Name = "Claimed by Bob",
+        });
+        await CreateService().UpsertIntentAsync(_tenantId, claimed.Id, _aliceId,
+            new UpsertShoppingItemIntentRequest { Status = ShoppingItemIntentStatus.Claimed },
+            TestContext.Current.CancellationToken);
+        await CreateService().UpsertIntentAsync(_tenantId, other.Id, _bobId,
+            new UpsertShoppingItemIntentRequest { Status = ShoppingItemIntentStatus.Claimed },
+            TestContext.Current.CancellationToken);
+
+        // claimedByMemberId alone is a valid scope (no event/property/meal needed).
+        var result = await CreateService()
+            .ListAsync(_tenantId, null, null, null, null, _aliceId, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var item = Assert.Single(result.Entity!);
+        Assert.Equal("Claimed by Alice", item.Name);
+    }
+
+    [Fact]
+    public async Task ListAsync_ClaimedByMember_ExcludesProvidedIntents()
+    {
+        var item = await AddItemAsync(new ShoppingItem
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, Origin = ShoppingItemOrigin.Event,
+            EventId = _eventId, Name = "Already provided",
+        });
+        await CreateService().UpsertIntentAsync(_tenantId, item.Id, _aliceId,
+            new UpsertShoppingItemIntentRequest { Status = ShoppingItemIntentStatus.Provided },
+            TestContext.Current.CancellationToken);
+
+        var result = await CreateService()
+            .ListAsync(_tenantId, null, null, null, null, _aliceId, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!);
     }
 
     // ── Prune cascade (PlanSyncService) ──────────────────────────────────────

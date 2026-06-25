@@ -196,4 +196,46 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
         Assert.False(result.Successful);
         Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
     }
+
+    // ── ListForTenantAsync (cross-accommodation "my stays") ──────────────────
+
+    [Fact]
+    public async Task ListForTenantAsync_EnrichesWithAccommodationAndPropertyNames()
+    {
+        var service = CreateService();
+        await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        var result = await service.ListForTenantAsync(_tenantId, new[] { _member }, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var stay = Assert.Single(result.Entity!);
+        Assert.Equal("Cabin A", stay.AccommodationName);
+        Assert.Equal("Lake House", stay.PropertyName);
+        Assert.Equal(_propertyId, stay.PropertyId);
+    }
+
+    [Fact]
+    public async Task ListForTenantAsync_MemberFilter_ExcludesOtherMembers()
+    {
+        var service = CreateService();
+        await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        var result = await service.ListForTenantAsync(_tenantId, new[] { _member2 }, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!);
+    }
+
+    [Fact]
+    public async Task ListForTenantAsync_FromNight_ExcludesPastStays()
+    {
+        var service = CreateService();
+        // A stay that has fully ended before the cutoff.
+        await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        var result = await service.ListForTenantAsync(_tenantId, new[] { _member }, Day3, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!);
+    }
 }

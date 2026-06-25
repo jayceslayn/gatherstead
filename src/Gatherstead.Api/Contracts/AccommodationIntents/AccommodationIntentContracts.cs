@@ -21,6 +21,22 @@ public record AccommodationIntentDto(
 
 public class AccommodationIntentResponse : BaseEntityResponse<AccommodationIntentDto> { }
 
+/// <summary>A member's stay enriched with its accommodation and property names, for cross-accommodation
+/// "my stays" listings (the top-level Accommodations feature and dashboard widget).</summary>
+public record MyStayDto(
+    Guid Id,
+    Guid AccommodationId,
+    string AccommodationName,
+    Guid PropertyId,
+    string PropertyName,
+    Guid HouseholdMemberId,
+    DateOnly StartNight,
+    DateOnly EndNight,
+    AccommodationIntentStatus Status,
+    AccommodationIntentDecision Decision,
+    int? PartyAdults,
+    int? PartyChildren);
+
 public class CreateAccommodationIntentRequest
 {
     [Required]

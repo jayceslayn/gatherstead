@@ -1,5 +1,5 @@
-import type { IAccommodationRepository } from '../interfaces'
-import type { AccommodationSummary, AccommodationType, AttributeWriteEntry, AttributeEntry } from '../types'
+import type { IAccommodationRepository, AccommodationAvailabilityQuery } from '../interfaces'
+import type { AccommodationSummary, AccommodationType, AccommodationAvailability, MyStay, AttributeWriteEntry, AttributeEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
@@ -22,6 +22,76 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     return getDemoStore().accommodations.value.find(
       a => a.tenantId === tenantId && a.propertyId === propertyId && a.id === accommodationId,
     ) ?? null
+  }
+
+  async searchAvailability(tenantId: string, query: AccommodationAvailabilityQuery): Promise<AccommodationAvailability[]> {
+    const store = getDemoStore()
+    const propertyName = (id: string) => store.properties.value.find(p => p.id === id)?.name ?? ''
+    const requestedAdults = query.partyAdults ?? 0
+    const requestedChildren = query.partyChildren ?? 0
+
+    const results = store.accommodations.value
+      .filter(a => a.tenantId === tenantId)
+      .map((a): AccommodationAvailability => {
+        // Two night spans overlap when each starts on or before the other ends.
+        const overlapping = store.accommodationIntents.value.filter(
+          i => i.accommodationId === a.id && i.startNight <= query.endNight && i.endNight >= query.startNight,
+        )
+        const claimedAdults = overlapping.reduce((s, i) => s + (i.partyAdults ?? 0), 0)
+        const claimedChildren = overlapping.reduce((s, i) => s + (i.partyChildren ?? 0), 0)
+        const remainingAdults = a.capacityAdults != null ? a.capacityAdults - claimedAdults : null
+        const remainingChildren = a.capacityChildren != null ? a.capacityChildren - claimedChildren : null
+        const adultsOk = remainingAdults == null || remainingAdults >= requestedAdults
+        const childrenOk = remainingChildren == null || remainingChildren >= requestedChildren
+        return {
+          id: a.id,
+          tenantId,
+          propertyId: a.propertyId,
+          propertyName: propertyName(a.propertyId),
+          name: a.name,
+          type: a.type,
+          notes: a.notes,
+          capacityAdults: a.capacityAdults,
+          capacityChildren: a.capacityChildren,
+          claimedAdults,
+          claimedChildren,
+          remainingAdults,
+          remainingChildren,
+          hasSufficientCapacity: adultsOk && childrenOk,
+        }
+      })
+      .filter(r => !query.requireCapacity || r.hasSufficientCapacity)
+
+    return results.sort((x, y) =>
+      Number(y.hasSufficientCapacity) - Number(x.hasSufficientCapacity)
+      || x.propertyName.localeCompare(y.propertyName)
+      || x.name.localeCompare(y.name))
+  }
+
+  async listMyStays(tenantId: string, memberId: string, fromNight: string): Promise<MyStay[]> {
+    const store = getDemoStore()
+    const accommodation = (id: string) => store.accommodations.value.find(a => a.id === id)
+    const propertyName = (id: string) => store.properties.value.find(p => p.id === id)?.name ?? ''
+    return store.accommodationIntents.value
+      .filter(i => i.tenantId === tenantId && i.householdMemberId === memberId && i.endNight >= fromNight)
+      .map((i): MyStay => {
+        const a = accommodation(i.accommodationId)
+        return {
+          id: i.id,
+          accommodationId: i.accommodationId,
+          accommodationName: a?.name ?? '',
+          propertyId: a?.propertyId ?? '',
+          propertyName: a ? propertyName(a.propertyId) : '',
+          householdMemberId: i.householdMemberId,
+          startNight: i.startNight,
+          endNight: i.endNight,
+          status: i.status,
+          decision: i.decision,
+          partyAdults: i.partyAdults,
+          partyChildren: i.partyChildren,
+        }
+      })
+      .sort((x, y) => x.startNight.localeCompare(y.startNight) || x.endNight.localeCompare(y.endNight))
   }
 
   async createAccommodation(

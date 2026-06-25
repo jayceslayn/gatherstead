@@ -27,31 +27,12 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
       </UButton>
     </GsPageHeader>
 
-    <div v-if="pending" class="py-16 text-center">
-      <p class="text-muted">{{ t('common.loading') }}</p>
-    </div>
-
-    <GsEmptyState
-      v-else-if="!upcomingEvents.length"
-      icon="i-heroicons-calendar-days"
-      :title="isManagerOrAbove ? t('dashboard.noEventsYet') : t('dashboard.waitingForEvent')"
-      :description="isManagerOrAbove ? t('dashboard.noEventsHint') : undefined"
-    >
-      <UButton v-if="isManagerOrAbove" to="/app/events/create" icon="i-heroicons-plus">
-        {{ t('dashboard.createEvent') }}
-      </UButton>
-    </GsEmptyState>
-
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- My Tasks -->
-      <div class="lg:col-span-1">
-        <h2 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
-          {{ t('dashboard.myTasks') }}
-        </h2>
-        <div class="rounded-lg border border-(--ui-border) bg-elevated p-6 flex flex-col items-center text-center gap-2">
-          <UIcon name="i-heroicons-clipboard-document-list" class="size-8 text-muted" />
-          <p class="text-sm text-muted">{{ t('dashboard.tasksComingSoon') }}</p>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- My upcoming (per-member) widgets -->
+      <div class="lg:col-span-1 space-y-6">
+        <GsMyUpcomingStays />
+        <GsMyUpcomingTasks />
+        <GsMyUpcomingShopping />
       </div>
 
       <!-- Upcoming Events -->
@@ -59,7 +40,24 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
         <h2 class="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
           {{ t('dashboard.upcomingEvents') }}
         </h2>
+
+        <div v-if="pending" class="py-16 text-center">
+          <p class="text-muted">{{ t('common.loading') }}</p>
+        </div>
+
+        <GsEmptyState
+          v-else-if="!upcomingEvents.length"
+          icon="i-heroicons-calendar-days"
+          :title="isManagerOrAbove ? t('dashboard.noEventsYet') : t('dashboard.waitingForEvent')"
+          :description="isManagerOrAbove ? t('dashboard.noEventsHint') : undefined"
+        >
+          <UButton v-if="isManagerOrAbove" to="/app/events/create" icon="i-heroicons-plus">
+            {{ t('dashboard.createEvent') }}
+          </UButton>
+        </GsEmptyState>
+
         <GsEventCalendarList
+          v-else
           v-model:view-mode="viewMode"
           :events="upcomingEvents"
           :initial-date="upcomingEvents[0]?.startDate"

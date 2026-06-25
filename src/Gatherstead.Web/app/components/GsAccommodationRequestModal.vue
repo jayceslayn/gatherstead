@@ -7,6 +7,9 @@ const props = defineProps<{
   members: HouseholdMember[]
   eventDays: string[]
   defaultMemberId: string | null
+  /** Prefills the free-date night inputs for a new stay (e.g. from the availability search). */
+  defaultStartNight?: string | null
+  defaultEndNight?: string | null
   /** When set, the modal edits this stay as a unit instead of creating a new one. */
   editIntent?: AccommodationIntent | null
   loading?: boolean
@@ -72,8 +75,8 @@ watch(() => props.open, (isOpen) => {
   partyAdults.value = null
   partyChildren.value = null
   notes.value = ''
-  startNight.value = props.eventDays[0] ?? ''
-  endNight.value = props.eventDays[0] ?? ''
+  startNight.value = props.defaultStartNight ?? props.eventDays[0] ?? ''
+  endNight.value = props.defaultEndNight ?? props.defaultStartNight ?? props.eventDays[0] ?? ''
 })
 
 const accommodationItems = computed(() => props.accommodations.map(a => ({ label: a.name, value: a.id })))

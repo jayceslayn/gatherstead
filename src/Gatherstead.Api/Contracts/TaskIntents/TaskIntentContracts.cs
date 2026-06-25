@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.TaskIntents;
 
@@ -12,6 +13,20 @@ public record TaskIntentDto(
     AuditInfo? Audit);
 
 public class TaskIntentResponse : BaseEntityResponse<TaskIntentDto> { }
+
+/// <summary>A member's volunteered task enriched with its plan day, task name and event context, for
+/// the "My Upcoming Tasks" dashboard/feature widget.</summary>
+public record MyTaskDto(
+    Guid Id,
+    Guid TaskPlanId,
+    Guid HouseholdMemberId,
+    string TaskName,
+    Guid EventId,
+    string EventName,
+    DateOnly Day,
+    TaskTimeSlot? TimeSlot,
+    bool Completed,
+    bool Volunteered);
 
 public class UpsertTaskIntentRequest
 {

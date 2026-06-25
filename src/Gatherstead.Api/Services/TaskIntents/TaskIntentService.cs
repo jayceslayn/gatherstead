@@ -56,6 +56,49 @@ public class TaskIntentService : ITaskIntentService
         return BaseEntityResponse<IReadOnlyCollection<TaskIntentDto>>.SuccessfulResponse(intents);
     }
 
+    public async Task<BaseEntityResponse<IReadOnlyCollection<MyTaskDto>>> ListForMemberAsync(
+        Guid tenantId,
+        IEnumerable<Guid>? memberIds = null,
+        DateOnly? fromDay = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<IReadOnlyCollection<MyTaskDto>>();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+
+        var query = _dbContext.TaskIntents
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId && i.Volunteered);
+
+        if (memberIds is not null)
+        {
+            var memberIdList = memberIds.ToList();
+            if (memberIdList.Count > 0)
+                query = query.Where(i => memberIdList.Contains(i.HouseholdMemberId));
+        }
+
+        if (fromDay is DateOnly from)
+            query = query.Where(i => i.TaskPlan!.Day >= from);
+
+        var tasks = await query
+            .OrderBy(i => i.TaskPlan!.Day)
+            .Select(i => new MyTaskDto(
+                i.Id,
+                i.TaskPlanId,
+                i.HouseholdMemberId,
+                i.TaskPlan!.Template!.Name,
+                i.TaskPlan.Template.EventId,
+                i.TaskPlan.Template.Event!.Name,
+                i.TaskPlan.Day,
+                i.TaskPlan.TimeSlot,
+                i.TaskPlan.Completed,
+                i.Volunteered))
+            .ToListAsync(cancellationToken);
+
+        return BaseEntityResponse<IReadOnlyCollection<MyTaskDto>>.SuccessfulResponse(tasks);
+    }
+
     public async Task<TaskIntentResponse> GetAsync(
         Guid tenantId,
         Guid planId,

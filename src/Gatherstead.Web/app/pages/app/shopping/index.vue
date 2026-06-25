@@ -54,6 +54,8 @@ watch(selected, (val) => {
   <div>
     <GsPageHeader :title="t('shopping.title')" />
 
+    <GsMyUpcomingShopping class="mb-6" />
+
     <div class="space-y-5">
       <UFormField :label="t('shopping.viewList')">
         <USelect

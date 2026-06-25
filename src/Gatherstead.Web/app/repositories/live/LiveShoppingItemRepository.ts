@@ -23,6 +23,13 @@ export class LiveShoppingItemRepository implements IShoppingItemRepository {
     return r.entity ?? []
   }
 
+  async listClaimedByMember(tenantId: string, memberId: string): Promise<ShoppingItem[]> {
+    const r = await $fetch<ApiResponse<ShoppingItem[]>>(
+      `/api/proxy/tenants/${tenantId}/shopping-items?claimedByMemberId=${encodeURIComponent(memberId)}`,
+    )
+    return r.entity ?? []
+  }
+
   async create(tenantId: string, input: CreateShoppingItemInput): Promise<ShoppingItem> {
     const r = await $fetch<ApiResponse<ShoppingItem>>(
       `/api/proxy/tenants/${tenantId}/shopping-items`,

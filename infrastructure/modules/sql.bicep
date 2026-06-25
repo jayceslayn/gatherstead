@@ -35,12 +35,21 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: 'gatherstead'
   location: location
+  // General Purpose serverless: auto-pauses when idle (pay storage only), bills compute
+  // per-second when active. Cheapest for current infrequent traffic; VBS secure enclaves
+  // are supported on any tier, so this is enclave-ready. Switch to DTU/provisioned later
+  // online if usage grows.
   sku: {
-    name: 'S0'
-    tier: 'Standard'
+    name: 'GP_S_Gen5_1'
+    tier: 'GeneralPurpose'
+    family: 'Gen5'
+    capacity: 1
   }
   properties: {
     collation: 'SQL_Latin1_General_CP1_CI_AS'
+    autoPauseDelay: 60          // minutes idle before auto-pause (60 = minimum)
+    minCapacity: json('0.5')    // vCore floor while active
+    preferredEnclaveType: 'VBS' // enables Always Encrypted with secure enclaves
   }
 }
 

@@ -13,6 +13,7 @@ const primaryNavItems = computed(() => [[
   { label: t('nav.dashboard'), icon: 'i-heroicons-home', to: '/app' },
   { label: t('nav.directory'), icon: 'i-heroicons-user-group', to: '/app/directory' },
   { label: t('nav.properties'), icon: 'i-heroicons-building-office-2', to: '/app/properties' },
+  { label: t('nav.accommodations'), icon: 'i-heroicons-home-modern', to: '/app/accommodations' },
   { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
   { label: t('nav.events'), icon: 'i-heroicons-calendar-days', to: '/app/events' },
   { label: t('nav.shopping'), icon: 'i-heroicons-shopping-bag', to: '/app/shopping' },
@@ -72,6 +73,7 @@ const mobileNavItems = computed(() => [
 // Secondary destinations live behind a "More" sheet so the bottom bar stays uncrowded.
 const mobileMoreItems = computed(() => {
   const groups: Array<Array<{ label: string; icon: string; to: string }>> = [[
+    { label: t('nav.accommodations'), icon: 'i-heroicons-home-modern', to: '/app/accommodations' },
     { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
     { label: t('nav.shopping'), icon: 'i-heroicons-shopping-bag', to: '/app/shopping' },
   ]]
@@ -90,7 +92,8 @@ function isActive(path: string) {
   return route.path.startsWith(path)
 }
 const isMoreActive = computed(() =>
-  route.path.startsWith('/app/equipment')
+  route.path.startsWith('/app/accommodations')
+  || route.path.startsWith('/app/equipment')
   || route.path.startsWith('/app/shopping')
   || route.path.startsWith('/app/reports')
   || route.path.startsWith('/app/settings'),

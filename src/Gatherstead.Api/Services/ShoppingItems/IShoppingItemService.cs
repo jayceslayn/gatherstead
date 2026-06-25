@@ -12,6 +12,7 @@ public interface IShoppingItemService
         Guid? propertyId,
         Guid? mealPlanId,
         ShoppingItemStatus? status,
+        Guid? claimedByMemberId = null,
         CancellationToken cancellationToken = default);
 
     Task<ShoppingItemResponse> GetAsync(Guid tenantId, Guid itemId, CancellationToken cancellationToken = default);

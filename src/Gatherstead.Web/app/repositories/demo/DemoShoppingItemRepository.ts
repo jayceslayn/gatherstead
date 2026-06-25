@@ -60,6 +60,12 @@ export class DemoShoppingItemRepository implements IShoppingItemRepository {
     return getDemoStore().shoppingItems.value.filter(i => i.tenantId === tenantId && i.propertyId === propertyId)
   }
 
+  async listClaimedByMember(tenantId: string, memberId: string): Promise<ShoppingItem[]> {
+    return getDemoStore().shoppingItems.value.filter(
+      i => i.tenantId === tenantId && (i.intents ?? []).some(x => x.householdMemberId === memberId && x.status === 'Claimed'),
+    )
+  }
+
   async create(tenantId: string, input: CreateShoppingItemInput): Promise<ShoppingItem> {
     const store = getDemoStore()
     if (store.shoppingItems.value.filter(i => i.tenantId === tenantId).length >= DEMO_LIMITS.shoppingItemsPerTenant) {
