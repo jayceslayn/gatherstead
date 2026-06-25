@@ -10,7 +10,10 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.1" />
+    <!-- Core driver and the Extensions.Azure add-on must share the same version: both 7.0.2 depend on
+         Extensions.Abstractions/Internal.Logging [7.0.2, 8.0.0). 7.0.1 core pins those to 1.0.0, and the
+         resulting ABI mismatch makes SqlAuthenticationProviderManager's static initializer throw. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
     <!-- MDS 7.0 extracted the Entra ID auth providers (Active Directory Default, etc.) into this
          add-on package. Required for the "Authentication=Active Directory Default" connection string;
          it registers the providers automatically with no code changes. -->
