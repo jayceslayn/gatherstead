@@ -291,7 +291,7 @@ jobs:
 
   deploy-web:
     name: Deploy Web
-    needs: [build-backend, build-frontend]
+    needs: [deploy-api]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     defaults:
@@ -340,7 +340,7 @@ jobs:
 
   deploy-demo:
     name: Deploy demo site
-    needs: [build-backend, build-frontend]
+    needs: [deploy-api]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
