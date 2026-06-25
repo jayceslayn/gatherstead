@@ -4,6 +4,9 @@ param location string
 @description('The principal ID of the app managed identity (granted Crypto User + Secrets User).')
 param appManagedIdentityPrincipalId string
 
+@description('The principal ID of the CI managed identity (granted Crypto User for deploy-setup column encryption).')
+param ciIdentityPrincipalId string
+
 @description('The object ID of the deployer (granted Key Vault Administrator for initial setup).')
 param deployerObjectId string
 
@@ -84,6 +87,19 @@ resource appCryptoUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultCryptoUserRoleId)
     principalId: appManagedIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// CI managed identity: Key Vault Crypto User — the deploy-setup job (Gatherstead.Data.Setup,
+// run as the CI identity) wraps/unwraps the CMK to create the CEK and run ALTER COLUMN ...
+// ENCRYPTED. No Secrets User: deploy-setup reads no Key Vault secrets.
+resource ciCryptoUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, ciIdentityPrincipalId, keyVaultCryptoUserRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultCryptoUserRoleId)
+    principalId: ciIdentityPrincipalId
     principalType: 'ServicePrincipal'
   }
 }

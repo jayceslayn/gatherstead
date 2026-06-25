@@ -26,7 +26,7 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 **Deploy jobs** (push to `main` only; run in sequence: migrations → setup → api → web/demo in parallel):
 
 - **`deploy-migrations`** — applies an idempotent EF Core script (opens a temporary SQL firewall rule for the runner, then removes it). On a clean database this creates every table; on an existing one it no-ops.
-- **`deploy-setup`** — runs the `Gatherstead.Data.Setup` utility (idempotent) to create the CMK/CEK, encrypt the configured columns, and apply temporal retention. `deploy-api` waits on both DB jobs so schema + encryption are in place before new code.
+- **`deploy-setup`** — runs the `Gatherstead.Data.Setup` utility (idempotent) to create the CMK/CEK, encrypt the configured columns, and apply temporal retention. Creating the CEK and encrypting columns wrap/unwrap the CMK, so the CI identity is granted **Key Vault Crypto User** on the vault (`ci-identity.bicep` provisions the identity; `keyvault.bicep` assigns the role). `deploy-api` waits on both DB jobs so schema + encryption are in place before new code.
 - **`deploy-api`** — zip-deploys the API to App Service; `deploy-web` and `deploy-demo` gate on this job.
 - **`deploy-web`** — zip-deploys the Web app to App Service (runs after `deploy-api`).
 - **`deploy-demo`** — generates and uploads the static demo site after `deploy-api` (see [Demo Site](#demo-site)).
@@ -57,7 +57,7 @@ infrastructure/
   parameters/
     prod.bicepparam        # Environment params — copy from prod.bicepparam.example (gitignored)
   post-deploy.sql          # Grants the app managed identity SQL database access (one-time)
-  ci-grant.sql             # Grants the CI identity DDL access for migrations (one-time)
+  ci-grant.sql             # Grants the CI identity DDL + write access for migrations (one-time)
 ```
 
 ## App Service Plan SKU: F1 vs B1
@@ -123,7 +123,7 @@ sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirecto
   -i infrastructure/post-deploy.sql
 ```
 
-Then grant the CI deploy identity DDL access so the pipeline can apply migrations — replace `<ci-identity-name>` with the `ciIdentityName` output:
+Then grant the CI deploy identity the access the pipeline needs to apply migrations — replace `<ci-identity-name>` with the `ciIdentityName` output. This grants `db_ddladmin` (schema changes) **and** `db_datawriter`, because EF migrations carry DML: `HasData` seed data (e.g. the `DietaryTags` reference rows, emitted as `InsertData`/`UpdateData`/`DeleteData`) and any `migrationBuilder.Sql` backfill. It deliberately withholds `db_datareader` — CI can write via reviewed migrations but never reads application data, which (together with column encryption) keeps PII confidential from the CI identity:
 
 ```bash
 sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirectoryDefault \

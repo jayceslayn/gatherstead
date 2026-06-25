@@ -67,6 +67,7 @@ module keyvault 'modules/keyvault.bicep' = {
   params: {
     location: location
     appManagedIdentityPrincipalId: identity.outputs.principalId
+    ciIdentityPrincipalId: ciIdentity.outputs.ciIdentityPrincipalId
     deployerObjectId: deployerObjectId
     workspaceId: observability.outputs.workspaceId
   }
