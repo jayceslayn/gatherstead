@@ -189,14 +189,18 @@ class Program
                 ? " COLLATE Latin1_General_BIN2"
                 : string.Empty;
 
+            // Clause order is significant for in-place ALTER COLUMN encryption: nullability must
+            // follow the ENCRYPTED WITH (...) clause (and precede WITH (ONLINE = ON)). Placing it
+            // before ENCRYPTED — as the generic column_definition grammar allows — is rejected here
+            // with "Incorrect syntax near 'ENCRYPTED'".
             var sql = $"""
                 ALTER TABLE dbo.[{table}]
-                ALTER COLUMN [{column}] {sqlType}{collation} {nullability}
+                ALTER COLUMN [{column}] {sqlType}{collation}
                 ENCRYPTED WITH (
                     COLUMN_ENCRYPTION_KEY = [{CekName}],
                     ENCRYPTION_TYPE = {encType},
                     ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256'
-                ) WITH (ONLINE = ON);
+                ) {nullability} WITH (ONLINE = ON);
                 """;
 
             var alterCmd = new SqlCommand(sql, connection);
