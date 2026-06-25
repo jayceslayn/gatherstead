@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Web UI Design Guidelines
 
 Durable frontend UX/UI conventions for the Gatherstead web app (Nuxt 4 + Vue 3 + Nuxt UI v4 + Tailwind). These are the patterns every page and component must follow — distilled from the original design plan in [agents/plans/WEB-UI-DESIGN.md](agents/plans/WEB-UI-DESIGN.md), which retains the phased implementation history and route map.
@@ -31,6 +36,8 @@ Reach for an existing component before hand-rolling markup. Building a new page 
 | Day × entity matrix | `GsSwimlaneGroup` + `GsSwimlane` | **The standard** for day-by-entity grids — one lane per member/template/accommodation, days as aligned columns on desktop, a day-pager on mobile. Used by event sign-up (Attendance, Tasks, Accommodations) and Event Reports. Don't hand-roll a new day-column or day-card layout — compose these instead. |
 | Form / modal footer | `GsFormFooter` | Renders `[Cancel][Save]` right-aligned; optional `#delete` slot left-aligned. Use on every form page and modal — never hand-roll a flex footer. |
 | Accommodation create/edit | `GsAccommodationModal` | Create + edit in one component (`accommodation` prop drives edit mode); emits `delete` for the parent to confirm and execute. |
+| Shopping list | `GsShoppingList` | Scope-aware list with **shop mode** (member check-off: claim/provide/undo) and **edit mode** (Coordinator+ CRUD). Filters by date (with "Show past" toggle), source (Meal/Event/Property), and fulfillment status. Per-member partial claims via intents; parent item status derived from intent collection. Composed with `GsShoppingItemModal` (create/edit) and `GsShoppingShopItem` (individual check-off row). Intent changes (claim/provide/unclaim) require no coordinator gate. |
+| Event calendar/list display | `GsEventCalendarList` | Dual-mode event display: calendar grid (FullCalendar `dayGridMonth`) or card list. Props: `events` (array), `showToggle` (bool), `calendarInitialView` (string), `initialDate` (string). Emits `update:viewMode`. Tracks view-toggle interactions via `useAnalytics()`. Wrapped in `<ClientOnly>`. |
 
 Prefer **Nuxt UI** primitives (`UButton`, `UInput`, `UCard`, `UModal`, `UFormField`, `UBadge`, …) over native HTML elements wherever an equivalent exists.
 

@@ -1,6 +1,8 @@
 ---
 name: project-bootstrap
 description: Start here before any task. Provides project orientation and routes agents to the right docs by task type, replacing broad codebase exploration.
+updated: 2026-06-25
+commit: 31a127e
 ---
 
 # Gatherstead — Project Bootstrap

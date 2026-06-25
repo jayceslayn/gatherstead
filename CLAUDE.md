@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Agent Guidelines for Gatherstead
 This repository uses Azure-first architecture with a C# .NET 10 API and a Vue 3 / Nuxt 4 web UI. For a comprehensive overview of the project's architecture, design principles, and implementation status, please refer to the documentation in the `docs/` directory.
 

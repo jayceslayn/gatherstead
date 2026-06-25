@@ -132,9 +132,9 @@ output webAppName string = appservice.outputs.webAppName
 output webAppUrl string = appservice.outputs.webAppUrl
 output appInsightsId string = observability.outputs.appInsightsId
 output logAnalyticsWorkspaceId string = observability.outputs.workspaceId
-// CI/CD: set ciIdentityClientId as the AZURE_CLIENT_ID GitHub secret used by build-and-test.yml.
+// CI/CD: set ciIdentityClientId as the AZURE_CLIENT_ID GitHub secret used by ci-cd.yml.
 output ciIdentityName string = ciIdentity.outputs.ciIdentityName
 output ciIdentityClientId string = ciIdentity.outputs.ciIdentityClientId
 output demoSiteUrl string = deployDemo ? demo.outputs.demoSiteUrl : ''
-// Copy this into the DEMO_APPINSIGHTS_CONNECTION_STRING GitHub Actions secret used by deploy-demo.yml.
+// Copy this into the DEMO_APPINSIGHTS_CONNECTION_STRING GitHub Actions secret used by ci-cd.yml.
 output demoAppInsightsConnectionString string = observability.outputs.demoAppInsightsConnectionString

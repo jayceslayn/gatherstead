@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Gatherstead Architecture
 
 ## Technology Stack
@@ -35,6 +40,9 @@ Nine entities support extensible key-value metadata via a shared `IParentScopedA
 - **Accommodation**: A place a member may occupy (e.g., guest room, bunk, RV pad, tent site, or offsite placeholder). Exists independently of any event — the room inventory doesn't change per gathering. Captures type, adult/child capacity, and notes.【F:src/Gatherstead.Data/Entities/Accommodation.cs】
 - **AccommodationIntent**: Member's request to occupy an accommodation on a given night, with status (`Intent`/`Hold`/`Confirmed`) and a decision field for offline arbitration. Not scoped to an event; nights may fall outside any formal gathering.【F:src/Gatherstead.Data/Entities/AccommodationIntent.cs】
 - **Equipment**: Shared equipment or facility owned by a tenant, optionally tied to a specific Property (e.g., kayaks, communal tools). Unique by `(TenantId, PropertyId, Name)`.【F:src/Gatherstead.Data/Entities/Equipment.cs】
+- **ShoppingItem**: A shopping list entry scoped to exactly one origin (`ShoppingItemOrigin`: Property/Event/Meal); exactly one nullable FK (`PropertyId`, `EventId`, `MealPlanId`) is set. Meal-scoped items denormalize `EventId` and derive `NeededByDate` from the meal plan day for efficient event-view queries. Key fields: `Name`, `QuantityNeeded`, `Unit`, `NeededByDate`, `Category`, `Notes`. The parent item's `Status` (Needed/Claimed/Covered) and `QuantityProvided` are computed from its intents. Create/update of property-level and event-level items requires Coordinator+; intent changes are open to any tenant member.【F:src/Gatherstead.Data/Entities/ShoppingItem.cs】
+- **ShoppingItemIntent**: One member's contribution toward a `ShoppingItem`. Tracks `Status` (Claimed/Provided) and optional `Quantity` (null = full/unspecified amount). Unique per `(ShoppingItemId, HouseholdMemberId)`.【F:src/Gatherstead.Data/Entities/ShoppingItemIntent.cs】
+- **ShoppingItemAttribute**: Extensible role-gated key-value metadata on shopping items, following the shared `IParentScopedAttribute` pattern.【F:src/Gatherstead.Data/Entities/ShoppingItemAttribute.cs】
 
 #### Event-level
 - **Event**: A time-bounded gathering at a property, defining the date window for meal planning, task coordination, and attendance tracking.【F:src/Gatherstead.Data/Entities/Event.cs】
@@ -73,12 +81,18 @@ flowchart TD
     Tenant --> Property
     Property --> Accommodation --> AccommodationIntent
     Property --> Equipment
+    Property --> ShoppingItem
     Property --> Event
     Event --> MealTemplate --> MealPlan --> MealIntent
     MealPlan --> MealAttendance
+    MealPlan --> ShoppingItem
     Event --> TaskTemplate --> TaskPlan --> TaskIntent
     Event --> EventAttendance
+    Event -.->|EventId| ShoppingItem
+    ShoppingItem --> ShoppingItemIntent
+    ShoppingItem --> ShoppingItemAttribute
 
+    HouseholdMember -.->|HouseholdMemberId| ShoppingItemIntent
     HouseholdMember -.->|HouseholdMemberId| AccommodationIntent
     HouseholdMember -.->|HouseholdMemberId| MealIntent
     HouseholdMember -.->|HouseholdMemberId| MealAttendance
@@ -108,13 +122,19 @@ erDiagram
     Tenant          ||--o{ Property : ""
     Property        ||--o{ Accommodation : ""
     Property        ||--o{ Equipment : ""
+    Property        |o--o{ ShoppingItem : "property-scoped"
     Accommodation   ||--o{ AccommodationIntent : ""
     HouseholdMember ||--o{ AccommodationIntent : ""
     Property        ||--o{ Event : ""
     Event           ||--o{ MealTemplate : ""
+    Event           |o--o{ ShoppingItem : "event-scoped"
     MealTemplate    ||--o{ MealPlan : ""
     MealPlan        ||--o{ MealAttendance : ""
     MealPlan        ||--o{ MealIntent : ""
+    MealPlan        |o--o{ ShoppingItem : "meal-scoped"
+    ShoppingItem    ||--o{ ShoppingItemIntent : ""
+    ShoppingItem    ||--o{ ShoppingItemAttribute : ""
+    HouseholdMember ||--o{ ShoppingItemIntent : ""
     HouseholdMember ||--o{ MealAttendance : ""
     HouseholdMember ||--o{ MealIntent : ""
     Event           ||--o{ TaskTemplate : ""

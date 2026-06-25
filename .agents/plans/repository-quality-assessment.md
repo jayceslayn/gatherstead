@@ -50,7 +50,7 @@ April's top gap — no direct unit tests for the expanded service layer — is s
 
 ### CI/CD: 2 → 3 Workflows
 
-A **`deploy-demo.yml`** workflow was added, building and deploying the demo site on every push to main (and via `workflow_dispatch`), alongside the existing build/test and dependency-audit workflows.
+The demo deploy was initially added as a standalone `deploy-demo.yml` and subsequently integrated into the unified **`ci-cd.yml`** as the `deploy-demo` job (running after `deploy-api`, with the SWA token fetched at runtime via the CI managed identity instead of a stored secret). The current CI/CD surface is `ci-cd.yml` plus `dependency-audit.yml`.
 
 ### Tooling: `FlagsCodegen`
 
@@ -95,7 +95,7 @@ Framework: xUnit v3, Moq, `Microsoft.AspNetCore.Mvc.Testing`, SQLite (in-memory)
 
 ### CI/CD: 0 → 2 GitHub Actions Workflows
 
-- **`build-and-test.yml`**: Runs on every push and PR to main. Builds backend (dotnet) and frontend (pnpm/Node 24) in parallel; executes all tests; collects Cobertura coverage via `coverlet.collector`; generates a Markdown summary written to the Actions job summary; uploads a full HTML report as a build artifact; uploads merged coverage to Codecov.
+- **`ci-cd.yml`**: Runs on every push and PR to main. Builds backend (dotnet) and frontend (pnpm/Node 24) in parallel; executes all tests; collects Cobertura coverage via `coverlet.collector`; generates a Markdown summary written to the Actions job summary; uploads a full HTML report as a build artifact; uploads merged coverage to Codecov. On push to `main`, deploys in sequence: migrations → setup → api → web + demo (in parallel).
 - **`dependency-audit.yml`**: NuGet locked restore + `--vulnerable` check; pnpm audit at `high` level; GitHub dependency-review action on PRs.
 
 ### Security Hardening: All Prior Gaps Addressed

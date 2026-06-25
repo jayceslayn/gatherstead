@@ -187,7 +187,7 @@ jobs:
           sqlcmd -S "${{ vars.SQL_SERVER_NAME }}.database.windows.net" \
             -d "${{ vars.SQL_DATABASE_NAME }}" \
             --authentication-method ActiveDirectoryDefault \
-            --exit-on-error --login-timeout 60 \
+            --exit-on-error -l 60 \
             -i migrate.sql
 
       - name: Remove SQL firewall rule

@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Dependency Security & Update Policy
 
 This document describes how we keep Gatherstead's dependencies current while
@@ -106,5 +111,5 @@ If only criterion 1 holds (CVE published, no exploitation signal) but CVSS
 
 - [.github/dependabot.yml](../.github/dependabot.yml) — weekly grouped PRs
   across nuget, npm, and github-actions.
-- [.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml)
+- [.github/workflows/ci-cd.yml](../.github/workflows/ci-cd.yml)
   — `audit-nuget`, `audit-pnpm`, and `dependency-review` jobs gate every PR.

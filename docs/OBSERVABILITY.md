@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Observability Contract
 
 Gatherstead uses Azure Monitor OpenTelemetry (`Azure.Monitor.OpenTelemetry.AspNetCore`) with a two-stage PII guard: a `PiiRedactionLogProcessor` (logs) and a `PiiRedactionActivityProcessor` (spans) that run before every export. This document is the authoritative reference for what you are allowed to log and why.

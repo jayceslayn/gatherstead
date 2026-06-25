@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Design and Security Principles
 
 - **Privacy by design**: Treat personal data (PII, contact details, dietary notes) as sensitive by default. Favor minimization, avoid unnecessary replication across contexts, and prefer references over denormalized copies.

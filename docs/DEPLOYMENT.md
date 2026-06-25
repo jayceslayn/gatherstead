@@ -1,3 +1,8 @@
+---
+updated: 2026-06-25
+commit: 31a127e
+---
+
 # Database Encryption and Deployment
 
 This project uses Always Encrypted with Secure Enclaves to protect sensitive data. Infrastructure is managed with **Bicep** (Azure-native IaC) and all resource-to-resource authentication uses **managed identity** — no passwords or connection string secrets.
@@ -10,7 +15,7 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 
 ## CI/CD pipeline
 
-[.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml) is a single CI/CD workflow. On every push and PR to `main` it runs the build/test gates; on a push to `main` it then deploys, but **only after** `build-backend` and `build-frontend` succeed. On PRs the deploy jobs are skipped.
+[.github/workflows/ci-cd.yml](../.github/workflows/ci-cd.yml) is a single CI/CD workflow. On every push and PR to `main` it runs the build/test gates; on a push to `main` it then deploys, but **only after** `build-backend` and `build-frontend` succeed. On PRs the deploy jobs are skipped.
 
 **Gate jobs** (run on push + PR):
 
@@ -18,12 +23,13 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 - **`build-frontend`** - `pnpm build`
 - **`audit-nuget`** / **`audit-pnpm`** / **`dependency-review`** (in [dependency-audit.yml](../.github/workflows/dependency-audit.yml)) — fail on vulnerable NuGet/pnpm dependencies. These run independently and do **not** gate the deploy jobs.
 
-**Deploy jobs** (push to `main` only, `needs: [build-backend, build-frontend]`):
+**Deploy jobs** (push to `main` only; run in sequence: migrations → setup → api → web/demo in parallel):
 
 - **`deploy-migrations`** — applies an idempotent EF Core script (opens a temporary SQL firewall rule for the runner, then removes it). On a clean database this creates every table; on an existing one it no-ops.
 - **`deploy-setup`** — runs the `Gatherstead.Data.Setup` utility (idempotent) to create the CMK/CEK, encrypt the configured columns, and apply temporal retention. `deploy-api` waits on both DB jobs so schema + encryption are in place before new code.
-- **`deploy-api`** / **`deploy-web`** — zip-deploy to the API and Web App Service apps.
-- **`deploy-demo`** — generates and uploads the static demo site (see [Demo Site](#demo-site)).
+- **`deploy-api`** — zip-deploys the API to App Service; `deploy-web` and `deploy-demo` gate on this job.
+- **`deploy-web`** — zip-deploys the Web app to App Service (runs after `deploy-api`).
+- **`deploy-demo`** — generates and uploads the static demo site after `deploy-api` (see [Demo Site](#demo-site)).
 
 Lockfiles (`packages.lock.json` per .NET project, `pnpm-lock.yaml` for the web app) are committed and integrity-checked on every build. Emergency security patches follow the runbook in [SECURITY-DEPS.md](SECURITY-DEPS.md#emergency-patch-runbook) and still deploy via this same pipeline.
 
@@ -184,13 +190,13 @@ A build-time `__DEMO_MODE__` constant (set via `vite.define` when `NUXT_PUBLIC_D
 
 ### CI/CD
 
-The `deploy-demo` job in [.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml) builds and deploys the demo on push to `main` (after build + test pass), keeping it in sync with the latest code.
+The `deploy-demo` job in [.github/workflows/ci-cd.yml](../.github/workflows/ci-cd.yml) builds and deploys the demo on push to `main` (after build + test + `deploy-api` pass), keeping it in sync with the latest code.
 
 ### Frontend telemetry
 
 Browser telemetry uses the App Insights JS SDK (see [OBSERVABILITY.md](OBSERVABILITY.md#frontend-telemetry)), delivered via `NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING`:
 
 - **Prod** — set automatically as a web-app app setting in `appservice.bicep` (points at the shared `gat-ai-*`, enabling frontend↔backend trace correlation).
-- **Demo** — copy the `demoAppInsightsConnectionString` deployment output into the `DEMO_APPINSIGHTS_CONNECTION_STRING` GitHub Actions secret; `deploy-demo.yml` bakes it into the static build at `pnpm generate` time. It is an ingestion-only key and safe to expose.
+- **Demo** — copy the `demoAppInsightsConnectionString` deployment output into the `DEMO_APPINSIGHTS_CONNECTION_STRING` GitHub Actions secret; the `deploy-demo` job in `ci-cd.yml` bakes it into the static build at `pnpm generate` time. It is an ingestion-only key and safe to expose.
 
 See [DEMO_SITE.md](agents/plans/DEMO_SITE.md) for full architecture and implementation details.

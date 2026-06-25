@@ -1,7 +1,7 @@
 -- CI/CD grant script: give the GitHub Actions CI managed identity DDL access to the database.
 -- Run this against the 'gatherstead' database once, after Bicep deployment provisions the CI identity.
 --
--- The CI identity (gat-ci-id-*) applies EF Core migrations from build-and-test.yml. It needs schema
+-- The CI identity (gat-ci-id-*) applies EF Core migrations from ci-cd.yml. It needs schema
 -- (DDL) rights only — never db_datareader/db_datawriter — so CI can change the schema but not read or
 -- write application data. (The app's own managed identity gets data access via post-deploy.sql.)
 --
