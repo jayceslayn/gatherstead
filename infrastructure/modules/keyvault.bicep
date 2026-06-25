@@ -32,6 +32,26 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   }
 }
 
+// Column Master Key for Always Encrypted.
+//
+// Rotation policy — intentionally none (Option A):
+//   - No auto-rotation. A Key Vault `Rotate` action only creates a new key *version*; Always
+//     Encrypted binds the CEK to a specific key, so version rotation is invisible to it. CMK
+//     rotation is a manual ceremony (create new CMK → re-sign the CEK with both → roll apps →
+//     retire old) and is tracked operationally (calendar / ag-gatherstead-oncall), not by KV.
+//   - No expiry (no `attributes.exp`). An expired CMK cannot unwrapKey, which would block
+//     decryption of every encrypted column — an outage whose blast radius is the whole dataset.
+//   Deploying with no `rotationPolicy` strips the inert Azure-default "notify 30 days before
+//   expiry" policy (harmless: with no expiry it never fires) and the drift does not recur.
+//
+// Option B (adopt at a higher maturity stage, once a manual-rotation runbook + ownership exist):
+//   add a Notify-only policy with a long expiry as a compliance forcing-function, e.g.
+//     rotationPolicy: {
+//       attributes: { expiryTime: 'P2Y' }
+//       lifetimeActions: [ { trigger: { timeBeforeExpiry: 'P90D' }, action: { type: 'Notify' } } ]
+//     }
+//   NB: never add a `Rotate` action, and the expiry becomes a hard deadline — the CMK must be
+//   rotated before it lapses or encrypted-column access breaks.
 resource cmkKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
   parent: keyVault
   name: 'cmk-gatherstead'

@@ -1,4 +1,4 @@
-name: Build and Test
+name: CI/CD
 
 on:
   push:
@@ -8,6 +8,11 @@ on:
 
 permissions:
   contents: read
+
+# Serialize deploys per branch so two pushes to main can't race the same App Service / database.
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -115,3 +120,278 @@ jobs:
           else
             diff src/Gatherstead.Api/openapi.json /tmp/openapi-fresh.json
           fi
+
+  # ---------------------------------------------------------------------------
+  # Deploy jobs — only on push to main, and only after build + test are green.
+  # Auth is GitHub OIDC → the gat-ci-id user-assigned managed identity (no secrets).
+  # Required repo secrets: AZURE_CLIENT_ID (ciIdentityClientId output), AZURE_TENANT_ID,
+  #   AZURE_SUBSCRIPTION_ID, DEMO_APPINSIGHTS_CONNECTION_STRING.
+  #   (The demo SWA token is fetched at runtime via the CI identity — no stored token.)
+  # Required repo variables (from Bicep outputs): AZURE_RESOURCE_GROUP, API_APP_NAME,
+  #   WEB_APP_NAME, SQL_SERVER_NAME, SQL_DATABASE_NAME, KEYVAULT_CMK_ID, DEMO_SWA_NAME.
+  # ---------------------------------------------------------------------------
+
+  deploy-migrations:
+    name: Deploy DB migrations
+    needs: [build-backend, build-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Generate idempotent migration script
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.9
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          # Offline (no DB connection): produces SQL safe to run against any schema version —
+          # creates every table on a clean DB and no-ops when already present.
+          dotnet ef migrations script --idempotent --project src/Gatherstead.Data -o migrate.sql
+
+      - name: Install sqlcmd
+        run: |
+          curl -fsSL https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.2/sqlcmd-linux-amd64.tar.bz2 -o /tmp/sqlcmd.tar.bz2
+          tar -xjf /tmp/sqlcmd.tar.bz2 -C /tmp
+          sudo mv /tmp/sqlcmd /usr/local/bin/sqlcmd
+
+      - name: Open SQL firewall for runner
+        run: |
+          RUNNER_IP=$(curl -fsSL https://api.ipify.org)
+          az sql server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.SQL_SERVER_NAME }}" \
+            --name "gh-actions-${{ github.run_id }}" \
+            --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
+
+      - name: Apply migrations
+        run: |
+          # ActiveDirectoryDefault → DefaultAzureCredential picks up the azure/login (Azure CLI) session.
+          # Serverless DB may be auto-paused; the first connect wakes it, so allow a generous timeout.
+          sqlcmd -S "${{ vars.SQL_SERVER_NAME }}.database.windows.net" \
+            -d "${{ vars.SQL_DATABASE_NAME }}" \
+            --authentication-method ActiveDirectoryDefault \
+            --exit-on-error --login-timeout 60 \
+            -i migrate.sql
+
+      - name: Remove SQL firewall rule
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.SQL_SERVER_NAME }}" \
+            --name "gh-actions-${{ github.run_id }}" || true
+
+  deploy-setup:
+    name: Configure encryption & retention
+    needs: [deploy-migrations]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Open SQL firewall for runner
+        run: |
+          RUNNER_IP=$(curl -fsSL https://api.ipify.org)
+          az sql server firewall-rule create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.SQL_SERVER_NAME }}" \
+            --name "gh-actions-setup-${{ github.run_id }}" \
+            --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
+
+      - name: Configure CMK/CEK, column encryption & temporal retention
+        # Idempotent: creates the keys if missing, encrypts only not-yet-encrypted columns,
+        # and (re)applies temporal retention. Authenticates to SQL + Key Vault via the
+        # azure/login (Azure CLI) session resolved by Active Directory Default / DefaultAzureCredential.
+        run: |
+          dotnet run --project src/Gatherstead.Data.Setup --configuration Release --no-restore -- \
+            "Server=tcp:${{ vars.SQL_SERVER_NAME }}.database.windows.net,1433;Database=${{ vars.SQL_DATABASE_NAME }};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;Column Encryption Setting=Enabled;" \
+            "${{ vars.KEYVAULT_CMK_ID }}"
+
+      - name: Remove SQL firewall rule
+        if: always()
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --server "${{ vars.SQL_SERVER_NAME }}" \
+            --name "gh-actions-setup-${{ github.run_id }}" || true
+
+  deploy-api:
+    name: Deploy API
+    needs: [build-backend, build-frontend, deploy-migrations, deploy-setup]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore --locked-mode
+
+      - name: Publish API
+        run: dotnet publish src/Gatherstead.Api/Gatherstead.Api.csproj --no-restore -c Release -o publish/api
+
+      - name: Package
+        run: cd publish/api && zip -r ../../api.zip .
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service
+        run: |
+          az webapp deploy \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.API_APP_NAME }}" \
+            --src-path api.zip --type zip
+
+  deploy-web:
+    name: Deploy Web
+    needs: [build-backend, build-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Gatherstead.Web
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: '10.33.0'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: src/Gatherstead.Web/pnpm-lock.yaml
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (SSR)
+        run: pnpm build
+
+      - name: Package
+        # Keep the .output directory in the archive — the App Service start command is
+        # `node .output/server/index.mjs` (see infrastructure/modules/appservice.bicep).
+        run: zip -r web.zip .output
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to App Service
+        run: |
+          az webapp deploy \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ vars.WEB_APP_NAME }}" \
+            --src-path web.zip --type zip
+
+  deploy-demo:
+    name: Deploy demo site
+    needs: [build-backend, build-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: '11.5.0'
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+          cache-dependency-path: src/Gatherstead.Web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: src/Gatherstead.Web
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate static demo site
+        working-directory: src/Gatherstead.Web
+        env:
+          NUXT_PUBLIC_DEMO_MODE: 'true'
+          # Demo App Insights (gat-ai-demo-*) — ingestion-only; safe to bake into the static build.
+          NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.DEMO_APPINSIGHTS_CONNECTION_STRING }}
+        run: pnpm generate
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Fetch SWA deployment token
+        id: swa
+        run: |
+          TOKEN=$(az staticwebapp secrets list \
+            --name "${{ vars.DEMO_SWA_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --query "properties.apiKey" -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa.outputs.token }}
+          action: upload
+          app_location: src/Gatherstead.Web/.output/public
+          skip_app_build: true

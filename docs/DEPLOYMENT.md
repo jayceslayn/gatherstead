@@ -8,17 +8,34 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 - Contributor + User Access Administrator roles on the target subscription
 - .NET 10 SDK
 
-## CI gates before deploy
+## CI/CD pipeline
 
-Every PR to `main` must pass four jobs in [.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml):
+[.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml) is a single CI/CD workflow. On every push and PR to `main` it runs the build/test gates; on a push to `main` it then deploys, but **only after** `build-backend` and `build-frontend` succeed. On PRs the deploy jobs are skipped.
+
+**Gate jobs** (run on push + PR):
 
 - **`build-backend`** — `dotnet restore --locked-mode`, build, test.
 - **`build-frontend`** - `pnpm build`
-- **`audit-nuget`** — fails on any vulnerable NuGet package (direct or transitive).
-- **`audit-pnpm`** — fails on any `high`+ severity pnpm advisory.
-- **`dependency-review`** — blocks PRs that introduce a known-vulnerable dependency.
+- **`audit-nuget`** / **`audit-pnpm`** / **`dependency-review`** (in [dependency-audit.yml](../.github/workflows/dependency-audit.yml)) — fail on vulnerable NuGet/pnpm dependencies. These run independently and do **not** gate the deploy jobs.
+
+**Deploy jobs** (push to `main` only, `needs: [build-backend, build-frontend]`):
+
+- **`deploy-migrations`** — applies an idempotent EF Core script (opens a temporary SQL firewall rule for the runner, then removes it). On a clean database this creates every table; on an existing one it no-ops.
+- **`deploy-setup`** — runs the `Gatherstead.Data.Setup` utility (idempotent) to create the CMK/CEK, encrypt the configured columns, and apply temporal retention. `deploy-api` waits on both DB jobs so schema + encryption are in place before new code.
+- **`deploy-api`** / **`deploy-web`** — zip-deploy to the API and Web App Service apps.
+- **`deploy-demo`** — generates and uploads the static demo site (see [Demo Site](#demo-site)).
 
 Lockfiles (`packages.lock.json` per .NET project, `pnpm-lock.yaml` for the web app) are committed and integrity-checked on every build. Emergency security patches follow the runbook in [SECURITY-DEPS.md](SECURITY-DEPS.md#emergency-patch-runbook) and still deploy via this same pipeline.
+
+### Deploy authentication & required GitHub config
+
+Deploys authenticate to Azure with **GitHub OIDC** federated to the `gat-ci-id-*` user-assigned managed identity provisioned by `ci-identity.bicep` — no client secret. After provisioning infrastructure (and running `ci-grant.sql`, below), configure the repository once:
+
+**Secrets** — `AZURE_CLIENT_ID` (the `ciIdentityClientId` output), `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, plus `DEMO_APPINSIGHTS_CONNECTION_STRING`. The demo SWA deployment token is fetched at runtime by the CI identity (`az staticwebapp secrets list`), so no token secret is stored.
+
+**Variables** — `AZURE_RESOURCE_GROUP`, `API_APP_NAME` (`apiAppName` output), `WEB_APP_NAME` (`webAppName` output), `SQL_SERVER_NAME` (`sqlServerName` output), `SQL_DATABASE_NAME` (`sqlDatabaseName` output), `KEYVAULT_CMK_ID` (`keyVaultCmkId` output), and `DEMO_SWA_NAME` (`gat-demo-swa`). The app/server names embed a `uniqueString` hash, so copy them from the Bicep outputs rather than guessing.
+
+The federated credential trusts `repo:<owner>/<repo>:ref:refs/heads/main` — override `githubRepository` / `githubBranch` in the bicepparam files if your repo slug differs.
 
 ## Infrastructure Structure
 
@@ -30,16 +47,18 @@ infrastructure/
     keyvault.bicep         # Key Vault (Premium) + CMK key + RBAC role assignments
     sql.bicep              # SQL Server (Entra ID-only auth) + Database
     appservice.bicep       # App Service Plan + API app (.NET 10) + Web app (Node 24)
+    ci-identity.bicep      # GitHub Actions OIDC managed identity + deploy RBAC
   parameters/
-    dev.bicepparam         # Dev: F1 (free) App Service Plan
-    prod.bicepparam        # Prod: B1 (basic) App Service Plan
-  encrypt-columns.sql      # Applies Always Encrypted to sensitive columns (one-time)
-  post-deploy.sql          # Grants the managed identity SQL database access (one-time)
+    prod.bicepparam        # Environment params — copy from prod.bicepparam.example (gitignored)
+  post-deploy.sql          # Grants the app managed identity SQL database access (one-time)
+  ci-grant.sql             # Grants the CI identity DDL access for migrations (one-time)
 ```
 
-## SKU Differences: Dev vs Prod
+## App Service Plan SKU: F1 vs B1
 
-| | F1 (Free) — dev | B1 (Basic) — prod |
+Set `appServicePlanSku` in `prod.bicepparam`. Start on F1 to validate the deploy at $0, switch to B1 before go-live.
+
+| | F1 (Free) | B1 (Basic) |
 |---|---|---|
 | Cost | $0 | ~$13/month/plan |
 | CPU | 60 min/day shared | 1 core dedicated |
@@ -53,7 +72,7 @@ Both apps (API + Web) share one plan. Scale up `appServicePlanSku` in `prod.bice
 
 ### 1. Configure Parameters
 
-Edit `infrastructure/parameters/dev.bicepparam` (or `prod.bicepparam`) and fill in:
+Copy `infrastructure/parameters/prod.bicepparam.example` to `prod.bicepparam` (gitignored) and fill in:
 
 - `sqlEntraAdminObjectId` — Object ID of the Entra ID user or group to be SQL admin
   ```bash
@@ -70,9 +89,9 @@ Edit `infrastructure/parameters/dev.bicepparam` (or `prod.bicepparam`) and fill 
 ```bash
 az login
 az deployment sub create \
-  --location eastus \
+  --location westus2 \
   --template-file infrastructure/main.bicep \
-  --parameters infrastructure/parameters/dev.bicepparam
+  --parameters infrastructure/parameters/prod.bicepparam
 ```
 
 This provisions the resource group, managed identity, Key Vault, SQL Server + Database, App Service Plan, API app, and Web app in one step. The managed identity is automatically attached to the API app and all app settings are pre-configured.
@@ -98,6 +117,13 @@ sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirecto
   -i infrastructure/post-deploy.sql
 ```
 
+Then grant the CI deploy identity DDL access so the pipeline can apply migrations — replace `<ci-identity-name>` with the `ciIdentityName` output:
+
+```bash
+sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirectoryDefault \
+  -i infrastructure/ci-grant.sql
+```
+
 ### 4. Run EF Core Migrations
 
 ```bash
@@ -110,7 +136,7 @@ The connection string must use Entra ID managed identity auth:
 Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Directory Managed Identity;User Id=<managedIdentityClientId>;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
 ```
 
-### 5. Configure Encryption Keys and Temporal Retention
+### 5. Configure Encryption and Temporal Retention
 
 Run the setup utility with the managed identity connection string and the CMK Key Vault ID:
 
@@ -120,17 +146,13 @@ dotnet run --project src/Gatherstead.Data.Setup/Gatherstead.Data.Setup.csproj --
   "<keyVaultCmkId>"
 ```
 
-This creates the Column Master Key (CMK) and Column Encryption Key (CEK) metadata in the database, and sets a 1-year retention policy on all temporal history tables.
+This is the single source of truth for column encryption. It creates the Column Master Key (CMK) and Column Encryption Key (CEK) metadata, applies Always Encrypted to all configured sensitive columns (see `EnsureColumnEncryption` in `src/Gatherstead.Data.Setup/Program.cs`), and sets a 1-year retention policy on all temporal history tables. Every step is idempotent, so it is safe to re-run — the CI `deploy-setup` job runs it on each deploy.
 
-The setup utility uses `DefaultAzureCredential`, so run it in an environment where the managed identity (or your own Entra ID identity) has Key Vault Crypto User access.
+The setup utility uses `DefaultAzureCredential`, so run it in an environment where the managed identity (or your own Entra ID identity) has Key Vault Crypto User access. The connection string must set `Column Encryption Setting=Enabled`.
 
-### 6. Encrypt Columns
+### 6. Deploy the Application
 
-Using `sqlcmd` or SSMS (connected as the Entra ID SQL admin), execute the entire contents of `infrastructure/encrypt-columns.sql`. This is a one-time operation that applies Always Encrypted to sensitive columns.
-
-### 7. Deploy the Application
-
-The API and Web App Service apps are already provisioned with the correct configuration (managed identity, connection string, Key Vault URI, CORS, API base URL). Deploy code to them using zip deploy or CI/CD:
+The API and Web App Service apps are already provisioned with the correct configuration (managed identity, connection string, Key Vault URI, CORS, API base URL). Once the GitHub secrets/variables in [Deploy authentication & required GitHub config](#deploy-authentication--required-github-config) are set, pushing to `main` deploys (and applies migrations) automatically. To deploy manually:
 
 **API** (ASP.NET Core 10):
 ```bash
@@ -143,7 +165,8 @@ az webapp deploy --resource-group <resourceGroupName> --name <apiAppName> --src-
 ```bash
 cd src/Gatherstead.Web
 pnpm build
-cd .output && zip -r ../../../web.zip .
+# Keep the .output directory in the archive — the start command is `node .output/server/index.mjs`.
+zip -r web.zip .output
 az webapp deploy --resource-group <resourceGroupName> --name <webAppName> --src-path web.zip
 ```
 
@@ -161,7 +184,7 @@ A build-time `__DEMO_MODE__` constant (set via `vite.define` when `NUXT_PUBLIC_D
 
 ### CI/CD
 
-`.github/workflows/deploy-demo.yml` builds and deploys the demo on push to `main`, keeping it in sync with the latest code.
+The `deploy-demo` job in [.github/workflows/build-and-test.yml](../.github/workflows/build-and-test.yml) builds and deploys the demo on push to `main` (after build + test pass), keeping it in sync with the latest code.
 
 ### Frontend telemetry
 

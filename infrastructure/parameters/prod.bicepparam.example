@@ -1,7 +1,7 @@
 using '../main.bicep'
 
-param location = 'eastus'
-param resourceGroupName = 'gatherstead-rg'
+param location = '<region>'
+param resourceGroupName = 'rg-gat-prod-<region>'
 
 // Object ID of the Entra ID group designated as SQL administrator in production.
 // Get with: az ad group show --group "<group-name>" --query id -o tsv
@@ -21,3 +21,7 @@ param logRetentionDays = 90
 
 // Distribution list or PagerDuty email for production oncall alerts.
 param oncallEmail = '<oncall-distribution-list-or-pagerduty-email>'
+
+// Provision the public demo static web app (+ its gat-ai-demo-* App Insights) in this resource
+// group, and grant the CI identity the role to fetch its deployment token. Set false to skip it.
+param deployDemo = true

@@ -30,6 +30,12 @@ param logRetentionDays int = 30
 @description('Email address that receives oncall alert notifications from Azure Monitor.')
 param oncallEmail string
 
+@description('The GitHub repository (owner/name) whose Actions runs may deploy via OIDC.')
+param githubRepository string = 'jayceslayn/gatherstead'
+
+@description('The git branch whose Actions runs may deploy via OIDC.')
+param githubBranch string = 'main'
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -94,11 +100,22 @@ module appservice 'modules/appservice.bicep' = {
   }
 }
 
+module ciIdentity 'modules/ci-identity.bicep' = {
+  name: 'ci-identity'
+  scope: rg
+  params: {
+    location: location
+    githubRepository: githubRepository
+    githubBranch: githubBranch
+  }
+}
+
 module demo 'modules/staticwebapp.bicep' = if (deployDemo) {
   name: 'demo'
   scope: rg
   params: {
     location: location
+    ciIdentityPrincipalId: ciIdentity.outputs.ciIdentityPrincipalId
   }
 }
 
@@ -109,10 +126,15 @@ output sqlDatabaseName string = sql.outputs.sqlDatabaseName
 output sqlServerFqdn string = sql.outputs.sqlServerFqdn
 output keyVaultUri string = keyvault.outputs.keyVaultUri
 output keyVaultCmkId string = keyvault.outputs.cmkKeyId
+output apiAppName string = appservice.outputs.apiAppName
 output apiAppUrl string = appservice.outputs.apiAppUrl
+output webAppName string = appservice.outputs.webAppName
 output webAppUrl string = appservice.outputs.webAppUrl
 output appInsightsId string = observability.outputs.appInsightsId
 output logAnalyticsWorkspaceId string = observability.outputs.workspaceId
+// CI/CD: set ciIdentityClientId as the AZURE_CLIENT_ID GitHub secret used by build-and-test.yml.
+output ciIdentityName string = ciIdentity.outputs.ciIdentityName
+output ciIdentityClientId string = ciIdentity.outputs.ciIdentityClientId
 output demoSiteUrl string = deployDemo ? demo.outputs.demoSiteUrl : ''
 // Copy this into the DEMO_APPINSIGHTS_CONNECTION_STRING GitHub Actions secret used by deploy-demo.yml.
 output demoAppInsightsConnectionString string = observability.outputs.demoAppInsightsConnectionString

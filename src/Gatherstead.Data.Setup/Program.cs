@@ -10,12 +10,12 @@ class Program
     private const string CmkName = "CMK_Default";
     private const string CekName = "CEK_Default";
 
-    static void Main(string[] args)
+    static int Main(string[] args)
     {
         if (args.Length != 2)
         {
             Console.WriteLine("Usage: Gatherstead.Db.Setup <ConnectionString> <KeyVaultUrl>");
-            return;
+            return 1;
         }
 
         string connectionString = args[0];
@@ -42,12 +42,14 @@ class Program
             EnsureTemporalRetention(connection);
 
             Console.WriteLine("\nDatabase setup completed successfully.");
+            return 0;
         }
         catch (Exception ex)
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine($"An error occurred: {ex.Message}");
             Console.ResetColor();
+            return 1;
         }
     }
 
@@ -111,18 +113,57 @@ class Program
     {
         Console.WriteLine("\nChecking column-level encryption...");
 
-        // Columns that must be encrypted and their SQL types.
-        // ContactMethod.Value uses Deterministic so equality lookups remain possible.
+        // Every column protected by Always Encrypted, as (table, column, sqlType, nullability, encType).
+        // This is the single source of truth for column encryption (the old infrastructure/encrypt-columns.sql
+        // was retired in favour of this idempotent utility). Nullability is explicit because ALTER COLUMN
+        // defaults an unqualified column to NULL — omitting it would silently drop NOT NULL constraints.
+        //
+        // ContactMethods.Value uses Deterministic so equality lookups remain possible.
         // All other PII columns use Randomized (no filtering needed against those values).
         var columns = new[]
         {
-            ("HouseholdMembers", "Name",         "NVARCHAR(200)", "RANDOMIZED"),
-            ("HouseholdMembers", "BirthDate",     "DATE",          "RANDOMIZED"),
-            ("HouseholdMembers", "DietaryNotes",  "NVARCHAR(500)", "RANDOMIZED"),
-            ("ContactMethods",   "Value",         "NVARCHAR(256)", "DETERMINISTIC"),
+            // HouseholdMember PII
+            ("HouseholdMembers", "Name",         "NVARCHAR(200)", "NOT NULL", "RANDOMIZED"),
+            ("HouseholdMembers", "BirthDate",     "DATE",          "NULL",     "RANDOMIZED"),
+            ("HouseholdMembers", "DietaryNotes",  "NVARCHAR(500)", "NULL",     "RANDOMIZED"),
+            ("HouseholdMembers", "Notes",         "NVARCHAR(500)", "NULL",     "RANDOMIZED"),
+            ("ContactMethods",   "Value",         "NVARCHAR(256)", "NOT NULL", "DETERMINISTIC"),
+
+            // Address PII
+            ("Addresses",        "Line1",         "NVARCHAR(200)", "NOT NULL", "RANDOMIZED"),
+            ("Addresses",        "Line2",         "NVARCHAR(200)", "NULL",     "RANDOMIZED"),
+            ("Addresses",        "City",          "NVARCHAR(100)", "NOT NULL", "RANDOMIZED"),
+            ("Addresses",        "State",         "NVARCHAR(100)", "NOT NULL", "RANDOMIZED"),
+            ("Addresses",        "PostalCode",    "NVARCHAR(20)",  "NOT NULL", "RANDOMIZED"),
+            ("Addresses",        "Country",       "NVARCHAR(100)", "NOT NULL", "RANDOMIZED"),
+
+            // Top-level entity free-text Notes
+            ("Tenants",              "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("Properties",           "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("Households",           "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("Events",               "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("Equipment",            "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("MealPlans",            "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("AccommodationIntents", "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("TaskTemplates",        "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("TaskPlans",            "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("MealAttendances",      "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("EventAttendances",     "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("MemberRelationships",  "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+
+            // Attribute values (free-text user input)
+            ("HouseholdMemberAttributes", "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("TenantAttributes",          "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("PropertyAttributes",        "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("AccommodationAttributes",   "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("HouseholdAttributes",       "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("EventAttributes",           "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("MealTemplateAttributes",    "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("TaskTemplateAttributes",    "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("EquipmentAttributes",       "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
         };
 
-        foreach (var (table, column, sqlType, encType) in columns)
+        foreach (var (table, column, sqlType, nullability, encType) in columns)
         {
             // sys.columns.encryption_type is non-NULL when the column is already encrypted.
             var checkCmd = new SqlCommand(@"
@@ -150,7 +191,7 @@ class Program
 
             var sql = $"""
                 ALTER TABLE dbo.[{table}]
-                ALTER COLUMN [{column}] {sqlType}{collation}
+                ALTER COLUMN [{column}] {sqlType}{collation} {nullability}
                 ENCRYPTED WITH (
                     COLUMN_ENCRYPTION_KEY = [{CekName}],
                     ENCRYPTION_TYPE = {encType},
