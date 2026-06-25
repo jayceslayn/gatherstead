@@ -1,6 +1,7 @@
 -- CI/CD grant script: give the GitHub Actions CI managed identity the database access it
--- needs to apply EF Core migrations. Run against the 'gatherstead' database once, after Bicep
--- deployment provisions the CI identity.
+-- needs to apply EF Core migrations and configure Always Encrypted (the deploy-migrations and
+-- deploy-setup jobs). Run against the 'gatherstead' database once, after Bicep deployment
+-- provisions the CI identity.
 --
 -- The CI identity (gat-ci-id-*) applies the idempotent EF Core migration script from ci-cd.yml.
 -- That script is not DDL-only: EF emits DML for HasData seed data (InsertData/UpdateData/
@@ -47,3 +48,20 @@ BEGIN
 END;
 
 GRANT SELECT ON [dbo].[__EFMigrationsHistory] TO [<ci-identity-name>];
+
+-- Always Encrypted setup (deploy-setup job → Gatherstead.Data.Setup).
+-- That tool creates the column master/encryption keys, encrypts PII columns, and configures
+-- temporal retention. db_ddladmin covers ALTER TABLE (column encryption, SYSTEM_VERSIONING) but
+-- NOT the key-management or database-level ALTER permissions below, so grant them explicitly:
+--   ALTER ANY COLUMN MASTER KEY / ENCRYPTION KEY — CREATE COLUMN MASTER/ENCRYPTION KEY.
+--   VIEW ANY ... DEFINITION — read sys.column_master_keys/sys.column_encryption_keys so the
+--     idempotency checks see existing keys (and skip re-creating them) and ALTER COLUMN can
+--     reference the CEK by name.
+--   ALTER (database scope) — ALTER DATABASE CURRENT SET TEMPORAL_HISTORY_RETENTION ON.
+-- None of these grant SELECT on application data, so the no-read PII control above still holds:
+-- these expose only key *metadata* (the key material lives in Key Vault), not plaintext rows.
+GRANT ALTER ANY COLUMN MASTER KEY TO [<ci-identity-name>];
+GRANT ALTER ANY COLUMN ENCRYPTION KEY TO [<ci-identity-name>];
+GRANT VIEW ANY COLUMN MASTER KEY DEFINITION TO [<ci-identity-name>];
+GRANT VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO [<ci-identity-name>];
+GRANT ALTER TO [<ci-identity-name>];
