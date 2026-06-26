@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "10687043521032723714"
+      "version": "0.44.1.10279",
+      "templateHash": "10505479579923790164"
     }
   },
   "parameters": {
@@ -13,6 +13,30 @@
       "type": "string",
       "metadata": {
         "description": "The Azure region where SQL resources will be created."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload token used in CAF resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment token used in CAF resource names."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names."
+      }
+    },
+    "resourceToken": {
+      "type": "string",
+      "metadata": {
+        "description": "Short deterministic suffix ensuring the globally-unique SQL server name is free."
       }
     },
     "sqlEntraAdminObjectId": {
@@ -41,7 +65,7 @@
     }
   },
   "variables": {
-    "sqlServerName": "[format('gat-sql-{0}', uniqueString(resourceGroup().id))]"
+    "sqlServerName": "[format('sql-{0}-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]"
   },
   "resources": [
     {
@@ -66,11 +90,16 @@
       "name": "[format('{0}/{1}', variables('sqlServerName'), 'gatherstead')]",
       "location": "[parameters('location')]",
       "sku": {
-        "name": "S0",
-        "tier": "Standard"
+        "name": "GP_S_Gen5_1",
+        "tier": "GeneralPurpose",
+        "family": "Gen5",
+        "capacity": 1
       },
       "properties": {
-        "collation": "SQL_Latin1_General_CP1_CI_AS"
+        "collation": "SQL_Latin1_General_CP1_CI_AS",
+        "autoPauseDelay": 60,
+        "minCapacity": "[json('0.5')]",
+        "preferredEnclaveType": "VBS"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"

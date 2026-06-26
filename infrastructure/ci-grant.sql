@@ -2,7 +2,7 @@
 -- needs to apply EF Core migrations. Run against the 'gatherstead' database once, after Bicep
 -- deployment provisions the CI identity.
 --
--- The CI identity (gat-ci-id-*) applies the idempotent EF Core migration script from ci-cd.yml.
+-- The CI identity (id-gat-ci-*) applies the idempotent EF Core migration script from ci-cd.yml.
 -- That script is not DDL-only: EF emits DML for HasData seed data (InsertData/UpdateData/
 -- DeleteData — e.g. the DietaryTags reference rows) and for any migrationBuilder.Sql backfill.
 -- So CI needs both DDL and write access:

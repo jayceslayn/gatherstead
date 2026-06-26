@@ -1,7 +1,13 @@
 using '../main.bicep'
 
 param location = '<region>'
-param resourceGroupName = 'rg-gat-prod-<region>'
+param resourceGroupName = 'rg-gat-prod-<region-abbreviation>'
+
+// CAF naming tokens — resources are named <type>-${workload}-${environment}-${locationAbbreviation}
+// (e.g. kv-gat-prod-wus2), with a short hash suffix on the globally-unique ones. Set the region
+// abbreviation to match `location`, e.g. wus2 for westus2, eus for eastus.
+param environment = 'prod'
+param locationAbbreviation = '<region-abbreviation>'
 
 // Object ID of the Entra ID group designated as SQL administrator in production.
 // Get with: az ad group show --group "<group-name>" --query id -o tsv
@@ -22,6 +28,23 @@ param logRetentionDays = 90
 // Distribution list or PagerDuty email for production oncall alerts.
 param oncallEmail = '<oncall-distribution-list-or-pagerduty-email>'
 
-// Provision the public demo static web app (+ its gat-ai-demo-* App Insights) in this resource
+// External identity provider (Microsoft Entra External ID / Azure AD B2C) — validates the API's
+// JWT bearer tokens. All non-secret (bearer validation uses the IdP's published OIDC signing keys).
+//   - Entra External ID: leave SignUpSignInPolicyId empty (no user-flow policy segment).
+//   - Azure AD B2C:      set Instance to https://<tenant>.b2clogin.com and SignUpSignInPolicyId to
+//                        the user-flow id (e.g. B2C_1A_SIGNUP_SIGNIN).
+param externalIdentityInstance = 'https://<tenant-subdomain>.ciamlogin.com'
+param externalIdentityDomain = '<tenant-subdomain>.onmicrosoft.com'
+param externalIdentityClientId = '<api-app-registration-client-id>'
+param externalIdentitySignUpSignInPolicyId = ''
+param externalIdentityValidIssuer = 'https://<tenant-subdomain>.ciamlogin.com/<tenant-id>/v2.0/'
+
+// Nuxt web app sign-in (Entra External ID, server-side OIDC + PKCE). All non-secret — PKCE replaces
+// the client secret, and NUXT_SESSION_PASSWORD is a Key Vault secret (create out-of-band), not a param.
+param webExternalIdentityClientId = '<web-app-registration-client-id>'
+param webExternalIdentityTenantName = '<tenant-subdomain>'
+param webExternalIdentityApiScope = 'api://<api-app-registration-client-id>/access_as_user'
+
+// Provision the public demo static web app (+ its appi-gat-demo-* App Insights) in this resource
 // group, and grant the CI identity the role to fetch its deployment token. Set false to skip it.
 param deployDemo = true

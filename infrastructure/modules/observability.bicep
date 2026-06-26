@@ -1,6 +1,15 @@
 @description('The Azure region for observability resources.')
 param location string
 
+@description('Workload token used in CAF resource names.')
+param workload string
+
+@description('Environment token used in CAF resource names.')
+param environment string
+
+@description('Region abbreviation used in CAF resource names.')
+param locationAbbreviation string
+
 @description('Number of days to retain logs in the workspace. Use 30 for dev, 90 for prod.')
 @minValue(30)
 @maxValue(730)
@@ -15,9 +24,9 @@ param appManagedIdentityPrincipalId string
 @description('Whether to provision a separate App Insights component for the demo static site.')
 param deployDemo bool = false
 
-var workspaceName = 'gat-law-${uniqueString(resourceGroup().id)}'
-var appInsightsName = 'gat-ai-${uniqueString(resourceGroup().id)}'
-var demoAppInsightsName = 'gat-ai-demo-${uniqueString(resourceGroup().id)}'
+var workspaceName = 'log-${workload}-${environment}-${locationAbbreviation}'
+var appInsightsName = 'appi-${workload}-${environment}-${locationAbbreviation}'
+var demoAppInsightsName = 'appi-${workload}-demo-${environment}-${locationAbbreviation}'
 
 // Built-in: Monitoring Metrics Publisher — allows the managed identity to ingest telemetry via AAD auth
 var monitoringMetricsPublisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb'
@@ -78,7 +87,7 @@ resource metricsPublisherRole 'Microsoft.Authorization/roleAssignments@2022-04-0
 }
 
 resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
-  name: 'ag-gatherstead-oncall'
+  name: 'ag-${workload}-oncall-${environment}-${locationAbbreviation}'
   location: 'global'
   properties: {
     groupShortName: 'gat-oncall'
@@ -96,7 +105,7 @@ resource actionGroup 'Microsoft.Insights/actionGroups@2023-01-01' = {
 // Sev 2 — fires when failed API requests exceed 5 in a 5-minute window.
 // Requires Phase 2 OTel SDK wiring before data flows to App Insights.
 resource alertFailedRequests 'Microsoft.Insights/metricAlerts@2018-03-01' = {
-  name: 'gat-alert-failed-requests'
+  name: 'alert-${workload}-failed-requests-${environment}-${locationAbbreviation}'
   location: 'global'
   properties: {
     description: 'API failed request count exceeded threshold — investigate recent deployments or errors.'
@@ -131,7 +140,7 @@ resource alertFailedRequests 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 // Sev 1 — fires when SQL or other dependency failures exceed 3 in a 5-minute window.
 // Requires Phase 2 OTel SDK wiring before data flows to App Insights.
 resource alertDependencyFailures 'Microsoft.Insights/metricAlerts@2018-03-01' = {
-  name: 'gat-alert-dependency-failures'
+  name: 'alert-${workload}-dependency-failures-${environment}-${locationAbbreviation}'
   location: 'global'
   properties: {
     description: 'Dependency failure count (SQL, Key Vault, etc.) exceeded threshold — may indicate downstream outage.'

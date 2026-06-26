@@ -1,0 +1,84 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.44.1.10279",
+      "templateHash": "807163487988551505"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "The Azure region for the Static Web App."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload token used in CAF resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment token used in CAF resource names."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names."
+      }
+    },
+    "ciIdentityPrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Principal ID of the CI managed identity, granted Contributor so the pipeline can fetch the SWA deployment token at runtime."
+      }
+    }
+  },
+  "variables": {
+    "contributorRoleId": "b24988ac-6180-42a0-ab88-20f7382dd24c"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2023-12-01",
+      "name": "[format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Free",
+        "tier": "Free"
+      },
+      "properties": {
+        "buildProperties": {
+          "appLocation": "src/Gatherstead.Web",
+          "outputLocation": ".output/public"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]",
+      "name": "[guid(resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))), parameters('ciIdentityPrincipalId'), variables('contributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('contributorRoleId'))]",
+        "principalId": "[parameters('ciIdentityPrincipalId')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "demoSiteUrl": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))), '2023-12-01').defaultHostname]"
+    }
+  }
+}

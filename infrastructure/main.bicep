@@ -6,6 +6,15 @@ param location string = 'eastus'
 @description('The name of the resource group.')
 param resourceGroupName string = 'gatherstead-rg'
 
+@description('Workload token used in CAF resource names (the <workload> segment).')
+param workload string = 'gat'
+
+@description('Environment token used in CAF resource names, e.g. dev or prod.')
+param environment string = 'dev'
+
+@description('Region abbreviation used in CAF resource names, e.g. wus2 for westus2.')
+param locationAbbreviation string = 'eus'
+
 @description('The object ID of the Entra ID user or group that will be the SQL administrator.')
 param sqlEntraAdminObjectId string
 
@@ -36,16 +45,65 @@ param githubRepository string = 'jayceslayn/gatherstead'
 @description('The git branch whose Actions runs may deploy via OIDC.')
 param githubBranch string = 'main'
 
+// External identity provider (Microsoft Entra External ID / Azure AD B2C) used to validate the
+// API's JWT bearer tokens. All values are non-secret: bearer validation uses the IdP's published
+// OIDC signing keys, not a client secret. These map 1:1 onto the API's `ExternalIdentity` config
+// section and are injected as `ExternalIdentity__*` app settings on the API App Service.
+@description('External ID instance/authority host, e.g. https://your-tenant.ciamlogin.com.')
+param externalIdentityInstance string
+
+@description('External ID domain, e.g. your-tenant.onmicrosoft.com (used to build the authority URL).')
+param externalIdentityDomain string
+
+@description('App registration (client) ID of the API — used as the JWT audience.')
+param externalIdentityClientId string
+
+@description('B2C sign-up/sign-in policy (user flow) ID. Leave empty for Entra External ID, which has no policy segment.')
+param externalIdentitySignUpSignInPolicyId string = ''
+
+@description('Expected token issuer, e.g. https://your-tenant.ciamlogin.com/<tenant-id>/v2.0/.')
+param externalIdentityValidIssuer string
+
+// Nuxt web app sign-in (Entra External ID, server-side OIDC + PKCE). All non-secret — the flow uses
+// PKCE, not a client secret; the session-encryption key comes from Key Vault, not a param.
+@description('App registration (client) ID of the Nuxt web app for the OIDC sign-in flow.')
+param webExternalIdentityClientId string
+
+@description('External ID tenant subdomain for the web app, e.g. gatherstead (→ gatherstead.ciamlogin.com).')
+param webExternalIdentityTenantName string
+
+@description('API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user.')
+param webExternalIdentityApiScope string
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
 }
+
+// Short deterministic suffix for resources whose names live in global DNS namespaces (Key Vault,
+// SQL server, App Services). 6 chars keeps Key Vault within its 24-char cap; reused across the
+// global-namespace resources for consistency.
+var resourceToken = substring(uniqueString(rg.id), 0, 6)
 
 module identity 'modules/identity.bicep' = {
   name: 'identity'
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
+  }
+}
+
+module webIdentity 'modules/web-identity.bicep' = {
+  name: 'web-identity'
+  scope: rg
+  params: {
+    location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
   }
 }
 
@@ -54,6 +112,9 @@ module observability 'modules/observability.bicep' = {
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
     logRetentionDays: logRetentionDays
     oncallEmail: oncallEmail
     appManagedIdentityPrincipalId: identity.outputs.principalId
@@ -66,7 +127,12 @@ module keyvault 'modules/keyvault.bicep' = {
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
+    resourceToken: resourceToken
     appManagedIdentityPrincipalId: identity.outputs.principalId
+    webManagedIdentityPrincipalId: webIdentity.outputs.principalId
     deployerObjectId: deployerObjectId
     workspaceId: observability.outputs.workspaceId
   }
@@ -77,6 +143,10 @@ module sql 'modules/sql.bicep' = {
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
+    resourceToken: resourceToken
     sqlEntraAdminObjectId: sqlEntraAdminObjectId
     sqlEntraAdminLogin: sqlEntraAdminLogin
     tenantId: tenant().tenantId
@@ -89,6 +159,10 @@ module appservice 'modules/appservice.bicep' = {
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
+    resourceToken: resourceToken
     appServicePlanSku: appServicePlanSku
     appManagedIdentityId: identity.outputs.id
     appManagedIdentityClientId: identity.outputs.clientId
@@ -97,6 +171,15 @@ module appservice 'modules/appservice.bicep' = {
     keyVaultUri: keyvault.outputs.keyVaultUri
     workspaceId: observability.outputs.workspaceId
     appInsightsConnectionString: observability.outputs.appInsightsConnectionString
+    externalIdentityInstance: externalIdentityInstance
+    externalIdentityDomain: externalIdentityDomain
+    externalIdentityClientId: externalIdentityClientId
+    externalIdentitySignUpSignInPolicyId: externalIdentitySignUpSignInPolicyId
+    externalIdentityValidIssuer: externalIdentityValidIssuer
+    webManagedIdentityId: webIdentity.outputs.id
+    webExternalIdentityClientId: webExternalIdentityClientId
+    webExternalIdentityTenantName: webExternalIdentityTenantName
+    webExternalIdentityApiScope: webExternalIdentityApiScope
   }
 }
 
@@ -105,6 +188,9 @@ module ciIdentity 'modules/ci-identity.bicep' = {
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
     githubRepository: githubRepository
     githubBranch: githubBranch
   }
@@ -115,6 +201,9 @@ module demo 'modules/staticwebapp.bicep' = if (deployDemo) {
   scope: rg
   params: {
     location: location
+    workload: workload
+    environment: environment
+    locationAbbreviation: locationAbbreviation
     ciIdentityPrincipalId: ciIdentity.outputs.ciIdentityPrincipalId
   }
 }

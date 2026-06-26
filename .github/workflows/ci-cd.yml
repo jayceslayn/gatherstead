@@ -123,7 +123,7 @@ jobs:
 
   # ---------------------------------------------------------------------------
   # Deploy jobs — only on push to main, and only after build + test are green.
-  # Auth is GitHub OIDC → the gat-ci-id user-assigned managed identity (no secrets).
+  # Auth is GitHub OIDC → the id-gat-ci user-assigned managed identity (no secrets).
   # Required repo secrets: AZURE_CLIENT_ID (ciIdentityClientId output), AZURE_TENANT_ID,
   #   AZURE_SUBSCRIPTION_ID, DEMO_APPINSIGHTS_CONNECTION_STRING.
   #   (The demo SWA token is fetched at runtime via the CI identity — no stored token.)
@@ -322,7 +322,7 @@ jobs:
         working-directory: src/Gatherstead.Web
         env:
           NUXT_PUBLIC_DEMO_MODE: 'true'
-          # Demo App Insights (gat-ai-demo-*) — ingestion-only; safe to bake into the static build.
+          # Demo App Insights (appi-gat-demo-*) — ingestion-only; safe to bake into the static build.
           NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.DEMO_APPINSIGHTS_CONNECTION_STRING }}
         run: pnpm generate
 

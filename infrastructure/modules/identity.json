@@ -1,0 +1,66 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.44.1.10279",
+      "templateHash": "13602478363869833431"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "The Azure region where the managed identity will be created."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload token used in CAF resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment token used in CAF resource names."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names."
+      }
+    }
+  },
+  "variables": {
+    "identityName": "[format('id-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('identityName')]",
+      "location": "[parameters('location')]"
+    }
+  ],
+  "outputs": {
+    "id": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]"
+    },
+    "name": {
+      "type": "string",
+      "value": "[variables('identityName')]"
+    },
+    "principalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').principalId]"
+    },
+    "clientId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName')), '2023-01-31').clientId]"
+    }
+  }
+}

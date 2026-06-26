@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "10828363388272455535"
+      "version": "0.44.1.10279",
+      "templateHash": "86300322442335050"
     }
   },
   "parameters": {
@@ -13,6 +13,24 @@
       "type": "string",
       "metadata": {
         "description": "The Azure region for observability resources."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload token used in CAF resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment token used in CAF resource names."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names."
       }
     },
     "logRetentionDays": {
@@ -35,11 +53,19 @@
       "metadata": {
         "description": "Principal ID of the app managed identity (granted Monitoring Metrics Publisher on App Insights)."
       }
+    },
+    "deployDemo": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Whether to provision a separate App Insights component for the demo static site."
+      }
     }
   },
   "variables": {
-    "workspaceName": "[format('gat-law-{0}', uniqueString(resourceGroup().id))]",
-    "appInsightsName": "[format('gat-ai-{0}', uniqueString(resourceGroup().id))]",
+    "workspaceName": "[format('log-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+    "appInsightsName": "[format('appi-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+    "demoAppInsightsName": "[format('appi-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
     "monitoringMetricsPublisherRoleId": "3913510d-42f4-4e42-8a64-420c390055eb"
   },
   "resources": [
@@ -76,6 +102,24 @@
       ]
     },
     {
+      "condition": "[parameters('deployDemo')]",
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('demoAppInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]",
+        "IngestionMode": "LogAnalytics",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+      ]
+    },
+    {
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
       "scope": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
@@ -92,7 +136,7 @@
     {
       "type": "Microsoft.Insights/actionGroups",
       "apiVersion": "2023-01-01",
-      "name": "ag-gatherstead-oncall",
+      "name": "[format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
       "location": "global",
       "properties": {
         "groupShortName": "gat-oncall",
@@ -109,7 +153,7 @@
     {
       "type": "Microsoft.Insights/metricAlerts",
       "apiVersion": "2018-03-01",
-      "name": "gat-alert-failed-requests",
+      "name": "[format('alert-{0}-failed-requests-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
       "location": "global",
       "properties": {
         "description": "API failed request count exceeded threshold — investigate recent deployments or errors.",
@@ -136,20 +180,20 @@
         },
         "actions": [
           {
-            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
           }
         ],
         "autoMitigate": true
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+        "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]",
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
       ]
     },
     {
       "type": "Microsoft.Insights/metricAlerts",
       "apiVersion": "2018-03-01",
-      "name": "gat-alert-dependency-failures",
+      "name": "[format('alert-{0}-dependency-failures-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
       "location": "global",
       "properties": {
         "description": "Dependency failure count (SQL, Key Vault, etc.) exceeded threshold — may indicate downstream outage.",
@@ -176,13 +220,13 @@
         },
         "actions": [
           {
-            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+            "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
           }
         ],
         "autoMitigate": true
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+        "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]",
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
       ]
     }
@@ -202,7 +246,11 @@
     },
     "actionGroupId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+      "value": "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
+    },
+    "demoAppInsightsConnectionString": {
+      "type": "string",
+      "value": "[if(parameters('deployDemo'), reference(resourceId('Microsoft.Insights/components', variables('demoAppInsightsName')), '2020-02-02').ConnectionString, '')]"
     }
   }
 }

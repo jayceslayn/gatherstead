@@ -1,6 +1,18 @@
 @description('The Azure region where App Service resources will be created.')
 param location string
 
+@description('Workload token used in CAF resource names.')
+param workload string
+
+@description('Environment token used in CAF resource names.')
+param environment string
+
+@description('Region abbreviation used in CAF resource names.')
+param locationAbbreviation string
+
+@description('Short deterministic suffix ensuring the globally-unique App Service names are free.')
+param resourceToken string
+
 @description('The App Service Plan SKU. Use F1 for dev (free) or B1 for prod (basic, always-on).')
 @allowed(['F1', 'B1', 'B2', 'B3', 'S1', 'S2', 'S3', 'P1v3', 'P2v3', 'P3v3'])
 param appServicePlanSku string = 'F1'
@@ -26,9 +38,36 @@ param workspaceId string
 @description('Application Insights connection string injected into both apps.')
 param appInsightsConnectionString string
 
-var planName = 'gat-asp-${uniqueString(resourceGroup().id)}'
-var apiAppName = 'gat-api-${uniqueString(resourceGroup().id)}'
-var webAppName = 'gat-web-${uniqueString(resourceGroup().id)}'
+@description('External ID instance/authority host, e.g. https://your-tenant.ciamlogin.com.')
+param externalIdentityInstance string
+
+@description('External ID domain, e.g. your-tenant.onmicrosoft.com.')
+param externalIdentityDomain string
+
+@description('App registration (client) ID of the API — used as the JWT audience.')
+param externalIdentityClientId string
+
+@description('B2C sign-up/sign-in policy (user flow) ID. Empty for Entra External ID.')
+param externalIdentitySignUpSignInPolicyId string = ''
+
+@description('Expected token issuer, e.g. https://your-tenant.ciamlogin.com/<tenant-id>/v2.0/.')
+param externalIdentityValidIssuer string
+
+@description('Full resource ID of the dedicated web managed identity (used for Key Vault references).')
+param webManagedIdentityId string
+
+@description('App registration (client) ID of the Nuxt web app for the OIDC sign-in flow.')
+param webExternalIdentityClientId string
+
+@description('External ID tenant subdomain for the web app, e.g. gatherstead (→ gatherstead.ciamlogin.com).')
+param webExternalIdentityTenantName string
+
+@description('The API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user.')
+param webExternalIdentityApiScope string
+
+var planName = 'asp-${workload}-${environment}-${locationAbbreviation}'
+var apiAppName = 'app-${workload}-api-${environment}-${locationAbbreviation}-${resourceToken}'
+var webAppName = 'app-${workload}-web-${environment}-${locationAbbreviation}-${resourceToken}'
 
 // Column Encryption Setting=Enabled turns on Always Encrypted (encrypt on write / decrypt on read,
 // plus equality over deterministic columns) — none of which engages the enclave. No attestation
@@ -75,6 +114,13 @@ resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ApplicationInsightsAgent_EXTENSION_VERSION', value: '~3' }
         // Allow requests from the web app origin
         { name: 'Cors__AllowedOrigins__0', value: 'https://${webAppName}.azurewebsites.net' }
+        // External identity provider (Entra External ID / Azure AD B2C) — JWT bearer validation.
+        // `__` maps to the nested `ExternalIdentity:*` config keys consumed in Program.cs.
+        { name: 'ExternalIdentity__Instance', value: externalIdentityInstance }
+        { name: 'ExternalIdentity__Domain', value: externalIdentityDomain }
+        { name: 'ExternalIdentity__ClientId', value: externalIdentityClientId }
+        { name: 'ExternalIdentity__SignUpSignInPolicyId', value: externalIdentitySignUpSignInPolicyId }
+        { name: 'ExternalIdentity__ValidIssuer', value: externalIdentityValidIssuer }
       ]
       connectionStrings: [
         {
@@ -91,9 +137,18 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: webAppName
   location: location
   kind: 'app,linux'
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${webManagedIdentityId}': {}
+    }
+  }
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
+    // Resolve @Microsoft.KeyVault(...) app-setting references with the web identity (required when the
+    // site uses a user-assigned identity rather than a system-assigned one).
+    keyVaultReferenceIdentity: webManagedIdentityId
     siteConfig: {
       linuxFxVersion: 'NODE|24-lts'
       alwaysOn: appServicePlanSku != 'F1'
@@ -107,6 +162,14 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         // Browser-facing key for the App Insights JS SDK (runtimeConfig.public.appInsightsConnectionString).
         // Same prod App Insights as the backend → end-to-end frontend/backend trace correlation.
         { name: 'NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+        // Entra External ID (server-side OIDC + PKCE) — bind runtimeConfig.externalIdentity.* in
+        // nuxt.config.ts. All non-secret; the OIDC flow uses PKCE, not a client secret.
+        { name: 'NUXT_EXTERNAL_IDENTITY_CLIENT_ID', value: webExternalIdentityClientId }
+        { name: 'NUXT_EXTERNAL_IDENTITY_TENANT_NAME', value: webExternalIdentityTenantName }
+        { name: 'NUXT_EXTERNAL_IDENTITY_API_SCOPE', value: webExternalIdentityApiScope }
+        // nuxt-auth-utils session encryption key — resolved from Key Vault at runtime via the web
+        // identity. Create the secret out-of-band: az keyvault secret set --name nuxt-session-password.
+        { name: 'NUXT_SESSION_PASSWORD', value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/nuxt-session-password/)' }
       ]
     }
   }

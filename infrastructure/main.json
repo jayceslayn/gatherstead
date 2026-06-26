@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "6753363496017167455"
+      "templateHash": "16221444173205173021"
     }
   },
   "parameters": {
@@ -21,6 +21,27 @@
       "defaultValue": "gatherstead-rg",
       "metadata": {
         "description": "The name of the resource group."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "defaultValue": "gat",
+      "metadata": {
+        "description": "Workload token used in CAF resource names (the <workload> segment)."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "metadata": {
+        "description": "Environment token used in CAF resource names, e.g. dev or prod."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "defaultValue": "eus",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names, e.g. wus2 for westus2."
       }
     },
     "sqlEntraAdminObjectId": {
@@ -95,7 +116,59 @@
       "metadata": {
         "description": "The git branch whose Actions runs may deploy via OIDC."
       }
+    },
+    "externalIdentityInstance": {
+      "type": "string",
+      "metadata": {
+        "description": "External ID instance/authority host, e.g. https://your-tenant.ciamlogin.com."
+      }
+    },
+    "externalIdentityDomain": {
+      "type": "string",
+      "metadata": {
+        "description": "External ID domain, e.g. your-tenant.onmicrosoft.com (used to build the authority URL)."
+      }
+    },
+    "externalIdentityClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "App registration (client) ID of the API — used as the JWT audience."
+      }
+    },
+    "externalIdentitySignUpSignInPolicyId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "B2C sign-up/sign-in policy (user flow) ID. Leave empty for Entra External ID, which has no policy segment."
+      }
+    },
+    "externalIdentityValidIssuer": {
+      "type": "string",
+      "metadata": {
+        "description": "Expected token issuer, e.g. https://your-tenant.ciamlogin.com/<tenant-id>/v2.0/."
+      }
+    },
+    "webExternalIdentityClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "App registration (client) ID of the Nuxt web app for the OIDC sign-in flow."
+      }
+    },
+    "webExternalIdentityTenantName": {
+      "type": "string",
+      "metadata": {
+        "description": "External ID tenant subdomain for the web app, e.g. gatherstead (→ gatherstead.ciamlogin.com)."
+      }
+    },
+    "webExternalIdentityApiScope": {
+      "type": "string",
+      "metadata": {
+        "description": "API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user."
+      }
     }
+  },
+  "variables": {
+    "resourceToken": "[substring(uniqueString(subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))), 0, 6)]"
   },
   "resources": [
     {
@@ -117,6 +190,15 @@
         "parameters": {
           "location": {
             "value": "[parameters('location')]"
+          },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
           }
         },
         "template": {
@@ -126,7 +208,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "7840531214350700362"
+              "templateHash": "13602478363869833431"
             }
           },
           "parameters": {
@@ -135,10 +217,28 @@
               "metadata": {
                 "description": "The Azure region where the managed identity will be created."
               }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
+              }
             }
           },
           "variables": {
-            "identityName": "[format('gat-id-{0}', uniqueString(resourceGroup().id))]"
+            "identityName": "[format('id-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]"
           },
           "resources": [
             {
@@ -175,6 +275,101 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
+      "name": "web-identity",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "3779215039023707803"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region where the managed identity will be created."
+              }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
+              }
+            }
+          },
+          "variables": {
+            "webIdentityName": "[format('id-{0}-web-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[variables('webIdentityName')]",
+              "location": "[parameters('location')]"
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('webIdentityName'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[variables('webIdentityName')]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('webIdentityName')), '2023-01-31').principalId]"
+            },
+            "clientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('webIdentityName')), '2023-01-31').clientId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
       "name": "observability",
       "resourceGroup": "[parameters('resourceGroupName')]",
       "properties": {
@@ -185,6 +380,15 @@
         "parameters": {
           "location": {
             "value": "[parameters('location')]"
+          },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
           },
           "logRetentionDays": {
             "value": "[parameters('logRetentionDays')]"
@@ -206,7 +410,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10979886673836902885"
+              "templateHash": "86300322442335050"
             }
           },
           "parameters": {
@@ -214,6 +418,24 @@
               "type": "string",
               "metadata": {
                 "description": "The Azure region for observability resources."
+              }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
               }
             },
             "logRetentionDays": {
@@ -246,9 +468,9 @@
             }
           },
           "variables": {
-            "workspaceName": "[format('gat-law-{0}', uniqueString(resourceGroup().id))]",
-            "appInsightsName": "[format('gat-ai-{0}', uniqueString(resourceGroup().id))]",
-            "demoAppInsightsName": "[format('gat-ai-demo-{0}', uniqueString(resourceGroup().id))]",
+            "workspaceName": "[format('log-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+            "appInsightsName": "[format('appi-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+            "demoAppInsightsName": "[format('appi-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
             "monitoringMetricsPublisherRoleId": "3913510d-42f4-4e42-8a64-420c390055eb"
           },
           "resources": [
@@ -319,7 +541,7 @@
             {
               "type": "Microsoft.Insights/actionGroups",
               "apiVersion": "2023-01-01",
-              "name": "ag-gatherstead-oncall",
+              "name": "[format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
               "location": "global",
               "properties": {
                 "groupShortName": "gat-oncall",
@@ -336,7 +558,7 @@
             {
               "type": "Microsoft.Insights/metricAlerts",
               "apiVersion": "2018-03-01",
-              "name": "gat-alert-failed-requests",
+              "name": "[format('alert-{0}-failed-requests-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
               "location": "global",
               "properties": {
                 "description": "API failed request count exceeded threshold — investigate recent deployments or errors.",
@@ -363,20 +585,20 @@
                 },
                 "actions": [
                   {
-                    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+                    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
                   }
                 ],
                 "autoMitigate": true
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+                "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]",
                 "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
               ]
             },
             {
               "type": "Microsoft.Insights/metricAlerts",
               "apiVersion": "2018-03-01",
-              "name": "gat-alert-dependency-failures",
+              "name": "[format('alert-{0}-dependency-failures-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
               "location": "global",
               "properties": {
                 "description": "Dependency failure count (SQL, Key Vault, etc.) exceeded threshold — may indicate downstream outage.",
@@ -403,13 +625,13 @@
                 },
                 "actions": [
                   {
-                    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+                    "actionGroupId": "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
                   }
                 ],
                 "autoMitigate": true
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]",
+                "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]",
                 "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
               ]
             }
@@ -429,7 +651,7 @@
             },
             "actionGroupId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+              "value": "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-oncall-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
             },
             "demoAppInsightsConnectionString": {
               "type": "string",
@@ -457,8 +679,23 @@
           "location": {
             "value": "[parameters('location')]"
           },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
+          },
+          "resourceToken": {
+            "value": "[variables('resourceToken')]"
+          },
           "appManagedIdentityPrincipalId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.principalId.value]"
+          },
+          "webManagedIdentityPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'web-identity'), '2025-04-01').outputs.principalId.value]"
           },
           "deployerObjectId": {
             "value": "[parameters('deployerObjectId')]"
@@ -474,7 +711,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "5234711991633923368"
+              "templateHash": "2535474733324505522"
             }
           },
           "parameters": {
@@ -484,10 +721,40 @@
                 "description": "The Azure region where the Key Vault will be created."
               }
             },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
+              }
+            },
+            "resourceToken": {
+              "type": "string",
+              "metadata": {
+                "description": "Short deterministic suffix ensuring the globally-unique Key Vault name is free."
+              }
+            },
             "appManagedIdentityPrincipalId": {
               "type": "string",
               "metadata": {
                 "description": "The principal ID of the app managed identity (granted Crypto User + Secrets User)."
+              }
+            },
+            "webManagedIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "The principal ID of the web managed identity (granted Secrets User for the NUXT_SESSION_PASSWORD reference)."
               }
             },
             "deployerObjectId": {
@@ -507,7 +774,7 @@
             "keyVaultAdministratorRoleId": "00482a5a-887f-4fb3-b363-3b7fe8e74483",
             "keyVaultCryptoUserRoleId": "12338af0-0e69-4776-bea7-57ae8d297424",
             "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6",
-            "keyVaultName": "[format('gat-kv-{0}', uniqueString(resourceGroup().id))]"
+            "keyVaultName": "[format('kv-{0}-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]"
           },
           "resources": [
             {
@@ -588,6 +855,20 @@
               ]
             },
             {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), parameters('webManagedIdentityPrincipalId'), variables('keyVaultSecretsUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]",
+                "principalId": "[parameters('webManagedIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            },
+            {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
               "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -635,7 +916,8 @@
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'web-identity')]"
       ]
     },
     {
@@ -651,6 +933,18 @@
         "parameters": {
           "location": {
             "value": "[parameters('location')]"
+          },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
+          },
+          "resourceToken": {
+            "value": "[variables('resourceToken')]"
           },
           "sqlEntraAdminObjectId": {
             "value": "[parameters('sqlEntraAdminObjectId')]"
@@ -672,7 +966,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "15631945508173399822"
+              "templateHash": "10505479579923790164"
             }
           },
           "parameters": {
@@ -680,6 +974,30 @@
               "type": "string",
               "metadata": {
                 "description": "The Azure region where SQL resources will be created."
+              }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
+              }
+            },
+            "resourceToken": {
+              "type": "string",
+              "metadata": {
+                "description": "Short deterministic suffix ensuring the globally-unique SQL server name is free."
               }
             },
             "sqlEntraAdminObjectId": {
@@ -708,7 +1026,7 @@
             }
           },
           "variables": {
-            "sqlServerName": "[format('gat-sql-{0}', uniqueString(resourceGroup().id))]"
+            "sqlServerName": "[format('sql-{0}-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]"
           },
           "resources": [
             {
@@ -820,6 +1138,18 @@
           "location": {
             "value": "[parameters('location')]"
           },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
+          },
+          "resourceToken": {
+            "value": "[variables('resourceToken')]"
+          },
           "appServicePlanSku": {
             "value": "[parameters('appServicePlanSku')]"
           },
@@ -843,6 +1173,33 @@
           },
           "appInsightsConnectionString": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.appInsightsConnectionString.value]"
+          },
+          "externalIdentityInstance": {
+            "value": "[parameters('externalIdentityInstance')]"
+          },
+          "externalIdentityDomain": {
+            "value": "[parameters('externalIdentityDomain')]"
+          },
+          "externalIdentityClientId": {
+            "value": "[parameters('externalIdentityClientId')]"
+          },
+          "externalIdentitySignUpSignInPolicyId": {
+            "value": "[parameters('externalIdentitySignUpSignInPolicyId')]"
+          },
+          "externalIdentityValidIssuer": {
+            "value": "[parameters('externalIdentityValidIssuer')]"
+          },
+          "webManagedIdentityId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'web-identity'), '2025-04-01').outputs.id.value]"
+          },
+          "webExternalIdentityClientId": {
+            "value": "[parameters('webExternalIdentityClientId')]"
+          },
+          "webExternalIdentityTenantName": {
+            "value": "[parameters('webExternalIdentityTenantName')]"
+          },
+          "webExternalIdentityApiScope": {
+            "value": "[parameters('webExternalIdentityApiScope')]"
           }
         },
         "template": {
@@ -852,7 +1209,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "13129015510726502767"
+              "templateHash": "9162663911508241485"
             }
           },
           "parameters": {
@@ -860,6 +1217,30 @@
               "type": "string",
               "metadata": {
                 "description": "The Azure region where App Service resources will be created."
+              }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
+              }
+            },
+            "resourceToken": {
+              "type": "string",
+              "metadata": {
+                "description": "Short deterministic suffix ensuring the globally-unique App Service names are free."
               }
             },
             "appServicePlanSku": {
@@ -922,12 +1303,67 @@
               "metadata": {
                 "description": "Application Insights connection string injected into both apps."
               }
+            },
+            "externalIdentityInstance": {
+              "type": "string",
+              "metadata": {
+                "description": "External ID instance/authority host, e.g. https://your-tenant.ciamlogin.com."
+              }
+            },
+            "externalIdentityDomain": {
+              "type": "string",
+              "metadata": {
+                "description": "External ID domain, e.g. your-tenant.onmicrosoft.com."
+              }
+            },
+            "externalIdentityClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "App registration (client) ID of the API — used as the JWT audience."
+              }
+            },
+            "externalIdentitySignUpSignInPolicyId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "B2C sign-up/sign-in policy (user flow) ID. Empty for Entra External ID."
+              }
+            },
+            "externalIdentityValidIssuer": {
+              "type": "string",
+              "metadata": {
+                "description": "Expected token issuer, e.g. https://your-tenant.ciamlogin.com/<tenant-id>/v2.0/."
+              }
+            },
+            "webManagedIdentityId": {
+              "type": "string",
+              "metadata": {
+                "description": "Full resource ID of the dedicated web managed identity (used for Key Vault references)."
+              }
+            },
+            "webExternalIdentityClientId": {
+              "type": "string",
+              "metadata": {
+                "description": "App registration (client) ID of the Nuxt web app for the OIDC sign-in flow."
+              }
+            },
+            "webExternalIdentityTenantName": {
+              "type": "string",
+              "metadata": {
+                "description": "External ID tenant subdomain for the web app, e.g. gatherstead (→ gatherstead.ciamlogin.com)."
+              }
+            },
+            "webExternalIdentityApiScope": {
+              "type": "string",
+              "metadata": {
+                "description": "The API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user."
+              }
             }
           },
           "variables": {
-            "planName": "[format('gat-asp-{0}', uniqueString(resourceGroup().id))]",
-            "apiAppName": "[format('gat-api-{0}', uniqueString(resourceGroup().id))]",
-            "webAppName": "[format('gat-web-{0}', uniqueString(resourceGroup().id))]",
+            "planName": "[format('asp-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+            "apiAppName": "[format('app-{0}-api-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]",
+            "webAppName": "[format('app-{0}-web-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]",
             "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
           },
           "resources": [
@@ -982,6 +1418,26 @@
                     {
                       "name": "Cors__AllowedOrigins__0",
                       "value": "[format('https://{0}.azurewebsites.net', variables('webAppName'))]"
+                    },
+                    {
+                      "name": "ExternalIdentity__Instance",
+                      "value": "[parameters('externalIdentityInstance')]"
+                    },
+                    {
+                      "name": "ExternalIdentity__Domain",
+                      "value": "[parameters('externalIdentityDomain')]"
+                    },
+                    {
+                      "name": "ExternalIdentity__ClientId",
+                      "value": "[parameters('externalIdentityClientId')]"
+                    },
+                    {
+                      "name": "ExternalIdentity__SignUpSignInPolicyId",
+                      "value": "[parameters('externalIdentitySignUpSignInPolicyId')]"
+                    },
+                    {
+                      "name": "ExternalIdentity__ValidIssuer",
+                      "value": "[parameters('externalIdentityValidIssuer')]"
                     }
                   ],
                   "connectionStrings": [
@@ -1003,9 +1459,16 @@
               "name": "[variables('webAppName')]",
               "location": "[parameters('location')]",
               "kind": "app,linux",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('webManagedIdentityId'))]": {}
+                }
+              },
               "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
                 "httpsOnly": true,
+                "keyVaultReferenceIdentity": "[parameters('webManagedIdentityId')]",
                 "siteConfig": {
                   "linuxFxVersion": "NODE|24-lts",
                   "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
@@ -1030,6 +1493,22 @@
                     {
                       "name": "NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING",
                       "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "NUXT_EXTERNAL_IDENTITY_CLIENT_ID",
+                      "value": "[parameters('webExternalIdentityClientId')]"
+                    },
+                    {
+                      "name": "NUXT_EXTERNAL_IDENTITY_TENANT_NAME",
+                      "value": "[parameters('webExternalIdentityTenantName')]"
+                    },
+                    {
+                      "name": "NUXT_EXTERNAL_IDENTITY_API_SCOPE",
+                      "value": "[parameters('webExternalIdentityApiScope')]"
+                    },
+                    {
+                      "name": "NUXT_SESSION_PASSWORD",
+                      "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/nuxt-session-password/)', parameters('keyVaultUri'))]"
                     }
                   ]
                 }
@@ -1152,7 +1631,8 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'web-identity')]"
       ]
     },
     {
@@ -1169,6 +1649,15 @@
           "location": {
             "value": "[parameters('location')]"
           },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
+          },
           "githubRepository": {
             "value": "[parameters('githubRepository')]"
           },
@@ -1183,7 +1672,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "8656254510248660738"
+              "templateHash": "18413101232700182416"
             }
           },
           "parameters": {
@@ -1191,6 +1680,24 @@
               "type": "string",
               "metadata": {
                 "description": "The Azure region where the CI managed identity will be created."
+              }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
               }
             },
             "githubRepository": {
@@ -1211,7 +1718,7 @@
           "variables": {
             "websiteContributorRoleId": "de139f84-1756-47ae-9be6-808fbbe84772",
             "sqlServerContributorRoleId": "6d8ee4ec-f05a-4a1d-8b00-a9b17e38b437",
-            "ciIdentityName": "[format('gat-ci-id-{0}', uniqueString(resourceGroup().id))]"
+            "ciIdentityName": "[format('id-{0}-ci-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]"
           },
           "resources": [
             {
@@ -1297,6 +1804,15 @@
           "location": {
             "value": "[parameters('location')]"
           },
+          "workload": {
+            "value": "[parameters('workload')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "locationAbbreviation": {
+            "value": "[parameters('locationAbbreviation')]"
+          },
           "ciIdentityPrincipalId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ci-identity'), '2025-04-01').outputs.ciIdentityPrincipalId.value]"
           }
@@ -1308,7 +1824,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "16804706677790998404"
+              "templateHash": "807163487988551505"
             }
           },
           "parameters": {
@@ -1316,6 +1832,24 @@
               "type": "string",
               "metadata": {
                 "description": "The Azure region for the Static Web App."
+              }
+            },
+            "workload": {
+              "type": "string",
+              "metadata": {
+                "description": "Workload token used in CAF resource names."
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment token used in CAF resource names."
+              }
+            },
+            "locationAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation used in CAF resource names."
               }
             },
             "ciIdentityPrincipalId": {
@@ -1332,7 +1866,7 @@
             {
               "type": "Microsoft.Web/staticSites",
               "apiVersion": "2023-12-01",
-              "name": "gat-demo-swa",
+              "name": "[format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
               "location": "[parameters('location')]",
               "sku": {
                 "name": "Free",
@@ -1348,22 +1882,22 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[resourceId('Microsoft.Web/staticSites', 'gat-demo-swa')]",
-              "name": "[guid(resourceId('Microsoft.Web/staticSites', 'gat-demo-swa'), parameters('ciIdentityPrincipalId'), variables('contributorRoleId'))]",
+              "scope": "[resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]",
+              "name": "[guid(resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))), parameters('ciIdentityPrincipalId'), variables('contributorRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('contributorRoleId'))]",
                 "principalId": "[parameters('ciIdentityPrincipalId')]",
                 "principalType": "ServicePrincipal"
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Web/staticSites', 'gat-demo-swa')]"
+                "[resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation')))]"
               ]
             }
           ],
           "outputs": {
             "demoSiteUrl": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Web/staticSites', 'gat-demo-swa'), '2023-12-01').defaultHostname]"
+              "value": "[reference(resourceId('Microsoft.Web/staticSites', format('stapp-{0}-demo-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))), '2023-12-01').defaultHostname]"
             }
           }
         }

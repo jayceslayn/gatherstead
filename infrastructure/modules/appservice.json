@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "13129015510726502767"
+      "templateHash": "9162663911508241485"
     }
   },
   "parameters": {
@@ -13,6 +13,30 @@
       "type": "string",
       "metadata": {
         "description": "The Azure region where App Service resources will be created."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload token used in CAF resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment token used in CAF resource names."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names."
+      }
+    },
+    "resourceToken": {
+      "type": "string",
+      "metadata": {
+        "description": "Short deterministic suffix ensuring the globally-unique App Service names are free."
       }
     },
     "appServicePlanSku": {
@@ -75,12 +99,67 @@
       "metadata": {
         "description": "Application Insights connection string injected into both apps."
       }
+    },
+    "externalIdentityInstance": {
+      "type": "string",
+      "metadata": {
+        "description": "External ID instance/authority host, e.g. https://your-tenant.ciamlogin.com."
+      }
+    },
+    "externalIdentityDomain": {
+      "type": "string",
+      "metadata": {
+        "description": "External ID domain, e.g. your-tenant.onmicrosoft.com."
+      }
+    },
+    "externalIdentityClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "App registration (client) ID of the API — used as the JWT audience."
+      }
+    },
+    "externalIdentitySignUpSignInPolicyId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "B2C sign-up/sign-in policy (user flow) ID. Empty for Entra External ID."
+      }
+    },
+    "externalIdentityValidIssuer": {
+      "type": "string",
+      "metadata": {
+        "description": "Expected token issuer, e.g. https://your-tenant.ciamlogin.com/<tenant-id>/v2.0/."
+      }
+    },
+    "webManagedIdentityId": {
+      "type": "string",
+      "metadata": {
+        "description": "Full resource ID of the dedicated web managed identity (used for Key Vault references)."
+      }
+    },
+    "webExternalIdentityClientId": {
+      "type": "string",
+      "metadata": {
+        "description": "App registration (client) ID of the Nuxt web app for the OIDC sign-in flow."
+      }
+    },
+    "webExternalIdentityTenantName": {
+      "type": "string",
+      "metadata": {
+        "description": "External ID tenant subdomain for the web app, e.g. gatherstead (→ gatherstead.ciamlogin.com)."
+      }
+    },
+    "webExternalIdentityApiScope": {
+      "type": "string",
+      "metadata": {
+        "description": "The API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user."
+      }
     }
   },
   "variables": {
-    "planName": "[format('gat-asp-{0}', uniqueString(resourceGroup().id))]",
-    "apiAppName": "[format('gat-api-{0}', uniqueString(resourceGroup().id))]",
-    "webAppName": "[format('gat-web-{0}', uniqueString(resourceGroup().id))]",
+    "planName": "[format('asp-{0}-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]",
+    "apiAppName": "[format('app-{0}-api-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]",
+    "webAppName": "[format('app-{0}-web-{1}-{2}-{3}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'), parameters('resourceToken'))]",
     "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
   },
   "resources": [
@@ -135,6 +214,26 @@
             {
               "name": "Cors__AllowedOrigins__0",
               "value": "[format('https://{0}.azurewebsites.net', variables('webAppName'))]"
+            },
+            {
+              "name": "ExternalIdentity__Instance",
+              "value": "[parameters('externalIdentityInstance')]"
+            },
+            {
+              "name": "ExternalIdentity__Domain",
+              "value": "[parameters('externalIdentityDomain')]"
+            },
+            {
+              "name": "ExternalIdentity__ClientId",
+              "value": "[parameters('externalIdentityClientId')]"
+            },
+            {
+              "name": "ExternalIdentity__SignUpSignInPolicyId",
+              "value": "[parameters('externalIdentitySignUpSignInPolicyId')]"
+            },
+            {
+              "name": "ExternalIdentity__ValidIssuer",
+              "value": "[parameters('externalIdentityValidIssuer')]"
             }
           ],
           "connectionStrings": [
@@ -156,9 +255,16 @@
       "name": "[variables('webAppName')]",
       "location": "[parameters('location')]",
       "kind": "app,linux",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', parameters('webManagedIdentityId'))]": {}
+        }
+      },
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('planName'))]",
         "httpsOnly": true,
+        "keyVaultReferenceIdentity": "[parameters('webManagedIdentityId')]",
         "siteConfig": {
           "linuxFxVersion": "NODE|24-lts",
           "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
@@ -183,6 +289,22 @@
             {
               "name": "NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING",
               "value": "[parameters('appInsightsConnectionString')]"
+            },
+            {
+              "name": "NUXT_EXTERNAL_IDENTITY_CLIENT_ID",
+              "value": "[parameters('webExternalIdentityClientId')]"
+            },
+            {
+              "name": "NUXT_EXTERNAL_IDENTITY_TENANT_NAME",
+              "value": "[parameters('webExternalIdentityTenantName')]"
+            },
+            {
+              "name": "NUXT_EXTERNAL_IDENTITY_API_SCOPE",
+              "value": "[parameters('webExternalIdentityApiScope')]"
+            },
+            {
+              "name": "NUXT_SESSION_PASSWORD",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/nuxt-session-password/)', parameters('keyVaultUri'))]"
             }
           ]
         }

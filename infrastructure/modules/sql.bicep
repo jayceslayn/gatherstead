@@ -1,6 +1,18 @@
 @description('The Azure region where SQL resources will be created.')
 param location string
 
+@description('Workload token used in CAF resource names.')
+param workload string
+
+@description('Environment token used in CAF resource names.')
+param environment string
+
+@description('Region abbreviation used in CAF resource names.')
+param locationAbbreviation string
+
+@description('Short deterministic suffix ensuring the globally-unique SQL server name is free.')
+param resourceToken string
+
 @description('The object ID of the Entra ID user or group that will be the SQL administrator.')
 param sqlEntraAdminObjectId string
 
@@ -13,7 +25,7 @@ param tenantId string
 @description('Resource ID of the Log Analytics workspace for diagnostic settings.')
 param workspaceId string
 
-var sqlServerName = 'gat-sql-${uniqueString(resourceGroup().id)}'
+var sqlServerName = 'sql-${workload}-${environment}-${locationAbbreviation}-${resourceToken}'
 
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: sqlServerName

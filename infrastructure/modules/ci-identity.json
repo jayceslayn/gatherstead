@@ -1,0 +1,119 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.44.1.10279",
+      "templateHash": "18413101232700182416"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "The Azure region where the CI managed identity will be created."
+      }
+    },
+    "workload": {
+      "type": "string",
+      "metadata": {
+        "description": "Workload token used in CAF resource names."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment token used in CAF resource names."
+      }
+    },
+    "locationAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "Region abbreviation used in CAF resource names."
+      }
+    },
+    "githubRepository": {
+      "type": "string",
+      "defaultValue": "jayceslayn/gatherstead",
+      "metadata": {
+        "description": "The GitHub repository (owner/name) allowed to federate with this identity."
+      }
+    },
+    "githubBranch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "The git branch whose workflow runs may assume this identity."
+      }
+    }
+  },
+  "variables": {
+    "websiteContributorRoleId": "de139f84-1756-47ae-9be6-808fbbe84772",
+    "sqlServerContributorRoleId": "6d8ee4ec-f05a-4a1d-8b00-a9b17e38b437",
+    "ciIdentityName": "[format('id-{0}-ci-{1}-{2}', parameters('workload'), parameters('environment'), parameters('locationAbbreviation'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[variables('ciIdentityName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
+      "apiVersion": "2023-01-31",
+      "name": "[format('{0}/{1}', variables('ciIdentityName'), format('github-{0}', parameters('githubBranch')))]",
+      "properties": {
+        "issuer": "https://token.actions.githubusercontent.com",
+        "subject": "[format('repo:{0}:ref:refs/heads/{1}', parameters('githubRepository'), parameters('githubBranch'))]",
+        "audiences": [
+          "api://AzureADTokenExchange"
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), variables('websiteContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('websiteContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), variables('sqlServerContributorRoleId'))]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('sqlServerContributorRoleId'))]",
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "ciIdentityName": {
+      "type": "string",
+      "value": "[variables('ciIdentityName')]"
+    },
+    "ciIdentityClientId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').clientId]"
+    },
+    "ciIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').principalId]"
+    }
+  }
+}

@@ -1,6 +1,15 @@
 @description('The Azure region where the CI managed identity will be created.')
 param location string
 
+@description('Workload token used in CAF resource names.')
+param workload string
+
+@description('Environment token used in CAF resource names.')
+param environment string
+
+@description('Region abbreviation used in CAF resource names.')
+param locationAbbreviation string
+
 @description('The GitHub repository (owner/name) allowed to federate with this identity.')
 param githubRepository string = 'jayceslayn/gatherstead'
 
@@ -11,7 +20,7 @@ param githubBranch string = 'main'
 var websiteContributorRoleId = 'de139f84-1756-47ae-9be6-808fbbe84772'
 var sqlServerContributorRoleId = '6d8ee4ec-f05a-4a1d-8b00-a9b17e38b437'
 
-var ciIdentityName = 'gat-ci-id-${uniqueString(resourceGroup().id)}'
+var ciIdentityName = 'id-${workload}-ci-${environment}-${locationAbbreviation}'
 
 // CI/CD identity assumed by GitHub Actions via OIDC — no client secret, no password.
 resource ciIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {

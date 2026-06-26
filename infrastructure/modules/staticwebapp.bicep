@@ -1,6 +1,15 @@
 @description('The Azure region for the Static Web App.')
 param location string
 
+@description('Workload token used in CAF resource names.')
+param workload string
+
+@description('Environment token used in CAF resource names.')
+param environment string
+
+@description('Region abbreviation used in CAF resource names.')
+param locationAbbreviation string
+
 @description('Principal ID of the CI managed identity, granted Contributor so the pipeline can fetch the SWA deployment token at runtime.')
 param ciIdentityPrincipalId string
 
@@ -8,7 +17,7 @@ param ciIdentityPrincipalId string
 var contributorRoleId = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 
 resource demoSite 'Microsoft.Web/staticSites@2023-12-01' = {
-  name: 'gat-demo-swa'
+  name: 'stapp-${workload}-demo-${environment}-${locationAbbreviation}'
   location: location
   sku: {
     name: 'Free'

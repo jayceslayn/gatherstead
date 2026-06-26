@@ -41,11 +41,11 @@ Lockfiles (`packages.lock.json` per .NET project, `pnpm-lock.yaml` for the web a
 
 ### Deploy authentication & required GitHub config
 
-Deploys authenticate to Azure with **GitHub OIDC** federated to the `gat-ci-id-*` user-assigned managed identity provisioned by `ci-identity.bicep` — no client secret. After provisioning infrastructure (and running `ci-grant.sql`, below), configure the repository once:
+Deploys authenticate to Azure with **GitHub OIDC** federated to the `id-gat-ci-*` user-assigned managed identity provisioned by `ci-identity.bicep` — no client secret. After provisioning infrastructure (and running `ci-grant.sql`, below), configure the repository once:
 
 **Secrets** — `AZURE_CLIENT_ID` (the `ciIdentityClientId` output), `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, plus `DEMO_APPINSIGHTS_CONNECTION_STRING`. The demo SWA deployment token is fetched at runtime by the CI identity (`az staticwebapp secrets list`), so no token secret is stored.
 
-**Variables** — `AZURE_RESOURCE_GROUP`, `API_APP_NAME` (`apiAppName` output), `WEB_APP_NAME` (`webAppName` output), `SQL_SERVER_NAME` (`sqlServerName` output), `SQL_DATABASE_NAME` (`sqlDatabaseName` output), and `DEMO_SWA_NAME` (`gat-demo-swa`). The app/server names embed a `uniqueString` hash, so copy them from the Bicep outputs rather than guessing. (`keyVaultCmkId` is no longer a CI variable — it's the CMK Key Vault ID passed to the manual Always Encrypted setup in [step 5](#5-configure-encryption-and-temporal-retention).)
+**Variables** — `AZURE_RESOURCE_GROUP`, `API_APP_NAME` (`apiAppName` output), `WEB_APP_NAME` (`webAppName` output), `SQL_SERVER_NAME` (`sqlServerName` output), `SQL_DATABASE_NAME` (`sqlDatabaseName` output), and `DEMO_SWA_NAME` (`stapp-gat-demo-*`). The app/server names embed a short `uniqueString` hash suffix, so copy them from the Bicep outputs rather than guessing. (`keyVaultCmkId` is no longer a CI variable — it's the CMK Key Vault ID passed to the manual Always Encrypted setup in [step 5](#5-configure-encryption-and-temporal-retention).)
 
 The federated credential trusts `repo:<owner>/<repo>:ref:refs/heads/main` — override `githubRepository` / `githubBranch` in the bicepparam files if your repo slug differs.
 
@@ -138,14 +138,53 @@ sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirecto
 
 ### 4. Run EF Core Migrations
 
+The design-time factory (`src/Gatherstead.Data/GathersteadDbContextFactory.cs`) hardcodes a dummy
+`Server=localhost;…` connection string and ignores design-time args, so a bare
+`dotnet ef database update` targets localhost, **not** Azure. You must supply the real connection
+explicitly. A manual run from a developer machine authenticates with `Active Directory Default`
+(`DefaultAzureCredential` resolves your `az login` session) — **not** `Active Directory Managed Identity`,
+which only resolves from inside Azure compute.
+
+Prerequisites:
+
+- `az login` as a member of the **`Gatherstead SQL Admins`** group (or any identity already granted access
+  via `infrastructure/ci-grant.sql`).
+- `dotnet tool install --global dotnet-ef --version 10.0.9`
+- An Azure SQL firewall rule allowing your current IP (the DB has no public access by default):
+
+  ```bash
+  MY_IP=$(curl -fsSL https://api.ipify.org)
+  az sql server firewall-rule create --resource-group <resource-group> --server <sql-server-name> \
+    --name "manual-migrate" --start-ip-address "$MY_IP" --end-ip-address "$MY_IP"
+  ```
+
+**Option A — apply migrations directly** (override the dummy connection with `--connection`):
+
 ```bash
-dotnet ef database update --project src/Gatherstead.Data
+dotnet ef database update --project src/Gatherstead.Data \
+  --connection "Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
 ```
 
-The connection string must use Entra ID managed identity auth:
+**Option B — mirror CI (recommended)** — generate an idempotent script offline (no DB connection needed),
+then apply it with sqlcmd. This is exactly what the pipeline does in `.github/workflows/ci-cd.yml`:
+
+```bash
+dotnet ef migrations script --idempotent --project src/Gatherstead.Data -o migrate.sql
+sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirectoryDefault \
+  --exit-on-error -l 60 -i migrate.sql
+```
+
+CI and any in-Azure execution use the managed-identity form of the connection string instead, since the
+identity is available there:
 
 ```
 Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Directory Managed Identity;User Id=<managedIdentityClientId>;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;
+```
+
+Remember to remove the temporary firewall rule when finished:
+
+```bash
+az sql server firewall-rule delete --resource-group <resource-group> --server <sql-server-name> --name "manual-migrate"
 ```
 
 ### 5. Configure Encryption and Temporal Retention
@@ -166,7 +205,7 @@ identifier — **not** the ARM resource ID. (The Bicep `cmkKeyId` output / `keyV
 
 ```bash
 az keyvault key show --vault-name <vault-name> --name cmk-gatherstead --query key.kid -o tsv
-# e.g. https://gat-kv-ut5ftcowqancq.vault.azure.net/keys/cmk-gatherstead
+# e.g. https://kv-gat-prod-wus2-a1b2c3.vault.azure.net/keys/cmk-gatherstead
 ```
 
 The connection string must use `Active Directory Default` (resolved to your CLI session by
@@ -184,6 +223,30 @@ Always Encrypted to all configured sensitive columns (see `EnsureColumnEncryptio
 `src/Gatherstead.Data.Setup/Program.cs`, which disables/re-enables `SYSTEM_VERSIONING` to encrypt both the
 current and history copies of each column), and sets a 1-year retention policy on all temporal history
 tables. Every step is idempotent, so it is safe to re-run.
+
+### Configure External Identity Sign-in
+
+Both apps authenticate users against **Microsoft Entra External ID** (`ciamlogin.com`). The API validates
+JWT bearer tokens (config injected as `ExternalIdentity__*` app settings); the Nuxt web app runs the
+server-side OIDC authorization-code + **PKCE** flow ([server/routes/auth/azure.get.ts](../src/Gatherstead.Web/server/routes/auth/azure.get.ts)),
+storing the access token only in an encrypted server session. PKCE means **no client secret** — the only
+web secret is the session-encryption key, kept in Key Vault. One-time setup after provisioning:
+
+1. **Create the Nuxt session secret in Key Vault** (resolved at runtime via the web app's managed identity
+   through the `NUXT_SESSION_PASSWORD` Key Vault reference):
+   ```bash
+   az keyvault secret set --vault-name <vault-name> --name nuxt-session-password \
+     --value "$(openssl rand -base64 48)"   # any random string ≥ 32 chars
+   ```
+2. **API app registration** — under *Expose an API*, add a scope (e.g. `access_as_user`) and set the
+   Application ID URI. This is the `webExternalIdentityApiScope` value (`api://<api-client-id>/access_as_user`)
+   so the web app's access token is audienced for the API.
+3. **Web app registration** — register a client configured for **public-client / PKCE** (no secret), add
+   the redirect URI `https://<webAppUrl>/auth/azure`, and grant it delegated permission to the API scope
+   from step 2. Its client ID is `webExternalIdentityClientId`.
+4. Fill the `externalIdentity*` and `webExternalIdentity*` values in `prod.bicepparam` (tenant, client IDs,
+   issuer) and redeploy so the app settings pick them up. The web App Service should then show the
+   `NUXT_SESSION_PASSWORD` Key Vault reference as **Resolved** in the portal.
 
 ### 6. Deploy the Application
 
@@ -215,7 +278,7 @@ A build-time `__DEMO_MODE__` constant (set via `vite.define` when `NUXT_PUBLIC_D
 
 ### Infrastructure
 
-`infrastructure/modules/staticwebapp.bicep` provisions the Static Web App resource, gated behind a `deployDemo` parameter in `main.bicep` so it is only created when explicitly enabled. The same `deployDemo` flag also provisions a separate App Insights component (`gat-ai-demo-*`, in `observability.bicep`) so anonymous demo traffic never mixes with prod product metrics.
+`infrastructure/modules/staticwebapp.bicep` provisions the Static Web App resource, gated behind a `deployDemo` parameter in `main.bicep` so it is only created when explicitly enabled. The same `deployDemo` flag also provisions a separate App Insights component (`appi-gat-demo-*`, in `observability.bicep`) so anonymous demo traffic never mixes with prod product metrics.
 
 ### CI/CD
 
@@ -225,7 +288,7 @@ The `deploy-demo` job in [.github/workflows/ci-cd.yml](../.github/workflows/ci-c
 
 Browser telemetry uses the App Insights JS SDK (see [OBSERVABILITY.md](OBSERVABILITY.md#frontend-telemetry)), delivered via `NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING`:
 
-- **Prod** — set automatically as a web-app app setting in `appservice.bicep` (points at the shared `gat-ai-*`, enabling frontend↔backend trace correlation).
+- **Prod** — set automatically as a web-app app setting in `appservice.bicep` (points at the shared `appi-gat-*`, enabling frontend↔backend trace correlation).
 - **Demo** — copy the `demoAppInsightsConnectionString` deployment output into the `DEMO_APPINSIGHTS_CONNECTION_STRING` GitHub Actions secret; the `deploy-demo` job in `ci-cd.yml` bakes it into the static build at `pnpm generate` time. It is an ingestion-only key and safe to expose.
 
 See [DEMO_SITE.md](agents/plans/DEMO_SITE.md) for full architecture and implementation details.

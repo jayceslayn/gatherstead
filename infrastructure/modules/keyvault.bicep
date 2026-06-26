@@ -1,8 +1,23 @@
 @description('The Azure region where the Key Vault will be created.')
 param location string
 
+@description('Workload token used in CAF resource names.')
+param workload string
+
+@description('Environment token used in CAF resource names.')
+param environment string
+
+@description('Region abbreviation used in CAF resource names.')
+param locationAbbreviation string
+
+@description('Short deterministic suffix ensuring the globally-unique Key Vault name is free.')
+param resourceToken string
+
 @description('The principal ID of the app managed identity (granted Crypto User + Secrets User).')
 param appManagedIdentityPrincipalId string
+
+@description('The principal ID of the web managed identity (granted Secrets User for the NUXT_SESSION_PASSWORD reference).')
+param webManagedIdentityPrincipalId string
 
 @description('The object ID of the deployer (granted Key Vault Administrator for initial setup).')
 param deployerObjectId string
@@ -15,7 +30,8 @@ var keyVaultAdministratorRoleId = '00482a5a-887f-4fb3-b363-3b7fe8e74483'
 var keyVaultCryptoUserRoleId = '12338af0-0e69-4776-bea7-57ae8d297424'
 var keyVaultSecretsUserRoleId = '4633458b-17de-408a-b874-0445c86b69e6'
 
-var keyVaultName = 'gat-kv-${uniqueString(resourceGroup().id)}'
+// 'kv-gat-prod-wus2-xxxxxx' = 23 chars, within the Key Vault 24-char limit.
+var keyVaultName = 'kv-${workload}-${environment}-${locationAbbreviation}-${resourceToken}'
 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
@@ -38,7 +54,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 //   - No auto-rotation. A Key Vault `Rotate` action only creates a new key *version*; Always
 //     Encrypted binds the CEK to a specific key, so version rotation is invisible to it. CMK
 //     rotation is a manual ceremony (create new CMK → re-sign the CEK with both → roll apps →
-//     retire old) and is tracked operationally (calendar / ag-gatherstead-oncall), not by KV.
+//     retire old) and is tracked operationally (calendar / ag-gat-oncall-*), not by KV.
 //   - No expiry (no `attributes.exp`). An expired CMK cannot unwrapKey, which would block
 //     decryption of every encrypted column — an outage whose blast radius is the whole dataset.
 //   Deploying with no `rotationPolicy` strips the inert Azure-default "notify 30 days before
@@ -104,6 +120,18 @@ resource appSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01'
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
     principalId: appManagedIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Web managed identity: Key Vault Secrets User — App Service resolves the NUXT_SESSION_PASSWORD
+// Key Vault reference with this identity. Secrets only — no key (CMK) or SQL access.
+resource webSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, webManagedIdentityPrincipalId, keyVaultSecretsUserRoleId)
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultSecretsUserRoleId)
+    principalId: webManagedIdentityPrincipalId
     principalType: 'ServicePrincipal'
   }
 }

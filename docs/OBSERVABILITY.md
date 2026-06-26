@@ -85,8 +85,8 @@ composable. It is **client-only** and **no-ops** when no connection string is co
 Conventions:
 
 - **Cookieless.** `disableCookiesUsage: true` — no consent banner, no persistent identifiers.
-- **Separate destinations.** Demo → its own App Insights component (`gat-ai-demo-*`); Prod →
-  the shared `gat-ai-*` (same resource as the backend, giving end-to-end frontend↔backend
+- **Separate destinations.** Demo → its own App Insights component (`appi-gat-demo-*`); Prod →
+  the shared `appi-gat-*` (same resource as the backend, giving end-to-end frontend↔backend
   trace correlation). Every item is tagged with `ai.cloud.role` (`gatherstead-web` /
   `gatherstead-web-demo`).
 - **Session/user stitching (hybrid).** Demo and anonymous Prod pages group a visit by an
