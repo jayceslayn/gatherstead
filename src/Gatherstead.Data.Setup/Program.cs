@@ -189,21 +189,68 @@ class Program
                 ? " COLLATE Latin1_General_BIN2"
                 : string.Empty;
 
-            // Clause order is significant for in-place ALTER COLUMN encryption: nullability must
-            // follow the ENCRYPTED WITH (...) clause (and precede WITH (ONLINE = ON)). Placing it
-            // before ENCRYPTED — as the generic column_definition grammar allows — is rejected here
-            // with "Incorrect syntax near 'ENCRYPTED'".
-            var sql = $"""
-                ALTER TABLE dbo.[{table}]
-                ALTER COLUMN [{column}] {sqlType}{collation}
+            // The column definition fragment that follows "ALTER COLUMN [name]". Clause order is
+            // significant: nullability must follow the ENCRYPTED WITH (...) clause (placing it before
+            // ENCRYPTED — as the generic column_definition grammar allows — is rejected with
+            // "Incorrect syntax near 'ENCRYPTED'"). Combining a collation change with encryption in
+            // one statement is permitted.
+            var encryptedColumnDef = $"""
+                {sqlType}{collation}
                 ENCRYPTED WITH (
                     COLUMN_ENCRYPTION_KEY = [{CekName}],
                     ENCRYPTION_TYPE = {encType},
                     ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256'
-                ) {nullability} WITH (ONLINE = ON);
+                ) {nullability}
                 """;
 
-            var alterCmd = new SqlCommand(sql, connection);
+            // If the table is system-versioned (temporal), the history table is its pair.
+            var historyCmd = new SqlCommand(@"
+                SELECT SCHEMA_NAME(h.schema_id), h.name
+                FROM sys.tables t
+                JOIN sys.tables h ON t.history_table_id = h.object_id
+                WHERE t.name = @table AND SCHEMA_NAME(t.schema_id) = 'dbo' AND t.temporal_type = 2", connection);
+            historyCmd.Parameters.AddWithValue("@table", table);
+
+            string? historySchema = null, historyTable = null;
+            using (var reader = historyCmd.ExecuteReader())
+            {
+                if (reader.Read())
+                {
+                    historySchema = reader.GetString(0);
+                    historyTable = reader.GetString(1);
+                }
+            }
+
+            string sql;
+            if (historyTable is not null)
+            {
+                // Temporal tables reject online ALTER COLUMN, and in-place encryption is not
+                // propagated to the history table automatically. Disable versioning, encrypt the
+                // column on both the current and history tables (their schemas must match to
+                // re-enable versioning), then re-enable. Wrapped in a transaction with XACT_ABORT so
+                // any failure rolls the whole thing back and restores versioning rather than leaving
+                // the table unversioned; DATA_CONSISTENCY_CHECK is safe to skip inside the
+                // transaction since no concurrent writes can occur. This keeps every statement at
+                // ALTER permission (db_ddladmin) — directly altering a still-versioned table would
+                // instead require CONTROL, which implies SELECT and would break the CI no-read rule.
+                sql = $"""
+                    SET XACT_ABORT ON;
+                    BEGIN TRANSACTION;
+                    ALTER TABLE dbo.[{table}] SET (SYSTEM_VERSIONING = OFF);
+                    ALTER TABLE dbo.[{table}] ALTER COLUMN [{column}] {encryptedColumnDef};
+                    ALTER TABLE [{historySchema}].[{historyTable}] ALTER COLUMN [{column}] {encryptedColumnDef};
+                    ALTER TABLE dbo.[{table}] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [{historySchema}].[{historyTable}], DATA_CONSISTENCY_CHECK = OFF));
+                    COMMIT TRANSACTION;
+                    """;
+            }
+            else
+            {
+                // Non-temporal table: encrypt in place online.
+                sql = $"ALTER TABLE dbo.[{table}] ALTER COLUMN [{column}] {encryptedColumnDef} WITH (ONLINE = ON);";
+            }
+
+            // In-place encryption time scales with row count; don't let a long-running ALTER time out.
+            var alterCmd = new SqlCommand(sql, connection) { CommandTimeout = 0 };
             alterCmd.ExecuteNonQuery();
             Console.WriteLine($"  {table}.{column} encrypted successfully.");
         }
