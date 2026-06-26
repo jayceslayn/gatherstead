@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "16467590471771928943"
+      "version": "0.44.1.10279",
+      "templateHash": "6753363496017167455"
     }
   },
   "parameters": {
@@ -60,6 +60,13 @@
         "description": "The App Service Plan SKU. F1 = free (dev), B1 = basic always-on (prod)."
       }
     },
+    "deployDemo": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Whether to deploy the demo static web app."
+      }
+    },
     "logRetentionDays": {
       "type": "int",
       "defaultValue": 30,
@@ -73,6 +80,20 @@
       "type": "string",
       "metadata": {
         "description": "Email address that receives oncall alert notifications from Azure Monitor."
+      }
+    },
+    "githubRepository": {
+      "type": "string",
+      "defaultValue": "jayceslayn/gatherstead",
+      "metadata": {
+        "description": "The GitHub repository (owner/name) whose Actions runs may deploy via OIDC."
+      }
+    },
+    "githubBranch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "The git branch whose Actions runs may deploy via OIDC."
       }
     }
   },
@@ -104,8 +125,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "14479353701972219710"
+              "version": "0.44.1.10279",
+              "templateHash": "7840531214350700362"
             }
           },
           "parameters": {
@@ -173,6 +194,9 @@
           },
           "appManagedIdentityPrincipalId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.principalId.value]"
+          },
+          "deployDemo": {
+            "value": "[parameters('deployDemo')]"
           }
         },
         "template": {
@@ -181,8 +205,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "10828363388272455535"
+              "version": "0.44.1.10279",
+              "templateHash": "10979886673836902885"
             }
           },
           "parameters": {
@@ -212,11 +236,19 @@
               "metadata": {
                 "description": "Principal ID of the app managed identity (granted Monitoring Metrics Publisher on App Insights)."
               }
+            },
+            "deployDemo": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Whether to provision a separate App Insights component for the demo static site."
+              }
             }
           },
           "variables": {
             "workspaceName": "[format('gat-law-{0}', uniqueString(resourceGroup().id))]",
             "appInsightsName": "[format('gat-ai-{0}', uniqueString(resourceGroup().id))]",
+            "demoAppInsightsName": "[format('gat-ai-demo-{0}', uniqueString(resourceGroup().id))]",
             "monitoringMetricsPublisherRoleId": "3913510d-42f4-4e42-8a64-420c390055eb"
           },
           "resources": [
@@ -239,6 +271,24 @@
               "type": "Microsoft.Insights/components",
               "apiVersion": "2020-02-02",
               "name": "[variables('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]",
+                "IngestionMode": "LogAnalytics",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', variables('workspaceName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('deployDemo')]",
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[variables('demoAppInsightsName')]",
               "location": "[parameters('location')]",
               "kind": "web",
               "properties": {
@@ -380,6 +430,10 @@
             "actionGroupId": {
               "type": "string",
               "value": "[resourceId('Microsoft.Insights/actionGroups', 'ag-gatherstead-oncall')]"
+            },
+            "demoAppInsightsConnectionString": {
+              "type": "string",
+              "value": "[if(parameters('deployDemo'), reference(resourceId('Microsoft.Insights/components', variables('demoAppInsightsName')), '2020-02-02').ConnectionString, '')]"
             }
           }
         }
@@ -419,8 +473,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "18136474477927689818"
+              "version": "0.44.1.10279",
+              "templateHash": "5234711991633923368"
             }
           },
           "parameters": {
@@ -452,7 +506,7 @@
           "variables": {
             "keyVaultAdministratorRoleId": "00482a5a-887f-4fb3-b363-3b7fe8e74483",
             "keyVaultCryptoUserRoleId": "12338af0-0e69-4776-bea7-57ae8d297424",
-            "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e0",
+            "keyVaultSecretsUserRoleId": "4633458b-17de-408a-b874-0445c86b69e6",
             "keyVaultName": "[format('gat-kv-{0}', uniqueString(resourceGroup().id))]"
           },
           "resources": [
@@ -481,7 +535,9 @@
                 "keySize": 2048,
                 "keyOps": [
                   "unwrapKey",
-                  "wrapKey"
+                  "wrapKey",
+                  "sign",
+                  "verify"
                 ]
               },
               "dependsOn": [
@@ -568,6 +624,10 @@
             "cmkKeyId": {
               "type": "string",
               "value": "[resourceId('Microsoft.KeyVault/vaults/keys', variables('keyVaultName'), 'cmk-gatherstead')]"
+            },
+            "cmkKeyUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/keys', variables('keyVaultName'), 'cmk-gatherstead'), '2023-07-01').keyUriWithVersion]"
             }
           }
         }
@@ -611,8 +671,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "10687043521032723714"
+              "version": "0.44.1.10279",
+              "templateHash": "15631945508173399822"
             }
           },
           "parameters": {
@@ -673,11 +733,16 @@
               "name": "[format('{0}/{1}', variables('sqlServerName'), 'gatherstead')]",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "S0",
-                "tier": "Standard"
+                "name": "GP_S_Gen5_1",
+                "tier": "GeneralPurpose",
+                "family": "Gen5",
+                "capacity": 1
               },
               "properties": {
-                "collation": "SQL_Latin1_General_CP1_CI_AS"
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "autoPauseDelay": 60,
+                "minCapacity": "[json('0.5')]",
+                "preferredEnclaveType": "VBS"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
@@ -786,8 +851,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.41.2.15936",
-              "templateHash": "8655537399703469985"
+              "version": "0.44.1.10279",
+              "templateHash": "13129015510726502767"
             }
           },
           "parameters": {
@@ -863,7 +928,7 @@
             "planName": "[format('gat-asp-{0}', uniqueString(resourceGroup().id))]",
             "apiAppName": "[format('gat-api-{0}', uniqueString(resourceGroup().id))]",
             "webAppName": "[format('gat-web-{0}', uniqueString(resourceGroup().id))]",
-            "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;Attestation Protocol=HGS;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
+            "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
           },
           "resources": [
             {
@@ -961,6 +1026,10 @@
                     {
                       "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
                       "value": "~3"
+                    },
+                    {
+                      "name": "NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
                     }
                   ]
                 }
@@ -1085,6 +1154,224 @@
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'sql')]"
       ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "ci-identity",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "githubRepository": {
+            "value": "[parameters('githubRepository')]"
+          },
+          "githubBranch": {
+            "value": "[parameters('githubBranch')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "8656254510248660738"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region where the CI managed identity will be created."
+              }
+            },
+            "githubRepository": {
+              "type": "string",
+              "defaultValue": "jayceslayn/gatherstead",
+              "metadata": {
+                "description": "The GitHub repository (owner/name) allowed to federate with this identity."
+              }
+            },
+            "githubBranch": {
+              "type": "string",
+              "defaultValue": "main",
+              "metadata": {
+                "description": "The git branch whose workflow runs may assume this identity."
+              }
+            }
+          },
+          "variables": {
+            "websiteContributorRoleId": "de139f84-1756-47ae-9be6-808fbbe84772",
+            "sqlServerContributorRoleId": "6d8ee4ec-f05a-4a1d-8b00-a9b17e38b437",
+            "ciIdentityName": "[format('gat-ci-id-{0}', uniqueString(resourceGroup().id))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[variables('ciIdentityName')]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
+              "apiVersion": "2023-01-31",
+              "name": "[format('{0}/{1}', variables('ciIdentityName'), format('github-{0}', parameters('githubBranch')))]",
+              "properties": {
+                "issuer": "https://token.actions.githubusercontent.com",
+                "subject": "[format('repo:{0}:ref:refs/heads/{1}', parameters('githubRepository'), parameters('githubBranch'))]",
+                "audiences": [
+                  "api://AzureADTokenExchange"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), variables('websiteContributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('websiteContributorRoleId'))]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), variables('sqlServerContributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('sqlServerContributorRoleId'))]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "ciIdentityName": {
+              "type": "string",
+              "value": "[variables('ciIdentityName')]"
+            },
+            "ciIdentityClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').clientId]"
+            },
+            "ciIdentityPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('ciIdentityName')), '2023-01-31').principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployDemo')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "demo",
+      "resourceGroup": "[parameters('resourceGroupName')]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "ciIdentityPrincipalId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ci-identity'), '2025-04-01').outputs.ciIdentityPrincipalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.44.1.10279",
+              "templateHash": "16804706677790998404"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "The Azure region for the Static Web App."
+              }
+            },
+            "ciIdentityPrincipalId": {
+              "type": "string",
+              "metadata": {
+                "description": "Principal ID of the CI managed identity, granted Contributor so the pipeline can fetch the SWA deployment token at runtime."
+              }
+            }
+          },
+          "variables": {
+            "contributorRoleId": "b24988ac-6180-42a0-ab88-20f7382dd24c"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/staticSites",
+              "apiVersion": "2023-12-01",
+              "name": "gat-demo-swa",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Free",
+                "tier": "Free"
+              },
+              "properties": {
+                "buildProperties": {
+                  "appLocation": "src/Gatherstead.Web",
+                  "outputLocation": ".output/public"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Web/staticSites', 'gat-demo-swa')]",
+              "name": "[guid(resourceId('Microsoft.Web/staticSites', 'gat-demo-swa'), parameters('ciIdentityPrincipalId'), variables('contributorRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('contributorRoleId'))]",
+                "principalId": "[parameters('ciIdentityPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/staticSites', 'gat-demo-swa')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "demoSiteUrl": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/staticSites', 'gat-demo-swa'), '2023-12-01').defaultHostname]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ci-identity')]",
+        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', parameters('resourceGroupName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -1116,9 +1403,21 @@
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault'), '2025-04-01').outputs.cmkKeyId.value]"
     },
+    "cmkKeyUri": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'keyvault'), '2025-04-01').outputs.cmkKeyUri.value]"
+    },
+    "apiAppName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'appservice'), '2025-04-01').outputs.apiAppName.value]"
+    },
     "apiAppUrl": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'appservice'), '2025-04-01').outputs.apiAppUrl.value]"
+    },
+    "webAppName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'appservice'), '2025-04-01').outputs.webAppName.value]"
     },
     "webAppUrl": {
       "type": "string",
@@ -1131,6 +1430,22 @@
     "logAnalyticsWorkspaceId": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.workspaceId.value]"
+    },
+    "ciIdentityName": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ci-identity'), '2025-04-01').outputs.ciIdentityName.value]"
+    },
+    "ciIdentityClientId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'ci-identity'), '2025-04-01').outputs.ciIdentityClientId.value]"
+    },
+    "demoSiteUrl": {
+      "type": "string",
+      "value": "[if(parameters('deployDemo'), reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'demo'), '2025-04-01').outputs.demoSiteUrl.value, '')]"
+    },
+    "demoAppInsightsConnectionString": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('resourceGroupName')), 'Microsoft.Resources/deployments', 'observability'), '2025-04-01').outputs.demoAppInsightsConnectionString.value]"
     }
   }
 }

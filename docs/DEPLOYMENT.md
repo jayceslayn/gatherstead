@@ -23,11 +23,17 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 - **`build-frontend`** - `pnpm build`
 - **`audit-nuget`** / **`audit-pnpm`** / **`dependency-review`** (in [dependency-audit.yml](../.github/workflows/dependency-audit.yml)) — fail on vulnerable NuGet/pnpm dependencies. These run independently and do **not** gate the deploy jobs.
 
-**Deploy jobs** (push to `main` only; run in sequence: migrations → setup → api → web/demo in parallel):
+**Deploy jobs** (push to `main` only; run in sequence: migrations → api → web/demo in parallel):
 
 - **`deploy-migrations`** — applies an idempotent EF Core script (opens a temporary SQL firewall rule for the runner, then removes it). On a clean database this creates every table; on an existing one it no-ops.
-- **`deploy-setup`** — runs the `Gatherstead.Data.Setup` utility (idempotent) to create the CMK/CEK, encrypt the configured columns, and apply temporal retention. Creating the CEK and encrypting columns wrap/unwrap the CMK, so the CI identity is granted **Key Vault Crypto User** on the vault (`ci-identity.bicep` provisions the identity; `keyvault.bicep` assigns the role). `deploy-api` waits on both DB jobs so schema + encryption are in place before new code.
 - **`deploy-api`** — zip-deploys the API to App Service; `deploy-web` and `deploy-demo` gate on this job.
+
+> **Always Encrypted setup is not a CI job.** Creating the CMK/CEK and encrypting columns on the
+> system-versioned temporal tables requires `CONTROL` on those tables (to toggle `SYSTEM_VERSIONING`)
+> plus Key Vault crypto access — a privilege level incompatible with the CI identity's deliberate
+> no-read posture. It is run **manually by a SQL admin** via `Gatherstead.Data.Setup`; see
+> [Configure Encryption and Temporal Retention](#5-configure-encryption-and-temporal-retention). It is
+> idempotent and only needs re-running when PII columns change.
 - **`deploy-web`** — zip-deploys the Web app to App Service (runs after `deploy-api`).
 - **`deploy-demo`** — generates and uploads the static demo site after `deploy-api` (see [Demo Site](#demo-site)).
 
@@ -39,7 +45,7 @@ Deploys authenticate to Azure with **GitHub OIDC** federated to the `gat-ci-id-*
 
 **Secrets** — `AZURE_CLIENT_ID` (the `ciIdentityClientId` output), `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, plus `DEMO_APPINSIGHTS_CONNECTION_STRING`. The demo SWA deployment token is fetched at runtime by the CI identity (`az staticwebapp secrets list`), so no token secret is stored.
 
-**Variables** — `AZURE_RESOURCE_GROUP`, `API_APP_NAME` (`apiAppName` output), `WEB_APP_NAME` (`webAppName` output), `SQL_SERVER_NAME` (`sqlServerName` output), `SQL_DATABASE_NAME` (`sqlDatabaseName` output), `KEYVAULT_CMK_ID` (`keyVaultCmkId` output), and `DEMO_SWA_NAME` (`gat-demo-swa`). The app/server names embed a `uniqueString` hash, so copy them from the Bicep outputs rather than guessing.
+**Variables** — `AZURE_RESOURCE_GROUP`, `API_APP_NAME` (`apiAppName` output), `WEB_APP_NAME` (`webAppName` output), `SQL_SERVER_NAME` (`sqlServerName` output), `SQL_DATABASE_NAME` (`sqlDatabaseName` output), and `DEMO_SWA_NAME` (`gat-demo-swa`). The app/server names embed a `uniqueString` hash, so copy them from the Bicep outputs rather than guessing. (`keyVaultCmkId` is no longer a CI variable — it's the CMK Key Vault ID passed to the manual Always Encrypted setup in [step 5](#5-configure-encryption-and-temporal-retention).)
 
 The federated credential trusts `repo:<owner>/<repo>:ref:refs/heads/main` — override `githubRepository` / `githubBranch` in the bicepparam files if your repo slug differs.
 
@@ -144,17 +150,40 @@ Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Dir
 
 ### 5. Configure Encryption and Temporal Retention
 
-Run the setup utility with the managed identity connection string and the CMK Key Vault ID:
+**Run this manually as a SQL admin — it is deliberately not part of CI.** Encrypting the
+system-versioned temporal tables requires toggling `SYSTEM_VERSIONING`, which needs `CONTROL` on the
+current *and* history tables. `CONTROL` implies `SELECT`, so granting it to the no-read CI identity
+would defeat the load-bearing PII confidentiality control (see [ci-grant.sql](../infrastructure/ci-grant.sql)).
+Run it as an identity in the **`Gatherstead SQL Admins`** group (which has `CONTROL`) that also has
+**Key Vault Crypto User** on the vault. It is idempotent, so re-run it whenever PII columns are added or
+changed; routine schema migrations (step 4) remain automated in CI.
+
+Authenticate with `az login` as that admin, then run the setup utility with the CMK's **Key Vault key
+URL** as the second argument. This must be the key's `https://<vault>.vault.azure.net/keys/...`
+identifier — **not** the ARM resource ID. (The Bicep `cmkKeyId` output / `keyVaultCmkId` in
+`infrastructure/output.json` is the ARM resource ID and will fail with
+`Invalid url specified ... (Parameter 'masterKeyPath')`.) Get the correct value with:
 
 ```bash
-dotnet run --project src/Gatherstead.Data.Setup/Gatherstead.Data.Setup.csproj -- \
-  "<managed-identity-connection-string>" \
-  "<keyVaultCmkId>"
+az keyvault key show --vault-name <vault-name> --name cmk-gatherstead --query key.kid -o tsv
+# e.g. https://gat-kv-ut5ftcowqancq.vault.azure.net/keys/cmk-gatherstead
 ```
 
-This is the single source of truth for column encryption. It creates the Column Master Key (CMK) and Column Encryption Key (CEK) metadata, applies Always Encrypted to all configured sensitive columns (see `EnsureColumnEncryption` in `src/Gatherstead.Data.Setup/Program.cs`), and sets a 1-year retention policy on all temporal history tables. Every step is idempotent, so it is safe to re-run — the CI `deploy-setup` job runs it on each deploy.
+The connection string must use `Active Directory Default` (resolved to your CLI session by
+`DefaultAzureCredential`) and set `Column Encryption Setting=Enabled`:
 
-The setup utility uses `DefaultAzureCredential`, so run it in an environment where the managed identity (or your own Entra ID identity) has Key Vault Crypto User access. The connection string must set `Column Encryption Setting=Enabled`.
+```bash
+dotnet run --project src/Gatherstead.Data.Setup/Gatherstead.Data.Setup.csproj --configuration Release -- \
+  "Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;Column Encryption Setting=Enabled;" \
+  "<cmkKeyUrl>"
+```
+
+This is the single source of truth for column encryption. It creates the Column Master Key (CMK) and
+Column Encryption Key (CEK) — the CEK is generated locally and wrapped with the CMK via Key Vault — applies
+Always Encrypted to all configured sensitive columns (see `EnsureColumnEncryption` in
+`src/Gatherstead.Data.Setup/Program.cs`, which disables/re-enables `SYSTEM_VERSIONING` to encrypt both the
+current and history copies of each column), and sets a 1-year retention policy on all temporal history
+tables. Every step is idempotent, so it is safe to re-run.
 
 ### 6. Deploy the Application
 

@@ -30,7 +30,14 @@ var planName = 'gat-asp-${uniqueString(resourceGroup().id)}'
 var apiAppName = 'gat-api-${uniqueString(resourceGroup().id)}'
 var webAppName = 'gat-web-${uniqueString(resourceGroup().id)}'
 
-var connectionString = 'Server=tcp:${sqlServerFqdn},1433;Database=${sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${appManagedIdentityClientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;Attestation Protocol=HGS;'
+// Column Encryption Setting=Enabled turns on Always Encrypted (encrypt on write / decrypt on read,
+// plus equality over deterministic columns) — none of which engages the enclave. No attestation
+// protocol is set: this database uses VBS enclaves with no attestation (preferredEnclaveType=VBS in
+// sql.bicep), so enclave operations work without one — and an HGS/AAS protocol here would instead
+// force attestation against an endpoint that does not exist and fail. The manual encryption setup
+// (Gatherstead.Data.Setup) connects the same way and successfully drives enclave-based in-place
+// ALTER COLUMN, confirming attestation is not required.
+var connectionString = 'Server=tcp:${sqlServerFqdn},1433;Database=${sqlDatabaseName};Authentication=Active Directory Managed Identity;User Id=${appManagedIdentityClientId};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;'
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: planName

@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.41.2.15936",
-      "templateHash": "8655537399703469985"
+      "version": "0.44.1.10279",
+      "templateHash": "13129015510726502767"
     }
   },
   "parameters": {
@@ -81,7 +81,7 @@
     "planName": "[format('gat-asp-{0}', uniqueString(resourceGroup().id))]",
     "apiAppName": "[format('gat-api-{0}', uniqueString(resourceGroup().id))]",
     "webAppName": "[format('gat-web-{0}', uniqueString(resourceGroup().id))]",
-    "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;Attestation Protocol=HGS;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
+    "connectionString": "[format('Server=tcp:{0},1433;Database={1};Authentication=Active Directory Managed Identity;User Id={2};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Column Encryption Setting=Enabled;', parameters('sqlServerFqdn'), parameters('sqlDatabaseName'), parameters('appManagedIdentityClientId'))]"
   },
   "resources": [
     {
@@ -179,6 +179,10 @@
             {
               "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
               "value": "~3"
+            },
+            {
+              "name": "NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING",
+              "value": "[parameters('appInsightsConnectionString')]"
             }
           ]
         }

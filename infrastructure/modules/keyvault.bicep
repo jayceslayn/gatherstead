@@ -4,9 +4,6 @@ param location string
 @description('The principal ID of the app managed identity (granted Crypto User + Secrets User).')
 param appManagedIdentityPrincipalId string
 
-@description('The principal ID of the CI managed identity (granted Crypto User for deploy-setup column encryption).')
-param ciIdentityPrincipalId string
-
 @description('The object ID of the deployer (granted Key Vault Administrator for initial setup).')
 param deployerObjectId string
 
@@ -61,9 +58,14 @@ resource cmkKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
   properties: {
     kty: 'RSA'
     keySize: 2048
+    // Always Encrypted wraps the CEK with the CMK (wrapKey/unwrapKey) AND signs the encrypted-CEK
+    // metadata — key path + ciphertext — with the CMK, verifying it on read. sign/verify are therefore
+    // required; omitting them fails CEK creation with "Operation sign is not permitted on this key".
     keyOps: [
       'unwrapKey'
       'wrapKey'
+      'sign'
+      'verify'
     ]
   }
   dependsOn: [deployerAdminRole]
@@ -91,18 +93,9 @@ resource appCryptoUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   }
 }
 
-// CI managed identity: Key Vault Crypto User — the deploy-setup job (Gatherstead.Data.Setup,
-// run as the CI identity) wraps/unwraps the CMK to create the CEK and run ALTER COLUMN ...
-// ENCRYPTED. No Secrets User: deploy-setup reads no Key Vault secrets.
-resource ciCryptoUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, ciIdentityPrincipalId, keyVaultCryptoUserRoleId)
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', keyVaultCryptoUserRoleId)
-    principalId: ciIdentityPrincipalId
-    principalType: 'ServicePrincipal'
-  }
-}
+// NOTE: The CI managed identity is intentionally NOT granted Key Vault Crypto User. Always Encrypted
+// setup (CEK wrap/unwrap, column encryption) is run manually by a SQL admin, not by CI — see
+// docs/DEPLOYMENT.md. CI does migrations only and needs no Key Vault access.
 
 // App managed identity: Key Vault Secrets User — for reading the PASETO public key secret
 resource appSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -131,4 +124,8 @@ resource keyVaultDiag 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview'
 }
 
 output keyVaultUri string = keyVault.properties.vaultUri
+// ARM resource ID — NOT a valid Always Encrypted master-key path.
 output cmkKeyId string = cmkKey.id
+// Key Vault key URL (with version) — this is the value Gatherstead.Data.Setup expects as its
+// <cmkKeyUrl> argument; see docs/DEPLOYMENT.md.
+output cmkKeyUri string = cmkKey.properties.keyUriWithVersion

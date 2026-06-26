@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider;
 using Azure.Identity;
@@ -36,8 +37,8 @@ class Program
             connection.Open();
             Console.WriteLine("Successfully connected to the database.");
 
-            EnsureColumnMasterKey(connection, keyVaultUrl);
-            EnsureColumnEncryptionKey(connection);
+            EnsureColumnMasterKey(connection, provider, keyVaultUrl);
+            EnsureColumnEncryptionKey(connection, provider, keyVaultUrl);
             EnsureColumnEncryption(connection);
             EnsureTemporalRetention(connection);
 
@@ -53,7 +54,8 @@ class Program
         }
     }
 
-    private static void EnsureColumnMasterKey(SqlConnection connection, string keyVaultUrl)
+    private static void EnsureColumnMasterKey(
+        SqlConnection connection, SqlColumnEncryptionAzureKeyVaultProvider keyStoreProvider, string keyVaultUrl)
     {
         Console.WriteLine($"\nChecking for Column Master Key '{CmkName}'...");
 
@@ -68,20 +70,32 @@ class Program
 
         Console.WriteLine($"Creating Column Master Key '{CmkName}'...");
         string sanitizedUrl = keyVaultUrl.Replace("'", "''");
+
+        // The CMK must be enclave-enabled, because columns are encrypted in place via ALTER COLUMN —
+        // an Always Encrypted *with secure enclaves* operation that the server refuses unless the key
+        // permits enclave computations. The signature attests, under the CMK's private key in Key Vault,
+        // that this key path is approved for enclave use; the server verifies it before the enclave may
+        // use the key. SignColumnMasterKeyMetadata calls Key Vault's sign operation (RS256), so the
+        // Key Vault key needs the 'sign' permission. The hex is our own generated value, not user input.
+        byte[] signature = keyStoreProvider.SignColumnMasterKeyMetadata(keyVaultUrl, allowEnclaveComputations: true);
+        string signatureHex = "0x" + Convert.ToHexString(signature);
+
         string createCmkSql = $@"
             CREATE COLUMN MASTER KEY [{CmkName}]
             WITH (
                 KEY_STORE_PROVIDER_NAME = 'AZURE_KEY_VAULT',
-                KEY_PATH = '{sanitizedUrl}'
+                KEY_PATH = '{sanitizedUrl}',
+                ENCLAVE_COMPUTATIONS (SIGNATURE = {signatureHex})
             );";
 
         var createCmd = new SqlCommand(createCmkSql, connection);
         createCmd.ExecuteNonQuery();
 
-        Console.WriteLine("Column Master Key created successfully.");
+        Console.WriteLine("Column Master Key created successfully (enclave-enabled).");
     }
 
-    private static void EnsureColumnEncryptionKey(SqlConnection connection)
+    private static void EnsureColumnEncryptionKey(
+        SqlConnection connection, SqlColumnEncryptionAzureKeyVaultProvider keyStoreProvider, string keyVaultUrl)
     {
         Console.WriteLine($"\nChecking for Column Encryption Key '{CekName}'...");
 
@@ -95,12 +109,23 @@ class Program
         }
 
         Console.WriteLine($"Creating Column Encryption Key '{CekName}'...");
+
+        // Raw T-SQL CREATE COLUMN ENCRYPTION KEY does NOT generate or wrap a key — unlike SSMS/PowerShell,
+        // it stores whatever ENCRYPTED_VALUE is supplied verbatim. So we must generate the CEK and wrap it
+        // ourselves: a random 256-bit key, encrypted with the CMK in Key Vault via RSA_OAEP (the CMK
+        // key-wrap algorithm — distinct from the AEAD algorithm used for the column data itself).
+        byte[] plaintextCek = RandomNumberGenerator.GetBytes(32);
+        byte[] encryptedCek = keyStoreProvider.EncryptColumnEncryptionKey(keyVaultUrl, "RSA_OAEP", plaintextCek);
+        string encryptedCekHex = "0x" + Convert.ToHexString(encryptedCek);
+
+        // ENCRYPTED_VALUE is a binary literal and can't be parameterized; the hex is our own generated
+        // value (not user input), so interpolating it is safe.
         string createCekSql = $@"
             CREATE COLUMN ENCRYPTION KEY [{CekName}]
             WITH VALUES (
                 COLUMN_MASTER_KEY = [{CmkName}],
-                ALGORITHM = 'AEAD_AES_256_CBC_HMAC_SHA_256',
-                ENCRYPTED_VALUE = 0x01  -- The driver replaces this with the actual encrypted value
+                ALGORITHM = 'RSA_OAEP',
+                ENCRYPTED_VALUE = {encryptedCekHex}
             );";
 
         var createCmd = new SqlCommand(createCekSql, connection);
@@ -118,12 +143,14 @@ class Program
         // was retired in favour of this idempotent utility). Nullability is explicit because ALTER COLUMN
         // defaults an unqualified column to NULL — omitting it would silently drop NOT NULL constraints.
         //
-        // ContactMethods.Value uses Deterministic so equality lookups remain possible.
-        // All other PII columns use Randomized (no filtering needed against those values).
+        // Deterministic encryption (vs Randomized) is required for any column that must support
+        // server-side equality — including being part of an index. HouseholdMembers.Name backs the
+        // (TenantId, HouseholdId, Name) index, and ContactMethods.Value needs equality lookups, so
+        // both are Deterministic. All other PII columns use Randomized (never compared server-side).
         var columns = new[]
         {
             // HouseholdMember PII
-            ("HouseholdMembers", "Name",         "NVARCHAR(200)", "NOT NULL", "RANDOMIZED"),
+            ("HouseholdMembers", "Name",         "NVARCHAR(200)", "NOT NULL", "DETERMINISTIC"),
             ("HouseholdMembers", "BirthDate",     "DATE",          "NULL",     "RANDOMIZED"),
             ("HouseholdMembers", "DietaryNotes",  "NVARCHAR(500)", "NULL",     "RANDOMIZED"),
             ("HouseholdMembers", "Notes",         "NVARCHAR(500)", "NULL",     "RANDOMIZED"),
@@ -221,7 +248,12 @@ class Program
                 }
             }
 
-            string sql;
+            // An index referencing the column blocks ALTER COLUMN, so drop any such index before
+            // encrypting and recreate it afterwards. Recreating only works because indexed PII columns
+            // are Deterministic (an index cannot reference a Randomized column) — see the column list.
+            var (dropIndexes, createIndexes) = ScriptDependentIndexes(connection, table, column);
+
+            var statements = new List<string>();
             if (historyTable is not null)
             {
                 // Temporal tables reject online ALTER COLUMN, and in-place encryption is not
@@ -233,29 +265,99 @@ class Program
                 // transaction since no concurrent writes can occur. This keeps every statement at
                 // ALTER permission (db_ddladmin) — directly altering a still-versioned table would
                 // instead require CONTROL, which implies SELECT and would break the CI no-read rule.
-                sql = $"""
-                    SET XACT_ABORT ON;
-                    BEGIN TRANSACTION;
-                    ALTER TABLE dbo.[{table}] SET (SYSTEM_VERSIONING = OFF);
-                    ALTER TABLE dbo.[{table}] ALTER COLUMN [{column}] {encryptedColumnDef};
-                    ALTER TABLE [{historySchema}].[{historyTable}] ALTER COLUMN [{column}] {encryptedColumnDef};
-                    ALTER TABLE dbo.[{table}] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [{historySchema}].[{historyTable}], DATA_CONSISTENCY_CHECK = OFF));
-                    COMMIT TRANSACTION;
-                    """;
+                // Secondary indexes exist only on the current table, so they are dropped/recreated there.
+                statements.Add("SET XACT_ABORT ON;");
+                statements.Add("BEGIN TRANSACTION;");
+                statements.Add($"ALTER TABLE dbo.[{table}] SET (SYSTEM_VERSIONING = OFF);");
+                statements.AddRange(dropIndexes);
+                statements.Add($"ALTER TABLE dbo.[{table}] ALTER COLUMN [{column}] {encryptedColumnDef};");
+                statements.Add($"ALTER TABLE [{historySchema}].[{historyTable}] ALTER COLUMN [{column}] {encryptedColumnDef};");
+                statements.AddRange(createIndexes);
+                statements.Add($"ALTER TABLE dbo.[{table}] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [{historySchema}].[{historyTable}], DATA_CONSISTENCY_CHECK = OFF));");
+                statements.Add("COMMIT TRANSACTION;");
             }
             else
             {
                 // Non-temporal table: encrypt in place online.
-                sql = $"ALTER TABLE dbo.[{table}] ALTER COLUMN [{column}] {encryptedColumnDef} WITH (ONLINE = ON);";
+                statements.AddRange(dropIndexes);
+                statements.Add($"ALTER TABLE dbo.[{table}] ALTER COLUMN [{column}] {encryptedColumnDef} WITH (ONLINE = ON);");
+                statements.AddRange(createIndexes);
             }
 
             // In-place encryption time scales with row count; don't let a long-running ALTER time out.
-            var alterCmd = new SqlCommand(sql, connection) { CommandTimeout = 0 };
+            var alterCmd = new SqlCommand(string.Join("\n", statements), connection) { CommandTimeout = 0 };
             alterCmd.ExecuteNonQuery();
             Console.WriteLine($"  {table}.{column} encrypted successfully.");
         }
 
         Console.WriteLine("Column encryption check complete.");
+    }
+
+    // Returns the DROP INDEX / CREATE INDEX statements for every secondary (nonclustered) index on
+    // dbo.[table] that references [column]. Such an index blocks ALTER COLUMN, so it must be dropped
+    // before encrypting and recreated after. Definitions are reconstructed from the catalog views so
+    // the recreated index matches what EF created (key/included columns, order, uniqueness, filter).
+    private static (List<string> Drops, List<string> Creates) ScriptDependentIndexes(
+        SqlConnection connection, string table, string column)
+    {
+        var cmd = new SqlCommand("""
+            SELECT i.name AS IndexName, i.is_unique, i.is_primary_key, i.is_unique_constraint,
+                   i.filter_definition, c.name AS ColumnName, ic.is_included_column,
+                   ic.key_ordinal, ic.is_descending_key
+            FROM sys.indexes i
+            JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+            JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+            WHERE i.object_id = OBJECT_ID(@qualified)
+              AND i.index_id > 1  -- nonclustered secondary indexes only (skip heap/clustered)
+              AND i.index_id IN (
+                  SELECT ic2.index_id
+                  FROM sys.index_columns ic2
+                  JOIN sys.columns c2 ON ic2.object_id = c2.object_id AND ic2.column_id = c2.column_id
+                  WHERE ic2.object_id = OBJECT_ID(@qualified) AND c2.name = @column)
+            ORDER BY i.name, ic.is_included_column, ic.key_ordinal;
+            """, connection);
+        cmd.Parameters.AddWithValue("@qualified", $"dbo.{table}");
+        cmd.Parameters.AddWithValue("@column", column);
+
+        // Group the column rows by index, preserving key/included column order from the query.
+        var indexes = new Dictionary<string, (bool IsUnique, string? Filter, List<string> Keys, List<string> Included)>();
+        using (var reader = cmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                var name = reader.GetString(0);
+                if (reader.GetBoolean(2) || reader.GetBoolean(3))
+                    throw new NotSupportedException(
+                        $"Index '{name}' on {table}.{column} is a primary key or unique constraint; " +
+                        "encrypting a column it covers is not supported by this tool.");
+
+                if (!indexes.TryGetValue(name, out var entry))
+                {
+                    entry = (reader.GetBoolean(1), reader.IsDBNull(4) ? null : reader.GetString(4),
+                             new List<string>(), new List<string>());
+                    indexes[name] = entry;
+                }
+
+                var colName = reader.GetString(5);
+                if (reader.GetBoolean(6))
+                    entry.Included.Add($"[{colName}]");
+                else
+                    entry.Keys.Add($"[{colName}]" + (reader.GetBoolean(8) ? " DESC" : string.Empty));
+            }
+        }
+
+        var drops = new List<string>();
+        var creates = new List<string>();
+        foreach (var (name, def) in indexes)
+        {
+            drops.Add($"DROP INDEX [{name}] ON dbo.[{table}];");
+
+            var unique = def.IsUnique ? "UNIQUE " : string.Empty;
+            var include = def.Included.Count > 0 ? $" INCLUDE ({string.Join(", ", def.Included)})" : string.Empty;
+            var filter = def.Filter is not null ? $" WHERE {def.Filter}" : string.Empty;
+            creates.Add($"CREATE {unique}INDEX [{name}] ON dbo.[{table}] ({string.Join(", ", def.Keys)}){include}{filter};");
+        }
+        return (drops, creates);
     }
 
     private static void EnsureTemporalRetention(SqlConnection connection)

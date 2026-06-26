@@ -67,7 +67,6 @@ module keyvault 'modules/keyvault.bicep' = {
   params: {
     location: location
     appManagedIdentityPrincipalId: identity.outputs.principalId
-    ciIdentityPrincipalId: ciIdentity.outputs.ciIdentityPrincipalId
     deployerObjectId: deployerObjectId
     workspaceId: observability.outputs.workspaceId
   }
@@ -127,6 +126,7 @@ output sqlDatabaseName string = sql.outputs.sqlDatabaseName
 output sqlServerFqdn string = sql.outputs.sqlServerFqdn
 output keyVaultUri string = keyvault.outputs.keyVaultUri
 output keyVaultCmkId string = keyvault.outputs.cmkKeyId
+output cmkKeyUri string = keyvault.outputs.cmkKeyUri
 output apiAppName string = appservice.outputs.apiAppName
 output apiAppUrl string = appservice.outputs.apiAppUrl
 output webAppName string = appservice.outputs.webAppName

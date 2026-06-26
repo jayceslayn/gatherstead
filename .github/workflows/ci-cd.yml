@@ -128,7 +128,9 @@ jobs:
   #   AZURE_SUBSCRIPTION_ID, DEMO_APPINSIGHTS_CONNECTION_STRING.
   #   (The demo SWA token is fetched at runtime via the CI identity — no stored token.)
   # Required repo variables (from Bicep outputs): AZURE_RESOURCE_GROUP, API_APP_NAME,
-  #   WEB_APP_NAME, SQL_SERVER_NAME, SQL_DATABASE_NAME, KEYVAULT_CMK_ID, DEMO_SWA_NAME.
+  #   WEB_APP_NAME, SQL_SERVER_NAME, SQL_DATABASE_NAME, DEMO_SWA_NAME.
+  #   (KEYVAULT_CMK_ID is no longer used by CI — it's an input to the manual admin
+  #    Always Encrypted setup; see docs/DEPLOYMENT.md.)
   # ---------------------------------------------------------------------------
 
   deploy-migrations:
@@ -198,61 +200,14 @@ jobs:
             --server "${{ vars.SQL_SERVER_NAME }}" \
             --name "gh-actions-${{ github.run_id }}" || true
 
-  deploy-setup:
-    name: Configure encryption & retention
-    needs: [deploy-migrations]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Restore dependencies
-        run: dotnet restore --locked-mode
-
-      - name: Open SQL firewall for runner
-        run: |
-          RUNNER_IP=$(curl -fsSL https://api.ipify.org)
-          az sql server firewall-rule create \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server "${{ vars.SQL_SERVER_NAME }}" \
-            --name "gh-actions-setup-${{ github.run_id }}" \
-            --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP"
-
-      - name: Configure CMK/CEK, column encryption & temporal retention
-        # Idempotent: creates the keys if missing, encrypts only not-yet-encrypted columns,
-        # and (re)applies temporal retention. Authenticates to SQL + Key Vault via the
-        # azure/login (Azure CLI) session resolved by Active Directory Default / DefaultAzureCredential.
-        run: |
-          dotnet run --project src/Gatherstead.Data.Setup --configuration Release --no-restore -- \
-            "Server=tcp:${{ vars.SQL_SERVER_NAME }}.database.windows.net,1433;Database=${{ vars.SQL_DATABASE_NAME }};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;Column Encryption Setting=Enabled;" \
-            "${{ vars.KEYVAULT_CMK_ID }}"
-
-      - name: Remove SQL firewall rule
-        if: always()
-        run: |
-          az sql server firewall-rule delete \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --server "${{ vars.SQL_SERVER_NAME }}" \
-            --name "gh-actions-setup-${{ github.run_id }}" || true
+  # NOTE: Always Encrypted setup (CMK/CEK, column encryption, temporal retention) is intentionally
+  # NOT a CI job. Encrypting the system-versioned temporal tables requires toggling SYSTEM_VERSIONING,
+  # which needs CONTROL on the tables — incompatible with the CI identity's deliberate no-read posture.
+  # It is run manually as a SQL admin via Gatherstead.Data.Setup; see docs/DEPLOYMENT.md.
 
   deploy-api:
     name: Deploy API
-    needs: [build-backend, build-frontend, deploy-migrations, deploy-setup]
+    needs: [build-backend, build-frontend, deploy-migrations]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
