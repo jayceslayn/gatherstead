@@ -131,6 +131,8 @@ jobs:
   #   WEB_APP_NAME, SQL_SERVER_NAME, SQL_DATABASE_NAME, DEMO_SWA_NAME.
   #   (KEYVAULT_CMK_ID is no longer used by CI — it's an input to the manual admin
   #    Always Encrypted setup; see docs/DEPLOYMENT.md.)
+  # Optional repo variables (public site URLs baked into the web/demo builds; unset = link/CTA hidden):
+  #   PROJECT_GITHUB_URL, DOCS_URL, LIVE_URL (demo's "Go live" CTA), DEMO_URL (prod's "Try the Demo" CTA).
   # ---------------------------------------------------------------------------
 
   deploy-migrations:
@@ -272,6 +274,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build (SSR)
+        env:
+          NUXT_PUBLIC_GITHUB_URL: ${{ vars.PROJECT_GITHUB_URL }}
+          NUXT_PUBLIC_DOCS_URL: ${{ vars.DOCS_URL }}
+          NUXT_PUBLIC_DEMO_URL: ${{ vars.DEMO_URL }}
         run: pnpm build
 
       - name: Package
@@ -322,6 +328,9 @@ jobs:
         working-directory: src/Gatherstead.Web
         env:
           NUXT_PUBLIC_DEMO_MODE: 'true'
+          NUXT_PUBLIC_LIVE_URL: ${{ vars.LIVE_URL }}
+          NUXT_PUBLIC_GITHUB_URL: ${{ vars.PROJECT_GITHUB_URL }}
+          NUXT_PUBLIC_DOCS_URL: ${{ vars.DOCS_URL }}
           # Demo App Insights (appi-gat-demo-*) — ingestion-only; safe to bake into the static build.
           NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING: ${{ secrets.DEMO_APPINSIGHTS_CONNECTION_STRING }}
         run: pnpm generate
