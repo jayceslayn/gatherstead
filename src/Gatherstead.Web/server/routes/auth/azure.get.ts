@@ -10,6 +10,11 @@ export default defineOAuthAzureB2CEventHandler({
   config: {
     clientId,
     tenant: tenantName,
+    // nuxt-auth-utils' azureb2c provider guards on clientId/policy/tenant before redirecting to the
+    // IdP. Entra External ID has no user-flow policy, and we override authorizationURL/tokenURL below,
+    // so this value is never used to build a URL — it exists only to satisfy that required-field check.
+    // Without it the handler 500s and onError bounces straight back to '/'.
+    policy: 'entra-external-id',
     authorizationURL: `${authority}/oauth2/v2.0/authorize`,
     tokenURL: `${authority}/oauth2/v2.0/token`,
     // OIDC userinfo endpoint — returns sub/name/email claims (Graph /v1.0/me, the provider default,
