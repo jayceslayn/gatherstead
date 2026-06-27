@@ -73,6 +73,9 @@ export default defineNuxtConfig({
       docsUrl: '',
       liveUrl: '',
       demoUrl: '',
+      // Support contact address shown as a mailto link on the public /contact page. Bound from
+      // NUXT_PUBLIC_CONTACT_EMAIL. Empty = the page shows a neutral fallback instead of a mailto link.
+      contactEmail: '',
       // App Insights JS SDK connection string (browser telemetry). Bound from
       // NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING. Empty = telemetry disabled (local dev).
       appInsightsConnectionString: '',

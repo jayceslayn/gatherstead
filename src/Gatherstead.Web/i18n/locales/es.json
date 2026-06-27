@@ -39,7 +39,21 @@
     "featureAccommodationDesc": "Gestiona habitaciones, espacios para casas rodantes e intenciones de estadía para que todos tengan un lugar.",
     "viewOnGithub": "Ver en GitHub",
     "viewDocs": "Documentación",
-    "tryDemo": "Probar la Demo"
+    "tryDemo": "Probar la Demo",
+    "contact": "Contacto"
+  },
+  "contact": {
+    "title": "Contáctanos",
+    "emailHeading": "Soporte por correo",
+    "emailIntro": "Comunícate directamente con nuestro equipo en:",
+    "emailFallback": "Los datos de contacto de soporte se están configurando. Vuelve a consultar pronto.",
+    "topicsHeading": "En qué podemos ayudarte",
+    "topicGroups": "Crear un nuevo grupo o unirte a uno existente",
+    "topicSubscription": "Preguntas sobre suscripción, facturación y cuenta",
+    "topicTechnical": "Problemas técnicos o reportes de errores",
+    "resourcesHeading": "Recursos de autoservicio",
+    "viewDocs": "Consultar la documentación",
+    "viewGithub": "Reportar un problema en GitHub"
   },
   "nav": {
     "home": "Inicio",
@@ -77,8 +91,9 @@
   "tenant": {
     "selectTitle": "Seleccionar un Grupo",
     "selectDescription": "Elige la familia u organización que deseas administrar.",
-    "noTenants": "Aún no perteneces a ningún grupo.",
-    "noTenantsHint": "Contacta a un administrador para comenzar.",
+    "noTenants": "Has iniciado sesión, pero aún no formas parte de ningún grupo.",
+    "noTenantsHint": "Pide a un administrador del grupo que te invite con esta dirección de correo y tu grupo aparecerá aquí.",
+    "contactCta": "Contáctanos",
     "dashboard": "Panel",
     "dashboardPlaceholder": "El panel de tu grupo estará disponible pronto."
   },
@@ -565,14 +580,14 @@
     },
     "invite": {
       "title": "Invitar Usuario",
-      "hint": "Ingresa el correo de la persona. Se unirá automáticamente la próxima vez que inicie sesión, tenga o no una cuenta.",
+      "hint": "Ingresa el correo de la persona. Todavía no se envía ningún correo, así que avísale directamente. Se unirá automáticamente la próxima vez que inicie sesión con este correo, tenga o no una cuenta.",
       "email": "Correo electrónico",
       "emailPlaceholder": "nombre{'@'}ejemplo.com",
       "household": "Acceso a hogar (opcional)",
       "householdRole": "Rol en el hogar",
       "noHousehold": "Sin acceso a hogar",
-      "send": "Enviar Invitación",
-      "sent": "Invitación enviada",
+      "send": "Crear Invitación",
+      "sent": "Invitación creada",
       "pendingTitle": "Invitaciones pendientes",
       "statusPending": "Pendiente",
       "revoke": "Revocar invitación"

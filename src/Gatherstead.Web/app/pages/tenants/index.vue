@@ -24,7 +24,15 @@ const { selectTenant } = useTenantSelect()
 
     <div v-else-if="!tenants?.length" class="text-center py-12">
       <p class="text-gray-500 mb-2">{{ t('tenant.noTenants') }}</p>
-      <p class="text-gray-400 text-sm">{{ t('tenant.noTenantsHint') }}</p>
+      <p class="text-gray-400 text-sm mb-6">{{ t('tenant.noTenantsHint') }}</p>
+      <UButton
+        to="/contact"
+        variant="soft"
+        color="primary"
+        icon="i-heroicons-envelope"
+      >
+        {{ t('tenant.contactCta') }}
+      </UButton>
     </div>
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

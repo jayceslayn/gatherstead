@@ -76,6 +76,13 @@ const isDemoMode = __DEMO_MODE__
       >
         {{ t('landing.viewDocs') }}
       </UButton>
+      <UButton
+        to="/contact"
+        variant="link"
+        color="neutral"
+      >
+        {{ t('landing.contact') }}
+      </UButton>
     </div>
   </UFooter>
 </template>

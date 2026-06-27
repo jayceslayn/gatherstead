@@ -248,6 +248,30 @@ web secret is the session-encryption key, kept in Key Vault. One-time setup afte
    issuer) and redeploy so the app settings pick them up. The web App Service should then show the
    `NUXT_SESSION_PASSWORD` Key Vault reference as **Resolved** in the portal.
 
+#### Enable self-service sign-up (registration)
+
+Registration is handled entirely by Entra External ID — there is **no app code change**. The same `/auth/azure`
+sign-in flow surfaces a "No account? Create one" link once self-service sign-up is enabled on the user flow the
+web app registration is attached to. In the **Microsoft Entra admin center** (external tenant
+`gatherstead.onmicrosoft.com`):
+
+1. **External Identities → User flows** — create or edit the **sign-up and sign-in** user flow, and under its
+   **Applications** add the web app registration (`webExternalIdentityClientId`). This is what makes its
+   `/authorize` requests offer sign-up.
+2. Set the flow's **identity providers** to include **Email with password** so users can self-register, and keep
+   **email one-time-passcode verification required** — every account must prove mailbox control, which is what
+   sets the `email_verified` claim the API relies on.
+3. **Abuse baseline — enable the flow's built-in CAPTCHA** to block scripted bot signups. This is the primary
+   mitigation for open sign-up; the API layer already provides defence-in-depth: bootstrap (`POST /api/me/bootstrap`)
+   is JWT-gated so a `User` row can only be written after a real sign-up, provisioning is idempotent per `ExternalId`
+   (one identity = one row), invitations auto-claim only when `email_verified == true` (a bogus account lands
+   group-less with no access), and a per-IP rate limit applies. **Known residual gaps, intentionally not addressed
+   here:** no WAF/Front Door in front of the App Services, no anomaly alerting on User-creation rate, and no cleanup
+   job for orphaned zero-tenant users — the residual risk is junk-row accumulation, not unauthorized access.
+
+`SignUpSignInPolicyId` stays **empty** throughout — it is an Azure AD B2C concept; Entra External ID uses the
+tenant's user flow instead, not a policy ID in the authority URL.
+
 ### 6. Deploy the Application
 
 The API and Web App Service apps are already provisioned with the correct configuration (managed identity, connection string, Key Vault URI, CORS, API base URL). Once the GitHub secrets/variables in [Deploy authentication & required GitHub config](#deploy-authentication--required-github-config) are set, pushing to `main` deploys (and applies migrations) automatically. To deploy manually:

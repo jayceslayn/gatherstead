@@ -39,7 +39,21 @@
     "featureAccommodationDesc": "Manage rooms, RV spaces, and stay intents so everyone has a place.",
     "viewOnGithub": "View on GitHub",
     "viewDocs": "Documentation",
-    "tryDemo": "Try the Demo"
+    "tryDemo": "Try the Demo",
+    "contact": "Contact"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "emailHeading": "Email support",
+    "emailIntro": "Reach our team directly at:",
+    "emailFallback": "Support contact details are being set up. Please check back soon.",
+    "topicsHeading": "What we can help with",
+    "topicGroups": "Creating a new group or joining an existing one",
+    "topicSubscription": "Subscription, billing, and account questions",
+    "topicTechnical": "Technical issues or bug reports",
+    "resourcesHeading": "Self-serve resources",
+    "viewDocs": "Browse the documentation",
+    "viewGithub": "Report an issue on GitHub"
   },
   "nav": {
     "home": "Home",
@@ -77,8 +91,9 @@
   "tenant": {
     "selectTitle": "Select a Group",
     "selectDescription": "Choose which family or organization you'd like to manage.",
-    "noTenants": "You don't belong to any groups yet.",
-    "noTenantsHint": "Contact an administrator to get started.",
+    "noTenants": "You're signed in, but not part of any group yet.",
+    "noTenantsHint": "Ask a group admin to invite you with this email address, and your group will appear here.",
+    "contactCta": "Contact us",
     "dashboard": "Dashboard",
     "dashboardPlaceholder": "Your group dashboard is coming soon."
   },
@@ -565,14 +580,14 @@
     },
     "invite": {
       "title": "Invite User",
-      "hint": "Enter the person's email. They'll join automatically the next time they sign in — whether or not they already have an account.",
+      "hint": "Enter the person's email. No email is sent yet, so let them know directly. They'll join automatically the next time they sign in with this email — whether or not they already have an account.",
       "email": "Email",
       "emailPlaceholder": "name{'@'}example.com",
       "household": "Household access (optional)",
       "householdRole": "Household role",
       "noHousehold": "No household access",
-      "send": "Send Invite",
-      "sent": "Invitation sent",
+      "send": "Create Invite",
+      "sent": "Invitation created",
       "pendingTitle": "Pending invitations",
       "statusPending": "Pending",
       "revoke": "Revoke invitation"
