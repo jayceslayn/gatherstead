@@ -161,7 +161,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ApplicationInsightsAgent_EXTENSION_VERSION', value: '~3' }
         // Browser-facing key for the App Insights JS SDK (runtimeConfig.public.appInsightsConnectionString).
         // Same prod App Insights as the backend → end-to-end frontend/backend trace correlation.
-        { name: 'NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+        { name: 'NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
         // Entra External ID (server-side OIDC + PKCE) — bind runtimeConfig.externalIdentity.* in
         // nuxt.config.ts. All non-secret; the OIDC flow uses PKCE, not a client secret.
         { name: 'NUXT_EXTERNAL_IDENTITY_CLIENT_ID', value: webExternalIdentityClientId }

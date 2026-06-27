@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "9162663911508241485"
+      "templateHash": "17795029780854529743"
     }
   },
   "parameters": {
@@ -287,7 +287,7 @@
               "value": "~3"
             },
             {
-              "name": "NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING",
+              "name": "NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING",
               "value": "[parameters('appInsightsConnectionString')]"
             },
             {

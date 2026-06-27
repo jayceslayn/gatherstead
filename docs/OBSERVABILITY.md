@@ -111,9 +111,12 @@ Conventions:
   the IP is not stored; browser/OS come from the User-Agent; `language`/`locale` are sent as
   custom dimensions. None identify an individual.
 
-The connection string is delivered as `NUXT_PUBLIC_APPINSIGHTS_CONNECTION_STRING` — a web-app
+The connection string is delivered as `NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING` — a web-app
 app setting in Prod (read at runtime) and a GitHub Actions secret baked into the static Demo
-build at `pnpm generate` time. It is an ingestion-only key and safe to expose in client code.
+build at `pnpm generate` time. The underscore placement matters: Nuxt binds it to
+`runtimeConfig.public.appInsightsConnectionString` only because Nitro derives the env name as
+`snakeCase('appInsightsConnectionString').toUpperCase()` → `APP_INSIGHTS_CONNECTION_STRING`. It is
+an ingestion-only key and safe to expose in client code.
 
 ## Verification
 
