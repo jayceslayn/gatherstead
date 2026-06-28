@@ -41,6 +41,24 @@ export default defineOAuthOidcEventHandler({
       },
       secure: buildSecureSession(tokens.access_token),
     })
+
+    // Provision the internal Users row (and claim any pending invitations) once, at login, so the
+    // first authenticated call (GET /api/proxy/tenants on /tenants) resolves to a real user instead
+    // of 401 "Authentication required." Best-effort: a failure is logged but must not block sign-in
+    // — the /app route middleware (ensureBootstrap) remains a fallback.
+    const config = useRuntimeConfig(event)
+    if (tokens.access_token) {
+      try {
+        await $fetch(`${config.public.apiBaseUrl}/api/me/bootstrap`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tokens.access_token}` },
+        })
+      }
+      catch (err) {
+        console.error('Azure OIDC: user bootstrap failed', err)
+      }
+    }
+
     return sendRedirect(event, '/tenants')
   },
   onError(event, error) {

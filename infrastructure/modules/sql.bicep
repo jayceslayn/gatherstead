@@ -43,6 +43,19 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
+// "Allow Azure services and resources to access this server" — the App Service connects from
+// Azure public IPs, so this opens the door for them. Access is still gated by Entra ID-only auth
+// (azureADOnlyAuthentication) plus per-identity database users; this rule alone grants no data
+// access. Codified here so a fresh environment reproduces the posture without a manual portal toggle.
+resource allowAzureServices 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
+  parent: sqlServer
+  name: 'AllowAllWindowsAzureIps'
+  properties: {
+    startIpAddress: '0.0.0.0'
+    endIpAddress: '0.0.0.0'
+  }
+}
+
 resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: 'gatherstead'

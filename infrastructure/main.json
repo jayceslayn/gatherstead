@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "16703398558998960335"
+      "templateHash": "14578987755803356005"
     }
   },
   "parameters": {
@@ -966,7 +966,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "10505479579923790164"
+              "templateHash": "13947628037851624733"
             }
           },
           "parameters": {
@@ -1044,6 +1044,18 @@
                 },
                 "minimalTlsVersion": "1.2"
               }
+            },
+            {
+              "type": "Microsoft.Sql/servers/firewallRules",
+              "apiVersion": "2023-08-01-preview",
+              "name": "[format('{0}/{1}', variables('sqlServerName'), 'AllowAllWindowsAzureIps')]",
+              "properties": {
+                "startIpAddress": "0.0.0.0",
+                "endIpAddress": "0.0.0.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Sql/servers', variables('sqlServerName'))]"
+              ]
             },
             {
               "type": "Microsoft.Sql/servers/databases",
@@ -1209,7 +1221,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "17795029780854529743"
+              "templateHash": "5840717935938172479"
             }
           },
           "parameters": {
@@ -1505,6 +1517,10 @@
                     {
                       "name": "NUXT_EXTERNAL_IDENTITY_API_SCOPE",
                       "value": "[parameters('webExternalIdentityApiScope')]"
+                    },
+                    {
+                      "name": "NUXT_EXTERNAL_IDENTITY_CLIENT_SECRET",
+                      "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/web-external-identity-client-secret/)', parameters('keyVaultUri'))]"
                     },
                     {
                       "name": "NUXT_SESSION_PASSWORD",

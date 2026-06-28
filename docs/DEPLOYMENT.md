@@ -129,6 +129,8 @@ sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirecto
   -i infrastructure/post-deploy.sql
 ```
 
+This grants the API's managed identity **read/write DML only** (`db_datareader` + `db_datawriter`) — the app performs no schema work at runtime (migrations are not applied at startup), so it deliberately gets no `db_ddladmin`. Schema changes are owned by the CI identity (next step). The app identity is therefore lower-privileged than both the `Gatherstead SQL Admins` group and the CI identity. The script is idempotent and safe to re-run.
+
 Then grant the CI deploy identity the access the pipeline needs to apply migrations — replace `<ci-identity-name>` with the `ciIdentityName` output. This grants `db_ddladmin` (schema changes) **and** `db_datawriter`, because EF migrations carry DML: `HasData` seed data (e.g. the `DietaryTags` reference rows, emitted as `InsertData`/`UpdateData`/`DeleteData`) and any `migrationBuilder.Sql` backfill. It deliberately withholds `db_datareader` — CI can write via reviewed migrations but never reads application data, which (together with column encryption) keeps PII confidential from the CI identity:
 
 ```bash
