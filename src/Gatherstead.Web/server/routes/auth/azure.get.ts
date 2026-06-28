@@ -23,14 +23,15 @@ export default defineOAuthOidcEventHandler({
     scope: ['openid', 'profile', 'email', 'offline_access', apiScope].filter(Boolean),
   },
   async onSuccess(event, { tokens }) {
-    if (!tokens.id_token) {
-      console.error('Azure OIDC error: token response contained no id_token')
-      return sendRedirect(event, '/')
-    }
     // The id_token came directly from the token endpoint over TLS and the provider already validated its
     // nonce, so decode the payload for the identity claims without re-verifying the signature.
+    const payload = tokens.id_token?.split('.')[1]
+    if (!payload) {
+      console.error('Azure OIDC error: token response had no/malformed id_token')
+      return sendRedirect(event, '/')
+    }
     const claims = JSON.parse(
-      Buffer.from(tokens.id_token.split('.')[1], 'base64url').toString(),
+      Buffer.from(payload, 'base64url').toString(),
     ) as { sub: string, name?: string, email?: string, preferred_username?: string }
     await setUserSession(event, {
       user: {
