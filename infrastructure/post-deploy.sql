@@ -23,3 +23,11 @@ IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'<managed-ide
 -- ALTER ROLE ... ADD MEMBER is a no-op if the member already belongs, so this is re-run-safe.
 ALTER ROLE db_datareader ADD MEMBER [<managed-identity-name>];
 ALTER ROLE db_datawriter ADD MEMBER [<managed-identity-name>];
+
+-- Always Encrypted: allow the SQL driver to read column-encryption metadata (the CMK path and the
+-- wrapped CEK) so it can encrypt/decrypt AE columns client-side. Without these, any query that
+-- materializes an encrypted column fails with "VIEW ANY COLUMN MASTER KEY DEFINITION permission
+-- denied." These grant key *metadata* visibility only, not plaintext access — reading the decrypted
+-- values is still governed by SELECT (db_datareader). GRANT is a no-op if already held.
+GRANT VIEW ANY COLUMN MASTER KEY DEFINITION TO [<managed-identity-name>];
+GRANT VIEW ANY COLUMN ENCRYPTION KEY DEFINITION TO [<managed-identity-name>];

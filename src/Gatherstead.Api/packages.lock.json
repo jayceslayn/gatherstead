@@ -33,6 +33,17 @@
           "Microsoft.IdentityModel.Protocols.OpenIdConnect": "8.0.1"
         }
       },
+      "Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider": {
+        "type": "Direct",
+        "requested": "[6.0.0, )",
+        "resolved": "6.0.0",
+        "contentHash": "ngkurIfykyN3muQkV/rzqU7saUe7u3xolbrcbp+v+mJSPx34+eSed0Bu/MsxuPmkkfG8D6FUg4OXZYr5hC/i0g==",
+        "dependencies": {
+          "Azure.Core": "[1.38.0, 2.0.0)",
+          "Azure.Security.KeyVault.Keys": "[4.5.0, 5.0.0)",
+          "Microsoft.Data.SqlClient": "6.0.0"
+        }
+      },
       "Microsoft.EntityFrameworkCore": {
         "type": "Direct",
         "requested": "[10.0.9, )",
@@ -94,6 +105,14 @@
           "Azure.Core": "1.54.0",
           "OpenTelemetry.Extensions.Hosting": "1.15.3",
           "OpenTelemetry.PersistentStorage.FileSystem": "1.0.3"
+        }
+      },
+      "Azure.Security.KeyVault.Keys": {
+        "type": "Transitive",
+        "resolved": "4.5.0",
+        "contentHash": "HnW9kjhRzQkfJE4ISl63cWVa6qLe3FM1MxoxNvNFtDUeT5iMBEg0YgGbcx2YgEiYaazIvSgZyjBr4L3Ur3+m7g==",
+        "dependencies": {
+          "Azure.Core": "1.30.0"
         }
       },
       "Microsoft.Bcl.AsyncInterfaces": {

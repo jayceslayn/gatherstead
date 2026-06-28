@@ -38,7 +38,28 @@ using Gatherstead.Data;
 using Gatherstead.Data.Interceptors;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider;
+using Azure.Identity;
 using System.Threading.RateLimiting;
+
+// Register the Azure Key Vault column-encryption provider so the SQL driver can unwrap the CEK and
+// decrypt/encrypt Always Encrypted (PII) columns at runtime. DefaultAzureCredential honours
+// AZURE_CLIENT_ID, selecting the app's user-assigned managed identity in Azure. Registration is
+// process-global and throws if called twice, so guard it (integration tests can build multiple
+// hosts in a single process).
+try
+{
+    SqlConnection.RegisterColumnEncryptionKeyStoreProviders(
+        new Dictionary<string, SqlColumnEncryptionKeyStoreProvider>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["AZURE_KEY_VAULT"] = new SqlColumnEncryptionAzureKeyVaultProvider(new DefaultAzureCredential()),
+        });
+}
+catch (InvalidOperationException)
+{
+    // Providers already registered for this process.
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
