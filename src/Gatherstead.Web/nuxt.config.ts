@@ -57,10 +57,14 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     // Server-only (private) — Entra External ID, used for the OIDC authorization-code + PKCE flow in
-    // server/routes/auth/azure.get.ts. No client secret: a public client + PKCE secures the exchange.
-    // Bound from NUXT_EXTERNAL_IDENTITY_CLIENT_ID / _TENANT_NAME / _API_SCOPE.
+    // server/routes/auth/azure.get.ts. The code is redeemed server-side as a confidential web client,
+    // so a client secret is required (PKCE alone only works for browser/SPA cross-origin redemption).
+    // Bound from NUXT_EXTERNAL_IDENTITY_CLIENT_ID / _CLIENT_SECRET / _TENANT_NAME / _API_SCOPE.
     externalIdentity: {
       clientId: '',
+      // Client secret of the web app registration. In prod it's a Key Vault reference resolved by the
+      // web app's managed identity (see infrastructure/modules/appservice.bicep).
+      clientSecret: '',
       tenantName: '',
       // The API's exposed scope (e.g. api://<api-client-id>/access_as_user). Requested so the issued
       // access token's audience is the API; without it, API calls bearing the token 401.

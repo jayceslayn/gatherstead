@@ -1,42 +1,49 @@
 import { buildSecureSession } from '~~/server/utils/session'
 
-// nuxt-auth-utils ships only an Azure AD B2C provider, whose defaults target b2clogin.com and read
-// runtimeConfig.oauth.azureb2c. We point it at Microsoft Entra External ID (ciamlogin.com) instead,
-// feeding config from the private runtimeConfig.externalIdentity section and overriding the endpoints.
-const { clientId, tenantName, apiScope } = useRuntimeConfig().externalIdentity
+// Microsoft Entra External ID (ciamlogin.com) sign-in. The Nuxt server redeems the authorization code
+// server-side, so this is a confidential client: the redirect URI is registered under a "Web" platform
+// and the code is exchanged with a client secret. nuxt-auth-utils' generic `oidc` provider does the full
+// standards flow for us — state (CSRF) + PKCE + nonce + secret-bearing code exchange.
+const { clientId, clientSecret, tenantName, apiScope } = useRuntimeConfig().externalIdentity
 const authority = `https://${tenantName}.ciamlogin.com/${tenantName}.onmicrosoft.com`
 
-export default defineOAuthAzureB2CEventHandler({
+export default defineOAuthOidcEventHandler({
   config: {
     clientId,
-    tenant: tenantName,
-    // nuxt-auth-utils' azureb2c provider guards on clientId/policy/tenant before redirecting to the
-    // IdP. Entra External ID has no user-flow policy, and we override authorizationURL/tokenURL below,
-    // so this value is never used to build a URL — it exists only to satisfy that required-field check.
-    // Without it the handler 500s and onError bounces straight back to '/'.
-    policy: 'entra-external-id',
-    authorizationURL: `${authority}/oauth2/v2.0/authorize`,
-    tokenURL: `${authority}/oauth2/v2.0/token`,
-    // OIDC userinfo endpoint — returns sub/name/email claims (Graph /v1.0/me, the provider default,
-    // returns id/mail instead and would break the claim mapping below).
-    userURL: 'https://graph.microsoft.com/oidc/userinfo',
-    // openid/profile/email for the user claims; offline_access for refresh; apiScope so the access
-    // token is audienced for the Gatherstead API (see getAccessToken in server/utils/session.ts).
+    clientSecret,
+    // Inline endpoints with NO userinfo_endpoint on purpose: the access token is audienced for our API
+    // (via apiScope), so it can't be used against Graph's userinfo endpoint. We take identity from the
+    // id_token instead and keep the access token for API calls (see getAccessToken in server/utils/session.ts).
+    openidConfig: {
+      authorization_endpoint: `${authority}/oauth2/v2.0/authorize`,
+      token_endpoint: `${authority}/oauth2/v2.0/token`,
+    },
+    // openid/profile/email for the id_token claims; offline_access for refresh; apiScope so the access
+    // token is audienced for the Gatherstead API.
     scope: ['openid', 'profile', 'email', 'offline_access', apiScope].filter(Boolean),
   },
-  async onSuccess(event, { user, tokens }) {
+  async onSuccess(event, { tokens }) {
+    if (!tokens.id_token) {
+      console.error('Azure OIDC error: token response contained no id_token')
+      return sendRedirect(event, '/')
+    }
+    // The id_token came directly from the token endpoint over TLS and the provider already validated its
+    // nonce, so decode the payload for the identity claims without re-verifying the signature.
+    const claims = JSON.parse(
+      Buffer.from(tokens.id_token.split('.')[1], 'base64url').toString(),
+    ) as { sub: string, name?: string, email?: string, preferred_username?: string }
     await setUserSession(event, {
       user: {
-        id: user.sub,
-        name: user.name || user.preferred_username,
-        email: user.email || user.preferred_username,
+        id: claims.sub,
+        name: claims.name ?? claims.preferred_username ?? '',
+        email: claims.email ?? claims.preferred_username ?? '',
       },
       secure: buildSecureSession(tokens.access_token),
     })
     return sendRedirect(event, '/tenants')
   },
   onError(event, error) {
-    console.error('Azure OAuth error:', error)
+    console.error('Azure OIDC error:', error)
     return sendRedirect(event, '/')
   },
 })

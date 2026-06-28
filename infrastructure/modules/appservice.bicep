@@ -162,11 +162,15 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         // Browser-facing key for the App Insights JS SDK (runtimeConfig.public.appInsightsConnectionString).
         // Same prod App Insights as the backend → end-to-end frontend/backend trace correlation.
         { name: 'NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
-        // Entra External ID (server-side OIDC + PKCE) — bind runtimeConfig.externalIdentity.* in
-        // nuxt.config.ts. All non-secret; the OIDC flow uses PKCE, not a client secret.
+        // Entra External ID (server-side OIDC authorization-code + PKCE) — bind
+        // runtimeConfig.externalIdentity.* in nuxt.config.ts. The code is redeemed server-side as a
+        // confidential web client, so a client secret is required (resolved from Key Vault below).
         { name: 'NUXT_EXTERNAL_IDENTITY_CLIENT_ID', value: webExternalIdentityClientId }
         { name: 'NUXT_EXTERNAL_IDENTITY_TENANT_NAME', value: webExternalIdentityTenantName }
         { name: 'NUXT_EXTERNAL_IDENTITY_API_SCOPE', value: webExternalIdentityApiScope }
+        // Web app registration client secret — resolved from Key Vault at runtime via the web identity.
+        // Create the secret out-of-band: az keyvault secret set --name web-external-identity-client-secret.
+        { name: 'NUXT_EXTERNAL_IDENTITY_CLIENT_SECRET', value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/web-external-identity-client-secret/)' }
         // nuxt-auth-utils session encryption key — resolved from Key Vault at runtime via the web
         // identity. Create the secret out-of-band: az keyvault secret set --name nuxt-session-password.
         { name: 'NUXT_SESSION_PASSWORD', value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/nuxt-session-password/)' }

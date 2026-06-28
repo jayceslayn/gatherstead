@@ -229,8 +229,11 @@ tables. Every step is idempotent, so it is safe to re-run.
 Both apps authenticate users against **Microsoft Entra External ID** (`ciamlogin.com`). The API validates
 JWT bearer tokens (config injected as `ExternalIdentity__*` app settings); the Nuxt web app runs the
 server-side OIDC authorization-code + **PKCE** flow ([server/routes/auth/azure.get.ts](../src/Gatherstead.Web/server/routes/auth/azure.get.ts)),
-storing the access token only in an encrypted server session. PKCE means **no client secret** — the only
-web secret is the session-encryption key, kept in Key Vault. One-time setup after provisioning:
+storing the access token only in an encrypted server session. The code is redeemed **server-side**, so the
+web app is a **confidential client**: it must present a **client secret** to redeem the code (a SPA-style
+PKCE-only redemption fails server-side with `AADSTS9002327` — "may only be redeemed via cross-origin
+requests"). Both web secrets — the client secret and the session-encryption key — are kept in Key Vault.
+One-time setup after provisioning:
 
 1. **Create the Nuxt session secret in Key Vault** (resolved at runtime via the web app's managed identity
    through the `NUXT_SESSION_PASSWORD` Key Vault reference):
@@ -241,12 +244,21 @@ web secret is the session-encryption key, kept in Key Vault. One-time setup afte
 2. **API app registration** — under *Expose an API*, add a scope (e.g. `access_as_user`) and set the
    Application ID URI. This is the `webExternalIdentityApiScope` value (`api://<api-client-id>/access_as_user`)
    so the web app's access token is audienced for the API.
-3. **Web app registration** — register a client configured for **public-client / PKCE** (no secret), add
-   the redirect URI `https://<webAppUrl>/auth/azure`, and grant it delegated permission to the API scope
-   from step 2. Its client ID is `webExternalIdentityClientId`.
+3. **Web app registration** — under *Authentication → Platform configurations*, register the redirect URI
+   `https://<webAppUrl>/auth/azure` under a **Web** platform (**not** Single-page application — a SPA
+   registration forces a browser cross-origin redemption and rejects the server-side exchange with
+   `AADSTS9002327`/HTTP 400). Then under *Certificates & secrets* create a **client secret**, and store it
+   in Key Vault so the app setting resolves it:
+   ```bash
+   az keyvault secret set --vault-name <vault-name> --name web-external-identity-client-secret \
+     --value "<the client secret value>"
+   ```
+   Grant the registration delegated permission to the API scope from step 2. Its client ID is
+   `webExternalIdentityClientId`.
 4. Fill the `externalIdentity*` and `webExternalIdentity*` values in `prod.bicepparam` (tenant, client IDs,
-   issuer) and redeploy so the app settings pick them up. The web App Service should then show the
-   `NUXT_SESSION_PASSWORD` Key Vault reference as **Resolved** in the portal.
+   issuer) and redeploy so the app settings pick them up. The web App Service should then show both the
+   `NUXT_SESSION_PASSWORD` and `NUXT_EXTERNAL_IDENTITY_CLIENT_SECRET` Key Vault references as **Resolved**
+   in the portal.
 
 #### Enable self-service sign-up (registration)
 
