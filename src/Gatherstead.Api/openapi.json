@@ -5242,7 +5242,9 @@
                 "SoftDelete",
                 "Restore",
                 "AppAdminAction",
-                "RateLimitBreach"
+                "RateLimitBreach",
+                "InvitationCreated",
+                "InvitationAccepted"
               ],
               "type": "string"
             }
@@ -5324,7 +5326,9 @@
                 "SoftDelete",
                 "Restore",
                 "AppAdminAction",
-                "RateLimitBreach"
+                "RateLimitBreach",
+                "InvitationCreated",
+                "InvitationAccepted"
               ],
               "type": "string"
             }
@@ -11555,6 +11559,9 @@
           "userId": {
             "type": "string",
             "format": "uuid"
+          },
+          "isAppAdmin": {
+            "type": "boolean"
           },
           "claimedInvitations": {
             "type": "integer",

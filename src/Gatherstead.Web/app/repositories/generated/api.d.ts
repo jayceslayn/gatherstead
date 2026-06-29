@@ -2948,7 +2948,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "SoftDelete" | "Restore" | "AppAdminAction" | "RateLimitBreach";
+                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "SoftDelete" | "Restore" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
                     dateFrom?: string;
                     dateTo?: string;
                     page?: number;
@@ -2993,7 +2993,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "SoftDelete" | "Restore" | "AppAdminAction" | "RateLimitBreach";
+                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "SoftDelete" | "Restore" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
                     dateFrom?: string;
                     dateTo?: string;
                     tenantId?: string;
