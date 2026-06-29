@@ -33,6 +33,18 @@ export default defineNuxtConfig({
     typeCheck: 'build',
   },
 
+  // Bundle used icons into the client at build time instead of fetching them from the Iconify
+  // CDN (api.iconify.design) at runtime. The demo deploys as a static site (pnpm generate) with
+  // no icon server endpoint, so without this every icon is fetched cross-origin — which App
+  // Insights' traceparent correlation then trips over CORS. Scan finds the literal i-* names in
+  // .vue sources; heroicons + lucide (@nuxt/ui defaults) collections are installed locally.
+  icon: {
+    clientBundle: {
+      scan: true,
+      sizeLimitKb: 256,
+    },
+  },
+
   routeRules: {
     '/': { prerender: true },
     '/tenants/**': { ssr: false },
