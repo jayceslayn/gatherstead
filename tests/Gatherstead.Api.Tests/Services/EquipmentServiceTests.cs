@@ -5,6 +5,7 @@ using Gatherstead.Api.Services.Equipment;
 using Gatherstead.Api.Tests.Fixtures;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace Gatherstead.Api.Tests.Services;
@@ -69,6 +70,39 @@ public class EquipmentServiceTests : IAsyncLifetime
             .CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
         Assert.True(result.Successful);
         Assert.Null(result.Entity!.PropertyId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_AppAdmin_PreservesAttributesItCannotSee()
+    {
+        // App-admin caller: write authority granted (canManage) but no tenant role, so the unconfigured
+        // GetCallerTenantRoleAsync mock returns null — exactly how an app admin resolves. A role-gated
+        // attribute they cannot see must survive a full-replace update that omits it (no blanking).
+        var equipmentId = Guid.NewGuid();
+        var attributeId = Guid.NewGuid();
+        _dbContext.Equipment.Add(new Equipment { Id = equipmentId, TenantId = _tenantId, Name = "Generator" });
+        _dbContext.EquipmentAttributes.Add(new EquipmentAttribute
+        {
+            Id = attributeId,
+            TenantId = _tenantId,
+            EquipmentId = equipmentId,
+            Key = "serialNumber",
+            Value = "SN-SECRET",
+            TenantMinRole = (byte)TenantRole.Manager,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Full-replace update with an empty attribute list (the app admin never received the hidden attr).
+        var request = new UpdateEquipmentRequest { Name = "Generator", Attributes = [] };
+        var result = await CreateService(canManage: true)
+            .UpdateAsync(_tenantId, equipmentId, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var attr = await _dbContext.EquipmentAttributes
+            .IgnoreQueryFilters()
+            .SingleAsync(a => a.Id == attributeId, TestContext.Current.CancellationToken);
+        Assert.False(attr.IsDeleted);
+        Assert.Equal("SN-SECRET", attr.Value);
     }
 
     [Fact]

@@ -35,6 +35,7 @@ public record BootstrapTenantDto(Guid TenantId, TenantRole Role);
 
 public record UserBootstrapDto(
     Guid UserId,
+    bool IsAppAdmin,
     int ClaimedInvitations,
     IReadOnlyList<BootstrapTenantDto> Tenants);
 

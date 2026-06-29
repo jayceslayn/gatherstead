@@ -1,16 +1,19 @@
 using System.Security.Claims;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Provisioning;
 using Gatherstead.Api.Tests.Fixtures;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 
 namespace Gatherstead.Api.Tests.Services;
 
 public class UserProvisioningServiceTests : IAsyncLifetime
 {
     private GathersteadDbContext _dbContext = null!;
+    private Mock<ISecurityEventLogger> _securityLogger = null!;
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _householdId = Guid.NewGuid();
     private const string ExternalId = "sub-12345";
@@ -48,9 +51,12 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     }
 
     private UserProvisioningService CreateService(IHttpContextAccessor accessor)
-        => new(_dbContext, accessor);
+    {
+        _securityLogger = new Mock<ISecurityEventLogger>();
+        return new(_dbContext, accessor, _securityLogger.Object);
+    }
 
-    private void SeedPendingInvitation(string email, TenantRole role = TenantRole.Member, Guid? householdId = null, HouseholdRole? householdRole = null)
+    private void SeedPendingInvitation(string email, TenantRole role = TenantRole.Member, Guid? householdId = null, HouseholdRole? householdRole = null, Guid? invitedByUserId = null)
     {
         _dbContext.Invitations.Add(new Invitation
         {
@@ -61,6 +67,7 @@ public class UserProvisioningServiceTests : IAsyncLifetime
             HouseholdId = householdId,
             HouseholdRole = householdRole,
             Status = InvitationStatus.Pending,
+            InvitedByUserId = invitedByUserId,
         });
         _dbContext.SaveChanges();
     }
@@ -163,5 +170,61 @@ public class UserProvisioningServiceTests : IAsyncLifetime
         Assert.Equal(1, first.Entity!.ClaimedInvitations);
         Assert.Equal(0, second.Entity!.ClaimedInvitations);
         Assert.Equal(1, await _dbContext.TenantUsers.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_NewUser_IsAppAdminFalse()
+    {
+        var result = await CreateService(BuildAccessor()).BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.False(result.Entity!.IsAppAdmin);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_AppAdminUser_SurfacesIsAppAdmin()
+    {
+        _dbContext.Users.Add(new User { Id = Guid.NewGuid(), ExternalId = ExternalId, Email = Email, IsAppAdmin = true });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService(BuildAccessor()).BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.True(result.Entity!.IsAppAdmin);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_ClaimInvitation_LogsAcceptedAsInfo()
+    {
+        SeedPendingInvitation(Email, invitedByUserId: Guid.NewGuid());
+
+        var service = CreateService(BuildAccessor());
+        await service.BootstrapAsync(TestContext.Current.CancellationToken);
+
+        // An ordinary accept (inviter != acceptor) is informational.
+        _securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.InvitationAccepted,
+            SecurityEventSeverity.Info,
+            It.IsAny<string>(), It.IsAny<string>(), _tenantId, It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_SelfGrantInvitation_LogsAcceptedAsWarning()
+    {
+        // The user who created the invite is the same account that claims it — the self-grant abuse path.
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = Email });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        SeedPendingInvitation(Email, role: TenantRole.Owner, invitedByUserId: userId);
+
+        var service = CreateService(BuildAccessor());
+        await service.BootstrapAsync(TestContext.Current.CancellationToken);
+
+        _securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.InvitationAccepted,
+            SecurityEventSeverity.Warning,
+            It.IsAny<string>(), It.IsAny<string>(), _tenantId, userId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

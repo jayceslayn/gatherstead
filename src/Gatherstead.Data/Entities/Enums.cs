@@ -110,7 +110,9 @@ public enum SecurityEventType
     SoftDelete,
     Restore,
     AppAdminAction,
-    RateLimitBreach
+    RateLimitBreach,
+    InvitationCreated,
+    InvitationAccepted
 }
 
 public enum SecurityEventSeverity

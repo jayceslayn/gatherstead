@@ -535,4 +535,29 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         var service = CreateService(_userId);
         Assert.Null(await service.GetCallerHouseholdRoleAsync(_tenantId, _householdId, TestContext.Current.CancellationToken));
     }
+
+    // ── App-admin two-axis invariant ─────────────────────────────────────────
+    // Guardrail: an app admin must have full write AUTHORITY on any tenant while their PII
+    // VISIBILITY collapses to none (null tenant role / no sensitive scope). Asserting both axes
+    // together prevents a future change from leaking PII to admins or silently revoking authority.
+
+    [Fact]
+    public async Task AppAdmin_HasFullAuthorityButNoVisibility()
+    {
+        // No TenantUser seeded — the admin is deliberately not a member of this tenant.
+        var service = CreateService(_userId, isAppAdmin: true);
+        var ct = TestContext.Current.CancellationToken;
+
+        // Authority axis: every write gate clears.
+        Assert.True(await service.CanManageTenantAsync(_tenantId, ct));
+        Assert.True(await service.CanManageEventAsync(_tenantId, ct));
+        Assert.True(await service.CanManageHouseholdAsync(_tenantId, _householdId, ct));
+        Assert.True(await service.CanEditMemberAsync(_tenantId, _householdId, Guid.NewGuid(), ct));
+
+        // Visibility axis: no tenant role, no sensitive read scope.
+        Assert.Null(await service.GetCallerTenantRoleAsync(_tenantId, ct));
+        var scope = await service.GetSensitiveReadScopeAsync(_tenantId, ct);
+        Assert.False(scope.IsGlobal);
+        Assert.False(scope.CanReadSensitive(_householdId));
+    }
 }

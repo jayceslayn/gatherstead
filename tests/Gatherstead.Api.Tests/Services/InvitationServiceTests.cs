@@ -2,6 +2,7 @@ using Gatherstead.Api.Contracts.Invitations;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Invitations;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Tests.Fixtures;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -16,6 +17,7 @@ public class InvitationServiceTests : IAsyncLifetime
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _actorUserId = Guid.NewGuid();
     private readonly Guid _householdId = Guid.NewGuid();
+    private Mock<ISecurityEventLogger> _securityLogger = null!;
 
     public async ValueTask InitializeAsync()
     {
@@ -39,7 +41,8 @@ public class InvitationServiceTests : IAsyncLifetime
         var auth = Mock.Of<IMemberAuthorizationService>(a =>
             a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManage)
             && a.GetCallerTenantRoleAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult((TenantRole?)actorRole));
-        return new InvitationService(_dbContext, tenantContext, userContext, auth);
+        _securityLogger = new Mock<ISecurityEventLogger>();
+        return new InvitationService(_dbContext, tenantContext, userContext, auth, _securityLogger.Object);
     }
 
     [Fact]
@@ -204,5 +207,49 @@ public class InvitationServiceTests : IAsyncLifetime
         Assert.True(second.Successful);
         Assert.Equal(InvitationStatus.Pending, second.Entity!.Status);
         Assert.NotEqual(first.Entity.Id, second.Entity.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_PendingInvite_LogsInvitationCreated()
+    {
+        var request = new CreateInvitationRequest { Email = "logme@test.com", Role = TenantRole.Member };
+
+        var result = await CreateService().CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        _securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.InvitationCreated,
+            SecurityEventSeverity.Info,
+            It.IsAny<string>(), It.IsAny<string>(), _tenantId, _actorUserId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        // A pending invite is not yet accepted, so no acceptance event is emitted.
+        _securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.InvitationAccepted,
+            It.IsAny<SecurityEventSeverity>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ExistingUserAutoAccept_LogsCreatedAndAccepted()
+    {
+        var existingUserId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = existingUserId, ExternalId = "auto@idp", Email = "auto@test.com" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var request = new CreateInvitationRequest { Email = "auto@test.com", Role = TenantRole.Member };
+
+        var result = await CreateService().CreateAsync(_tenantId, request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(InvitationStatus.Accepted, result.Entity!.Status);
+        _securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.InvitationCreated, SecurityEventSeverity.Info,
+            It.IsAny<string>(), It.IsAny<string>(), _tenantId, _actorUserId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        // Inviter (_actorUserId) differs from the accepting user, so acceptance is informational.
+        _securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.InvitationAccepted, SecurityEventSeverity.Info,
+            It.IsAny<string>(), It.IsAny<string>(), _tenantId, existingUserId, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

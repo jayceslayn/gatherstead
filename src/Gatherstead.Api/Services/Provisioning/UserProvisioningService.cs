@@ -3,6 +3,7 @@ using Gatherstead.Api.Contracts.Invitations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Membership;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +14,16 @@ public class UserProvisioningService : IUserProvisioningService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISecurityEventLogger _securityEventLogger;
 
     public UserProvisioningService(
         GathersteadDbContext dbContext,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ISecurityEventLogger securityEventLogger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
     }
 
     public async Task<UserBootstrapResponse> BootstrapAsync(CancellationToken cancellationToken = default)
@@ -81,7 +85,10 @@ public class UserProvisioningService : IUserProvisioningService
             .Select(tu => new BootstrapTenantDto(tu.TenantId, tu.Role))
             .ToListAsync(cancellationToken);
 
-        response.SetSuccess(new UserBootstrapDto(userId, claimed, tenants));
+        // A brand-new (self-created) user is never an app admin; only an existing row can carry the flag.
+        var isAppAdmin = user?.IsAppAdmin ?? false;
+
+        response.SetSuccess(new UserBootstrapDto(userId, isAppAdmin, claimed, tenants));
         return response;
     }
 
@@ -107,8 +114,31 @@ public class UserProvisioningService : IUserProvisioningService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Emit attribution events after the grant is durable. Logged separately so a logging failure
+        // can never roll back a membership grant. Invitee email is omitted (PII) — the invitation row
+        // referenced by id already carries it.
+        foreach (var invite in pending)
+            await LogInvitationAcceptedAsync(invite, userId, cancellationToken);
+
         return pending.Count;
     }
+
+    private Task LogInvitationAcceptedAsync(Invitation invite, Guid acceptedByUserId, CancellationToken cancellationToken)
+    {
+        // A self-grant (acceptor invited themselves) is the abuse vector worth surfacing for review.
+        var selfGrant = invite.InvitedByUserId == acceptedByUserId;
+        return _securityEventLogger.LogAsync(
+            SecurityEventType.InvitationAccepted,
+            selfGrant ? SecurityEventSeverity.Warning : SecurityEventSeverity.Info,
+            resource: $"Invitation:{invite.Id}",
+            detail: $"{{\"role\":\"{invite.Role}\",\"invitedByUserId\":{JsonId(invite.InvitedByUserId)},\"selfGrant\":{(selfGrant ? "true" : "false")}}}",
+            tenantId: invite.TenantId,
+            userId: acceptedByUserId,
+            cancellationToken: cancellationToken);
+    }
+
+    private static string JsonId(Guid? id) => id is null ? "null" : $"\"{id}\"";
 
     /// <summary>
     /// Resolves the caller's email for invitation matching, but only when the identity provider

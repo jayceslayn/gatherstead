@@ -6,7 +6,7 @@ const props = defineProps<{
   minRole: TenantRole
 }>()
 
-const { role } = useTenantRole()
+const { role, isAppAdmin } = useTenantRole()
 
 const roleOrder: Record<TenantRole, number> = {
   Guest: 0,
@@ -17,6 +17,8 @@ const roleOrder: Record<TenantRole, number> = {
 }
 
 const hasAccess = computed(() => {
+  // App admins clear every threshold (authority axis); role stays null so PII remains masked.
+  if (isAppAdmin.value) return true
   if (!role.value) return false
   return roleOrder[role.value] >= roleOrder[props.minRole]
 })

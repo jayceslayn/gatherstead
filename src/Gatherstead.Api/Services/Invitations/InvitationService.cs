@@ -2,6 +2,7 @@ using Gatherstead.Api.Contracts.Invitations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Membership;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -17,17 +18,20 @@ public class InvitationService : IInvitationService
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly ISecurityEventLogger _securityEventLogger;
 
     public InvitationService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         ICurrentUserContext currentUserContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        ISecurityEventLogger securityEventLogger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
     }
 
     public async Task<InvitationResponse> CreateAsync(
@@ -106,6 +110,33 @@ public class InvitationService : IInvitationService
         _dbContext.Invitations.Add(invitation);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Attribution events emitted after persist so a logging failure can never block the invite.
+        // Invitee email is omitted (PII) — the invitation row referenced by id already carries it.
+        await _securityEventLogger.LogAsync(
+            SecurityEventType.InvitationCreated,
+            SecurityEventSeverity.Info,
+            resource: $"Invitation:{invitation.Id}",
+            detail: $"{{\"role\":\"{invitation.Role}\",\"householdId\":{JsonId(invitation.HouseholdId)}}}",
+            tenantId: tenantId,
+            userId: _currentUserContext.UserId,
+            cancellationToken: cancellationToken);
+
+        // The invite was auto-accepted (the invitee already had an account). Record the acceptance too,
+        // flagging a self-grant — an inviter granting a role to their own account — for review.
+        if (invitation.Status == InvitationStatus.Accepted)
+        {
+            var selfGrant = invitation.InvitedByUserId is not null
+                && invitation.InvitedByUserId == invitation.AcceptedByUserId;
+            await _securityEventLogger.LogAsync(
+                SecurityEventType.InvitationAccepted,
+                selfGrant ? SecurityEventSeverity.Warning : SecurityEventSeverity.Info,
+                resource: $"Invitation:{invitation.Id}",
+                detail: $"{{\"role\":\"{invitation.Role}\",\"invitedByUserId\":{JsonId(invitation.InvitedByUserId)},\"selfGrant\":{(selfGrant ? "true" : "false")}}}",
+                tenantId: tenantId,
+                userId: invitation.AcceptedByUserId,
+                cancellationToken: cancellationToken);
+        }
+
         response.SetSuccess(MapToDto(invitation));
         return response;
     }
@@ -164,4 +195,6 @@ public class InvitationService : IInvitationService
 
     private static InvitationDto MapToDto(Invitation i) => new(
         i.Id, i.TenantId, i.Email, i.Role, i.HouseholdId, i.HouseholdRole, i.Status, i.CreatedAt, i.AcceptedAt);
+
+    private static string JsonId(Guid? id) => id is null ? "null" : $"\"{id}\"";
 }

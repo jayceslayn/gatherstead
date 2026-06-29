@@ -1,5 +1,6 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useCurrentMemberStore } from '~/stores/member'
+import { useSessionStore } from '~/stores/session'
 import type { TenantRole } from '~/repositories/types'
 import { DEMO_TENANT, DEMO_USER } from '~/repositories/demo/demoConstants'
 
@@ -12,12 +13,17 @@ interface TenantUserMeApiResponse {
   entity: { linkedMemberId: string | null, linkedHouseholdId: string | null }
 }
 
+interface BootstrapApiResponse {
+  entity: { userId: string, isAppAdmin: boolean, claimedInvitations: number }
+}
+
 // Provision the internal user and claim any pending invitations exactly once per page load,
 // before tenants are resolved, so a freshly-invited user's membership is already in place.
-let bootstrapPromise: Promise<unknown> | null = null
+let bootstrapPromise: Promise<BootstrapApiResponse | null> | null = null
 function ensureBootstrap() {
   if (!bootstrapPromise) {
-    bootstrapPromise = $fetch('/api/proxy/me/bootstrap', { method: 'POST' }).catch(() => null)
+    bootstrapPromise = $fetch<BootstrapApiResponse>('/api/proxy/me/bootstrap', { method: 'POST' })
+      .catch(() => null)
   }
   return bootstrapPromise
 }
@@ -27,6 +33,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const tenantStore = useTenantStore()
   const memberStore = useCurrentMemberStore()
+  const sessionStore = useSessionStore()
 
   if (__DEMO_MODE__) {
     if (!tenantStore.currentTenantId) {
@@ -54,7 +61,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Live mode: provision the internal user and claim any pending invitations before
   // resolving tenants, so a freshly-invited user's membership is already in place.
-  await ensureBootstrap()
+  // The bootstrap response also carries the account-level app-admin flag.
+  const bootstrap = await ensureBootstrap()
+  sessionStore.setAppAdmin(bootstrap?.entity?.isAppAdmin === true)
 
   // Live mode: resolve tenant on first load
   if (!tenantStore.currentTenantId) {

@@ -5356,6 +5356,7 @@ export interface components {
         UserBootstrapDto: {
             /** Format: uuid */
             userId?: string;
+            isAppAdmin?: boolean;
             /** Format: int32 */
             claimedInvitations?: number;
             tenants?: components["schemas"]["BootstrapTenantDto"][];
