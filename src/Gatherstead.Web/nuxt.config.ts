@@ -25,6 +25,7 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     'nuxt-auth-utils',
     '@nuxtjs/i18n',
+    'nuxt-security',
   ],
 
   typescript: {
@@ -36,6 +37,49 @@ export default defineNuxtConfig({
     '/': { prerender: true },
     '/tenants/**': { ssr: false },
     '/app/**': { ssr: false },
+  },
+
+  // Content Security Policy (+ baseline security headers) via nuxt-security. Shipped report-only
+  // first: verify zero violations live, then flip contentSecurityPolicyReportOnly to false.
+  security: {
+    contentSecurityPolicyReportOnly: true,
+
+    // SSR routes: per-request nonce for inline Nuxt hydration scripts.
+    nonce: true,
+
+    // Prerendered `/` and the ssr:false SPA trees (/tenants/**, /app/**, and the whole app in
+    // demo mode) have no per-request render, so their inline scripts are whitelisted by build-time
+    // SHA-256 hash and the CSP is re-emitted as real HTTP headers through Nitro.
+    ssg: {
+      hashScripts: true,
+      hashStyles: false, // styles via 'unsafe-inline'; hashing is brittle with Tailwind v4 / @nuxt/ui
+      meta: false, // <meta> CSP can't carry report-only / frame-ancestors / report-uri
+      nitroHeaders: true, // serve prerendered-page CSP as HTTP headers (default; explicit)
+    },
+
+    headers: {
+      contentSecurityPolicy: {
+        'base-uri': ["'self'"],
+        'object-src': ["'none'"],
+        'frame-ancestors': ["'none'"],
+        // 'self' for _nuxt/*.js + the npm-bundled App Insights SDK; nonce (SSR) + hash
+        // (prerendered/SPA); 'strict-dynamic'/'unsafe-inline' kept as CSP1/2 fallbacks.
+        'script-src': ["'self'", 'https:', "'unsafe-inline'", "'strict-dynamic'", "'nonce-{{nonce}}'"],
+        // Vue / @nuxt/ui / Tailwind v4 inject runtime inline styles.
+        'style-src': ["'self'", "'unsafe-inline'"],
+        // Same-origin API via the Nitro proxy + App Insights ingestion + live metrics.
+        'connect-src': [
+          "'self'",
+          'https://*.applicationinsights.azure.com',
+          'https://*.in.applicationinsights.azure.com',
+          'https://*.livediagnostics.monitor.azure.com',
+        ],
+        'font-src': ["'self'"], // @nuxt/fonts self-hosts at build
+        'img-src': ["'self'", 'data:', 'https:'], // @nuxt/image + icon data URIs
+        'form-action': ["'self'"],
+        'upgrade-insecure-requests': true,
+      },
+    },
   },
 
   i18n: {
