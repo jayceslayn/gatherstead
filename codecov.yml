@@ -1,0 +1,4 @@
+ignore:
+  - "src/Gatherstead.Data/Migrations/**"   # auto-generated EF Core migrations; excluded at collection time too
+  - "src/Gatherstead.Data.Setup/**"        # standalone Always-Encrypted console tool; not unit-tested
+  - "tools/FlagsCodegen/**"                # standalone codegen tool; not unit-tested
