@@ -20,6 +20,12 @@ public class User : AuditableEntity
     [MaxLength(256)]
     public string? Email { get; set; }
 
+    // Seeded once from the id_token "name" claim when the row is first created, then app-owned:
+    // the user can edit it via PUT /api/me and later logins never overwrite it (Entra has no
+    // self-service profile editing, so the editable copy lives here, not in the directory).
+    [MaxLength(256)]
+    public string? DisplayName { get; set; }
+
     public bool IsAppAdmin { get; set; }
 
     public ICollection<TenantUser> Tenants { get; set; } = new List<TenantUser>();

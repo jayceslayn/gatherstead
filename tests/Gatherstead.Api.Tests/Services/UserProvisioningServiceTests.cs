@@ -38,11 +38,13 @@ public class UserProvisioningServiceTests : IAsyncLifetime
         string? externalId = ExternalId,
         string? email = Email,
         bool emailVerified = true,
-        bool authenticated = true)
+        bool authenticated = true,
+        string? displayName = null)
     {
         var claims = new List<Claim>();
         if (externalId is not null) claims.Add(new Claim("sub", externalId));
         if (email is not null) claims.Add(new Claim("email", email));
+        if (displayName is not null) claims.Add(new Claim("name", displayName));
         claims.Add(new Claim("email_verified", emailVerified ? "true" : "false"));
 
         var identity = authenticated ? new ClaimsIdentity(claims, "TestAuth") : new ClaimsIdentity();
@@ -191,6 +193,87 @@ public class UserProvisioningServiceTests : IAsyncLifetime
 
         Assert.True(result.Successful);
         Assert.True(result.Entity!.IsAppAdmin);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_NewUser_SeedsDisplayNameFromNameClaim()
+    {
+        var result = await CreateService(BuildAccessor(displayName: "Ada Lovelace"))
+            .BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var user = await _dbContext.Users.SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal("Ada Lovelace", user.DisplayName);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_ExistingUser_NeverOverwritesDisplayName()
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = Email, DisplayName = "Chosen Name" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // A later login presents a different "name" claim; the app-owned value must survive.
+        var result = await CreateService(BuildAccessor(displayName: "Directory Name"))
+            .BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var user = await _dbContext.Users.SingleAsync(u => u.Id == userId, TestContext.Current.CancellationToken);
+        Assert.Equal("Chosen Name", user.DisplayName);
+    }
+
+    [Fact]
+    public async Task GetMeAsync_ReturnsProfile()
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = Email, DisplayName = "Ada Lovelace" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService(BuildAccessor()).GetMeAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(userId, result.Entity!.UserId);
+        Assert.Equal(Email, result.Entity.Email);
+        Assert.Equal("Ada Lovelace", result.Entity.DisplayName);
+    }
+
+    [Fact]
+    public async Task GetMeAsync_UnprovisionedUser_ReturnsError()
+    {
+        var result = await CreateService(BuildAccessor()).GetMeAsync(TestContext.Current.CancellationToken);
+
+        Assert.False(result.Successful);
+    }
+
+    [Fact]
+    public async Task UpdateDisplayNameAsync_UpdatesAndReturnsProfile()
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = Email, DisplayName = "Old" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService(BuildAccessor())
+            .UpdateDisplayNameAsync("  New Name  ", TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal("New Name", result.Entity!.DisplayName);
+        var user = await _dbContext.Users.SingleAsync(u => u.Id == userId, TestContext.Current.CancellationToken);
+        Assert.Equal("New Name", user.DisplayName);
+    }
+
+    [Fact]
+    public async Task UpdateDisplayNameAsync_BlankValue_ReturnsError()
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = Email, DisplayName = "Old" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService(BuildAccessor())
+            .UpdateDisplayNameAsync("   ", TestContext.Current.CancellationToken);
+
+        Assert.False(result.Successful);
+        var user = await _dbContext.Users.SingleAsync(u => u.Id == userId, TestContext.Current.CancellationToken);
+        Assert.Equal("Old", user.DisplayName);
     }
 
     [Fact]

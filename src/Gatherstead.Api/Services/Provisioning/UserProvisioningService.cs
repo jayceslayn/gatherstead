@@ -59,7 +59,15 @@ public class UserProvisioningService : IUserProvisioningService
             // (self-created) row before it becomes queryable.
             httpContext.Items[HttpContextCurrentUserContext.CacheKey] = (Guid?)userId;
 
-            _dbContext.Users.Add(new User { Id = userId, ExternalId = externalId, Email = email });
+            // DisplayName is seeded once here from the token "name" claim. Unlike Email (refreshed
+            // below on every login), it is never re-synced afterwards so an in-app edit survives.
+            _dbContext.Users.Add(new User
+            {
+                Id = userId,
+                ExternalId = externalId,
+                Email = email,
+                DisplayName = ResolveDisplayName(principal),
+            });
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
         else
@@ -71,6 +79,7 @@ public class UserProvisioningService : IUserProvisioningService
                 user.Email = email;
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
+            // Intentionally do NOT touch DisplayName here: it is app-owned after first login.
         }
 
         var claimed = 0;
@@ -90,6 +99,81 @@ public class UserProvisioningService : IUserProvisioningService
 
         response.SetSuccess(new UserBootstrapDto(userId, isAppAdmin, claimed, tenants));
         return response;
+    }
+
+    public async Task<MeResponse> GetMeAsync(CancellationToken cancellationToken = default)
+    {
+        var response = new MeResponse();
+        var user = await ResolveCurrentUserAsync(response, cancellationToken);
+        if (user is null)
+            return response;
+
+        response.SetSuccess(new MeDto(user.Id, user.Email, user.DisplayName));
+        return response;
+    }
+
+    public async Task<MeResponse> UpdateDisplayNameAsync(string displayName, CancellationToken cancellationToken = default)
+    {
+        var response = new MeResponse();
+        var user = await ResolveCurrentUserAsync(response, cancellationToken);
+        if (user is null)
+            return response;
+
+        var normalized = (displayName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Display name is required.");
+            return response;
+        }
+        if (normalized.Length > 256)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Display name must be 256 characters or fewer.");
+            return response;
+        }
+
+        user.DisplayName = normalized;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        response.SetSuccess(new MeDto(user.Id, user.Email, user.DisplayName));
+        return response;
+    }
+
+    /// <summary>
+    /// Loads the authenticated caller's tracked <c>User</c> row, adding an error message to the
+    /// response when the caller is unauthenticated, missing the subject claim, or has not yet been
+    /// provisioned (bootstrap runs at login, so a missing row is an exceptional state).
+    /// </summary>
+    private async Task<User?> ResolveCurrentUserAsync<T>(BaseEntityResponse<T> response, CancellationToken cancellationToken)
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        var principal = httpContext?.User;
+        if (httpContext is null || principal?.Identity?.IsAuthenticated != true)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Not authenticated.");
+            return null;
+        }
+
+        var externalId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? principal.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(externalId))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Authenticated user is missing a required identifier claim.");
+            return null;
+        }
+
+        var user = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.ExternalId == externalId, cancellationToken);
+        if (user is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "User has not been provisioned.");
+            return null;
+        }
+
+        // Pre-seed the resolved id so the auditing interceptor doesn't issue a lazy lookup against
+        // this same DbContext mid-SaveChanges (this route isn't tenant-scoped, so nothing else
+        // populates the cache first). Mirrors the brand-new-user path in BootstrapAsync.
+        httpContext.Items[HttpContextCurrentUserContext.CacheKey] = (Guid?)user.Id;
+        return user;
     }
 
     private async Task<int> ClaimInvitationsAsync(Guid userId, string email, CancellationToken cancellationToken)
@@ -158,6 +242,18 @@ public class UserProvisioningService : IUserProvisioningService
             ?? principal.FindFirst("email")?.Value
             ?? principal.FindFirst("emails")?.Value;
         return string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+    }
+
+    /// <summary>
+    /// Resolves the caller's display name from the token "name" claim (the Entra user-flow
+    /// "Display Name" attribute). Used only to seed <see cref="User.DisplayName"/> at first login;
+    /// returns null when absent so the seeded value stays empty rather than blank-padded.
+    /// </summary>
+    private static string? ResolveDisplayName(ClaimsPrincipal principal)
+    {
+        var name = principal.FindFirst("name")?.Value
+            ?? principal.FindFirst(ClaimTypes.Name)?.Value;
+        return string.IsNullOrWhiteSpace(name) ? null : name.Trim();
     }
 
     /// <summary>

@@ -31,6 +31,7 @@ import type {
   AttributeWriteEntry,
   EventReport,
   InvitationSummary,
+  MeSummary,
   ShoppingItem,
   ShoppingItemIntentStatus,
 } from './types'
@@ -111,6 +112,11 @@ export interface ITenantUserRepository {
   ): Promise<InvitationSummary>
   listInvitations(tenantId: string): Promise<InvitationSummary[]>
   revokeInvitation(tenantId: string, invitationId: string): Promise<void>
+}
+
+export interface IMeRepository {
+  getMe(): Promise<MeSummary>
+  updateDisplayName(displayName: string): Promise<MeSummary>
 }
 
 export interface IEventRepository {
@@ -468,6 +474,7 @@ export interface Repositories {
   ageBands: IAgeBandRepository
   dietaryTags: IDietaryTagRepository
   tenantUsers: ITenantUserRepository
+  me: IMeRepository
   events: IEventRepository
   eventAttendance: IEventAttendanceRepository
   mealPlans: IMealPlanRepository

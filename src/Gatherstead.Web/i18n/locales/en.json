@@ -550,7 +550,17 @@
   },
   "settings": {
     "title": "Settings",
-    "users": "User Management"
+    "users": "User Management",
+    "account": "Account"
+  },
+  "account": {
+    "title": "Account",
+    "subtitle": "Your profile details",
+    "email": "Email",
+    "emailHelp": "Managed by your sign-in provider and can't be changed here.",
+    "displayName": "Display name",
+    "displayNameRequired": "Display name is required.",
+    "saved": "Profile updated"
   },
   "tenantUser": {
     "title": "Users",

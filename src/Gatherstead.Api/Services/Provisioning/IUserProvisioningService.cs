@@ -10,4 +10,14 @@ public interface IUserProvisioningService
     /// email. Returns the resolved user id and the tenants they now belong to.
     /// </summary>
     Task<UserBootstrapResponse> BootstrapAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the authenticated caller's own profile (id, email, display name).
+    /// </summary>
+    Task<MeResponse> GetMeAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Updates the authenticated caller's editable display name and returns the refreshed profile.
+    /// </summary>
+    Task<MeResponse> UpdateDisplayNameAsync(string displayName, CancellationToken cancellationToken = default);
 }

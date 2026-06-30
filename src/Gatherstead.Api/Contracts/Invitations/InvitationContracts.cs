@@ -40,3 +40,17 @@ public record UserBootstrapDto(
     IReadOnlyList<BootstrapTenantDto> Tenants);
 
 public class UserBootstrapResponse : BaseEntityResponse<UserBootstrapDto> { }
+
+public record MeDto(
+    [property: Required] Guid UserId,
+    string? Email,
+    string? DisplayName);
+
+public class MeResponse : BaseEntityResponse<MeDto> { }
+
+public class UpdateMeRequest
+{
+    [Required]
+    [StringLength(256, MinimumLength = 1)]
+    public string DisplayName { get; init; } = string.Empty;
+}

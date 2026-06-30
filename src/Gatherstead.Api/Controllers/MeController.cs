@@ -32,4 +32,26 @@ public class MeController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpGet]
+    public async Task<ActionResult<MeResponse>> Get(CancellationToken cancellationToken)
+    {
+        var response = await _provisioningService.GetMeAsync(cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        return Ok(response);
+    }
+
+    [HttpPut]
+    public async Task<ActionResult<MeResponse>> Update([FromBody] UpdateMeRequest request, CancellationToken cancellationToken)
+    {
+        var response = await _provisioningService.UpdateDisplayNameAsync(request.DisplayName, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        return Ok(response);
+    }
 }

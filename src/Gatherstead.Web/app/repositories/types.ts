@@ -48,6 +48,9 @@ export type HouseholdUserSummary = S['HouseholdUserDto']
 // ── Invitations ────────────────────────────────────────────────────────────
 export type InvitationSummary = S['InvitationDto']
 
+// ── Current user (the authenticated caller's own profile) ───────────────────
+export type MeSummary = S['MeDto']
+
 // ── Households ────────────────────────────────────────────────────────────
 export type HouseholdSummary = OmitAudit<S['HouseholdDto']>
 

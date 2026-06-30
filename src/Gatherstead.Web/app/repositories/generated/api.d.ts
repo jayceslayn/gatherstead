@@ -1952,6 +1952,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MeResponse"];
+                        "application/json": components["schemas"]["MeResponse"];
+                        "text/json": components["schemas"]["MeResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateMeRequest"];
+                    "text/json": components["schemas"]["UpdateMeRequest"];
+                    "application/*+json": components["schemas"]["UpdateMeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MeResponse"];
+                        "application/json": components["schemas"]["MeResponse"];
+                        "text/json": components["schemas"]["MeResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/{tenantId}/events/{eventId}/meal-templates/{templateId}/plans/{planId}/attendance": {
         parameters: {
             query?: never;
@@ -4762,6 +4826,17 @@ export interface components {
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
         };
+        MeDto: {
+            /** Format: uuid */
+            userId: string;
+            email?: string | null;
+            displayName?: string | null;
+        };
+        MeResponse: {
+            entity?: components["schemas"]["MeDto"];
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
         MealAttendanceDto: {
             /** Format: uuid */
             id?: string;
@@ -5241,6 +5316,9 @@ export interface components {
             name: string;
             notes?: string | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
+        };
+        UpdateMeRequest: {
+            displayName: string;
         };
         UpdateMealPlanRequest: {
             notes?: string | null;

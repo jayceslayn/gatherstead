@@ -550,7 +550,17 @@
   },
   "settings": {
     "title": "Configuración",
-    "users": "Gestión de Usuarios"
+    "users": "Gestión de Usuarios",
+    "account": "Cuenta"
+  },
+  "account": {
+    "title": "Cuenta",
+    "subtitle": "Los datos de tu perfil",
+    "email": "Correo electrónico",
+    "emailHelp": "Gestionado por tu proveedor de inicio de sesión y no se puede cambiar aquí.",
+    "displayName": "Nombre para mostrar",
+    "displayNameRequired": "El nombre para mostrar es obligatorio.",
+    "saved": "Perfil actualizado"
   },
   "tenantUser": {
     "title": "Usuarios",

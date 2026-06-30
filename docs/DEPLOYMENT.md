@@ -283,6 +283,23 @@ web app registration is attached to. In the **Microsoft Entra admin center** (ex
    here:** no WAF/Front Door in front of the App Services, no anomaly alerting on User-creation rate, and no cleanup
    job for orphaned zero-tenant users — the residual risk is junk-row accumulation, not unauthorized access.
 
+#### Return the Display Name claim (required for `User.DisplayName`)
+
+The API seeds a user's editable `User.DisplayName` (shown/edited on **Settings → Account**) from the token
+`name` claim at first login. *Collecting* the Display Name attribute on the user flow is not enough — the flow
+must also **return** it as a token claim:
+
+1. **External Identities → User flows → sign-up and sign-in → User attributes** — ensure **Display Name** is
+   collected, and under **Application claims** (the claims the token returns) tick **Display Name** so it is
+   emitted as the `name` claim.
+2. The backend reads the claim from the **access token** presented to `POST /api/me/bootstrap` (the same way it
+   reads `email`/`email_verified`). Confirm `name` is present there. If a deployment only emits `name` on the
+   id_token, the seed will be empty and the user can still set their name manually on the Account page.
+
+This claim list is configured **in the portal only** — it is not represented in the Bicep under `infrastructure/`,
+which carries the auth *parameters* (`Instance`, `Domain`, `ClientId`, `ValidIssuer`) but not the user-flow
+attribute/claim selection.
+
 `SignUpSignInPolicyId` stays **empty** throughout — it is an Azure AD B2C concept; Entra External ID uses the
 tenant's user flow instead, not a policy ID in the authority URL.
 
