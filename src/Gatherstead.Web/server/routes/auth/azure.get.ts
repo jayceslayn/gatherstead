@@ -1,5 +1,5 @@
 import { buildAuthority } from '~~/server/utils/auth'
-import { buildSecureSession } from '~~/server/utils/session'
+import { buildSecureSession, persistSecureSession } from '~~/server/utils/session'
 
 // Microsoft Entra External ID (ciamlogin.com) sign-in. The Nuxt server redeems the authorization code
 // server-side, so this is a confidential client: the redirect URI is registered under a "Web" platform
@@ -34,14 +34,20 @@ export default defineOAuthOidcEventHandler({
     const claims = JSON.parse(
       Buffer.from(payload, 'base64url').toString(),
     ) as { sub: string, name?: string, email?: string, preferred_username?: string }
+    // Establish the session (and its id + small cookie) with only the user claims, then stash the
+    // tokens in the server-side store keyed by that session id — keeping the large Entra tokens out of
+    // the cookie. setUserSession must run first so persistSecureSession has a session id to key on.
     await setUserSession(event, {
       user: {
         id: claims.sub,
         name: claims.name ?? claims.preferred_username ?? '',
         email: claims.email ?? claims.preferred_username ?? '',
       },
-      secure: buildSecureSession(tokens.access_token, tokens.refresh_token, tokens.expires_in),
     })
+    await persistSecureSession(
+      event,
+      buildSecureSession(tokens.access_token, tokens.refresh_token, tokens.expires_in),
+    )
 
     // Provision the internal Users row (and claim any pending invitations) once, at login, so the
     // first authenticated call (GET /api/proxy/tenants on /tenants) resolves to a real user instead

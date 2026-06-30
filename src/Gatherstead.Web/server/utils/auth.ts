@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3'
-import { buildSecureSession, getSecureSession } from '~~/server/utils/session'
+import { buildSecureSession, clearSecureSession, getSecureSession, persistSecureSession } from '~~/server/utils/session'
 
 interface OidcTokenResponse {
   access_token: string
@@ -67,24 +67,20 @@ export async function getValidAccessToken(event: H3Event): Promise<string> {
   }
 
   if (!secure.refreshToken) {
-    await clearUserSession(event)
+    await clearSecureSession(event)
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
   try {
     const tokens = await refreshTokens(secure.refreshToken)
-    await setUserSession(event, {
-      // setUserSession deep-merges, so this updates `secure` while preserving the `user` claims.
-      // The rotated session cookie survives the downstream proxyRequest only because the API is a
-      // stateless JWT resource that returns no Set-Cookie: h3's sendProxy overwrites the response
-      // set-cookie with upstream cookies whenever the upstream sends any. If the API (or a security
-      // middleware) ever sets a cookie, this refresh would stop persisting — re-append it after proxy.
-      secure: buildSecureSession(
-        tokens.access_token,
-        tokens.refresh_token ?? secure.refreshToken,
-        tokens.expires_in,
-      ),
-    })
+    // Tokens live in the server-side store (keyed by session id), not the cookie, so the rotated
+    // refresh token is written there and is unaffected by the downstream proxyRequest's Set-Cookie
+    // handling. Entra rotates the refresh token on each use; fall back to the existing one if absent.
+    await persistSecureSession(event, buildSecureSession(
+      tokens.access_token,
+      tokens.refresh_token ?? secure.refreshToken,
+      tokens.expires_in,
+    ))
     return tokens.access_token
   }
   catch (err) {
@@ -98,7 +94,7 @@ export async function getValidAccessToken(event: H3Event): Promise<string> {
       // Clear the session so the client 401 interceptor re-authenticates (seamless under an active
       // Entra SSO session).
       console.error('Azure refresh token rejected (invalid_grant); clearing session')
-      await clearUserSession(event)
+      await clearSecureSession(event)
       throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
     }
     // Transient (network / 5xx / timeout) or a config fault: keep the session so the next request

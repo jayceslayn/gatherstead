@@ -12,6 +12,18 @@ export default defineNuxtConfig({
 
   devtools: { enabled: true },
 
+  // Server-side store for the OAuth tokens (see server/utils/session.ts). The session cookie only
+  // carries the user claims + an opaque session id, so the large Entra access/refresh tokens are kept
+  // out of the cookie (they would blow past the browser's ~4096-byte cookie limit and get silently
+  // dropped). In-memory driver: per-instance, lost on restart — the 401 interceptor re-authenticates
+  // seamlessly under an active Entra SSO session. Swap `driver` for redis/azure-storage-table here to
+  // persist across restarts.
+  nitro: {
+    storage: {
+      sessions: { driver: 'memory' },
+    },
+  },
+
   css: [
     '~/assets/css/main.css',
   ],
@@ -112,6 +124,21 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    // nuxt-auth-utils session cookie. It now carries only the user claims + the opaque session id
+    // (the OAuth tokens live in the `sessions` server store), so we lock the cookie down explicitly.
+    // `sameSite: 'lax'` (not 'strict') is required so the cookie survives the cross-site redirect back
+    // from Entra. The `__Host-` prefix is the strongest binding (forces Secure + Path=/ + no Domain)
+    // but breaks plain-http local dev, so it's production-only. Password is bound from
+    // NUXT_SESSION_PASSWORD at runtime.
+    session: {
+      name: process.env.NODE_ENV === 'production' ? '__Host-session' : 'nuxt-session',
+      cookie: {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+      },
+    },
     // Server-only (private) — Entra External ID, used for the OIDC authorization-code + PKCE flow in
     // server/routes/auth/azure.get.ts. The code is redeemed server-side as a confidential web client,
     // so a client secret is required (PKCE alone only works for browser/SPA cross-origin redemption).
