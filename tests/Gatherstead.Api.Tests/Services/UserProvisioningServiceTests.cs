@@ -175,6 +175,26 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BootstrapAsync_ExcludesSoftDeletedMembership()
+    {
+        // The tenants list bypasses the tenant filter (no ambient tenant), but soft-delete must
+        // stay enforced: a removed membership must not resurface at login.
+        var ct = TestContext.Current.CancellationToken;
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = Email });
+        var membership = new TenantUser { TenantId = _tenantId, UserId = userId, Role = TenantRole.Owner };
+        _dbContext.TenantUsers.Add(membership);
+        await _dbContext.SaveChangesAsync(ct);
+        membership.IsDeleted = true;
+        await _dbContext.SaveChangesAsync(ct);
+
+        var result = await CreateService(BuildAccessor()).BootstrapAsync(ct);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!.Tenants);
+    }
+
+    [Fact]
     public async Task BootstrapAsync_NewUser_IsAppAdminFalse()
     {
         var result = await CreateService(BuildAccessor()).BootstrapAsync(TestContext.Current.CancellationToken);

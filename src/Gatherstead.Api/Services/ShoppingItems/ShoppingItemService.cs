@@ -278,10 +278,11 @@ public class ShoppingItemService : IShoppingItemService
             return response;
         }
 
-        // Find-or-revive the member's intent. Bypass the soft-delete filter so a previously removed
-        // intent is reused instead of inserting a duplicate (the unique index spans soft-deleted rows).
+        // Find-or-revive the member's intent. Bypass only the soft-delete filter so a previously
+        // removed intent is reused instead of inserting a duplicate (the unique index spans
+        // soft-deleted rows). Tenant isolation stays enforced.
         var intent = await _dbContext.ShoppingItemIntents
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .FirstOrDefaultAsync(
                 x => x.TenantId == tenantId && x.ShoppingItemId == itemId && x.HouseholdMemberId == memberId,
                 cancellationToken);

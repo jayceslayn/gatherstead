@@ -87,8 +87,10 @@ public class UserProvisioningService : IUserProvisioningService
             claimed = await ClaimInvitationsAsync(userId, email, cancellationToken);
 
         // Bootstrap is not tenant-scoped, so the global tenant filter would hide tenant rows.
+        // Drop only the tenant filter; soft-delete stays enforced (the explicit !IsDeleted is
+        // redundant defense-in-depth).
         var tenants = await _dbContext.TenantUsers
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
             .AsNoTracking()
             .Where(tu => tu.UserId == userId && !tu.IsDeleted)
             .Select(tu => new BootstrapTenantDto(tu.TenantId, tu.Role))
@@ -178,8 +180,10 @@ public class UserProvisioningService : IUserProvisioningService
 
     private async Task<int> ClaimInvitationsAsync(Guid userId, string email, CancellationToken cancellationToken)
     {
+        // Invitations are matched by email across every tenant (claim runs before any tenant is
+        // resolved), so drop only the tenant filter; soft-delete stays enforced.
         var pending = await _dbContext.Invitations
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
             .Where(i => i.Email == email && i.Status == InvitationStatus.Pending && !i.IsDeleted)
             .ToListAsync(cancellationToken);
 

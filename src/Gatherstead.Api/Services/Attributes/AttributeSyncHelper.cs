@@ -1,4 +1,5 @@
 using Gatherstead.Api.Contracts.Attributes;
+using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,9 +22,10 @@ internal static class AttributeSyncHelper
         CancellationToken ct)
         where TAttr : AuditableEntity, IParentScopedAttribute
     {
-        // Load all (including soft-deleted) to support key re-activation without
-        // violating the unique index on (TenantId, ParentId, Key).
-        var all = await byParent.IgnoreQueryFilters().ToListAsync(ct);
+        // Load all (including soft-deleted) to support key re-activation without violating the
+        // unique index on (TenantId, ParentId, Key). Bypass only the soft-delete filter; the caller's
+        // byParent scope and the retained tenant filter both keep this within the current tenant.
+        var all = await byParent.IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter]).ToListAsync(ct);
         var incomingKeys = incoming.Select(e => e.Key.Trim()).ToHashSet(StringComparer.Ordinal);
 
         foreach (var entry in incoming)

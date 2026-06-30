@@ -18,9 +18,9 @@ public static class MembershipGrant
     /// <c>SaveChanges</c> — the caller controls persistence so this can compose with other writes.
     /// </summary>
     /// <remarks>
-    /// Uses <see cref="EntityFrameworkQueryableExtensions.IgnoreQueryFilters{TEntity}"/> with an
-    /// explicit tenant/user scope so it behaves identically whether or not a tenant context is set
-    /// (the bootstrap claim path runs before any tenant is resolved).
+    /// Drops only the tenant query filter (via <see cref="GathersteadDbContext.TenantFilter"/>) with
+    /// an explicit tenant/user scope so it behaves identically whether or not a tenant context is set
+    /// (the bootstrap claim path runs before any tenant is resolved). Soft-delete stays enforced.
     /// </remarks>
     public static async Task GrantAsync(
         GathersteadDbContext dbContext,
@@ -32,7 +32,7 @@ public static class MembershipGrant
         CancellationToken cancellationToken)
     {
         var hasTenantUser = await dbContext.TenantUsers
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
             .AnyAsync(tu => tu.TenantId == tenantId && tu.UserId == userId && !tu.IsDeleted, cancellationToken);
         if (!hasTenantUser)
         {
@@ -47,7 +47,7 @@ public static class MembershipGrant
         if (householdId is Guid hid)
         {
             var hasHouseholdUser = await dbContext.HouseholdUsers
-                .IgnoreQueryFilters()
+                .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
                 .AnyAsync(hu => hu.HouseholdId == hid && hu.UserId == userId && !hu.IsDeleted, cancellationToken);
             if (!hasHouseholdUser)
             {

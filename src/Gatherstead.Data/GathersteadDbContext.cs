@@ -8,6 +8,16 @@ namespace Gatherstead.Data;
 
 public class GathersteadDbContext : DbContext
 {
+    /// <summary>Name of the soft-delete global query filter. Pass to
+    /// <see cref="EntityFrameworkQueryableExtensions.IgnoreQueryFilters{TEntity}(IQueryable{TEntity}, IEnumerable{string})"/>
+    /// to include soft-deleted rows while keeping tenant isolation enforced.</summary>
+    public const string SoftDeleteFilter = "SoftDelete";
+
+    /// <summary>Name of the tenant-isolation global query filter. Pass to
+    /// <see cref="EntityFrameworkQueryableExtensions.IgnoreQueryFilters{TEntity}(IQueryable{TEntity}, IEnumerable{string})"/>
+    /// for deliberately cross-tenant queries while keeping the soft-delete filter enforced.</summary>
+    public const string TenantFilter = "Tenant";
+
     private readonly AuditingSaveChangesInterceptor _auditingSaveChangesInterceptor;
     private readonly Guid? _tenantId;
     private readonly IIncludeDeletedContext? _includeDeletedContext;
@@ -245,27 +255,35 @@ public class GathersteadDbContext : DbContext
     {
         var entityBuilder = modelBuilder.Entity<TEntity>();
 
-        var parameter = Expression.Parameter(typeof(TEntity), "entity");
+        // Two named filters (EF Core 10) instead of one combined predicate, so a query can disable
+        // exactly one dimension via IgnoreQueryFilters([name]) — e.g. a cross-tenant lookup keeps
+        // soft-delete enforced, and a find-or-revive keeps tenant isolation enforced. EF ANDs all
+        // active named filters together, so normal queries behave identically to a single filter.
 
-        // Soft-delete filter: IncludeDeleted || !entity.IsDeleted
+        // SoftDelete: IncludeDeleted || !entity.IsDeleted
         // EF Core re-evaluates the property reference per query, so the filter is composable.
         // IncludeDeleted delegates to IIncludeDeletedContext, which reads from HttpContext.Items
         // set by RequireTenantAccessAttribute after authorization completes.
+        var sdParameter = Expression.Parameter(typeof(TEntity), "entity");
         var includeDeletedField = Expression.Property(Expression.Constant(this), nameof(IncludeDeleted));
-        var isDeletedProperty = Expression.Property(parameter, nameof(IAuditableEntity.IsDeleted));
-        Expression filterBody = Expression.OrElse(includeDeletedField, Expression.Not(isDeletedProperty));
+        var isDeletedProperty = Expression.Property(sdParameter, nameof(IAuditableEntity.IsDeleted));
+        var softDeleteBody = Expression.OrElse(includeDeletedField, Expression.Not(isDeletedProperty));
+        entityBuilder.HasQueryFilter(
+            SoftDeleteFilter,
+            Expression.Lambda<Func<TEntity, bool>>(softDeleteBody, sdParameter));
 
+        // Tenant: entity.TenantId == _tenantId (only for entities carrying a Guid TenantId).
         var tenantIdProperty = typeof(TEntity).GetProperty("TenantId");
         if (tenantIdProperty?.PropertyType == typeof(Guid))
         {
-            var tenantIdAccess = Expression.Property(parameter, tenantIdProperty);
+            var tenantParameter = Expression.Parameter(typeof(TEntity), "entity");
+            var tenantIdAccess = Expression.Property(tenantParameter, tenantIdProperty);
             var tenantIdAsNullable = Expression.Convert(tenantIdAccess, typeof(Guid?));
             var tenantIdField = Expression.Field(Expression.Constant(this), nameof(_tenantId));
             var tenantIdComparison = Expression.Equal(tenantIdAsNullable, tenantIdField);
-            filterBody = Expression.AndAlso(filterBody, tenantIdComparison);
+            entityBuilder.HasQueryFilter(
+                TenantFilter,
+                Expression.Lambda<Func<TEntity, bool>>(tenantIdComparison, tenantParameter));
         }
-
-        var lambda = Expression.Lambda<Func<TEntity, bool>>(filterBody, parameter);
-        entityBuilder.HasQueryFilter(lambda);
     }
 }

@@ -50,10 +50,10 @@ public class PlanSyncService
         DateOnly end,
         CancellationToken cancellationToken)
     {
-        // IgnoreQueryFilters() includes soft-deleted rows so PlanGenerator can detect
-        // suppression markers (IsDeleted && IsException) and avoid re-generating them.
+        // Bypass only the soft-delete filter so PlanGenerator can detect suppression markers
+        // (IsDeleted && IsException) and avoid re-generating them. Tenant isolation stays enforced.
         var existing = await _dbContext.TaskPlans
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Include(p => p.Intents)
             .Where(p => p.TenantId == tenantId && p.TemplateId == template.Id)
             .ToListAsync(cancellationToken);
@@ -87,8 +87,9 @@ public class PlanSyncService
         DateOnly end,
         CancellationToken cancellationToken)
     {
+        // Bypass only the soft-delete filter (see ApplyTaskPlanDiffAsync); tenant isolation stays enforced.
         var existing = await _dbContext.MealPlans
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Include(p => p.Intents)
             .Where(p => p.TenantId == tenantId && p.MealTemplateId == template.Id)
             .ToListAsync(cancellationToken);

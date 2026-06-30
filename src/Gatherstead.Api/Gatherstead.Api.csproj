@@ -23,4 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Gatherstead.Data\Gatherstead.Data.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gatherstead.Api.Tests" />
+  </ItemGroup>
 </Project>

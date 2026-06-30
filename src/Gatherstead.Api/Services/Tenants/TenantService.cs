@@ -47,7 +47,11 @@ public class TenantService : ITenantService
             return response;
         }
 
+        // Not tenant-scoped (no {tenantId} route), so the global tenant filter would resolve to
+        // TenantId == null and hide every row. Drop only the tenant filter; soft-delete stays
+        // enforced on both TenantUser and the projected Tenant navigation.
         var query = _dbContext.TenantUsers
+            .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
             .AsNoTracking()
             .Where(tu => tu.UserId == userId);
 

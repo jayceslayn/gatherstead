@@ -84,7 +84,7 @@ public class HouseholdUserService : IHouseholdUserService
 
         // Load including soft-deleted rows so we can restore
         var existing = await _dbContext.HouseholdUsers
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Include(hu => hu.User)
             .Where(hu => hu.TenantId == tenantId && hu.HouseholdId == householdId && hu.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken);
@@ -139,7 +139,7 @@ public class HouseholdUserService : IHouseholdUserService
             return response;
 
         var householdUser = await _dbContext.HouseholdUsers
-            .IgnoreQueryFilters()
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Include(hu => hu.User)
             .Where(hu => hu.TenantId == tenantId && hu.HouseholdId == householdId && hu.UserId == userId)
             .SingleOrDefaultAsync(cancellationToken);
