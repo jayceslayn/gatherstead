@@ -64,6 +64,12 @@
           "Microsoft.EntityFrameworkCore.Relational": "10.0.9"
         }
       },
+      "Microsoft.Extensions.Caching.Hybrid": {
+        "type": "Direct",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "xvhmF2dlwC3e8KKSuWOjJkjQdKG80991CUqjDnqzV1Od0CgMqbDw49kGJ9RiGrp3nbLTYCSb3c+KYo6TcENYRw=="
+      },
       "OpenTelemetry.Instrumentation.EntityFrameworkCore": {
         "type": "Direct",
         "requested": "[1.15.1-beta.1, )",

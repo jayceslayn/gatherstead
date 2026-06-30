@@ -55,7 +55,7 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     private UserProvisioningService CreateService(IHttpContextAccessor accessor)
     {
         _securityLogger = new Mock<ISecurityEventLogger>();
-        return new(_dbContext, accessor, _securityLogger.Object);
+        return new(_dbContext, accessor, _securityLogger.Object, new FakeAuthCache());
     }
 
     private void SeedPendingInvitation(string email, TenantRole role = TenantRole.Member, Guid? householdId = null, HouseholdRole? householdRole = null, Guid? invitedByUserId = null)

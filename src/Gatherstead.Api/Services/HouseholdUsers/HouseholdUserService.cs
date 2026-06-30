@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.HouseholdUsers;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
@@ -13,15 +14,18 @@ public class HouseholdUserService : IHouseholdUserService
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
+    private readonly IAuthCache _authCache;
 
     public HouseholdUserService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
-        IMemberAuthorizationService memberAuthorizationService)
+        IMemberAuthorizationService memberAuthorizationService,
+        IAuthCache authCache)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
+        _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>> ListAsync(
@@ -113,6 +117,8 @@ public class HouseholdUserService : IHouseholdUserService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _authCache.InvalidateHouseholdUsersAsync(tenantId, userId, cancellationToken);
+
         // Reload User navigation if it was null on a newly created entity
         if (existing.User is null)
             await _dbContext.Entry(existing).Reference(hu => hu.User).LoadAsync(cancellationToken);
@@ -158,6 +164,8 @@ public class HouseholdUserService : IHouseholdUserService
 
         householdUser.IsDeleted = true;
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _authCache.InvalidateHouseholdUsersAsync(tenantId, userId, cancellationToken);
 
         response.SetSuccess(MapToDto(householdUser));
         return response;

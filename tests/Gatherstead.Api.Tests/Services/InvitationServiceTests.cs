@@ -42,7 +42,7 @@ public class InvitationServiceTests : IAsyncLifetime
             a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManage)
             && a.GetCallerTenantRoleAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult((TenantRole?)actorRole));
         _securityLogger = new Mock<ISecurityEventLogger>();
-        return new InvitationService(_dbContext, tenantContext, userContext, auth, _securityLogger.Object);
+        return new InvitationService(_dbContext, tenantContext, userContext, auth, _securityLogger.Object, new FakeAuthCache());
     }
 
     [Fact]

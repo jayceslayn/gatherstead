@@ -41,7 +41,7 @@ public class HouseholdUserServiceTests : IAsyncLifetime
             s.CanManageHouseholdAsync(_tenantId, _householdId, It.IsAny<CancellationToken>())
                 == Task.FromResult(canManageHousehold));
 
-        return new HouseholdUserService(_dbContext, tenantContext, authService);
+        return new HouseholdUserService(_dbContext, tenantContext, authService, new FakeAuthCache());
     }
 
     private async Task SeedTenantUserAsync(Guid userId, CancellationToken ct = default, TenantRole role = TenantRole.Member)

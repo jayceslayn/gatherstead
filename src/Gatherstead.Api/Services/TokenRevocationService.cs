@@ -1,3 +1,4 @@
+using Gatherstead.Api.Security;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,13 +11,16 @@ namespace Gatherstead.Api.Services;
 public class TokenRevocationService : ITokenRevocationService
 {
     private readonly GathersteadDbContext _dbContext;
+    private readonly IAuthCache _authCache;
     private readonly ILogger<TokenRevocationService> _logger;
 
     public TokenRevocationService(
         GathersteadDbContext dbContext,
+        IAuthCache authCache,
         ILogger<TokenRevocationService> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -63,6 +67,10 @@ public class TokenRevocationService : ITokenRevocationService
         _dbContext.RevokedTokens.Add(revokedToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Evict any cached "not revoked" result so this instance rejects the token immediately;
+        // other instances expire it within the (short) cache TTL.
+        await _authCache.InvalidateRevokedAsync(jti, cancellationToken);
+
         _logger.LogInformation(
             "Token revoked successfully. JTI: {Jti}, UserId: {UserId}, TenantId: {TenantId}, Reason: {Reason}",
             jti, userId, tenantId, reason);
@@ -75,8 +83,13 @@ public class TokenRevocationService : ITokenRevocationService
             return false;
         }
 
-        return await _dbContext.RevokedTokens
-            .AnyAsync(rt => rt.Jti == jti && rt.ExpiresAt > DateTime.UtcNow, cancellationToken);
+        // Cached with a short TTL: the revocation check runs on every authenticated request, and the
+        // overwhelming majority return "not revoked". RevokeTokenAsync evicts on revoke.
+        return await _authCache.GetIsRevokedAsync(
+            jti,
+            ct => _dbContext.RevokedTokens
+                .AnyAsync(rt => rt.Jti == jti && rt.ExpiresAt > DateTime.UtcNow, ct),
+            cancellationToken);
     }
 
     public async Task CleanupExpiredRevocationsAsync(CancellationToken cancellationToken = default)

@@ -13,6 +13,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAppAdminContext _appAdminContext;
+    private readonly IAuthCache _authCache;
     private readonly ILogger<MemberAuthorizationService> _logger;
     private readonly ISecurityEventLogger _securityEventLogger;
 
@@ -24,6 +25,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         ICurrentUserContext currentUserContext,
         IHttpContextAccessor httpContextAccessor,
         IAppAdminContext appAdminContext,
+        IAuthCache authCache,
         ILogger<MemberAuthorizationService> logger,
         ISecurityEventLogger securityEventLogger)
     {
@@ -31,6 +33,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
+        _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
     }
@@ -209,11 +212,16 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (items != null && items.TryGetValue(CacheKey_TenantUserInfo, out var cached))
             return (TenantUserInfo?)cached;
 
-        var info = await _dbContext.TenantUsers
-            .AsNoTracking()
-            .Where(tu => tu.TenantId == tenantId && tu.UserId == userId)
-            .Select(tu => new TenantUserInfo(tu.Role, tu.LinkedMemberId))
-            .FirstOrDefaultAsync(ct);
+        // Cross-request cached (short TTL); evicted on role/membership change. The per-request Items
+        // cache still fronts it so repeated authorization checks in one request hit memory only.
+        var info = await _authCache.GetTenantUserAsync(
+            tenantId, userId,
+            innerCt => _dbContext.TenantUsers
+                .AsNoTracking()
+                .Where(tu => tu.TenantId == tenantId && tu.UserId == userId)
+                .Select(tu => new TenantUserInfo(tu.Role, tu.LinkedMemberId))
+                .FirstOrDefaultAsync(innerCt),
+            ct);
 
         items?.TryAdd(CacheKey_TenantUserInfo, info);
         return info;
@@ -225,16 +233,20 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (items != null && items.TryGetValue(CacheKey_HouseholdUsers, out var cached))
             return (List<HouseholdUserInfo>)cached!;
 
-        var householdUsers = await _dbContext.HouseholdUsers
-            .AsNoTracking()
-            .Where(hu => hu.TenantId == tenantId && hu.UserId == userId)
-            .Select(hu => new HouseholdUserInfo(hu.HouseholdId, hu.Role))
-            .ToListAsync(ct);
+        var householdUsers = await _authCache.GetHouseholdUsersAsync(
+            tenantId, userId,
+            innerCt => _dbContext.HouseholdUsers
+                .AsNoTracking()
+                .Where(hu => hu.TenantId == tenantId && hu.UserId == userId)
+                .Select(hu => new HouseholdUserInfo(hu.HouseholdId, hu.Role))
+                .ToListAsync(innerCt),
+            ct);
 
         items?.TryAdd(CacheKey_HouseholdUsers, householdUsers);
         return householdUsers;
     }
 
-    private sealed record TenantUserInfo(TenantRole Role, Guid? LinkedMemberId);
-    private sealed record HouseholdUserInfo(Guid HouseholdId, HouseholdRole Role);
+    // internal (not private) so HybridCache's JSON serializer can round-trip them for the L2 path.
+    internal sealed record TenantUserInfo(TenantRole Role, Guid? LinkedMemberId);
+    internal sealed record HouseholdUserInfo(Guid HouseholdId, HouseholdRole Role);
 }

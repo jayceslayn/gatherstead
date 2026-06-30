@@ -15,15 +15,18 @@ public class UserProvisioningService : IUserProvisioningService
     private readonly GathersteadDbContext _dbContext;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ISecurityEventLogger _securityEventLogger;
+    private readonly IAuthCache _authCache;
 
     public UserProvisioningService(
         GathersteadDbContext dbContext,
         IHttpContextAccessor httpContextAccessor,
-        ISecurityEventLogger securityEventLogger)
+        ISecurityEventLogger securityEventLogger,
+        IAuthCache authCache)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
         _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
+        _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
     }
 
     public async Task<UserBootstrapResponse> BootstrapAsync(CancellationToken cancellationToken = default)
@@ -81,6 +84,9 @@ public class UserProvisioningService : IUserProvisioningService
             }
             // Intentionally do NOT touch DisplayName here: it is app-owned after first login.
         }
+
+        // Seed the cross-request ExternalId → UserId mapping now that the row is durable.
+        await _authCache.SetUserIdAsync(externalId, userId, cancellationToken);
 
         var claimed = 0;
         if (!string.IsNullOrEmpty(email))
@@ -202,6 +208,14 @@ public class UserProvisioningService : IUserProvisioningService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Evict any cached "no membership" role result for this user in each granted tenant so the
+        // newly-claimed access is visible on the user's next request rather than after the TTL.
+        foreach (var invite in pending)
+        {
+            await _authCache.InvalidateTenantUserAsync(invite.TenantId, userId, cancellationToken);
+            await _authCache.InvalidateHouseholdUsersAsync(invite.TenantId, userId, cancellationToken);
+        }
 
         // Emit attribution events after the grant is durable. Logged separately so a logging failure
         // can never roll back a membership grant. Invitee email is omitted (PII) — the invitation row

@@ -41,6 +41,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider;
 using Azure.Identity;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 
 // Register the Azure Key Vault column-encryption provider so the SQL driver can unwrap the CEK and
@@ -77,6 +78,15 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddHttpContextAccessor();
+
+// Cross-request auth caching (HybridCache, L1 in-process). Registering an IDistributedCache (Redis)
+// later promotes it to an L2 backplane with no code change. AuthCache owns all keys/TTLs.
+var authCacheOptions = builder.Configuration.GetSection("AuthCache").Get<AuthCacheOptions>()
+    ?? new AuthCacheOptions();
+builder.Services.AddSingleton(authCacheOptions);
+builder.Services.AddHybridCache();
+builder.Services.AddSingleton<IAuthCache, AuthCache>();
+
 builder.Services.AddScoped<ICurrentUserContext, HttpContextCurrentUserContext>();
 builder.Services.AddScoped<ICurrentTenantContext, HttpContextCurrentTenantContext>();
 builder.Services.AddScoped<IIncludeDeletedContext, HttpContextIncludeDeletedContext>();
@@ -168,6 +178,29 @@ builder.Services
                                 SecurityEventType.TokenRevoked,
                                 SecurityEventSeverity.Warning,
                                 detail: $"{{\"jti\":\"{jti}\"}}");
+                        return;
+                    }
+                }
+
+                // Resolve ExternalId → internal UserId once here (cross-request cached) and pre-seed
+                // HttpContext.Items so the per-request ICurrentUserContext reads are free. The sync
+                // UserId getter retains its own DB query as the pre-bootstrap fallback.
+                var externalId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? context.Principal?.FindFirst("sub")?.Value;
+                if (!string.IsNullOrEmpty(externalId))
+                {
+                    var authCache = context.HttpContext.RequestServices.GetService<IAuthCache>();
+                    var db = context.HttpContext.RequestServices.GetService<GathersteadDbContext>();
+                    if (authCache != null && db != null)
+                    {
+                        var userId = await authCache.GetUserIdAsync(
+                            externalId,
+                            ct => db.Users.AsNoTracking()
+                                .Where(u => u.ExternalId == externalId)
+                                .Select(u => (Guid?)u.Id)
+                                .FirstOrDefaultAsync(ct));
+                        if (userId is not null)
+                            context.HttpContext.Items[HttpContextCurrentUserContext.CacheKey] = userId;
                     }
                 }
             },

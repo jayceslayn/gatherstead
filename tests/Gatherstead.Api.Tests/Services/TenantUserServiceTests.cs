@@ -42,7 +42,7 @@ public class TenantUserServiceTests : IAsyncLifetime
         var authService = Mock.Of<IMemberAuthorizationService>(s =>
             s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManageTenant || isAppAdmin));
 
-        return new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext);
+        return new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache());
     }
 
     private async Task SeedTenantUserAsync(Guid userId, TenantRole role)
@@ -151,7 +151,7 @@ public class TenantUserServiceTests : IAsyncLifetime
             c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>((bool?)false));
         var authService = Mock.Of<IMemberAuthorizationService>(s =>
             s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(true));
-        var svc = new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext);
+        var svc = new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache());
 
         var result = await svc.UpdateRoleAsync(
             _tenantId, _actorUserId,

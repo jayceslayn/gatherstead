@@ -1,5 +1,6 @@
 using Gatherstead.Api.Contracts.Invitations;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
 using Gatherstead.Api.Services.Membership;
 using Gatherstead.Api.Services.Observability;
@@ -19,19 +20,22 @@ public class InvitationService : IInvitationService
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly ISecurityEventLogger _securityEventLogger;
+    private readonly IAuthCache _authCache;
 
     public InvitationService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         ICurrentUserContext currentUserContext,
         IMemberAuthorizationService memberAuthorizationService,
-        ISecurityEventLogger securityEventLogger)
+        ISecurityEventLogger securityEventLogger,
+        IAuthCache authCache)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
         _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
+        _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
     }
 
     public async Task<InvitationResponse> CreateAsync(
@@ -109,6 +113,14 @@ public class InvitationService : IInvitationService
 
         _dbContext.Invitations.Add(invitation);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // On immediate auto-accept, evict the granted user's cached role results so their new access
+        // is visible on their next request rather than after the TTL.
+        if (existingUser is not null)
+        {
+            await _authCache.InvalidateTenantUserAsync(tenantId, existingUser.Id, cancellationToken);
+            await _authCache.InvalidateHouseholdUsersAsync(tenantId, existingUser.Id, cancellationToken);
+        }
 
         // Attribution events emitted after persist so a logging failure can never block the invite.
         // Invitee email is omitted (PII) — the invitation row referenced by id already carries it.

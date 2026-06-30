@@ -16,7 +16,7 @@ public class TokenRevocationServiceTests : IDisposable
     {
         _dbContext = TestDbContextFactory.Create();
         var logger = Mock.Of<ILogger<TokenRevocationService>>();
-        _service = new TokenRevocationService(_dbContext, logger);
+        _service = new TokenRevocationService(_dbContext, new FakeAuthCache(), logger);
     }
 
     public void Dispose()
@@ -69,6 +69,18 @@ public class TokenRevocationServiceTests : IDisposable
 
         var count = await _dbContext.RevokedTokens.CountAsync(r => r.Jti == jti, TestContext.Current.CancellationToken);
         Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public async Task RevokeTokenAsync_EvictsCachedRevocationCheck()
+    {
+        var fake = new FakeAuthCache();
+        var service = new TokenRevocationService(_dbContext, fake, Mock.Of<ILogger<TokenRevocationService>>());
+        var jti = Guid.NewGuid().ToString();
+
+        await service.RevokeTokenAsync(jti, Guid.NewGuid(), null, "User logout", TestContext.Current.CancellationToken);
+
+        Assert.Contains($"revoked:{jti}", fake.Invalidations);
     }
 
     [Fact]
@@ -166,13 +178,20 @@ public class TokenRevocationServiceTests : IDisposable
     public void Constructor_NullDbContext_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(
-            () => new TokenRevocationService(null!, Mock.Of<ILogger<TokenRevocationService>>()));
+            () => new TokenRevocationService(null!, new FakeAuthCache(), Mock.Of<ILogger<TokenRevocationService>>()));
+    }
+
+    [Fact]
+    public void Constructor_NullAuthCache_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(
+            () => new TokenRevocationService(_dbContext, null!, Mock.Of<ILogger<TokenRevocationService>>()));
     }
 
     [Fact]
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(
-            () => new TokenRevocationService(_dbContext, null!));
+            () => new TokenRevocationService(_dbContext, new FakeAuthCache(), null!));
     }
 }

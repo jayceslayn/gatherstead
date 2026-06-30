@@ -50,6 +50,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
             userContext,
             httpContextAccessor,
             appAdminContext,
+            new FakeAuthCache(),
             Mock.Of<ILogger<MemberAuthorizationService>>(),
             securityLogger.Object);
     }

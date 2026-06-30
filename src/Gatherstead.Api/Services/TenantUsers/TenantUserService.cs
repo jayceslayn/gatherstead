@@ -17,19 +17,22 @@ public class TenantUserService : ITenantUserService
     private readonly ICurrentUserContext _currentUserContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly IAppAdminContext _appAdminContext;
+    private readonly IAuthCache _authCache;
 
     public TenantUserService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
         ICurrentUserContext currentUserContext,
         IMemberAuthorizationService memberAuthorizationService,
-        IAppAdminContext appAdminContext)
+        IAppAdminContext appAdminContext,
+        IAuthCache authCache)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
         _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
+        _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TenantUserDto>>> ListAsync(
@@ -127,6 +130,8 @@ public class TenantUserService : ITenantUserService
         tenantUser.Role = request.Role;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _authCache.InvalidateTenantUserAsync(tenantId, userId, cancellationToken);
+
         response.SetSuccess(MapToDto(tenantUser));
         return response;
     }
@@ -219,6 +224,10 @@ public class TenantUserService : ITenantUserService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // LinkedMemberId is part of the cached TenantUserInfo (drives the Self check).
+        await _authCache.InvalidateTenantUserAsync(tenantId, userId, cancellationToken);
+
         response.SetSuccess(MapToDto(tenantUser));
         return response;
     }
