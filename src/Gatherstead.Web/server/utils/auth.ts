@@ -1,0 +1,111 @@
+import type { H3Event } from 'h3'
+import { buildSecureSession, getSecureSession } from '~~/server/utils/session'
+
+interface OidcTokenResponse {
+  access_token: string
+  refresh_token?: string
+  expires_in?: number
+}
+
+// Entra External ID (CIAM) authority for the tenant. Shared by the login handler
+// (server/routes/auth/azure.get.ts) and the refresh-token flow below.
+export function buildAuthority(tenantName: string): string {
+  return `https://${tenantName}.ciamlogin.com/${tenantName}.onmicrosoft.com`
+}
+
+// Refresh slightly before the real expiry so an in-flight request never carries a token that
+// expires mid-flight (independent of the API's own clock skew).
+const EXPIRY_SKEW_MS = 60_000
+
+// Coalesce concurrent refreshes: the /tenants landing fires several proxied calls at once and Entra
+// rotates the refresh token on each use, so parallel refreshes would invalidate one another. This
+// dedups in-flight refreshes keyed by the refresh token — per app instance, which is sufficient for
+// the single Web App instance we run.
+const inFlightRefreshes = new Map<string, Promise<OidcTokenResponse>>()
+
+function refreshTokens(refreshToken: string): Promise<OidcTokenResponse> {
+  const existing = inFlightRefreshes.get(refreshToken)
+  if (existing) {
+    return existing
+  }
+
+  const { clientId, clientSecret, tenantName, apiScope } = useRuntimeConfig().externalIdentity
+  // Same scope set requested at login (server/routes/auth/azure.get.ts) so the new access token keeps
+  // the API audience and we continue to receive a rotated refresh token via offline_access.
+  const scope = ['openid', 'profile', 'email', 'offline_access', apiScope].filter(Boolean).join(' ')
+
+  const promise = $fetch<OidcTokenResponse>(`${buildAuthority(tenantName)}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      scope,
+    }),
+  }).finally(() => inFlightRefreshes.delete(refreshToken))
+
+  inFlightRefreshes.set(refreshToken, promise)
+  return promise
+}
+
+// Returns a non-expired access token for the proxied API call, transparently renewing it with the
+// refresh token when it is at/near expiry. When renewal is impossible (no refresh token, or the
+// refresh token is itself expired/revoked) the session is cleared and a 401 is thrown so the client
+// re-authenticates.
+export async function getValidAccessToken(event: H3Event): Promise<string> {
+  const secure = await getSecureSession(event)
+  if (!secure?.accessToken) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  const expired = typeof secure.expiresAt === 'number'
+    && Date.now() >= secure.expiresAt - EXPIRY_SKEW_MS
+  if (!expired) {
+    return secure.accessToken
+  }
+
+  if (!secure.refreshToken) {
+    await clearUserSession(event)
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
+  try {
+    const tokens = await refreshTokens(secure.refreshToken)
+    await setUserSession(event, {
+      // setUserSession deep-merges, so this updates `secure` while preserving the `user` claims.
+      // The rotated session cookie survives the downstream proxyRequest only because the API is a
+      // stateless JWT resource that returns no Set-Cookie: h3's sendProxy overwrites the response
+      // set-cookie with upstream cookies whenever the upstream sends any. If the API (or a security
+      // middleware) ever sets a cookie, this refresh would stop persisting — re-append it after proxy.
+      secure: buildSecureSession(
+        tokens.access_token,
+        tokens.refresh_token ?? secure.refreshToken,
+        tokens.expires_in,
+      ),
+    })
+    return tokens.access_token
+  }
+  catch (err) {
+    // The token endpoint returns 400 { error: "invalid_grant" } when the refresh token is itself
+    // expired/revoked (RFC 6749 §5.2) — the one case where re-auth is the fix. Match on that error
+    // code (ofetch parses the JSON body onto err.data), not the 400 status alone: other 400s
+    // (invalid_request / invalid_scope / invalid_client) are config faults where clearing the session
+    // would only cause a re-auth loop. Anything else is treated as transient.
+    const oauthError = (err as { data?: { error?: string } }).data?.error
+    if (oauthError === 'invalid_grant') {
+      // Clear the session so the client 401 interceptor re-authenticates (seamless under an active
+      // Entra SSO session).
+      console.error('Azure refresh token rejected (invalid_grant); clearing session')
+      await clearUserSession(event)
+      throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+    }
+    // Transient (network / 5xx / timeout) or a config fault: keep the session so the next request
+    // retries the refresh. 503 (not 401) avoids tripping the client's re-auth interceptor into a
+    // re-auth storm, and surfaces config faults in logs rather than as a silent logout loop.
+    const status = (err as { status?: number }).status
+    console.error('Azure token refresh failed; session retained', { status, oauthError })
+    throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
+  }
+}

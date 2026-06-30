@@ -1,7 +1,7 @@
-import { getAccessToken } from '~~/server/utils/session'
+import { getValidAccessToken } from '~~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
-  const accessToken = await getAccessToken(event)
+  const accessToken = await getValidAccessToken(event)
 
   const config = useRuntimeConfig()
   const path = getRouterParam(event, 'path') || ''
