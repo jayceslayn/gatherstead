@@ -134,7 +134,7 @@ async function clearDemoData() {
           external
           @click="trackEvent('demo_go_live_click')"
         >
-          {{ t('demo.banner.goLive') }}
+          {{ t('demo.modal.goLive') }}
         </UButton>
       </div>
     </template>

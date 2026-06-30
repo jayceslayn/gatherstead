@@ -40,6 +40,7 @@
     "viewOnGithub": "View on GitHub",
     "viewDocs": "Documentation",
     "tryDemo": "Try the Demo",
+    "visitLiveSite": "Visit the Live Site",
     "contact": "Contact"
   },
   "contact": {
@@ -517,8 +518,7 @@
   "demo": {
     "banner": {
       "title": "Demo Mode",
-      "learnMore": "Learn More",
-      "goLive": "Use the Live App"
+      "learnMore": "Learn More"
     },
     "modal": {
       "title": "About Demo Mode",
@@ -538,6 +538,7 @@
       },
       "dataResets": "Demo data lives in your browser's localStorage. Clearing site data or switching browsers resets everything to the original sample data.",
       "cta": "Ready to keep your gatherings?",
+      "goLive": "Use the Live App",
       "resetButton": "Reset Demo Data",
       "resetting": "Resetting…",
       "clearButton": "Clear Demo Data",

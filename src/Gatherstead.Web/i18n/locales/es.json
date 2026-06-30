@@ -40,6 +40,7 @@
     "viewOnGithub": "Ver en GitHub",
     "viewDocs": "Documentación",
     "tryDemo": "Probar la Demo",
+    "visitLiveSite": "Visitar el Sitio en Vivo",
     "contact": "Contacto"
   },
   "contact": {
@@ -517,8 +518,7 @@
   "demo": {
     "banner": {
       "title": "Modo Demostración",
-      "learnMore": "Saber Más",
-      "goLive": "Usar la App en Vivo"
+      "learnMore": "Saber Más"
     },
     "modal": {
       "title": "Acerca del Modo Demostración",
@@ -538,6 +538,7 @@
       },
       "dataResets": "Los datos de la demo se almacenan en el localStorage de tu navegador. Borrar los datos del sitio o cambiar de navegador restablece todo a los datos de muestra originales.",
       "cta": "¿Listo para guardar tus reuniones?",
+      "goLive": "Usar la App en Vivo",
       "resetButton": "Restablecer Datos de Demo",
       "resetting": "Restableciendo…",
       "clearButton": "Borrar Datos de Demo",

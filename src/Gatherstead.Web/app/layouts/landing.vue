@@ -17,14 +17,6 @@ const isDemoMode = __DEMO_MODE__
     </template>
     <template #right>
       <LocaleSwitcher />
-      <UButton
-        v-if="!isDemoMode && config.public.demoUrl"
-        variant="soft"
-        :to="(config.public.demoUrl as string)"
-        external
-      >
-        {{ t('landing.tryDemo') }}
-      </UButton>
       <template v-if="!isDemoMode">
         <UButton
           v-if="loggedIn"

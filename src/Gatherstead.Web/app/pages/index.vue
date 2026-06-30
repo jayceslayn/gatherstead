@@ -5,6 +5,8 @@ definePageMeta({
 
 const { t } = useI18n()
 const { loggedIn } = useAuth()
+const config = useRuntimeConfig()
+const isDemoMode = __DEMO_MODE__
 
 const features = computed(() => [
   { title: t('landing.featureDirectory'), description: t('landing.featureDirectoryDesc'), icon: 'i-heroicons-user-group' },
@@ -27,25 +29,48 @@ const features = computed(() => [
         <p class="text-neutral-500 dark:text-neutral-400 mb-8 max-w-2xl mx-auto">
           {{ t('landing.heroDescription') }}
         </p>
-        <UButton
-          v-if="loggedIn"
-          to="/tenants"
-          size="lg"
-          color="primary"
-        >
-          {{ t('common.getStarted') }}
-        </UButton>
-        <UButton
-          v-else
-          to="/auth/azure"
-          external
-          size="lg"
-          color="primary"
-          variant="solid"
-          icon="i-heroicons-arrow-left-end-on-rectangle"
-        >
-          {{ t('common.signIn') }}
-        </UButton>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <UButton
+            v-if="!isDemoMode && config.public.demoUrl"
+            :to="(config.public.demoUrl as string)"
+            external
+            size="lg"
+            color="primary"
+            variant="soft"
+          >
+            {{ t('landing.tryDemo') }}
+          </UButton>
+          <UButton
+            v-if="isDemoMode && config.public.liveUrl"
+            :to="(config.public.liveUrl as string)"
+            external
+            size="lg"
+            color="primary"
+            variant="soft"
+          >
+            {{ t('landing.visitLiveSite') }}
+          </UButton>
+
+          <UButton
+            v-if="loggedIn"
+            to="/tenants"
+            size="lg"
+            color="primary"
+          >
+            {{ t('common.getStarted') }}
+          </UButton>
+          <UButton
+            v-else
+            to="/auth/azure"
+            external
+            size="lg"
+            color="primary"
+            variant="solid"
+            icon="i-heroicons-arrow-left-end-on-rectangle"
+          >
+            {{ t('common.signIn') }}
+          </UButton>
+        </div>
       </UContainer>
     </section>
 
