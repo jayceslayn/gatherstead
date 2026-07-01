@@ -51,7 +51,8 @@ public class MealPlanService : IMealPlanService
                 query = query.Where(p => idList.Contains(p.Id));
         }
 
-        var plans = await query.Select(p => MapToDto(p)).ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var plans = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<MealPlanDto>>.SuccessfulResponse(plans);
     }

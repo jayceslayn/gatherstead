@@ -52,7 +52,8 @@ public class EventAttendanceService : IEventAttendanceService
                 query = query.Where(a => memberIdList.Contains(a.HouseholdMemberId));
         }
 
-        var attendances = await query.Select(a => MapToDto(a)).ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var attendances = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<EventAttendanceDto>>.SuccessfulResponse(attendances);
     }

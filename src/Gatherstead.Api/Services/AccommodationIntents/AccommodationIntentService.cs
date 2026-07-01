@@ -51,7 +51,8 @@ public class AccommodationIntentService : IAccommodationIntentService
                 query = query.Where(i => memberIdList.Contains(i.HouseholdMemberId));
         }
 
-        var intents = await query.Select(i => MapToDto(i)).ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var intents = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<AccommodationIntentDto>>.SuccessfulResponse(intents);
     }

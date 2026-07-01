@@ -117,4 +117,18 @@ public class TaskPlanServiceTests : IAsyncLifetime
 
         Assert.Null(result.Entity);
     }
+
+    [Fact]
+    public async Task ListAsync_ReturnsPlansForTemplate()
+    {
+        // Regression: the list projection must materialize before mapping, otherwise EF Core rejects
+        // the instance MapToDto in the query shaper and the endpoint 500s.
+        var plan = await AddPlanAsync();
+
+        var result = await CreateService().ListAsync(_tenantId, _eventId, _templateId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var listed = Assert.Single(result.Entity!);
+        Assert.Equal(plan.Id, listed.Id);
+    }
 }

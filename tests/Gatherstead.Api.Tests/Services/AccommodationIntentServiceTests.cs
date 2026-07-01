@@ -260,4 +260,33 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
         Assert.True(result.Successful);
         Assert.Empty(result.Entity!);
     }
+
+    // ── ListAsync (per-accommodation) ────────────────────────────────────────
+
+    [Fact]
+    public async Task ListAsync_ReturnsIntentsForAccommodation()
+    {
+        // Regression: the list projection must materialize before mapping, otherwise EF Core rejects
+        // the instance MapToDto in the query shaper and the endpoint 500s.
+        var service = CreateService();
+        await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        var result = await service.ListAsync(_tenantId, _accommodationId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var intent = Assert.Single(result.Entity!);
+        Assert.Equal(_member, intent.HouseholdMemberId);
+    }
+
+    [Fact]
+    public async Task ListAsync_MemberFilter_ExcludesOtherMembers()
+    {
+        var service = CreateService();
+        await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        var result = await service.ListAsync(_tenantId, _accommodationId, new[] { _member2 }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!);
+    }
 }

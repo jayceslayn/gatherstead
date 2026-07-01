@@ -51,7 +51,8 @@ public class MealIntentService : IMealIntentService
                 query = query.Where(i => memberIdList.Contains(i.HouseholdMemberId));
         }
 
-        var intents = await query.Select(i => MapToDto(i)).ToListAsync(cancellationToken);
+        var entities = await query.ToListAsync(cancellationToken);
+        var intents = entities.Select(MapToDto).ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<MealIntentDto>>.SuccessfulResponse(intents);
     }

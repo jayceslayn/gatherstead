@@ -126,4 +126,27 @@ public class MealTemplateServiceTests : IAsyncLifetime
         Assert.Contains("Lunch", names);
         Assert.Contains("Lunch (cook)", names);
     }
+
+    [Fact]
+    public async Task ListAsync_ReturnsTemplatesForEvent()
+    {
+        // Guard: this List already materializes before mapping; keep it exercised under SQLite so it
+        // cannot regress into an untranslatable instance-method projection.
+        _dbContext.MealTemplates.Add(new MealTemplate
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId,
+            Name = "Breakfasts", MealTypes = MealTypeFlags.Breakfast,
+        });
+        _dbContext.MealTemplates.Add(new MealTemplate
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId,
+            Name = "Dinners", MealTypes = MealTypeFlags.Dinner,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, _eventId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(2, result.Entity!.Count);
+    }
 }

@@ -84,4 +84,32 @@ public class EventAttendanceServiceTests : IAsyncLifetime
         Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR && m.Message.Contains("member", StringComparison.OrdinalIgnoreCase));
         Assert.False(await _dbContext.EventAttendances.AnyAsync(TestContext.Current.CancellationToken));
     }
+
+    [Fact]
+    public async Task ListAsync_ReturnsAttendancesForEvent()
+    {
+        // Regression: the list projection must materialize before mapping. The instance MapToDto
+        // captures the service, which EF Core rejects in the query shaper — previously a live 500.
+        var service = CreateService();
+        await service.UpsertAsync(_tenantId, _eventId, _householdId, Request(_member), TestContext.Current.CancellationToken);
+
+        var result = await service.ListAsync(_tenantId, _eventId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var attendance = Assert.Single(result.Entity!);
+        Assert.Equal(_member, attendance.HouseholdMemberId);
+        Assert.Equal(AttendanceStatus.Going, attendance.Status);
+    }
+
+    [Fact]
+    public async Task ListAsync_MemberFilter_ExcludesOtherMembers()
+    {
+        var service = CreateService();
+        await service.UpsertAsync(_tenantId, _eventId, _householdId, Request(_member), TestContext.Current.CancellationToken);
+
+        var result = await service.ListAsync(_tenantId, _eventId, new[] { Guid.NewGuid() }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!);
+    }
 }

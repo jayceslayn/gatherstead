@@ -119,4 +119,29 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
         var task = Assert.Single(result.Entity!);
         Assert.Equal(Future, task.Day);
     }
+
+    [Fact]
+    public async Task ListAsync_ReturnsIntentsForPlan()
+    {
+        // Regression: the per-plan list projection must materialize before mapping, otherwise EF Core
+        // rejects the instance MapToDto in the query shaper and the endpoint 500s.
+        await AddIntentAsync(_futurePlanId, _member, volunteered: true);
+
+        var result = await CreateService().ListAsync(_tenantId, _futurePlanId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var intent = Assert.Single(result.Entity!);
+        Assert.Equal(_member, intent.HouseholdMemberId);
+    }
+
+    [Fact]
+    public async Task ListAsync_MemberFilter_ExcludesOtherMembers()
+    {
+        await AddIntentAsync(_futurePlanId, _member2, volunteered: true);
+
+        var result = await CreateService().ListAsync(_tenantId, _futurePlanId, new[] { _member }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Empty(result.Entity!);
+    }
 }

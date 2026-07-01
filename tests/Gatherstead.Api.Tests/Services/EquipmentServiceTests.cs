@@ -178,4 +178,21 @@ public class EquipmentServiceTests : IAsyncLifetime
         Assert.False(result.Successful);
         Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR);
     }
+
+    // ── ListAsync ─────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ListAsync_ReturnsEquipmentForTenant()
+    {
+        // Guard: this List already materializes before mapping; keep it exercised under SQLite so it
+        // cannot regress into an untranslatable instance-method projection.
+        _dbContext.Equipment.Add(new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Tractor" });
+        _dbContext.Equipment.Add(new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Ladder" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(2, result.Entity!.Count);
+    }
 }
