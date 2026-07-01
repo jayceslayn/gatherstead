@@ -58,7 +58,7 @@ async function onSubmit() {
         submit-type="submit"
         :submit-label="t('common.save')"
         :loading="saving"
-        cancel-to="/app/settings"
+        cancel-to="/app"
       />
     </UForm>
   </div>

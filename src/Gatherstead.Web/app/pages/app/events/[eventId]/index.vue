@@ -130,6 +130,13 @@ onMounted(() => {
 
       <GsAttributeSection :attributes="event.attributes" class="mb-6 max-w-lg" />
 
+      <GsEmptyState
+        v-if="!manageableHouseholds.length"
+        icon="i-heroicons-home"
+        :title="t('event.noHousehold.title')"
+        :description="t('event.noHousehold.body')"
+      />
+
       <div v-if="manageableHouseholds.length > 1" class="flex items-center gap-3 mb-6">
         <UFormField :label="t('event.selectHousehold')">
           <USelect
@@ -141,6 +148,7 @@ onMounted(() => {
       </div>
 
       <UTabs
+        v-if="manageableHouseholds.length"
         v-model="activeTab"
         :items="tabs"
       >

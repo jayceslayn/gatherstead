@@ -125,6 +125,28 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateAsync_MemberNotFound_ReturnsErrorNotServerError()
+    {
+        // A member id that doesn't belong to the household must be rejected up front rather than
+        // hitting the FK constraint on save (which would surface as a 500).
+        var request = new CreateAccommodationIntentRequest
+        {
+            HouseholdMemberId = Guid.NewGuid(),
+            StartNight = Day1,
+            EndNight = Day2,
+            Status = AccommodationIntentStatus.Intent,
+            PartyAdults = 1,
+        };
+
+        var result = await CreateService()
+            .CreateAsync(_tenantId, _accommodationId, _householdId, request, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR && m.Message.Contains("member", StringComparison.OrdinalIgnoreCase));
+        Assert.False(await _dbContext.AccommodationIntents.AnyAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task UpdateAsync_PromotesStatusAndDecision()
     {
         var service = CreateService();

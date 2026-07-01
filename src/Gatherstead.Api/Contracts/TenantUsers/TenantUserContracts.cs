@@ -9,7 +9,9 @@ public record TenantUserDto(
     [property: Required] Guid TenantId,
     [property: Required] TenantRole Role,
     Guid? LinkedMemberId,
-    [property: Required] string ExternalId);
+    [property: Required] string ExternalId,
+    string? Email,
+    string? DisplayName);
 
 public record TenantUserMeDto(
     [property: Required] Guid UserId,

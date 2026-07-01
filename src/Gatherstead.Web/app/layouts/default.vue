@@ -40,6 +40,11 @@ const accountMenuItems = computed(() => {
     [
       ...profileItem,
       {
+        label: t('nav.account'),
+        icon: 'i-heroicons-cog-6-tooth',
+        to: '/user/settings',
+      },
+      {
         label: t('nav.switchGroup'),
         icon: 'i-heroicons-arrow-path',
         to: '/tenants',

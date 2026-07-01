@@ -16,6 +16,12 @@ const userId = computed(() => route.params.userId as string)
 // Tenant user data
 const { tenantUsers, pending: usersPending, refresh: refreshUsers } = useTenantUserList()
 const targetUser = computed(() => tenantUsers.value.find(u => u.userId === userId.value))
+
+// Human label for headings: display name, then email, then the raw identity-provider id.
+const targetUserLabel = computed(() => {
+  const u = targetUser.value
+  return u ? (u.displayName || u.email || u.externalId) : undefined
+})
 const { updateRole, setLinkedMember, updating: userUpdating } = useTenantUserActions(refreshUsers)
 
 // Resolve linked member details from the full member map
@@ -112,10 +118,10 @@ const memberPickerOptions = computed(() =>
       :items="[
         { label: t('settings.title'), to: '/app/settings' },
         { label: t('settings.users'), to: '/app/settings/users' },
-        { label: targetUser?.externalId ?? '…' },
+        { label: targetUserLabel ?? '…' },
       ]"
     />
-    <GsPageHeader :title="targetUser?.externalId ?? t('common.loading')" />
+    <GsPageHeader :title="targetUserLabel ?? t('common.loading')" />
 
     <div v-if="usersPending" class="py-16 text-center">
       <p class="text-muted">{{ t('common.loading') }}</p>

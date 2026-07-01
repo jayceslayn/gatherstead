@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { useTenantUserList, useInvitations, useInvitationActions } from '~/composables/useTenantUsers'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
-import type { TenantRole } from '~/repositories/types'
+import type { TenantRole, TenantUserSummary } from '~/repositories/types'
+
+// Prefer a human label; fall back to email, then the raw identity-provider id.
+function userLabel(u: TenantUserSummary): string {
+  return u.displayName || u.email || u.externalId
+}
 
 definePageMeta({
   layout: 'default',
@@ -28,7 +33,11 @@ const search = ref('')
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
   if (!q) return tenantUsers.value
-  return tenantUsers.value.filter(u => u.externalId.toLowerCase().includes(q))
+  return tenantUsers.value.filter(u =>
+    u.externalId.toLowerCase().includes(q)
+    || (u.email?.toLowerCase().includes(q) ?? false)
+    || (u.displayName?.toLowerCase().includes(q) ?? false),
+  )
 })
 
 const grouped = computed(() =>
@@ -116,7 +125,8 @@ const grouped = computed(() =>
             <UCard class="hover:ring-1 hover:ring-primary transition-all cursor-pointer">
               <div class="flex items-center gap-3">
                 <div class="min-w-0 flex-1">
-                  <p class="font-mono text-sm truncate">{{ user.externalId }}</p>
+                  <p class="text-sm truncate" :class="{ 'font-mono': userLabel(user) === user.externalId }">{{ userLabel(user) }}</p>
+                  <p v-if="user.email && user.email !== userLabel(user)" class="text-xs text-muted truncate">{{ user.email }}</p>
                   <p class="text-xs text-muted">
                     {{ t('tenantUser.linkedMemberLabel') }}
                     {{ user.linkedMemberId ? (memberMap.get(user.linkedMemberId)?.name ?? user.linkedMemberId) : t('tenantUser.noLinkedMember') }}

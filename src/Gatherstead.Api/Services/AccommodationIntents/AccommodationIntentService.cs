@@ -141,6 +141,8 @@ public class AccommodationIntentService : IAccommodationIntentService
             return response;
         if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+            return response;
 
         var accommodationExists = await _dbContext.Accommodations
             .AsNoTracking()

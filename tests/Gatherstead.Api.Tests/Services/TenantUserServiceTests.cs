@@ -102,6 +102,24 @@ public class TenantUserServiceTests : IAsyncLifetime
         Assert.Contains(result.Entity!, dto => dto.ExternalId == "target@test");
     }
 
+    [Fact]
+    public async Task ListAsync_IncludesEmailAndDisplayName()
+    {
+        var target = await _dbContext.Users.FindAsync([_targetUserId], TestContext.Current.CancellationToken);
+        target!.Email = "target@example.com";
+        target.DisplayName = "Target User";
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Member);
+        var service = CreateService(TenantRole.Manager);
+
+        var result = await service.ListAsync(_tenantId, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var dto = Assert.Single(result.Entity!, d => d.UserId == _targetUserId);
+        Assert.Equal("target@example.com", dto.Email);
+        Assert.Equal("Target User", dto.DisplayName);
+    }
+
     // ── UpdateRoleAsync ────────────────────────────────────────────────────────
 
     [Fact]

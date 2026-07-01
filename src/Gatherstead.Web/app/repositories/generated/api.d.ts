@@ -5231,6 +5231,8 @@ export interface components {
             /** Format: uuid */
             linkedMemberId?: string | null;
             externalId: string;
+            email?: string | null;
+            displayName?: string | null;
         };
         TenantUserResponse: {
             entity?: components["schemas"]["TenantUserDto"];

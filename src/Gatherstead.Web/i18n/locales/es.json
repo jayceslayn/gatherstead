@@ -71,6 +71,7 @@
     "settings": "Configuración",
     "more": "Más",
     "yourProfile": "Tu Perfil",
+    "account": "Cuenta",
     "switchGroup": "Cambiar Grupo"
   },
   "dashboard": {
@@ -201,6 +202,10 @@
     "accommodationsCtaButton": "Buscar alojamiento",
     "myAttendance": "Mi Asistencia",
     "selectHousehold": "Seleccionar hogar",
+    "noHousehold": {
+      "title": "Aún no tienes un hogar",
+      "body": "Necesitas un hogar antes de poder inscribirte en este evento. Crea o únete a uno desde la sección de Hogares."
+    },
     "tabsComingSoon": "Esta sección estará disponible pronto.",
     "dateRangeLabel": "Rango de fechas",
     "endBeforeStart": "La fecha de fin debe ser igual o posterior a la de inicio.",

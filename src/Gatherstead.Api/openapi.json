@@ -10877,6 +10877,14 @@
           "externalId": {
             "minLength": 1,
             "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false

@@ -71,6 +71,7 @@
     "settings": "Settings",
     "more": "More",
     "yourProfile": "Your Profile",
+    "account": "Account",
     "switchGroup": "Switch Group"
   },
   "dashboard": {
@@ -201,6 +202,10 @@
     "accommodationsCtaButton": "Find a stay",
     "myAttendance": "My Attendance",
     "selectHousehold": "Select household",
+    "noHousehold": {
+      "title": "No household yet",
+      "body": "You need a household before you can sign up for this event. Create or join one from the Households area."
+    },
     "tabsComingSoon": "This section is coming soon.",
     "dateRangeLabel": "Date range",
     "endBeforeStart": "End date must be on or after the start date.",

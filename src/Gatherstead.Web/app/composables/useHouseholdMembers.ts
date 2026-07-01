@@ -32,7 +32,9 @@ export function useHouseholdMembers(householdId: Ref<string>) {
 
   const { data, pending, error, refresh } = useAsyncData<HouseholdMember[]>(
     () => `members-${tenantStore.currentTenantId}-${householdId.value}`,
-    () => repo.listMembers(tenantStore.currentTenantId!, householdId.value),
+    // Skip the request when no household is selected (e.g. the user has none yet) so we never
+    // call the API with an empty household id. Re-runs once a real id is set (watched below).
+    () => householdId.value ? repo.listMembers(tenantStore.currentTenantId!, householdId.value) : Promise.resolve([]),
     { watch: [householdId] },
   )
 

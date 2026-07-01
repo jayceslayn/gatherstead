@@ -61,6 +61,9 @@ export default defineNuxtConfig({
     '/': { prerender: true },
     '/tenants/**': { ssr: false },
     '/app/**': { ssr: false },
+    '/user/**': { ssr: false },
+    // Account moved out of tenant settings to its own user-scoped route.
+    '/app/settings/account': { redirect: '/user/settings' },
   },
 
   // Content Security Policy (+ baseline security headers) via nuxt-security. Shipped report-only

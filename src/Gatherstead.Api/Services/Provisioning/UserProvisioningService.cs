@@ -116,7 +116,7 @@ public class UserProvisioningService : IUserProvisioningService
         if (user is null)
             return response;
 
-        response.SetSuccess(new MeDto(user.Id, user.Email, user.DisplayName));
+        response.SetSuccess(new MeDto(user.Id, ResolveDisplayEmail(user), user.DisplayName));
         return response;
     }
 
@@ -142,8 +142,21 @@ public class UserProvisioningService : IUserProvisioningService
         user.DisplayName = normalized;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(new MeDto(user.Id, user.Email, user.DisplayName));
+        response.SetSuccess(new MeDto(user.Id, ResolveDisplayEmail(user), user.DisplayName));
         return response;
+    }
+
+    /// <summary>
+    /// Email to surface on the caller's own profile: the stored (verified) email when present,
+    /// otherwise the caller's raw token email claim. Display-only — never feeds invitation matching.
+    /// </summary>
+    private string? ResolveDisplayEmail(User user)
+    {
+        if (!string.IsNullOrEmpty(user.Email))
+            return user.Email;
+
+        var principal = _httpContextAccessor.HttpContext?.User;
+        return principal is null ? null : ResolveEmailClaim(principal);
     }
 
     /// <summary>
@@ -256,6 +269,16 @@ public class UserProvisioningService : IUserProvisioningService
         if (!IsEmailVerified(principal))
             return null;
 
+        return ResolveEmailClaim(principal);
+    }
+
+    /// <summary>
+    /// Reads the caller's email claim (normalized) with no verification gate. Safe for display of the
+    /// caller's own profile — the value is echoed back to the caller and never drives invitation
+    /// matching, which stays gated behind <see cref="ResolveEmail"/>.
+    /// </summary>
+    private static string? ResolveEmailClaim(ClaimsPrincipal principal)
+    {
         var email = principal.FindFirst(ClaimTypes.Email)?.Value
             ?? principal.FindFirst("email")?.Value
             ?? principal.FindFirst("emails")?.Value;

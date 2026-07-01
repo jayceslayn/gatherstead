@@ -29,13 +29,20 @@ function ensureBootstrap() {
 }
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (!to.path.startsWith('/app')) return
+  // /app/* is tenant-scoped; /user/* is the caller's own account (not tenant-scoped) but still
+  // needs the login guard + bootstrap so /api/me is provisioned.
+  const isApp = to.path.startsWith('/app')
+  const isUser = to.path.startsWith('/user')
+  if (!isApp && !isUser) return
 
   const tenantStore = useTenantStore()
   const memberStore = useCurrentMemberStore()
   const sessionStore = useSessionStore()
 
   if (__DEMO_MODE__) {
+    // User routes don't need tenant/member context in demo mode — the demo `me` repository
+    // returns a profile on its own.
+    if (isUser) return
     if (!tenantStore.currentTenantId) {
       tenantStore.setTenant(DEMO_TENANT.id, DEMO_TENANT.name, DEMO_TENANT.userRole)
     }
@@ -64,6 +71,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // The bootstrap response also carries the account-level app-admin flag.
   const bootstrap = await ensureBootstrap()
   sessionStore.setAppAdmin(bootstrap?.entity?.isAppAdmin === true)
+
+  // The remainder is tenant context, which user-scoped routes don't need.
+  if (isUser) return
 
   // Live mode: resolve tenant on first load
   if (!tenantStore.currentTenantId) {

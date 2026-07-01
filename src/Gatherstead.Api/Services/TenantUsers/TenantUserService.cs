@@ -301,5 +301,5 @@ public class TenantUserService : ITenantUserService
     }
 
     private static TenantUserDto MapToDto(TenantUser tu) =>
-        new(tu.UserId, tu.TenantId, tu.Role, tu.LinkedMemberId, tu.User?.ExternalId ?? string.Empty);
+        new(tu.UserId, tu.TenantId, tu.Role, tu.LinkedMemberId, tu.User?.ExternalId ?? string.Empty, tu.User?.Email, tu.User?.DisplayName);
 }

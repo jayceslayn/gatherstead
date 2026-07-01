@@ -96,6 +96,8 @@ public class EventAttendanceService : IEventAttendanceService
             return response;
         if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+            return response;
 
         var eventExists = await _dbContext.Events
             .AsNoTracking()

@@ -138,6 +138,8 @@ public class TaskIntentService : ITaskIntentService
             return response;
         if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+            return response;
 
         var planExists = await _dbContext.TaskPlans
             .AsNoTracking()

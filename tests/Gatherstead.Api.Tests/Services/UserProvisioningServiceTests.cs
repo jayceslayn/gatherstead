@@ -266,6 +266,36 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetMeAsync_NullStoredEmail_FallsBackToTokenEmail()
+    {
+        // The stored email stays null when the IdP never asserted email_verified, but the caller's
+        // own token still carries the address — surface it for display of their own profile.
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = null, DisplayName = "Ada" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService(BuildAccessor(email: "Token@Test.com", emailVerified: false))
+            .GetMeAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal("token@test.com", result.Entity!.Email);
+    }
+
+    [Fact]
+    public async Task GetMeAsync_StoredEmailPresent_PrefersStoredEmail()
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Users.Add(new User { Id = userId, ExternalId = ExternalId, Email = "stored@test.com" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService(BuildAccessor(email: "different@test.com"))
+            .GetMeAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal("stored@test.com", result.Entity!.Email);
+    }
+
+    [Fact]
     public async Task UpdateDisplayNameAsync_UpdatesAndReturnsProfile()
     {
         var userId = Guid.NewGuid();
