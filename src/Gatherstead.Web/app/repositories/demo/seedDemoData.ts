@@ -78,35 +78,37 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   // absent → the manual band is used as the fallback.
   const bob = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Bob Parr', true, null, birthDateYearsAgo(45),
-    'Large portions — saving the world burns a lot of calories.', [],
+    'Large portions — saving the world burns a lot of calories.',
+    'Prefers a downstairs room — the knees are not what they used to be.', [],
     [{ key: 'Supersuit Size', value: 'XL (reinforced seams)', tenantMinRole: 3 }], // Members and above
   )
   const helen = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', true, 'Age18To64', null, null, [],
+    DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', true, 'Age18To64', null, null, null, [],
   )
   const violet = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Violet Parr', false, null, birthDateYearsAgo(15),
-    'Will not eat anything if people are watching.', [],
+    'Will not eat anything if people are watching.', null, [],
   )
   const dash = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Dash Parr', false, 'Age6To12', null,
-    'Eats at top speed. Food must be secured to the plate.', [],
+    'Eats at top speed. Food must be secured to the plate.', null, [],
   )
   const jackJack = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, null, birthDateYearsAgo(1),
-    'Baby food only. Keep away from raccoons.', [],
+    'Baby food only. Keep away from raccoons.', null, [],
   )
 
   const lucius = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, 'Age18To64', null, null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, 'Age18To64', null, null, null, [],
   )
   const honey = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, birthDateYearsAgo(42), null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, birthDateYearsAgo(42), null, null, [],
   )
 
   const edna = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, ednaStudio.id, 'Edna Mode', true, 'Age65Plus', null,
-    'No capes. Also no gluten.', ['gluten-free'],
+    'No capes. Also no gluten.',
+    'Do not, under any circumstances, discuss capes.', ['gluten-free'],
   )
 
   // Link demo user to Bob Parr

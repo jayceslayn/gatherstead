@@ -59,7 +59,7 @@ function formatDate(date: string | null) {
         </UButton>
       </GsPageHeader>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <!-- Identity -->
         <UCard>
           <template #header>
@@ -105,10 +105,12 @@ function formatDate(date: string | null) {
             </div>
           </dl>
         </UCard>
+      </div>
+
+      <GsNotesSection :notes="member.notes" class="mb-6 max-w-lg" />
 
         <!-- Additional Details (custom attributes) -->
-        <GsAttributeSection :attributes="member.attributes" class="md:col-span-2" />
-      </div>
+        <GsAttributeSection :attributes="member.attributes" class="mb-6 max-w-lg" />
     </template>
 
     <GsEmptyState

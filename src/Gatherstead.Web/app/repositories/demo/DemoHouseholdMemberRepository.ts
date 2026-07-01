@@ -43,6 +43,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<HouseholdMember> {
@@ -59,6 +60,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       ageBand: bandForStorage(ageBand, birthDate),
       birthDate,
       dietaryNotes,
+      notes,
       dietaryTags,
       attributes: toAttributeEntries(attributes),
     }
@@ -76,6 +78,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
@@ -87,6 +90,7 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     m.ageBand = bandForStorage(ageBand, birthDate)
     m.birthDate = birthDate
     m.dietaryNotes = dietaryNotes
+    m.notes = notes
     m.dietaryTags = dietaryTags
     if (attributes !== undefined) m.attributes = toAttributeEntries(attributes)
     persistDemoStore()

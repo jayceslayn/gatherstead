@@ -36,6 +36,7 @@ const form = reactive({
   birthDate: '',
   dietaryNotes: '',
   dietaryTags: [] as string[],
+  notes: '',
   attributes: [] as AttributeWriteEntry[],
 })
 
@@ -50,6 +51,7 @@ watch(member, (val: HouseholdMember | null) => {
   form.birthDate = val.birthDate ?? ''
   form.dietaryNotes = val.dietaryNotes ?? ''
   form.dietaryTags = [...val.dietaryTags]
+  form.notes = val.notes ?? ''
   form.attributes = toAttributeWriteEntries(val.attributes)
   // Reset after the form watcher's next-tick flush so pre-fill doesn't mark as dirty
   nextTick(() => { isDirty.value = false })
@@ -77,6 +79,7 @@ async function onSubmit() {
     form.ageBand.trim() || null,
     form.birthDate || null,
     form.dietaryNotes.trim() || null,
+    form.notes.trim() || null,
     form.dietaryTags,
     cleanAttributeWriteEntries(form.attributes),
   )
@@ -112,6 +115,7 @@ async function onSubmit() {
         v-model:birth-date="form.birthDate"
         v-model:dietary-notes="form.dietaryNotes"
         v-model:dietary-tags="form.dietaryTags"
+        v-model:notes="form.notes"
         v-model:attributes="form.attributes"
         :name-error="nameError"
         :loading="saving"

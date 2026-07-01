@@ -77,6 +77,7 @@ export interface IHouseholdMemberRepository {
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<HouseholdMember>
@@ -89,6 +90,7 @@ export interface IHouseholdMemberRepository {
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>

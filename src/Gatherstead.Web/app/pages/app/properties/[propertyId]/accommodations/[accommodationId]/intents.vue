@@ -138,6 +138,8 @@ async function submitRequest(payload: {
       </UBadge>
     </div>
 
+    <GsNotesSection :notes="accommodation?.notes" class="mb-6 max-w-lg" />
+
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-base font-semibold">{{ t('accommodation.intents') }}</h2>
       <UButton

@@ -55,8 +55,10 @@ export type MeSummary = S['MeDto']
 export type HouseholdSummary = OmitAudit<S['HouseholdDto']>
 
 // ── HouseholdMembers ───────────────────────────────────────────────────────
-// Frontend HouseholdMember omits the general 'notes' field and audit fields.
-export type HouseholdMember = OmitAudit<Omit<S['HouseholdMemberDto'], 'notes'>>
+// Frontend HouseholdMember omits audit fields. The general 'notes' field is
+// surfaced read-only on the member detail page; the API keeps it gated behind
+// sensitive-read permission (returns null otherwise).
+export type HouseholdMember = OmitAudit<S['HouseholdMemberDto']>
 
 // ── Dietary ───────────────────────────────────────────────────────────────
 export type DietaryTag = S['DietaryTagDto']

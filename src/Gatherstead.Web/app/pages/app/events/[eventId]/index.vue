@@ -128,6 +128,8 @@ onMounted(() => {
         </GsRoleGate>
       </div>
 
+      <GsNotesSection :notes="event.notes" class="mb-6 max-w-lg" />
+
       <GsAttributeSection :attributes="event.attributes" class="mb-6 max-w-lg" />
 
       <GsEmptyState

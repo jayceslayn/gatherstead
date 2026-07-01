@@ -74,6 +74,8 @@ function onModalDelete() {
         </GsRoleGate>
       </GsPageHeader>
 
+      <GsNotesSection :notes="household.notes" class="mb-6 max-w-lg" />
+
       <GsAttributeSection :attributes="household.attributes" class="mb-6 max-w-lg" />
 
       <GsEmptyState

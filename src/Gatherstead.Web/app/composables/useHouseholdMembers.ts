@@ -68,6 +68,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes: AttributeWriteEntry[] = [],
   ): Promise<HouseholdMember | null> {
@@ -75,7 +76,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     try {
       const created = await repo.createMember(
         tenantStore.currentTenantId!, householdId.value,
-        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes,
+        name, isAdult, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes,
       )
       await refresh()
       return created
@@ -100,6 +101,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes: AttributeWriteEntry[] = [],
   ): Promise<boolean> {
@@ -107,7 +109,7 @@ export function useHouseholdMemberActions(householdId: Ref<string>, refresh: () 
     try {
       await repo.updateMember(
         tenantStore.currentTenantId!, householdId.value, memberId,
-        name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes,
+        name, isAdult, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes,
       )
       await refresh()
       return true

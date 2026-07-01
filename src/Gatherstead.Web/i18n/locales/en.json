@@ -25,6 +25,9 @@
     "show": "Show details",
     "hide": "Hide details"
   },
+  "notes": {
+    "title": "Notes"
+  },
   "landing": {
     "heroTitle": "Plan Your Family Gatherings",
     "heroSubtitle": "One place for households, events, accommodations, and more",
@@ -122,6 +125,8 @@
     "birthDate": "Birth Date",
     "dietaryNotes": "Dietary Notes",
     "dietaryNotesPlaceholder": "Any dietary notes…",
+    "notes": "Notes",
+    "notesPlaceholder": "Any notes…",
     "isAdult": "Adult",
     "adult": "Adult",
     "child": "Child",

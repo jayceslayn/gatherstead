@@ -25,6 +25,9 @@
     "show": "Mostrar detalles",
     "hide": "Ocultar detalles"
   },
+  "notes": {
+    "title": "Notas"
+  },
   "landing": {
     "heroTitle": "Planifica tus Reuniones Familiares",
     "heroSubtitle": "Un solo lugar para hogares, eventos, alojamiento y más",
@@ -122,6 +125,8 @@
     "birthDate": "Fecha de Nacimiento",
     "dietaryNotes": "Notas Dietéticas",
     "dietaryNotesPlaceholder": "Cualquier nota dietética…",
+    "notes": "Notas",
+    "notesPlaceholder": "Cualquier nota…",
     "isAdult": "Adulto",
     "adult": "Adulto",
     "child": "Niño",

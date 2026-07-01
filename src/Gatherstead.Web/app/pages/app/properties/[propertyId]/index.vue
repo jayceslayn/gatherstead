@@ -106,6 +106,8 @@ async function confirmDeleteAccommodation() {
         </GsRoleGate>
       </GsPageHeader>
 
+      <GsNotesSection :notes="property.notes" class="mb-6 max-w-lg" />
+
       <GsAttributeSection :attributes="property.attributes" class="mb-6 max-w-lg" />
 
       <div v-if="accommodationsPending" class="py-8 text-center">

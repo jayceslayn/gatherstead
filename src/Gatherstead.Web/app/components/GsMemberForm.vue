@@ -9,6 +9,7 @@ const ageBand = defineModel<string>('ageBand', { required: true })
 const birthDate = defineModel<string>('birthDate', { required: true })
 const dietaryNotes = defineModel<string>('dietaryNotes', { required: true })
 const dietaryTags = defineModel<string[]>('dietaryTags', { required: true })
+const notes = defineModel<string>('notes', { required: true })
 const attributes = defineModel<AttributeWriteEntry[]>('attributes', { required: true })
 
 const props = defineProps<{
@@ -58,7 +59,7 @@ watch(birthDate, (bd) => {
 
 <template>
   <UForm
-    :state="{ name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags }"
+    :state="{ name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, notes }"
     class="max-w-lg space-y-5"
     @submit="emit('submit')"
   >
@@ -108,6 +109,10 @@ watch(birthDate, (bd) => {
       <div v-if="dietaryTags.length" class="mt-2">
         <GsDietaryTags :slugs="dietaryTags" />
       </div>
+    </UFormField>
+
+    <UFormField :label="t('member.notes')" name="notes">
+      <UTextarea v-model="notes" :placeholder="t('member.notesPlaceholder')" class="w-full" />
     </UFormField>
 
     <GsAttributeField v-model="attributes" />

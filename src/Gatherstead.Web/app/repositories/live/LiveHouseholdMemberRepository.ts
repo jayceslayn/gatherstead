@@ -26,12 +26,13 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<HouseholdMember> {
     const r = await $fetch<ApiResponse<HouseholdMember>>(
       `/api/proxy/tenants/${tenantId}/households/${householdId}/members`,
-      { method: 'POST', body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes: attributes ?? null } },
+      { method: 'POST', body: { name, isAdult, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -45,12 +46,13 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
+    notes: string | null,
     dietaryTags: string[],
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/households/${householdId}/members/${memberId}`, {
       method: 'PUT',
-      body: { name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, attributes: attributes ?? null },
+      body: { name, isAdult, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes: attributes ?? null },
     })
   }
 
