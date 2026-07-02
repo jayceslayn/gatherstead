@@ -35,3 +35,20 @@ public class UpsertTaskIntentRequest
 
     public bool Volunteered { get; init; }
 }
+
+public class BulkUpsertTaskIntentItem
+{
+    [Required]
+    public Guid TaskPlanId { get; init; }
+
+    [Required]
+    public Guid HouseholdMemberId { get; init; }
+
+    public bool Volunteered { get; init; }
+}
+
+public class BulkUpsertTaskIntentRequest
+{
+    [Required]
+    public IReadOnlyList<BulkUpsertTaskIntentItem> Items { get; init; } = Array.Empty<BulkUpsertTaskIntentItem>();
+}

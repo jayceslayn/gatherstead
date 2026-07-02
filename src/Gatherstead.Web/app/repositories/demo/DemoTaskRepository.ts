@@ -1,4 +1,4 @@
-import type { ITaskRepository } from '../interfaces'
+import type { BulkTaskIntentItem, ITaskRepository } from '../interfaces'
 import type { TaskTemplate, TaskPlan, TaskIntent, MyTask, AttributeWriteEntry, AttributeEntry } from '../types'
 import { taskSlotsFromFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
@@ -96,6 +96,23 @@ export class DemoTaskRepository implements ITaskRepository {
     }
     persistDemoStore()
     trackPersistence('task_volunteer', 'set', { volunteered: volunteered ? 1 : 0 })
+  }
+
+  async listEventIntents(_tenantId: string, eventId: string): Promise<TaskIntent[]> {
+    const store = getDemoStore()
+    const templateIds = new Set(store.taskTemplates.value.filter(t => t.eventId === eventId).map(t => t.id))
+    const planIds = new Set(store.taskPlans.value.filter(p => templateIds.has(p.templateId)).map(p => p.id))
+    return store.taskIntents.value.filter(i => planIds.has(i.taskPlanId))
+  }
+
+  async bulkUpsertIntents(
+    tenantId: string,
+    eventId: string,
+    items: BulkTaskIntentItem[],
+  ): Promise<void> {
+    for (const item of items) {
+      await this.upsertIntent(tenantId, eventId, '', item.planId, '', item.memberId, item.volunteered)
+    }
   }
 
   async createTemplate(

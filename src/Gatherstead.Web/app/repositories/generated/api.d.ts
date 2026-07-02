@@ -1162,6 +1162,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenants/{tenantId}/events/{eventId}/attendance/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    eventId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BulkUpsertEventAttendanceRequest"];
+                    "text/json": components["schemas"]["BulkUpsertEventAttendanceRequest"];
+                    "application/*+json": components["schemas"]["BulkUpsertEventAttendanceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["EventAttendanceDtoBulkUpsertResponse"];
+                        "application/json": components["schemas"]["EventAttendanceDtoBulkUpsertResponse"];
+                        "text/json": components["schemas"]["EventAttendanceDtoBulkUpsertResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/{tenantId}/events/{eventId}/meal-attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    memberIds?: string;
+                };
+                header?: never;
+                path: {
+                    tenantId: string;
+                    eventId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "application/json": components["schemas"]["MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "text/json": components["schemas"]["MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/{tenantId}/events/{eventId}/meal-attendance/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    eventId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BulkUpsertMealAttendanceRequest"];
+                    "text/json": components["schemas"]["BulkUpsertMealAttendanceRequest"];
+                    "application/*+json": components["schemas"]["BulkUpsertMealAttendanceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MealAttendanceDtoBulkUpsertResponse"];
+                        "application/json": components["schemas"]["MealAttendanceDtoBulkUpsertResponse"];
+                        "text/json": components["schemas"]["MealAttendanceDtoBulkUpsertResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/{tenantId}/events": {
         parameters: {
             query?: never;
@@ -1360,6 +1494,94 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/{tenantId}/events/{eventId}/task-intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    memberIds?: string;
+                };
+                header?: never;
+                path: {
+                    tenantId: string;
+                    eventId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskIntentDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "application/json": components["schemas"]["TaskIntentDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "text/json": components["schemas"]["TaskIntentDtoIReadOnlyCollectionBaseEntityResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tenants/{tenantId}/events/{eventId}/task-intents/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    eventId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BulkUpsertTaskIntentRequest"];
+                    "text/json": components["schemas"]["BulkUpsertTaskIntentRequest"];
+                    "application/*+json": components["schemas"]["BulkUpsertTaskIntentRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TaskIntentDtoBulkUpsertResponse"];
+                        "application/json": components["schemas"]["TaskIntentDtoBulkUpsertResponse"];
+                        "text/json": components["schemas"]["TaskIntentDtoBulkUpsertResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4363,6 +4585,37 @@ export interface components {
             /** @enum {string} */
             role?: "Owner" | "Manager" | "Coordinator" | "Member" | "Guest";
         };
+        BulkItemError: {
+            /** Format: int32 */
+            index?: number;
+            message?: string;
+        };
+        BulkUpsertEventAttendanceRequest: {
+            items: components["schemas"]["UpsertEventAttendanceRequest"][];
+        };
+        BulkUpsertMealAttendanceItem: {
+            /** Format: uuid */
+            mealPlanId: string;
+            /** Format: uuid */
+            householdMemberId: string;
+            /** @enum {string} */
+            status: "Going" | "Maybe" | "NotGoing";
+            bringOwnFood?: boolean;
+            notes?: string | null;
+        };
+        BulkUpsertMealAttendanceRequest: {
+            items: components["schemas"]["BulkUpsertMealAttendanceItem"][];
+        };
+        BulkUpsertTaskIntentItem: {
+            /** Format: uuid */
+            taskPlanId: string;
+            /** Format: uuid */
+            householdMemberId: string;
+            volunteered?: boolean;
+        };
+        BulkUpsertTaskIntentRequest: {
+            items: components["schemas"]["BulkUpsertTaskIntentItem"][];
+        };
         ContactMethodDto: {
             /** Format: uuid */
             id?: string;
@@ -4594,6 +4847,12 @@ export interface components {
             departureWindowEnd?: string | null;
             notes?: string | null;
             audit?: components["schemas"]["AuditInfo"];
+        };
+        EventAttendanceDtoBulkUpsertResponse: {
+            entity?: components["schemas"]["EventAttendanceDto"][] | null;
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+            readonly itemErrors?: components["schemas"]["BulkItemError"][];
         };
         EventAttendanceDtoIReadOnlyCollectionBaseEntityResponse: {
             entity?: components["schemas"]["EventAttendanceDto"][] | null;
@@ -4851,6 +5110,12 @@ export interface components {
             bringOwnFood?: boolean;
             notes?: string | null;
             audit?: components["schemas"]["AuditInfo"];
+        };
+        MealAttendanceDtoBulkUpsertResponse: {
+            entity?: components["schemas"]["MealAttendanceDto"][] | null;
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+            readonly itemErrors?: components["schemas"]["BulkItemError"][];
         };
         MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse: {
             entity?: components["schemas"]["MealAttendanceDto"][] | null;
@@ -5128,6 +5393,12 @@ export interface components {
             householdMemberId?: string;
             volunteered?: boolean;
             audit?: components["schemas"]["AuditInfo"];
+        };
+        TaskIntentDtoBulkUpsertResponse: {
+            entity?: components["schemas"]["TaskIntentDto"][] | null;
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+            readonly itemErrors?: components["schemas"]["BulkItemError"][];
         };
         TaskIntentDtoIReadOnlyCollectionBaseEntityResponse: {
             entity?: components["schemas"]["TaskIntentDto"][] | null;

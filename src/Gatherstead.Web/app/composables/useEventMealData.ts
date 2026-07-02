@@ -49,20 +49,15 @@ export function useEventMealData(eventId: Ref<string>) {
     }
     attendancePending.value = true
     try {
-      const entries = await Promise.all(
-        plans.map(async (plan) => {
-          try {
-            const records = await attendanceRepo.listMealAttendance(
-              tenantStore.currentTenantId!, eventId.value, plan.mealTemplateId, plan.id,
-            )
-            return [plan.id, records] as [string, MealAttendance[]]
-          }
-          catch {
-            return [plan.id, []] as [string, MealAttendance[]]
-          }
-        }),
-      )
-      attendanceMap.value = Object.fromEntries(entries)
+      // One event-scoped request instead of one per plan; group the flat list by plan.
+      const records = await attendanceRepo
+        .listMealAttendanceForEvent(tenantStore.currentTenantId!, eventId.value)
+        .catch(() => [] as MealAttendance[])
+      const map: Record<string, MealAttendance[]> = {}
+      for (const record of records) {
+        (map[record.mealPlanId] ??= []).push(record)
+      }
+      attendanceMap.value = map
     }
     finally {
       attendancePending.value = false
@@ -131,7 +126,34 @@ export function useEventMealData(eventId: Ref<string>) {
     }
   }
 
+  async function bulkUpsert(items: { planId: string, memberId: string, status: AttendanceStatus }[]) {
+    if (!items.length) return
+    try {
+      const records = await attendanceRepo.bulkUpsertMealAttendance(
+        tenantStore.currentTenantId!, eventId.value, items,
+      )
+      for (const record of records) {
+        const list = [...(attendanceMap.value[record.mealPlanId] ?? [])]
+        const idx = list.findIndex(a => a.householdMemberId === record.householdMemberId)
+        if (idx >= 0) list[idx] = record
+        else list.push(record)
+        attendanceMap.value[record.mealPlanId] = list
+      }
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        useToast().add({
+          title: t('demo.limitReached.title'),
+          description: t('demo.limitReached.description'),
+          color: 'warning',
+        })
+        return
+      }
+      throw e
+    }
+  }
+
   const pending = computed(() => plansPending.value || attendancePending.value)
 
-  return { allPlans, mealPlansByDay, templateNameById, pending, getAttendance, upsert }
+  return { allPlans, mealPlansByDay, templateNameById, pending, getAttendance, upsert, bulkUpsert }
 }

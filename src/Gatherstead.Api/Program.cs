@@ -261,18 +261,26 @@ var queueLimit = rateLimitingSection.GetValue("QueueLimit", 0);
 
 builder.Services.AddRateLimiter(options =>
 {
-    // Global rate limiter based on IP address
+    // Partition by authenticated user so devices/households behind one NAT IP don't share a
+    // single budget (which made bursty but legitimate sign-up flows trip the limit); fall back to
+    // IP for unauthenticated requests. UseRateLimiter is placed after authentication below so the
+    // user principal is populated here.
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
     {
-        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var externalId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? context.User.FindFirst("sub")?.Value;
+
+        var partitionKey = externalId is not null
+            ? $"user:{externalId}"
+            : $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
 
         return RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: ipAddress,
+            partitionKey: partitionKey,
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = permitLimit,
                 Window = TimeSpan.FromMinutes(windowMinutes),
-                QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = queueLimit
             });
     });
@@ -280,6 +288,12 @@ builder.Services.AddRateLimiter(options =>
     options.OnRejected = async (context, cancellationToken) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        // Tell clients when to retry so they can back off instead of hammering the endpoint.
+        var retryAfterSeconds = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+            ? (int)retryAfter.TotalSeconds
+            : (int)TimeSpan.FromMinutes(windowMinutes).TotalSeconds;
+        context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
         var logger = context.HttpContext.RequestServices
             .GetRequiredService<ILogger<Program>>();
@@ -341,9 +355,10 @@ app.Use(async (context, next) =>
 
 app.UseCors();
 app.UseRouting();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+// After authentication so the rate limiter can partition by the authenticated user (see AddRateLimiter).
+app.UseRateLimiter();
 app.UseMiddleware<CorrelationEnrichmentMiddleware>();
 
 app.MapControllers();

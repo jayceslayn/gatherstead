@@ -1,4 +1,4 @@
-import type { IEventAttendanceRepository } from '../interfaces'
+import type { BulkEventAttendanceItem, IEventAttendanceRepository } from '../interfaces'
 import type { AttendanceRecord, AttendanceStatus } from '../types'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
 import { trackPersistence } from '../../utils/telemetry'
@@ -28,6 +28,16 @@ export class DemoEventAttendanceRepository implements IEventAttendanceRepository
     }
     persistDemoStore()
     trackPersistence('attendance', 'set', { status })
+  }
+
+  async bulkUpsertAttendance(
+    tenantId: string,
+    eventId: string,
+    items: BulkEventAttendanceItem[],
+  ): Promise<void> {
+    for (const item of items) {
+      await this.upsertAttendance(tenantId, eventId, '', item.memberId, item.day, item.status)
+    }
   }
 
   async deleteAttendance(_tenantId: string, _eventId: string, attendanceId: string): Promise<void> {

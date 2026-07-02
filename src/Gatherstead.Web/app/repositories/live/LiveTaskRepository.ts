@@ -1,6 +1,7 @@
-import type { ITaskRepository } from '../interfaces'
+import type { BulkTaskIntentItem, ITaskRepository } from '../interfaces'
 import type { TaskTemplate, TaskPlan, TaskIntent, MyTask, AttributeWriteEntry } from '../types'
 import { trackPersistence } from '../../utils/telemetry'
+import { retryOn429 } from './retryOn429'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -52,6 +53,13 @@ export class LiveTaskRepository implements ITaskRepository {
     return r.entity ?? []
   }
 
+  async listEventIntents(tenantId: string, eventId: string): Promise<TaskIntent[]> {
+    const r = await $fetch<ApiResponse<TaskIntent[]>>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-intents`,
+    )
+    return r.entity ?? []
+  }
+
   async upsertIntent(
     tenantId: string,
     eventId: string,
@@ -69,6 +77,24 @@ export class LiveTaskRepository implements ITaskRepository {
       },
     )
     trackPersistence('task_volunteer', 'set', { volunteered: volunteered ? 1 : 0 })
+  }
+
+  async bulkUpsertIntents(
+    tenantId: string,
+    eventId: string,
+    items: BulkTaskIntentItem[],
+  ): Promise<void> {
+    if (!items.length) return
+    await retryOn429(() => $fetch<unknown>(
+      `/api/proxy/tenants/${tenantId}/events/${eventId}/task-intents/bulk`,
+      {
+        method: 'PUT',
+        body: {
+          items: items.map(i => ({ taskPlanId: i.planId, householdMemberId: i.memberId, volunteered: i.volunteered })),
+        },
+      },
+    ))
+    trackPersistence('task_volunteer', 'set', { count: items.length })
   }
 
   async createTemplate(

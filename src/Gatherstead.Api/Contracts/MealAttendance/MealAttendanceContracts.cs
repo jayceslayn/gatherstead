@@ -28,3 +28,24 @@ public class UpsertMealAttendanceRequest
     public bool BringOwnFood { get; init; }
     public string? Notes { get; init; }
 }
+
+public class BulkUpsertMealAttendanceItem
+{
+    [Required]
+    public Guid MealPlanId { get; init; }
+
+    [Required]
+    public Guid HouseholdMemberId { get; init; }
+
+    [Required]
+    public AttendanceStatus Status { get; init; }
+
+    public bool BringOwnFood { get; init; }
+    public string? Notes { get; init; }
+}
+
+public class BulkUpsertMealAttendanceRequest
+{
+    [Required]
+    public IReadOnlyList<BulkUpsertMealAttendanceItem> Items { get; init; } = Array.Empty<BulkUpsertMealAttendanceItem>();
+}

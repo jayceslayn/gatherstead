@@ -145,6 +145,27 @@ export interface IEventRepository {
   deleteEvent(tenantId: string, eventId: string): Promise<void>
 }
 
+/** One day-attendance change in a bulk sign-up submission. */
+export interface BulkEventAttendanceItem {
+  memberId: string
+  day: string
+  status: AttendanceStatus
+}
+
+/** One meal-attendance change in a bulk sign-up submission. */
+export interface BulkMealAttendanceItem {
+  planId: string
+  memberId: string
+  status: AttendanceStatus
+}
+
+/** One task-intent change in a bulk sign-up submission. */
+export interface BulkTaskIntentItem {
+  planId: string
+  memberId: string
+  volunteered: boolean
+}
+
 export interface IEventAttendanceRepository {
   listAttendance(tenantId: string, eventId: string): Promise<AttendanceRecord[]>
   upsertAttendance(
@@ -155,6 +176,8 @@ export interface IEventAttendanceRepository {
     day: string,
     status: AttendanceStatus,
   ): Promise<void>
+  /** Upserts many day-attendance records in one request. householdId is derived server-side. */
+  bulkUpsertAttendance(tenantId: string, eventId: string, items: BulkEventAttendanceItem[]): Promise<void>
   deleteAttendance(tenantId: string, eventId: string, attendanceId: string): Promise<void>
 }
 
@@ -242,6 +265,8 @@ export interface ITaskRepository {
     templateId: string,
     planId: string,
   ): Promise<TaskIntent[]>
+  /** Lists all task intents across every plan of the event in one request. */
+  listEventIntents(tenantId: string, eventId: string): Promise<TaskIntent[]>
   upsertIntent(
     tenantId: string,
     eventId: string,
@@ -251,6 +276,8 @@ export interface ITaskRepository {
     memberId: string,
     volunteered: boolean,
   ): Promise<void>
+  /** Upserts many task intents in one request. householdId is derived server-side. */
+  bulkUpsertIntents(tenantId: string, eventId: string, items: BulkTaskIntentItem[]): Promise<void>
   createTemplate(
     tenantId: string,
     eventId: string,
@@ -302,6 +329,10 @@ export interface ITaskRepository {
 
 export interface IMealAttendanceRepository {
   listMealAttendance(tenantId: string, eventId: string, templateId: string, planId: string): Promise<MealAttendance[]>
+  /** Lists all meal attendance across every plan of the event in one request. */
+  listMealAttendanceForEvent(tenantId: string, eventId: string): Promise<MealAttendance[]>
+  /** Upserts many meal-attendance records in one request. householdId is derived server-side. */
+  bulkUpsertMealAttendance(tenantId: string, eventId: string, items: BulkMealAttendanceItem[]): Promise<MealAttendance[]>
   upsertMealAttendance(
     tenantId: string,
     eventId: string,

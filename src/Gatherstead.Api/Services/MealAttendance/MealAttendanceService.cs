@@ -58,6 +58,34 @@ public class MealAttendanceService : IMealAttendanceService
         return BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>.SuccessfulResponse(attendances);
     }
 
+    public async Task<BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>> ListForEventAsync(
+        Guid tenantId,
+        Guid eventId,
+        IEnumerable<Guid>? memberIds = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+
+        var query = _dbContext.MealAttendances
+            .AsNoTracking()
+            .Where(a => a.TenantId == tenantId && a.MealPlan!.MealTemplate!.EventId == eventId);
+
+        if (memberIds is not null)
+        {
+            var memberIdList = memberIds.ToList();
+            if (memberIdList.Count > 0)
+                query = query.Where(a => memberIdList.Contains(a.HouseholdMemberId));
+        }
+
+        var entities = await query.ToListAsync(cancellationToken);
+        var attendances = entities.Select(MapToDto).ToList();
+
+        return BaseEntityResponse<IReadOnlyCollection<MealAttendanceDto>>.SuccessfulResponse(attendances);
+    }
+
     public async Task<MealAttendanceResponse> GetAsync(
         Guid tenantId,
         Guid planId,
@@ -95,9 +123,10 @@ public class MealAttendanceService : IMealAttendanceService
             return response;
         if (!ServiceGuards.RequireRequest(request, "upsert meal attendance", response))
             return response;
-        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
-            return response;
-        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        // Resolve + authorize the member by its own id; the client-supplied householdId is
+        // advisory only (a member has exactly one household), so a stale/mismatched value no
+        // longer produces a spurious "Household member not found."
+        if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
             return response;
 
         var planExists = await _dbContext.MealPlans
@@ -137,6 +166,86 @@ public class MealAttendanceService : IMealAttendanceService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(existing));
+        return response;
+    }
+
+    public async Task<BulkUpsertResponse<MealAttendanceDto>> BulkUpsertAsync(
+        Guid tenantId,
+        Guid eventId,
+        BulkUpsertMealAttendanceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BulkUpsertResponse<MealAttendanceDto>();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!ServiceGuards.RequireRequest(request, "bulk upsert meal attendance", response))
+            return response;
+
+        var items = request.Items;
+        if (items.Count == 0)
+            return (BulkUpsertResponse<MealAttendanceDto>)response.SetSuccess(Array.Empty<MealAttendanceDto>());
+
+        var memberOutcomes = await ServiceGuards.ResolveMembersForIntentAsync(
+            _memberAuthorizationService, _dbContext, tenantId,
+            items.Select(i => i.HouseholdMemberId).ToList(), cancellationToken);
+
+        var planIds = items.Select(i => i.MealPlanId).Distinct().ToList();
+        var validPlanIds = (await _dbContext.MealPlans
+            .AsNoTracking()
+            .Where(p => p.TenantId == tenantId && planIds.Contains(p.Id) && p.MealTemplate!.EventId == eventId)
+            .Select(p => p.Id)
+            .ToListAsync(cancellationToken))
+            .ToHashSet();
+
+        var memberIds = items.Select(i => i.HouseholdMemberId).Distinct().ToList();
+        var existingByKey = (await _dbContext.MealAttendances
+            .Where(a => a.TenantId == tenantId && planIds.Contains(a.MealPlanId) && memberIds.Contains(a.HouseholdMemberId))
+            .ToListAsync(cancellationToken))
+            .ToDictionary(a => (a.MealPlanId, a.HouseholdMemberId));
+
+        var upserted = new List<MealAttendanceEntity>();
+        for (var index = 0; index < items.Count; index++)
+        {
+            var item = items[index];
+            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId) is string error)
+            {
+                response.ItemErrors.Add(new BulkItemError(index, error));
+                continue;
+            }
+
+            if (!validPlanIds.Contains(item.MealPlanId))
+            {
+                response.ItemErrors.Add(new BulkItemError(index, "Meal plan not found."));
+                continue;
+            }
+
+            if (!existingByKey.TryGetValue((item.MealPlanId, item.HouseholdMemberId), out var existing))
+            {
+                existing = new MealAttendanceEntity
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    MealPlanId = item.MealPlanId,
+                    HouseholdMemberId = item.HouseholdMemberId,
+                };
+                _dbContext.MealAttendances.Add(existing);
+                existingByKey[(item.MealPlanId, item.HouseholdMemberId)] = existing;
+            }
+            else if (existing.IsDeleted)
+            {
+                existing.IsDeleted = false;
+            }
+
+            existing.Status = item.Status;
+            existing.BringOwnFood = item.BringOwnFood;
+            existing.Notes = item.Notes?.Trim();
+            upserted.Add(existing);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        response.SetSuccess(upserted.Select(MapToDto).ToList());
         return response;
     }
 

@@ -1,4 +1,4 @@
-import type { IMealAttendanceRepository } from '../interfaces'
+import type { BulkMealAttendanceItem, IMealAttendanceRepository } from '../interfaces'
 import type { MealAttendance, AttendanceStatus } from '../types'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
 import { trackPersistence } from '../../utils/telemetry'
@@ -48,6 +48,25 @@ export class DemoMealAttendanceRepository implements IMealAttendanceRepository {
     persistDemoStore()
     trackPersistence('meal_attendance', 'create', { status })
     return record
+  }
+
+  async listMealAttendanceForEvent(_tenantId: string, eventId: string): Promise<MealAttendance[]> {
+    const store = getDemoStore()
+    const templateIds = new Set(store.mealTemplates.value.filter(t => t.eventId === eventId).map(t => t.id))
+    const planIds = new Set(store.mealPlans.value.filter(p => templateIds.has(p.mealTemplateId)).map(p => p.id))
+    return store.mealAttendance.value.filter(a => planIds.has(a.mealPlanId))
+  }
+
+  async bulkUpsertMealAttendance(
+    tenantId: string,
+    eventId: string,
+    items: BulkMealAttendanceItem[],
+  ): Promise<MealAttendance[]> {
+    const results: MealAttendance[] = []
+    for (const item of items) {
+      results.push(await this.upsertMealAttendance(tenantId, eventId, '', item.planId, '', item.memberId, item.status, false))
+    }
+    return results
   }
 
   async deleteMealAttendance(

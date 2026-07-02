@@ -94,9 +94,10 @@ public class MealIntentService : IMealIntentService
             return response;
         if (!ServiceGuards.RequireRequest(request, "upsert meal intent", response))
             return response;
-        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
-            return response;
-        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        // Resolve + authorize the member by its own id; the client-supplied householdId is
+        // advisory only (a member has exactly one household), so a stale/mismatched value no
+        // longer produces a spurious "Household member not found."
+        if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
             return response;
 
         var planExists = await _dbContext.MealPlans

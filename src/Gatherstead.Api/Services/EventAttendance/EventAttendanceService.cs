@@ -95,9 +95,10 @@ public class EventAttendanceService : IEventAttendanceService
             return response;
         if (!ServiceGuards.RequireRequest(request, "upsert event attendance", response))
             return response;
-        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
-            return response;
-        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, request.HouseholdMemberId, cancellationToken))
+        // Resolve + authorize the member by its own id; the client-supplied householdId is
+        // advisory only (a member has exactly one household), so a stale/mismatched value no
+        // longer produces a spurious "Household member not found."
+        if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
             return response;
 
         var eventExists = await _dbContext.Events
@@ -141,6 +142,86 @@ public class EventAttendanceService : IEventAttendanceService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(existing));
+        return response;
+    }
+
+    public async Task<BulkUpsertResponse<EventAttendanceDto>> BulkUpsertAsync(
+        Guid tenantId,
+        Guid eventId,
+        BulkUpsertEventAttendanceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BulkUpsertResponse<EventAttendanceDto>();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+        if (!ServiceGuards.RequireRequest(request, "bulk upsert event attendance", response))
+            return response;
+
+        var items = request.Items;
+        if (items.Count == 0)
+            return (BulkUpsertResponse<EventAttendanceDto>)response.SetSuccess(Array.Empty<EventAttendanceDto>());
+
+        var eventExists = await _dbContext.Events
+            .AsNoTracking()
+            .AnyAsync(e => e.TenantId == tenantId && e.Id == eventId, cancellationToken);
+
+        if (!eventExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Event not found.");
+            return response;
+        }
+
+        var memberOutcomes = await ServiceGuards.ResolveMembersForIntentAsync(
+            _memberAuthorizationService, _dbContext, tenantId,
+            items.Select(i => i.HouseholdMemberId).ToList(), cancellationToken);
+
+        var memberIds = items.Select(i => i.HouseholdMemberId).Distinct().ToList();
+        var existingByKey = (await _dbContext.EventAttendances
+            .Where(a => a.TenantId == tenantId && a.EventId == eventId && memberIds.Contains(a.HouseholdMemberId))
+            .ToListAsync(cancellationToken))
+            .ToDictionary(a => (a.HouseholdMemberId, a.Day));
+
+        var upserted = new List<EventAttendanceEntity>();
+        for (var index = 0; index < items.Count; index++)
+        {
+            var item = items[index];
+            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId) is string error)
+            {
+                response.ItemErrors.Add(new BulkItemError(index, error));
+                continue;
+            }
+
+            if (!existingByKey.TryGetValue((item.HouseholdMemberId, item.Day), out var existing))
+            {
+                existing = new EventAttendanceEntity
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenantId,
+                    EventId = eventId,
+                    HouseholdMemberId = item.HouseholdMemberId,
+                    Day = item.Day,
+                };
+                _dbContext.EventAttendances.Add(existing);
+                existingByKey[(item.HouseholdMemberId, item.Day)] = existing;
+            }
+            else if (existing.IsDeleted)
+            {
+                existing.IsDeleted = false;
+            }
+
+            existing.Status = item.Status;
+            existing.ArrivalWindowStart = item.ArrivalWindowStart;
+            existing.ArrivalWindowEnd = item.ArrivalWindowEnd;
+            existing.DepartureWindowStart = item.DepartureWindowStart;
+            existing.DepartureWindowEnd = item.DepartureWindowEnd;
+            existing.Notes = item.Notes?.Trim();
+            upserted.Add(existing);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        response.SetSuccess(upserted.Select(MapToDto).ToList());
         return response;
     }
 

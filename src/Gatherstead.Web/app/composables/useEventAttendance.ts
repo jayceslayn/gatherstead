@@ -35,10 +35,29 @@ export function useEventAttendance(eventId: Ref<string>) {
     }
   }
 
+  async function bulkUpsert(items: { memberId: string, day: string, status: AttendanceStatus }[]) {
+    if (!items.length) return
+    try {
+      await repo.bulkUpsertAttendance(tenantStore.currentTenantId!, eventId.value, items)
+      await refresh()
+    }
+    catch (e) {
+      if (e instanceof DemoLimitError) {
+        useToast().add({
+          title: t('demo.limitReached.title'),
+          description: t('demo.limitReached.description'),
+          color: 'warning',
+        })
+        return
+      }
+      throw e
+    }
+  }
+
   async function deleteAttendance(attendanceId: string) {
     await repo.deleteAttendance(tenantStore.currentTenantId!, eventId.value, attendanceId)
     await refresh()
   }
 
-  return { attendance, pending, error, refresh, upsert, deleteAttendance }
+  return { attendance, pending, error, refresh, upsert, bulkUpsert, deleteAttendance }
 }

@@ -37,3 +37,9 @@ public class UpsertEventAttendanceRequest
     public DateTimeOffset? DepartureWindowEnd { get; init; }
     public string? Notes { get; init; }
 }
+
+public class BulkUpsertEventAttendanceRequest
+{
+    [Required]
+    public IReadOnlyList<UpsertEventAttendanceRequest> Items { get; init; } = Array.Empty<UpsertEventAttendanceRequest>();
+}

@@ -86,6 +86,74 @@ public class EventAttendanceServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task UpsertAsync_MismatchedHouseholdId_StillSucceeds()
+    {
+        // Regression for the "Household member not found." bug: the wizard could send a
+        // householdId that doesn't match the member's real household. The member exists and the
+        // caller is authorized, so the upsert must succeed regardless of the supplied householdId.
+        var result = await CreateService()
+            .UpsertAsync(_tenantId, _eventId, Guid.NewGuid(), Request(_member), TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(AttendanceStatus.Going, result.Entity!.Status);
+    }
+
+    [Fact]
+    public async Task UpsertAsync_NotAuthorized_ReturnsPermissionError()
+    {
+        var result = await CreateService(canAssign: false)
+            .UpsertAsync(_tenantId, _eventId, _householdId, Request(_member), TestContext.Current.CancellationToken);
+
+        Assert.False(result.Successful);
+        Assert.Contains(result.Messages, m => m.Type == MessageType.ERROR && m.Message.Contains("permission", StringComparison.OrdinalIgnoreCase));
+        Assert.False(await _dbContext.EventAttendances.AnyAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task BulkUpsertAsync_MixedItems_PersistsValidAndReportsPerItemErrors()
+    {
+        var missingMember = Guid.NewGuid();
+        var request = new BulkUpsertEventAttendanceRequest
+        {
+            Items = new[]
+            {
+                new UpsertEventAttendanceRequest { HouseholdMemberId = _member, Day = Day1, Status = AttendanceStatus.Going },
+                new UpsertEventAttendanceRequest { HouseholdMemberId = missingMember, Day = Day1, Status = AttendanceStatus.Maybe },
+            },
+        };
+
+        var result = await CreateService().BulkUpsertAsync(_tenantId, _eventId, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Single(result.Entity!);
+        Assert.Equal(_member, result.Entity!.Single().HouseholdMemberId);
+        var itemError = Assert.Single(result.ItemErrors);
+        Assert.Equal(1, itemError.Index);
+        Assert.Contains("member", itemError.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, await _dbContext.EventAttendances.CountAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task BulkUpsertAsync_ReupsertsSameKey_UpdatesInsteadOfDuplicating()
+    {
+        var service = CreateService();
+        await service.UpsertAsync(_tenantId, _eventId, _householdId, Request(_member), TestContext.Current.CancellationToken);
+
+        var request = new BulkUpsertEventAttendanceRequest
+        {
+            Items = new[]
+            {
+                new UpsertEventAttendanceRequest { HouseholdMemberId = _member, Day = Day1, Status = AttendanceStatus.NotGoing },
+            },
+        };
+        var result = await service.BulkUpsertAsync(_tenantId, _eventId, request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var attendance = Assert.Single(await _dbContext.EventAttendances.ToListAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(AttendanceStatus.NotGoing, attendance.Status);
+    }
+
+    [Fact]
     public async Task ListAsync_ReturnsAttendancesForEvent()
     {
         // Regression: the list projection must materialize before mapping. The instance MapToDto

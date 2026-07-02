@@ -83,6 +83,21 @@ public class EventAttendanceController : ControllerBase
         return Ok(response);
     }
 
+    [HttpPut("bulk")]
+    public async Task<ActionResult<BulkUpsertResponse<EventAttendanceDto>>> BulkUpsertAttendance(
+        Guid tenantId,
+        Guid eventId,
+        [FromBody] BulkUpsertEventAttendanceRequest request,
+        CancellationToken cancellationToken)
+    {
+        var response = await _eventAttendanceService.BulkUpsertAsync(tenantId, eventId, request, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        return Ok(response);
+    }
+
     [HttpDelete("{attendanceId:guid}")]
     public async Task<ActionResult<EventAttendanceResponse>> DeleteAttendance(
         Guid tenantId,

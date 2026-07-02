@@ -16,9 +16,9 @@ const selectedDayIndex = defineModel<number>('selectedDayIndex', { default: 0 })
 
 const { t } = useI18n()
 const { formatDay } = useFormatDate()
-const { attendance, pending: attendancePending, upsert: upsertDay } = useEventAttendance(computed(() => props.eventId))
+const { attendance, pending: attendancePending, upsert: upsertDay, bulkUpsert: bulkUpsertDays } = useEventAttendance(computed(() => props.eventId))
 const { members } = useHouseholdMembers(computed(() => props.householdId))
-const { mealPlansByDay, templateNameById, getAttendance: getMealAttendance, upsert: upsertMeal } = useEventMealData(computed(() => props.eventId))
+const { mealPlansByDay, templateNameById, getAttendance: getMealAttendance, upsert: upsertMeal, bulkUpsert: bulkUpsertMeals } = useEventMealData(computed(() => props.eventId))
 
 // === Day attendance ===
 const statusByMemberColumn = computed<Record<string, Record<string, AttendanceStatus | undefined>>>(() => {
@@ -119,7 +119,16 @@ async function setMealCell(memberId: string, planId: string, status: AttendanceS
 }
 
 async function setColumn(day: string, status: AttendanceStatus) {
-  await Promise.all(members.value.map(m => setDayCell(m.id, day, status)))
+  if (!props.householdId) return
+  // Set every member for this day in one bulk call; when marking NotGoing, cascade the day's
+  // meals to NotGoing too (mirrors setDayCell) in a single bulk call rather than per member/meal.
+  const dayItems = members.value.map(m => ({ memberId: m.id, day, status }))
+  const mealItems = status === 'NotGoing'
+    ? members.value.flatMap(m =>
+        (mealPlansByDay.value[day] ?? []).map(p => ({ planId: p.id, memberId: m.id, status: 'NotGoing' as AttendanceStatus })),
+      )
+    : []
+  await Promise.all([bulkUpsertDays(dayItems), bulkUpsertMeals(mealItems)])
 }
 
 // === Bulk wizard ===
@@ -241,7 +250,7 @@ watch(wizardOpen, (isOpen) => {
     :household-id="householdId"
     :members="members"
     :meal-plans-by-day="mealPlansByDay"
-    :upsert-day="upsertDay"
-    :upsert-meal="upsertMeal"
+    :bulk-upsert-days="bulkUpsertDays"
+    :bulk-upsert-meals="bulkUpsertMeals"
   />
 </template>

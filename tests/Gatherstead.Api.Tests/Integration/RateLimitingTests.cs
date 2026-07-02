@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Gatherstead.Api.Tests.Fixtures;
 using Microsoft.AspNetCore.Hosting;
@@ -25,11 +26,16 @@ public class RateLimitingTests : IAsyncLifetime
             {
                 services.AddRateLimiter(options =>
                 {
+                    // Mirror production partitioning: authenticated user, falling back to IP.
                     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     {
-                        var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                        var externalId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                            ?? context.User.FindFirst("sub")?.Value;
+                        var partitionKey = externalId is not null
+                            ? $"user:{externalId}"
+                            : $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
                         return RateLimitPartition.GetFixedWindowLimiter(
-                            partitionKey: ipAddress,
+                            partitionKey: partitionKey,
                             factory: _ => new FixedWindowRateLimiterOptions
                             {
                                 PermitLimit = 5,
@@ -42,6 +48,10 @@ public class RateLimitingTests : IAsyncLifetime
                     options.OnRejected = async (context, cancellationToken) =>
                     {
                         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                        var retryAfterSeconds = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                            ? (int)retryAfter.TotalSeconds
+                            : 60;
+                        context.HttpContext.Response.Headers.RetryAfter = retryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
                         await context.HttpContext.Response.WriteAsJsonAsync(
                             new { error = "Too many requests. Please try again later." },
                             cancellationToken: cancellationToken);
@@ -114,5 +124,25 @@ public class RateLimitingTests : IAsyncLifetime
         Assert.NotNull(rateLimitedResponse);
         var content = await rateLimitedResponse.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Contains("Too many requests", content);
+    }
+
+    [Fact]
+    public async Task RateLimitResponse_IncludesRetryAfterHeader()
+    {
+        var client = _factory.CreateClient();
+
+        HttpResponseMessage? rateLimitedResponse = null;
+        for (var i = 0; i < 20; i++)
+        {
+            var response = await client.GetAsync("/", TestContext.Current.CancellationToken);
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                rateLimitedResponse = response;
+                break;
+            }
+        }
+
+        Assert.NotNull(rateLimitedResponse);
+        Assert.NotNull(rateLimitedResponse.Headers.RetryAfter);
     }
 }

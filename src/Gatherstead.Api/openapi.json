@@ -2107,6 +2107,198 @@
         }
       }
     },
+    "/api/tenants/{tenantId}/events/{eventId}/attendance/bulk": {
+      "put": {
+        "tags": [
+          "EventAttendance"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertEventAttendanceRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertEventAttendanceRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertEventAttendanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventAttendanceDtoBulkUpsertResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventAttendanceDtoBulkUpsertResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventAttendanceDtoBulkUpsertResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/events/{eventId}/meal-attendance": {
+      "get": {
+        "tags": [
+          "EventMealAttendance"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/events/{eventId}/meal-attendance/bulk": {
+      "put": {
+        "tags": [
+          "EventMealAttendance"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertMealAttendanceRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertMealAttendanceRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertMealAttendanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealAttendanceDtoBulkUpsertResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealAttendanceDtoBulkUpsertResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealAttendanceDtoBulkUpsertResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants/{tenantId}/events": {
       "get": {
         "tags": [
@@ -2415,6 +2607,130 @@
               "text/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EventResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/events/{eventId}/task-intents": {
+      "get": {
+        "tags": [
+          "EventTaskIntents"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskIntentDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskIntentDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskIntentDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tenants/{tenantId}/events/{eventId}/task-intents/bulk": {
+      "put": {
+        "tags": [
+          "EventTaskIntents"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertTaskIntentRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertTaskIntentRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpsertTaskIntentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskIntentDtoBulkUpsertResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskIntentDtoBulkUpsertResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskIntentDtoBulkUpsertResponse"
                 }
               }
             }
@@ -7824,6 +8140,119 @@
         },
         "additionalProperties": false
       },
+      "BulkItemError": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BulkUpsertEventAttendanceRequest": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UpsertEventAttendanceRequest"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BulkUpsertMealAttendanceItem": {
+        "required": [
+          "householdMemberId",
+          "mealPlanId",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "mealPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "enum": [
+              "Going",
+              "Maybe",
+              "NotGoing"
+            ],
+            "type": "string"
+          },
+          "bringOwnFood": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "BulkUpsertMealAttendanceRequest": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkUpsertMealAttendanceItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "BulkUpsertTaskIntentItem": {
+        "required": [
+          "householdMemberId",
+          "taskPlanId"
+        ],
+        "type": "object",
+        "properties": {
+          "taskPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "volunteered": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BulkUpsertTaskIntentRequest": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkUpsertTaskIntentItem"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "ContactMethodDto": {
         "type": "object",
         "properties": {
@@ -8713,6 +9142,36 @@
           },
           "audit": {
             "$ref": "#/components/schemas/AuditInfo"
+          }
+        },
+        "additionalProperties": false
+      },
+      "EventAttendanceDtoBulkUpsertResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventAttendanceDto"
+            },
+            "nullable": true
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          },
+          "itemErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkItemError"
+            },
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -9637,6 +10096,36 @@
         },
         "additionalProperties": false
       },
+      "MealAttendanceDtoBulkUpsertResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MealAttendanceDto"
+            },
+            "nullable": true
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          },
+          "itemErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkItemError"
+            },
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
       "MealAttendanceDtoIReadOnlyCollectionBaseEntityResponse": {
         "type": "object",
         "properties": {
@@ -10513,6 +11002,36 @@
           },
           "audit": {
             "$ref": "#/components/schemas/AuditInfo"
+          }
+        },
+        "additionalProperties": false
+      },
+      "TaskIntentDtoBulkUpsertResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskIntentDto"
+            },
+            "nullable": true
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          },
+          "itemErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkItemError"
+            },
+            "readOnly": true
           }
         },
         "additionalProperties": false
@@ -11766,7 +12285,13 @@
       "name": "EventAttendance"
     },
     {
+      "name": "EventMealAttendance"
+    },
+    {
       "name": "Events"
+    },
+    {
+      "name": "EventTaskIntents"
     },
     {
       "name": "HouseholdMembers"

@@ -20,8 +20,8 @@ const props = defineProps<{
   householdId: string
   members: HouseholdMember[]
   mealPlansByDay: Record<string, MealPlan[]>
-  upsertDay: (householdId: string, memberId: string, day: string, status: AttendanceStatus) => Promise<void>
-  upsertMeal: (planId: string, householdId: string, memberId: string, status: AttendanceStatus) => Promise<void>
+  bulkUpsertDays: (items: { memberId: string, day: string, status: AttendanceStatus }[]) => Promise<void>
+  bulkUpsertMeals: (items: { planId: string, memberId: string, status: AttendanceStatus }[]) => Promise<void>
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -121,28 +121,30 @@ function mealSummary(state: MemberWizardState): string {
 async function apply() {
   applying.value = true
   try {
-    await Promise.all(
-      memberStates.value.flatMap(state =>
-        props.days.flatMap((day): Promise<void>[] => {
-          const lo = state.arrival <= state.departure ? state.arrival : state.departure
-          const hi = state.arrival <= state.departure ? state.departure : state.arrival
-          const inRange = state.dayStatus !== 'NotGoing' && day >= lo && day <= hi
+    // Collect every change up-front and send two bulk requests (days + meals) rather than one
+    // request per member/day/meal, which previously fanned out to hundreds of calls.
+    const dayItems: { memberId: string, day: string, status: AttendanceStatus }[] = []
+    const mealItems: { planId: string, memberId: string, status: AttendanceStatus }[] = []
 
-          const dayStatus: AttendanceStatus = inRange ? state.dayStatus : 'NotGoing'
-          const dayPromise = props.upsertDay(props.householdId, state.memberId, day, dayStatus)
+    for (const state of memberStates.value) {
+      const lo = state.arrival <= state.departure ? state.arrival : state.departure
+      const hi = state.arrival <= state.departure ? state.departure : state.arrival
 
-          const mealPlans: MealPlan[] = props.mealPlansByDay[day] ?? []
-          const mealPromises = mealPlans.map((plan) => {
-            const mealStatus: AttendanceStatus = inRange
-              ? (state.meals.byType[plan.mealType] ?? state.meals.all)
-              : 'NotGoing'
-            return props.upsertMeal(plan.id, props.householdId, state.memberId, mealStatus)
-          })
+      for (const day of props.days) {
+        const inRange = state.dayStatus !== 'NotGoing' && day >= lo && day <= hi
+        const dayStatus: AttendanceStatus = inRange ? state.dayStatus : 'NotGoing'
+        dayItems.push({ memberId: state.memberId, day, status: dayStatus })
 
-          return [dayPromise, ...mealPromises]
-        }),
-      ),
-    )
+        for (const plan of props.mealPlansByDay[day] ?? []) {
+          const mealStatus: AttendanceStatus = inRange
+            ? (state.meals.byType[plan.mealType] ?? state.meals.all)
+            : 'NotGoing'
+          mealItems.push({ planId: plan.id, memberId: state.memberId, status: mealStatus })
+        }
+      }
+    }
+
+    await Promise.all([props.bulkUpsertDays(dayItems), props.bulkUpsertMeals(mealItems)])
     stateCache.delete(props.householdId)
     open.value = false
   }

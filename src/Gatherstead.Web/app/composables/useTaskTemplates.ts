@@ -338,17 +338,12 @@ export function useEventTaskSignup(
     }
     intentsPending.value = true
     try {
-      const lists = await Promise.all(
-        items.value.map(it =>
-          repo.listPlanIntents(tenantId, eventId.value, it.template.id, it.plan.id).catch(() => [] as TaskIntent[]),
-        ),
-      )
+      // One event-scoped request instead of one per plan; group the flat list by plan.
+      const intents = await repo.listEventIntents(tenantId, eventId.value).catch(() => [] as TaskIntent[])
       const map: Record<string, Record<string, TaskIntent>> = {}
-      items.value.forEach((it, i) => {
-        const byMember: Record<string, TaskIntent> = {}
-        for (const intent of lists[i] ?? []) byMember[intent.householdMemberId] = intent
-        map[it.plan.id] = byMember
-      })
+      for (const intent of intents) {
+        (map[intent.taskPlanId] ??= {})[intent.householdMemberId] = intent
+      }
       intentMap.value = map
     }
     finally {

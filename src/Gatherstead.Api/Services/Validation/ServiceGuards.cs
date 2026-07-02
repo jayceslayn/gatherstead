@@ -188,6 +188,82 @@ public static class ServiceGuards
     }
 
     /// <summary>
+    /// Resolves a member by (tenantId, memberId) — independent of any client-supplied
+    /// householdId — then authorizes intent assignment against the member's ACTUAL household,
+    /// returning that household id. A member belongs to exactly one household, so deriving it
+    /// here removes the fragility of trusting a client householdId that can be stale or
+    /// mismatched (which previously surfaced as a spurious "Household member not found.").
+    /// Attaches the not-found error when the member does not exist, or the standard permission
+    /// error when authorization fails, and returns null in both cases so callers short-circuit.
+    /// </summary>
+    public static async Task<Guid?> ResolveMemberForIntentAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        GathersteadDbContext dbContext,
+        Guid tenantId,
+        Guid memberId,
+        CancellationToken cancellationToken)
+    {
+        var householdId = await dbContext.HouseholdMembers
+            .AsNoTracking()
+            .Where(m => m.TenantId == tenantId && m.Id == memberId)
+            .Select(m => (Guid?)m.HouseholdId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (householdId is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+            return null;
+        }
+
+        if (!await authorizationService.CanAssignIntentForMemberAsync(tenantId, householdId.Value, memberId, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to assign intents for this member.");
+            return null;
+        }
+
+        return householdId;
+    }
+
+    /// <summary>
+    /// Bulk counterpart to <see cref="ResolveMemberForIntentAsync{T}"/>: resolves and authorizes a
+    /// set of members in one members query plus one authorization check per distinct member. Returns
+    /// a per-member outcome (null = authorized OK; otherwise the error message to report against each
+    /// item that references that member). Does not touch a response — callers record per-item errors.
+    /// </summary>
+    public static async Task<Dictionary<Guid, string?>> ResolveMembersForIntentAsync(
+        IMemberAuthorizationService authorizationService,
+        GathersteadDbContext dbContext,
+        Guid tenantId,
+        IReadOnlyCollection<Guid> memberIds,
+        CancellationToken cancellationToken)
+    {
+        var outcomes = new Dictionary<Guid, string?>();
+        if (memberIds.Count == 0) return outcomes;
+
+        var distinct = memberIds.Distinct().ToList();
+        var households = await dbContext.HouseholdMembers
+            .AsNoTracking()
+            .Where(m => m.TenantId == tenantId && distinct.Contains(m.Id))
+            .Select(m => new { m.Id, m.HouseholdId })
+            .ToDictionaryAsync(m => m.Id, m => m.HouseholdId, cancellationToken);
+
+        foreach (var memberId in distinct)
+        {
+            if (!households.TryGetValue(memberId, out var householdId))
+            {
+                outcomes[memberId] = "Household member not found.";
+                continue;
+            }
+
+            var authorized = await authorizationService.CanAssignIntentForMemberAsync(tenantId, householdId, memberId, cancellationToken);
+            outcomes[memberId] = authorized ? null : "You do not have permission to assign intents for this member.";
+        }
+
+        return outcomes;
+    }
+
+    /// <summary>
     /// Materializes a single entity from the supplied query. Emits a "{entityDisplayName} not found."
     /// error on the response and returns null when no row matches. Callers should short-circuit on null.
     /// </summary>
