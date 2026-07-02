@@ -1,8 +1,15 @@
 <script setup lang="ts">
 const { t } = useI18n()
-const { loggedIn, logout } = useAuth()
+const { loggedIn, login, logout } = useAuth()
 const config = useRuntimeConfig()
 const isDemoMode = __DEMO_MODE__
+
+// Persist a spinner on the clicked auth button until the browser navigates away.
+const signingIn = ref(false)
+function onSignIn() {
+  signingIn.value = true
+  login()
+}
 </script>
 
 <!-- eslint-disable vue/no-multiple-template-root -->
@@ -35,8 +42,8 @@ const isDemoMode = __DEMO_MODE__
         <UButton
           v-else
           color="primary"
-          to="/auth/azure"
-          external
+          :loading="signingIn"
+          @click="onSignIn"
         >
           {{ t('common.signIn') }}
         </UButton>

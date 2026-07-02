@@ -11,10 +11,18 @@ export function useAuth() {
   }
 
   const { loggedIn, user } = useUserSession()
+  // External (full-page) navigations bypass the Nuxt router, so page:loading
+  // hooks never fire — start the indicator manually for visible feedback.
   return {
     loggedIn,
     user,
-    login: () => navigateTo('/auth/azure', { external: true }),
-    logout: () => navigateTo('/auth/logout', { external: true }),
+    login: () => {
+      useLoadingIndicator().start()
+      return navigateTo('/auth/azure', { external: true })
+    },
+    logout: () => {
+      useLoadingIndicator().start()
+      return navigateTo('/auth/logout', { external: true })
+    },
   }
 }

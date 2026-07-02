@@ -20,10 +20,15 @@ const { days, gridStyle, selectedDay, selectedDayIndex } = useSwimlaneContext()
 </script>
 
 <template>
-  <div class="border-t border-default" :class="{ 'hidden lg:block': hideWhenEmpty }">
+  <!-- lg:min-w-max stretches the lane to the scrollable content width so its top
+       separator spans the full width when scrolled horizontally. The lane is the
+       y-axis snap target (start none — leave x-snapping to the day cells). -->
+  <div class="border-t border-default lg:min-w-max lg:[scroll-snap-align:start_none]" :class="{ 'hidden lg:block': hideWhenEmpty }">
     <!-- Rule: optional leading slot + title + sub-description + trailing slot. -->
     <div class="flex items-center justify-between gap-2 px-2 pt-2 pb-1">
-      <div class="flex items-center gap-2 min-w-0">
+      <!-- Pinned to the left edge so the member/template name stays visible while
+           scrolling horizontally through days. -->
+      <div class="flex items-center gap-2 min-w-0 lg:sticky lg:left-0 z-10 bg-default pr-2">
         <span class="shrink-0 empty:hidden">
           <slot name="rule-leading" />
         </span>
@@ -37,12 +42,13 @@ const { days, gridStyle, selectedDay, selectedDayIndex } = useSwimlaneContext()
       </div>
     </div>
 
-    <!-- Desktop: per-day cells aligned to the group's columns. -->
+    <!-- Desktop: per-day cells aligned to the group's columns. Each cell is an
+         x-axis snap target (none start) so horizontal scrolling lands on a column. -->
     <div class="hidden lg:grid pb-2" :style="gridStyle">
       <div
         v-for="(day, i) in days"
         :key="day"
-        class="px-2"
+        class="px-2 lg:[scroll-snap-align:none_start]"
         :class="i > 0 ? 'border-l border-default/60' : ''"
       >
         <slot name="day" :day="day" :index="i" />

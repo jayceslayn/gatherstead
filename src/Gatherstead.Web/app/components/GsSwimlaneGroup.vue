@@ -47,16 +47,36 @@ function nextDay() {
   selectedDayIndex.value = Math.min(props.days.length - 1, selectedDayIndex.value + 1)
 }
 
+// Desktop scroll-snapping aligns lanes to the top of the scroll box; offset the
+// snap position by the sticky header's height so a snapped lane isn't hidden under it.
+const headerEl = ref<HTMLElement | null>(null)
+const headerHeight = ref(0)
+let headerObserver: ResizeObserver | null = null
+
+onMounted(() => {
+  if (!headerEl.value) return
+  headerHeight.value = headerEl.value.offsetHeight
+  headerObserver = new ResizeObserver(() => {
+    headerHeight.value = headerEl.value?.offsetHeight ?? 0
+  })
+  headerObserver.observe(headerEl.value)
+})
+
+onBeforeUnmount(() => headerObserver?.disconnect())
+
 provide(swimlaneKey, { days, gridStyle, selectedDayIndex, selectedDay })
 </script>
 
 <template>
   <div
-    class="lg:overflow-auto lg:rounded-lg lg:border lg:border-default"
+    class="lg:overflow-auto lg:rounded-lg lg:border lg:border-default lg:snap-both lg:snap-mandatory"
     :class="maxHeightClass"
+    :style="{ scrollPaddingTop: `${headerHeight}px` }"
   >
     <!-- ── Sticky header ──────────────────────────────────────────── -->
-    <div class="sticky top-[var(--gs-banner-h,0px)] lg:top-0 z-20 bg-default border-b border-default">
+    <!-- lg:min-w-max stretches the header to the scrollable content width so its
+         background + border stay opaque past the initial (visible) render width. -->
+    <div ref="headerEl" class="sticky top-[var(--gs-banner-h,0px)] lg:top-0 z-20 lg:min-w-max bg-default border-b border-default">
 
       <!-- Desktop: one cell per day, aligned to the lane columns below. -->
       <div class="hidden lg:grid" :style="gridStyle">

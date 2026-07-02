@@ -5,7 +5,9 @@ export default defineEventHandler(async (event) => {
 
   const config = useRuntimeConfig()
   const path = getRouterParam(event, 'path') || ''
-  const targetUrl = `${config.public.apiBaseUrl}/api/${path}`
+  // getRouterParam returns only the matched path segments, so the incoming query
+  // string must be re-appended — proxyRequest fetches the target URL verbatim.
+  const targetUrl = `${config.public.apiBaseUrl}/api/${path}${getRequestURL(event).search}`
 
   return proxyRequest(event, targetUrl, {
     headers: {

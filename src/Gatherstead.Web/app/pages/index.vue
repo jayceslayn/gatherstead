@@ -4,9 +4,20 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const { loggedIn } = useAuth()
+const { loggedIn, login } = useAuth()
 const config = useRuntimeConfig()
 const isDemoMode = __DEMO_MODE__
+
+// Persist a spinner on the clicked CTA until the browser navigates away.
+const signingIn = ref(false)
+function onGetStarted() {
+  signingIn.value = true
+  navigateTo('/tenants')
+}
+function onSignIn() {
+  signingIn.value = true
+  login()
+}
 
 const features = computed(() => [
   { title: t('landing.featureDirectory'), description: t('landing.featureDirectoryDesc'), icon: 'i-heroicons-user-group' },
@@ -53,20 +64,21 @@ const features = computed(() => [
 
           <UButton
             v-if="loggedIn"
-            to="/tenants"
             size="lg"
             color="primary"
+            :loading="signingIn"
+            @click="onGetStarted"
           >
             {{ t('common.getStarted') }}
           </UButton>
           <UButton
             v-else
-            to="/auth/azure"
-            external
             size="lg"
             color="primary"
             variant="solid"
             icon="i-heroicons-arrow-left-end-on-rectangle"
+            :loading="signingIn"
+            @click="onSignIn"
           >
             {{ t('common.signIn') }}
           </UButton>
