@@ -89,9 +89,11 @@ export default defineNuxtConfig({
         'base-uri': ["'self'"],
         'object-src': ["'none'"],
         'frame-ancestors': ["'none'"],
-        // 'self' for _nuxt/*.js + the npm-bundled App Insights SDK; nonce (SSR) + hash
-        // (prerendered/SPA); 'strict-dynamic'/'unsafe-inline' kept as CSP1/2 fallbacks.
-        'script-src': ["'self'", 'https:', "'unsafe-inline'", "'strict-dynamic'", "'nonce-{{nonce}}'"],
+        // 'self' covers all same-origin _nuxt/*.js (incl. import-map-resolved #entry chunks) +
+        // the npm-bundled App Insights SDK; nonce (SSR) + build-time hash (prerendered/SPA) cover
+        // inline scripts. 'strict-dynamic' is deliberately absent: it discards 'self' in CSP3
+        // browsers, which blocks the import-map-resolved entry module Nuxt/Vite emit.
+        'script-src': ["'self'", "'nonce-{{nonce}}'"],
         // Vue / @nuxt/ui / Tailwind v4 inject runtime inline styles.
         'style-src': ["'self'", "'unsafe-inline'"],
         // Same-origin API via the Nitro proxy + App Insights ingestion + live metrics.
