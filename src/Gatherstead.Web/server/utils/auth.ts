@@ -17,6 +17,17 @@ export function buildAuthority(tenantName: string): string {
 // expires mid-flight (independent of the API's own clock skew).
 const EXPIRY_SKEW_MS = 60_000
 
+// OAuth 2.0 token-endpoint error codes (RFC 6749 §5.2). Used to constrain what we log from the
+// token endpoint's error body to a known, non-sensitive set (`invalid_grant` is handled above).
+const KNOWN_OAUTH_ERRORS = new Set([
+  'invalid_request',
+  'invalid_client',
+  'invalid_grant',
+  'unauthorized_client',
+  'unsupported_grant_type',
+  'invalid_scope',
+])
+
 // Coalesce concurrent refreshes: the /tenants landing fires several proxied calls at once and Entra
 // rotates the refresh token on each use, so parallel refreshes would invalidate one another. This
 // dedups in-flight refreshes keyed by the refresh token — per app instance, which is sufficient for
@@ -101,7 +112,9 @@ export async function getValidAccessToken(event: H3Event): Promise<string> {
     // retries the refresh. 503 (not 401) avoids tripping the client's re-auth interceptor into a
     // re-auth storm, and surfaces config faults in logs rather than as a silent logout loop.
     const status = (err as { status?: number }).status
-    console.error('Azure token refresh failed; session retained', { status, oauthError })
+    // Only log a recognised OAuth error code (or a fixed placeholder), never raw response content.
+    const safeOauthError = KNOWN_OAUTH_ERRORS.has(oauthError as string) ? oauthError : 'unrecognized'
+    console.error('Azure token refresh failed; session retained', { status, oauthError: safeOauthError })
     throw createError({ statusCode: 503, statusMessage: 'Service Unavailable' })
   }
 }
