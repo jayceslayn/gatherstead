@@ -45,6 +45,11 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     softDeleteRetentionInDays: 7
     enableSoftDelete: true
+    // Purge protection prevents a soft-deleted vault OR key from being permanently purged inside the
+    // retention window. The CMK (cmk-gatherstead) wraps the Always Encrypted CEK: purging it would render
+    // every encrypted PII column permanently undecryptable, so protection against accidental/malicious
+    // purge is mandatory. NOTE: this flag is irreversible once enabled on a vault (by Azure design).
+    enablePurgeProtection: true
   }
 }
 

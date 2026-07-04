@@ -24,3 +24,7 @@ overrides:
   "brace-expansion@5": ">=5.0.6"
   ws: ">=8.20.1"
   shell-quote: ">=1.8.4"
+  # happy-dom < 20.8.9 has critical VM-escape RCE + related advisories. It is only an optional peer
+  # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
+  # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
+  happy-dom: ">=20.8.9"

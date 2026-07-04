@@ -45,6 +45,8 @@ public class MemberRelationshipService : IMemberRelationshipService
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         var query = _dbContext.MemberRelationships
             .AsNoTracking()
@@ -77,6 +79,8 @@ public class MemberRelationshipService : IMemberRelationshipService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
         var relationship = await ServiceGuards.LoadOrNotFoundAsync(
@@ -176,6 +180,8 @@ public class MemberRelationshipService : IMemberRelationshipService
 
         if (!await ServiceGuards.AuthorizeHouseholdManageAsync(response, _memberAuthorizationService, tenantId, householdId, AuthorizationDeniedMessage, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         var relationship = await ServiceGuards.LoadOrNotFoundAsync(
             response,
@@ -224,6 +230,8 @@ public class MemberRelationshipService : IMemberRelationshipService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeHouseholdManageAsync(response, _memberAuthorizationService, tenantId, householdId, AuthorizationDeniedMessage, cancellationToken))
+            return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
         var relationship = await ServiceGuards.LoadOrNotFoundAsync(
