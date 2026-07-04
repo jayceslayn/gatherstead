@@ -156,6 +156,15 @@ class Program
             ("HouseholdMembers", "Notes",         "NVARCHAR(500)", "NULL",     "RANDOMIZED"),
             ("ContactMethods",   "Value",         "NVARCHAR(256)", "NOT NULL", "DETERMINISTIC"),
 
+            // Account / invitation PII. Email is Deterministic on both because the verified-email
+            // invitation-claim flow matches by equality (WHERE Email == @normalizedEmail) and both columns
+            // are indexed; emails are normalized to lower-case before storage and comparison, so no
+            // case-insensitive/LIKE lookup exists that Deterministic encryption would break. DisplayName is
+            // never compared server-side, so it is Randomized.
+            ("Users",            "Email",         "NVARCHAR(256)", "NULL",     "DETERMINISTIC"),
+            ("Users",            "DisplayName",   "NVARCHAR(256)", "NULL",     "RANDOMIZED"),
+            ("Invitations",      "Email",         "NVARCHAR(256)", "NOT NULL", "DETERMINISTIC"),
+
             // Address PII
             ("Addresses",        "Line1",         "NVARCHAR(200)", "NOT NULL", "RANDOMIZED"),
             ("Addresses",        "Line2",         "NVARCHAR(200)", "NULL",     "RANDOMIZED"),
@@ -177,6 +186,10 @@ class Program
             ("MealAttendances",      "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
             ("EventAttendances",     "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
             ("MemberRelationships",  "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("Accommodations",       "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("MealTemplates",        "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("ShoppingItems",        "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
+            ("ShoppingItemIntents",  "Notes", "NVARCHAR(500)", "NULL", "RANDOMIZED"),
 
             // Attribute values (free-text user input)
             ("HouseholdMemberAttributes", "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
@@ -188,6 +201,7 @@ class Program
             ("MealTemplateAttributes",    "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
             ("TaskTemplateAttributes",    "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
             ("EquipmentAttributes",       "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
+            ("ShoppingItemAttributes",    "Value", "NVARCHAR(255)", "NOT NULL", "RANDOMIZED"),
         };
 
         foreach (var (table, column, sqlType, nullability, encType) in columns)
