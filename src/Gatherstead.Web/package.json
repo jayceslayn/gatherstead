@@ -18,6 +18,7 @@
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/vue3": "^6.1.20",
+    "@internationalized/date": "^3.12.2",
     "@microsoft/applicationinsights-web": "^3.4.1",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/icon": "^2.2.3",

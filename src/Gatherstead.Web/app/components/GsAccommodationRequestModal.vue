@@ -36,7 +36,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { formatDate } = useFormatDate()
 
 const accommodationId = ref('')
 const memberId = ref('')
@@ -84,7 +83,10 @@ watch(() => props.open, (isOpen) => {
 
 const accommodationItems = computed(() => props.accommodations.map(a => ({ label: a.name, value: a.id })))
 const memberItems = computed(() => props.members.map(m => ({ label: m.name, value: m.id })))
-const nightItems = computed(() => props.eventDays.map(d => ({ label: formatDate(d), value: d })))
+
+// In event mode, clamp the picker to the event's day span; empty strings (free mode) = no bound.
+const dateMin = computed(() => props.eventDays[0] ?? '')
+const dateMax = computed(() => props.eventDays.at(-1) ?? '')
 
 const statusItems = computed(() => [
   { label: t('status.requested'), value: 'Requested' as AccommodationIntentStatus },
@@ -149,17 +151,15 @@ function confirmDelete() {
           <USelect v-model="memberId" :items="memberItems" class="w-full" />
         </UFormField>
 
-        <div class="grid grid-cols-2 gap-3">
-          <UFormField :label="t('event.signup.firstNight')">
-            <UInput v-if="isFreeDates" v-model="startNight" type="date" class="w-full" />
-            <USelect v-else v-model="startNight" :items="nightItems" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('event.signup.lastNight')">
-            <UInput v-if="isFreeDates" v-model="endNight" type="date" class="w-full" />
-            <USelect v-else v-model="endNight" :items="nightItems" class="w-full" />
-          </UFormField>
-        </div>
-        <p class="text-xs text-muted -mt-2">
+        <UFormField :label="t('event.dateRangeLabel')">
+          <GsDateRangePicker
+            v-model:start-date="startNight"
+            v-model:end-date="endNight"
+            :min="dateMin"
+            :max="dateMax"
+          />
+        </UFormField>
+        <p class="text-xs text-muted">
           {{ t('event.signup.nightsSelected', { n: nightCount }) }}
         </p>
 

@@ -27,14 +27,9 @@ const { t } = useI18n()
       <USelect v-model="propertyId" :items="propertyItems" :disabled="propertyLocked" class="w-full" />
     </UFormField>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <UFormField :label="t('event.startDate')" name="startDate" required>
-        <UInput v-model="startDate" type="date" class="w-full" />
-      </UFormField>
-      <UFormField :label="t('event.endDate')" name="endDate" required>
-        <UInput v-model="endDate" type="date" class="w-full" />
-      </UFormField>
-    </div>
+    <UFormField :label="t('event.dateRangeLabel')" name="dates" required>
+      <GsDateRangePicker v-model:start-date="startDate" v-model:end-date="endDate" />
+    </UFormField>
     <p v-if="errors.dates" class="text-sm text-error -mt-2">{{ errors.dates }}</p>
   </div>
 </template>

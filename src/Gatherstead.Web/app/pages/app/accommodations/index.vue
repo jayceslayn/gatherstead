@@ -114,13 +114,10 @@ async function onSubmit(payload: {
       <!-- Search + results -->
       <div class="lg:col-span-2 space-y-6">
         <UCard>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UFormField :label="t('accommodations.checkIn')">
-              <UInput v-model="startNight" type="date" class="w-full" />
-            </UFormField>
-            <UFormField :label="t('accommodations.checkOut')">
-              <UInput v-model="endNight" type="date" class="w-full" />
-            </UFormField>
+          <UFormField :label="t('event.dateRangeLabel')">
+            <GsDateRangePicker v-model:start-date="startNight" v-model:end-date="endNight" />
+          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <UFormField :label="t('accommodation.partyAdults')">
               <UInput v-model.number="partyAdults" type="number" min="0" class="w-full" />
             </UFormField>

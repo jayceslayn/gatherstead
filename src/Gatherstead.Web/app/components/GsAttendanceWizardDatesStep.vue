@@ -10,9 +10,10 @@ const props = defineProps<{
 const memberStates = defineModel<MemberWizardState[]>({ required: true })
 
 const { t } = useI18n()
-const { formatDate } = useFormatDate()
 
-const dayItems = computed(() => props.days.map(d => ({ label: formatDate(d), value: d })))
+// Constrain the range pickers to the event's day span.
+const minDay = computed(() => props.days[0] ?? '')
+const maxDay = computed(() => props.days.at(-1) ?? '')
 
 // Household-level defaults used to bulk-fill all members.
 const householdDayStatus = ref<AttendanceStatus>('Going')
@@ -57,14 +58,14 @@ function updateMember(memberId: string, patch: Partial<MemberWizardState>) {
           />
         </div>
 
-        <div v-if="householdDayStatus !== 'NotGoing'" class="grid grid-cols-2 gap-3">
-          <UFormField :label="t('event.attendanceWizard.arrival')">
-            <USelect v-model="householdArrival" :items="dayItems" class="w-full" />
-          </UFormField>
-          <UFormField :label="t('event.attendanceWizard.departure')">
-            <USelect v-model="householdDeparture" :items="dayItems" class="w-full" />
-          </UFormField>
-        </div>
+        <UFormField v-if="householdDayStatus !== 'NotGoing'" :label="t('event.dateRangeLabel')">
+          <GsDateRangePicker
+            v-model:start-date="householdArrival"
+            v-model:end-date="householdDeparture"
+            :min="minDay"
+            :max="maxDay"
+          />
+        </UFormField>
       </div>
 
       <UButton size="sm" variant="outline" @click="applyHouseholdDefaults">
@@ -92,24 +93,16 @@ function updateMember(memberId: string, patch: Partial<MemberWizardState>) {
           />
         </div>
 
-        <div v-if="state.dayStatus !== 'NotGoing'" class="grid grid-cols-2 gap-3">
-          <UFormField :label="t('event.attendanceWizard.arrival')">
-            <USelect
-              :model-value="state.arrival"
-              :items="dayItems"
-              class="w-full"
-              @update:model-value="updateMember(state.memberId, { arrival: $event })"
-            />
-          </UFormField>
-          <UFormField :label="t('event.attendanceWizard.departure')">
-            <USelect
-              :model-value="state.departure"
-              :items="dayItems"
-              class="w-full"
-              @update:model-value="updateMember(state.memberId, { departure: $event })"
-            />
-          </UFormField>
-        </div>
+        <UFormField v-if="state.dayStatus !== 'NotGoing'" :label="t('event.dateRangeLabel')">
+          <GsDateRangePicker
+            :start-date="state.arrival"
+            :end-date="state.departure"
+            :min="minDay"
+            :max="maxDay"
+            @update:start-date="updateMember(state.memberId, { arrival: $event })"
+            @update:end-date="updateMember(state.memberId, { departure: $event })"
+          />
+        </UFormField>
 
         <p v-if="state.dayStatus !== 'NotGoing'" class="text-xs text-muted">
           {{ t('event.attendanceWizard.daysSelected', { n: memberNights(state) }) }}

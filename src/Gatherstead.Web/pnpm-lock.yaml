@@ -41,6 +41,9 @@ importers:
       '@fullcalendar/vue3':
         specifier: ^6.1.20
         version: 6.1.20(@fullcalendar/core@6.1.20)(vue@3.5.38(typescript@6.0.3))
+      '@internationalized/date':
+        specifier: ^3.12.2
+        version: 3.12.2
       '@microsoft/applicationinsights-web':
         specifier: ^3.4.1
         version: 3.4.1(tslib@2.8.1)

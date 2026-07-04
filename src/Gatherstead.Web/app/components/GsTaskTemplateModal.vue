@@ -19,6 +19,9 @@ const props = defineProps<{
   refresh?: () => Promise<void>
   template?: TaskTemplate | null
   draftMode?: boolean
+  /** ISO bounds of the event, constraining the optional sub-range. */
+  eventStart?: string
+  eventEnd?: string
 }>()
 
 const emit = defineEmits<{
@@ -78,9 +81,8 @@ function validate(): boolean {
   errors.name = form.name.trim() ? '' : t('validation.required', { field: t('event.task.templateName') })
   errors.timeSlots = form.timeSlots.length ? '' : t('event.task.selectTimeSlot')
   errors.dates = ''
-  if (form.useSubRange) {
-    if (!form.startDate || !form.endDate) errors.dates = t('validation.required', { field: t('event.meal.dateRangeLabel') })
-    else if (form.endDate < form.startDate) errors.dates = t('event.endBeforeStart')
+  if (form.useSubRange && (!form.startDate || !form.endDate)) {
+    errors.dates = t('validation.required', { field: t('event.meal.dateRangeLabel') })
   }
   return !errors.name && !errors.timeSlots && !errors.dates && !hasIncompleteAttributeRows(form.attributes)
 }
@@ -140,6 +142,8 @@ async function submit() {
           v-model:use-sub-range="form.useSubRange"
           v-model:start-date="form.startDate"
           v-model:end-date="form.endDate"
+          :min="eventStart"
+          :max="eventEnd"
           :error="errors.dates || undefined"
         />
 

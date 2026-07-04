@@ -53,13 +53,10 @@ watch(event, (val: EventSummary | null) => {
 
 function validate(): boolean {
   errors.name = form.name.trim() ? '' : t('validation.required', { field: t('event.name') })
-  errors.dates = ''
-  if (!form.startDate || !form.endDate) {
-    errors.dates = t('validation.required', { field: t('event.dateRangeLabel') })
-  }
-  else if (form.endDate < form.startDate) {
-    errors.dates = t('event.endBeforeStart')
-  }
+  // The range picker guarantees start <= end, so only presence needs checking.
+  errors.dates = (!form.startDate || !form.endDate)
+    ? t('validation.required', { field: t('event.dateRangeLabel') })
+    : ''
   return !errors.name && !errors.dates && !hasIncompleteAttributeRows(form.attributes)
 }
 
@@ -337,6 +334,8 @@ async function confirmDeleteTask() {
     <GsMealTemplateModal
       v-model:open="showMealModal"
       :event-id="eventId"
+      :event-start="form.startDate"
+      :event-end="form.endDate"
       :template="editingMealTemplate"
       :refresh="refreshMealTemplates"
       :refresh-tasks="refreshTaskTemplates"
@@ -345,6 +344,8 @@ async function confirmDeleteTask() {
     <GsTaskTemplateModal
       v-model:open="showTaskModal"
       :event-id="eventId"
+      :event-start="form.startDate"
+      :event-end="form.endDate"
       :template="editingTaskTemplate"
       :refresh="refreshTaskTemplates"
       @delete="onTaskModalDelete"

@@ -4,6 +4,9 @@
 // source of truth; date-range validation stays in the parent (which owns the error message).
 defineProps<{
   error?: string
+  /** Optional ISO bounds constraining the sub-range to the event span. */
+  min?: string
+  max?: string
 }>()
 
 const useSubRange = defineModel<boolean>('useSubRange', { default: false })
@@ -19,14 +22,14 @@ const { t } = useI18n()
       <UCheckbox v-model="useSubRange" :label="t('event.meal.useSubRange')" />
     </UFormField>
 
-    <div v-if="useSubRange" class="grid grid-cols-2 gap-4 mt-4">
-      <UFormField :label="t('event.startDate')">
-        <UInput v-model="startDate" type="date" class="w-full" />
-      </UFormField>
-      <UFormField :label="t('event.endDate')">
-        <UInput v-model="endDate" type="date" class="w-full" />
-      </UFormField>
-    </div>
+    <UFormField v-if="useSubRange" :label="t('event.dateRangeLabel')" class="mt-4">
+      <GsDateRangePicker
+        v-model:start-date="startDate"
+        v-model:end-date="endDate"
+        :min="min"
+        :max="max"
+      />
+    </UFormField>
     <p v-if="error" class="text-sm text-error mt-1">{{ error }}</p>
   </div>
 </template>
