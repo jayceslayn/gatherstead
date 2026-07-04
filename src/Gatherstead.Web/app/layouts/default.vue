@@ -107,8 +107,6 @@ const isMoreActive = computed(() =>
 
 <template>
   <div class="min-h-screen flex flex-col">
-    <DemoBanner />
-
     <div class="flex flex-1 min-h-0">
       <!-- Desktop sidebar (md+) -->
       <aside class="hidden md:flex w-50 border-r border-(--ui-border) p-4 flex-col shrink-0">

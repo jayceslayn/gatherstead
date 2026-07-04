@@ -14,7 +14,6 @@ function onSignIn() {
 
 <!-- eslint-disable vue/no-multiple-template-root -->
 <template>
-  <DemoBanner />
   <UHeader to="/" :toggle="!isDemoMode">
     <template #title>
       <picture>
