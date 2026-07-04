@@ -9,6 +9,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
+    "test": "vitest",
+    "test:run": "vitest run",
     "generate:types": "openapi-typescript ../../src/Gatherstead.Api/openapi.json -o app/repositories/generated/api.d.ts"
   },
   "dependencies": {
@@ -37,10 +39,13 @@
     "@iconify-json/lucide": "^1.2.0",
     "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
     "@nuxt/eslint": "^1.16.0",
+    "@nuxt/test-utils": "^3.19.0",
     "@types/node": "^25.9.3",
+    "@vue/test-utils": "^2.4.6",
     "eslint": "^10.4.1",
     "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
+    "vitest": "^3.2.4",
     "vue-tsc": "^3.3.4"
   },
   "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b"

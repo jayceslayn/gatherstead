@@ -44,6 +44,8 @@ public class AddressService : IAddressService
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         var query = _dbContext.Addresses
             .AsNoTracking()
@@ -76,6 +78,8 @@ public class AddressService : IAddressService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
         var address = await ServiceGuards.LoadOrNotFoundAsync(
@@ -160,6 +164,8 @@ public class AddressService : IAddressService
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Line1, "Address line 1", response, out string normalizedLine1);
         ServiceValidationHelper.TryNormalizeString(request.City, "City", response, out string normalizedCity);
@@ -209,6 +215,8 @@ public class AddressService : IAddressService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
         var address = await ServiceGuards.LoadOrNotFoundAsync(
