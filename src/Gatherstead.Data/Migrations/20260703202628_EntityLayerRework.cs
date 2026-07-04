@@ -11,8 +11,11 @@ namespace Gatherstead.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // === Add new columns first (before the data migration + drops below) ===
-            // Source defaults to 0 (IntentSource.Volunteered) for all existing rows.
+            // === Add new columns (before the drops below) ===
+            // No data backfill is performed: this reworks pre-go-live schema with no legacy production
+            // data to migrate, and the CI migration identity is deliberately no-read (see ci-grant.sql),
+            // so WHERE-filtered backfill UPDATEs can't run under it. Dev/demo databases are recreated
+            // from scratch. Source defaults to 0 (IntentSource.Volunteered) for all rows.
             migrationBuilder.AddColumn<int>(
                 name: "Source",
                 table: "TaskIntents",
@@ -45,31 +48,7 @@ namespace Gatherstead.Data.Migrations
                 type: "decimal(6,2)",
                 nullable: true);
 
-            // === Data migration (runs after adds, before drops) ===
-            // Intents: withdrawal now deletes the row, so a persisted Volunteered=0 row is a stale
-            // withdrawal — soft-delete it. Rows with Volunteered=1 keep the default Source=Volunteered.
-            migrationBuilder.Sql(@"
-UPDATE [TaskIntents] SET [IsDeleted] = 1, [DeletedAt] = SYSDATETIMEOFFSET()
-WHERE [Volunteered] = 0 AND [IsDeleted] = 0;");
-            migrationBuilder.Sql(@"
-UPDATE [MealIntents] SET [IsDeleted] = 1, [DeletedAt] = SYSDATETIMEOFFSET()
-WHERE [Volunteered] = 0 AND [IsDeleted] = 0;");
-
-            // AccommodationIntents: fold the old Decision into the merged Status enum. Old Decision
-            // values Pending=0/Approved=1/Declined=2; a Declined decision becomes Status=Declined(3).
-            // Non-declined rows keep their Status (old Intent=0/Hold=1/Confirmed=2 map 1:1 onto
-            // Requested=0/Hold=1/Confirmed=2), so no other update is needed.
-            migrationBuilder.Sql(@"
-UPDATE [AccommodationIntents] SET [Status] = 3 WHERE [Decision] = 2;");
-
-            // HouseholdMembers: preserve the adult signal where derivable before dropping IsAdult.
-            // AgeBand is persisted as its enum NAME (string conversion), so set 'Age18To64'. Child rows
-            // (IsAdult=0) without a band can't be mapped to a specific child band — accepted data loss.
-            migrationBuilder.Sql(@"
-UPDATE [HouseholdMembers] SET [AgeBand] = 'Age18To64'
-WHERE [IsAdult] = 1 AND [AgeBand] IS NULL AND [BirthDate] IS NULL;");
-
-            // === Drop replaced/dead columns (after the data migration above) ===
+            // === Drop replaced/dead columns ===
             migrationBuilder.DropColumn(
                 name: "Volunteered",
                 table: "TaskIntents");
@@ -177,8 +156,8 @@ WHERE [IsAdult] = 1 AND [AgeBand] IS NULL AND [BirthDate] IS NULL;");
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Re-adds the dropped columns but does NOT restore their data: the Decision→Status fold,
-            // the IsAdult→AgeBand backfill, and the stale-withdrawal soft-deletes are one-way.
+            // Re-adds the dropped columns as empty (Up performed no data backfill, so there is
+            // nothing to restore); the merged-enum reworks are one-way at the data level.
             migrationBuilder.DropTable(
                 name: "AccommodationBeds")
                 .Annotation("SqlServer:IsTemporal", true)
