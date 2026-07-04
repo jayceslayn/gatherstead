@@ -531,6 +531,9 @@
     "invalidEmail": "Please enter a valid email address",
     "invalidDate": "Please enter a valid date"
   },
+  "auth": {
+    "reauthenticating": "Signing you back in…"
+  },
   "error": {
     "notFound": "Page not found",
     "unauthorized": "You must be signed in to view this page.",

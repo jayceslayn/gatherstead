@@ -1,5 +1,6 @@
 <template>
   <UApp>
+    <ReauthBanner />
     <NuxtRouteAnnouncer />
     <NuxtLoadingIndicator />
     <NuxtLayout>

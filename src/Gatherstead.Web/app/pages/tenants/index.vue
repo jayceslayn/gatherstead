@@ -7,6 +7,9 @@ definePageMeta({
 const { t } = useI18n()
 const { tenants, pending, error } = useTenants()
 const { selectTenant } = useTenantSelect()
+// While a silent re-auth redirect is in flight, a 401 sets `error` but the app is recovering, not
+// failing — suppress the terminal error so it doesn't flash (the global ReauthBanner is the signal).
+const reauthing = useReauth()
 </script>
 
 <template>
@@ -14,7 +17,7 @@ const { selectTenant } = useTenantSelect()
     <h1 class="text-2xl font-bold mb-2">{{ t('tenant.selectTitle') }}</h1>
     <p class="text-gray-500 dark:text-gray-400 mb-8">{{ t('tenant.selectDescription') }}</p>
 
-    <div v-if="pending" class="text-center py-12">
+    <div v-if="pending || reauthing" class="text-center py-12">
       <p class="text-gray-500">{{ t('common.loading') }}</p>
     </div>
 

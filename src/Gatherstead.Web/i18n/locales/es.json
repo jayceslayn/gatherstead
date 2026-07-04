@@ -531,6 +531,9 @@
     "invalidEmail": "Por favor ingresa una dirección de correo electrónico válida",
     "invalidDate": "Por favor ingresa una fecha válida"
   },
+  "auth": {
+    "reauthenticating": "Volviendo a iniciar sesión…"
+  },
   "error": {
     "notFound": "Página no encontrada",
     "unauthorized": "Debes iniciar sesión para ver esta página.",

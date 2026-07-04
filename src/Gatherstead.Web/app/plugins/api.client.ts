@@ -13,23 +13,26 @@ export default defineNuxtPlugin((nuxtApp) => {
   if (__DEMO_MODE__) return
 
   // Capture composables at setup time: the onResponseError callback runs outside Nuxt's injection
-  // context, so resolving router/session there would throw.
+  // context, so resolving router/session/state there would throw.
   const router = useRouter()
   const { clear } = useUserSession()
-
-  // Guard against re-entrancy: a page firing several proxied calls at once would otherwise trigger
-  // one redirect per failed call.
-  let reauthInFlight = false
+  const loadingIndicator = useLoadingIndicator()
+  // Shared reactive flag (also our re-entrancy guard): a page firing several proxied calls at once
+  // would otherwise trigger one redirect per failed call. Components read this to show a re-auth hint.
+  const reauthInFlight = useReauth()
 
   globalThis.$fetch = $fetch.create({
     onResponseError({ request, response }) {
       if (response.status !== 401) return
       if (!String(request).includes('/api/proxy/')) return
-      if (reauthInFlight) return
+      if (reauthInFlight.value) return
       // Already on an auth route — don't loop.
       if (router.currentRoute.value.path.startsWith('/auth/')) return
 
-      reauthInFlight = true
+      // Surface the silent re-auth: the shared flag drives the app-wide banner, and the loading
+      // indicator gives the top progress bar (external nav bypasses the router's page:loading hooks).
+      reauthInFlight.value = true
+      loadingIndicator.start()
       // Reflect the dead session on the client, then re-authenticate. runWithContext restores the Nuxt
       // app context that navigateTo requires from inside this callback.
       clear().finally(() =>
