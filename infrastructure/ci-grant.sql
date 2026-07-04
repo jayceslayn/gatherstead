@@ -3,18 +3,26 @@
 -- deployment provisions the CI identity.
 --
 -- The CI identity (id-gat-ci-*) applies the idempotent EF Core migration script from ci-cd.yml.
--- That script is not DDL-only: EF emits DML for HasData seed data (InsertData/UpdateData/
--- DeleteData — e.g. the DietaryTags reference rows) and for any migrationBuilder.Sql backfill.
--- So CI needs both DDL and write access:
---   - db_ddladmin  — CREATE/ALTER/DROP tables, indexes, etc.
---   - db_datawriter — INSERT/UPDATE/DELETE for seed data and backfills (all tables).
+-- That script is not DDL-only, and DDL/write access alone is not sufficient:
+--   - EF emits DML for HasData seed data (InsertData/UpdateData/DeleteData — e.g. the DietaryTags
+--     reference rows) and for any migrationBuilder.Sql backfill.
+--   - Every AuditableEntity table is a system-versioned temporal table. When a migration drops or
+--     alters a column on an existing temporal table (a plain nullable ADD does not), EF wraps the
+--     change in ALTER TABLE ... SET (SYSTEM_VERSIONING = OFF) ... SET (SYSTEM_VERSIONING = ON ...).
+--     That toggle requires CONTROL on the table and its history table; db_ddladmin/ALTER is NOT enough,
+--     and the migration fails with "Msg 13538 ... You do not have the required permissions" (this is a
+--     temporal-table permission error, not an Always Encrypted one).
 --
--- Deliberately NOT granted: db_datareader. CI must not be able to SELECT application data.
--- This no-read grant is the load-bearing control for PII confidentiality against a compromised
--- or malicious migration: the CI identity also holds Key Vault Crypto User (so deploy-setup can
--- encrypt columns) and could therefore decrypt ciphertext — but with no read access it cannot
--- fetch the encrypted rows in the first place. (The app's own managed identity gets full data
--- access via post-deploy.sql; that is where application reads/writes happen.)
+-- So CI needs CONTROL, which db_owner provides (it also supersedes DDL + read/write):
+--   - db_owner — CREATE/ALTER/DROP, INSERT/UPDATE/DELETE, and CONTROL for the SYSTEM_VERSIONING toggle.
+--
+-- Tradeoff (accepted): db_owner implies SELECT, so this identity can read application data. The
+-- earlier "no-read" posture (db_ddladmin + db_datawriter only) is therefore abandoned — it is
+-- incompatible with automated migrations that alter temporal tables. PII columns protected by Always
+-- Encrypted (Users.Email/DisplayName, Invitations.Email, *.Notes, ...) remain ciphertext to this
+-- identity because it still holds no Key Vault Crypto access and so cannot decrypt them; non-encrypted
+-- columns (names, addresses, contact values) are readable. The app's own managed identity gets its
+-- data access via post-deploy.sql; that is where application reads/writes happen.
 --
 -- Prerequisites:
 --   - Connect using Entra ID authentication as the SQL administrator.
@@ -26,31 +34,13 @@
 -- Add the CI identity as a database user backed by its Entra ID service principal.
 CREATE USER [<ci-identity-name>] FROM EXTERNAL PROVIDER;
 
--- DDL for the schema, plus write access for HasData seed data and backfills.
-ALTER ROLE db_ddladmin ADD MEMBER [<ci-identity-name>];
-ALTER ROLE db_datawriter ADD MEMBER [<ci-identity-name>];
+-- db_owner: DDL + write for seed/backfill DML, plus CONTROL to toggle SYSTEM_VERSIONING when
+-- migrations alter the system-versioned temporal tables. The idempotent EF script self-creates
+-- [dbo].[__EFMigrationsHistory] on a fresh DB and reads it to find applied migrations; db_owner
+-- covers that read, so no separate history-table pre-create or GRANT SELECT is needed.
+ALTER ROLE db_owner ADD MEMBER [<ci-identity-name>];
 
--- The idempotent migration script SELECTs __EFMigrationsHistory to find which migrations are
--- already applied. db_datawriter grants INSERT/UPDATE/DELETE but NOT SELECT, and we deliberately
--- withhold db_datareader, so grant read on this one table only.
---
--- Pre-create the table here (matching EF Core's schema) so this GRANT is valid on a fresh DB
--- before the first migration runs. The idempotent EF script's IF OBJECT_ID check skips creation
--- when the table already exists.
-IF OBJECT_ID(N'[dbo].[__EFMigrationsHistory]') IS NULL
-BEGIN
-    CREATE TABLE [dbo].[__EFMigrationsHistory] (
-        [MigrationId] nvarchar(150) NOT NULL,
-        [ProductVersion] nvarchar(32) NOT NULL,
-        CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
-    );
-END;
-
-GRANT SELECT ON [dbo].[__EFMigrationsHistory] TO [<ci-identity-name>];
-
--- NOTE: Always Encrypted setup (CMK/CEK creation, column encryption, temporal retention) is NOT
--- performed by this identity. Encrypting the system-versioned temporal tables requires toggling
--- SYSTEM_VERSIONING, which needs CONTROL on the tables — and CONTROL implies SELECT, which would
--- break the no-read control above. That setup is run manually by a SQL admin via
--- Gatherstead.Data.Setup instead (see docs/DEPLOYMENT.md), so the CI identity needs no key-management
--- or database-scoped ALTER grants here.
+-- NOTE: Always Encrypted setup (CMK/CEK creation, column encryption, temporal retention) is still NOT
+-- performed by this identity. It requires Key Vault Crypto access to wrap the CEK, and is run through
+-- the Gatherstead.Data.Setup tool as a one-off by a SQL admin (see docs/DEPLOYMENT.md), so the CI
+-- identity needs no key-management grants here.

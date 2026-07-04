@@ -203,9 +203,9 @@ jobs:
             --name "gh-actions-${{ github.run_id }}" || true
 
   # NOTE: Always Encrypted setup (CMK/CEK, column encryption, temporal retention) is intentionally
-  # NOT a CI job. Encrypting the system-versioned temporal tables requires toggling SYSTEM_VERSIONING,
-  # which needs CONTROL on the tables — incompatible with the CI identity's deliberate no-read posture.
-  # It is run manually as a SQL admin via Gatherstead.Data.Setup; see docs/DEPLOYMENT.md.
+  # NOT a CI job. Wrapping the CEK requires Key Vault Crypto access (which the CI identity does not
+  # have) and the setup is driven by the Gatherstead.Data.Setup tool rather than a raw script. It is
+  # run manually as a SQL admin; see docs/DEPLOYMENT.md.
 
   deploy-api:
     name: Deploy API

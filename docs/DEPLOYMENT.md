@@ -28,10 +28,10 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 - **`deploy-migrations`** — applies an idempotent EF Core script (opens a temporary SQL firewall rule for the runner, then removes it). On a clean database this creates every table; on an existing one it no-ops.
 - **`deploy-api`** — zip-deploys the API to App Service; `deploy-web` and `deploy-demo` gate on this job.
 
-> **Always Encrypted setup is not a CI job.** Creating the CMK/CEK and encrypting columns on the
-> system-versioned temporal tables requires `CONTROL` on those tables (to toggle `SYSTEM_VERSIONING`)
-> plus Key Vault crypto access — a privilege level incompatible with the CI identity's deliberate
-> no-read posture. It is run **manually by a SQL admin** via `Gatherstead.Data.Setup`; see
+> **Always Encrypted setup is not a CI job.** Creating the CMK/CEK and encrypting columns requires
+> Key Vault crypto access (to wrap the CEK) that the CI identity does not have, and is driven by the
+> `Gatherstead.Data.Setup` tool rather than a raw script. It is run **manually by a SQL admin** via
+> `Gatherstead.Data.Setup`; see
 > [Configure Encryption and Temporal Retention](#5-configure-encryption-and-temporal-retention). It is
 > idempotent and only needs re-running when PII columns change.
 - **`deploy-web`** — zip-deploys the Web app to App Service (runs after `deploy-api`).
@@ -63,7 +63,7 @@ infrastructure/
   parameters/
     prod.bicepparam        # Environment params — copy from prod.bicepparam.example (gitignored)
   post-deploy.sql          # Grants the app managed identity SQL database access (one-time)
-  ci-grant.sql             # Grants the CI identity DDL + write access for migrations (one-time)
+  ci-grant.sql             # Grants the CI identity db_owner for migrations (one-time)
 ```
 
 ## App Service Plan SKU: F1 vs B1
@@ -131,7 +131,7 @@ sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirecto
 
 This grants the API's managed identity **read/write DML only** (`db_datareader` + `db_datawriter`) — the app performs no schema work at runtime (migrations are not applied at startup), so it deliberately gets no `db_ddladmin`. Schema changes are owned by the CI identity (next step). The app identity is therefore lower-privileged than both the `Gatherstead SQL Admins` group and the CI identity. The script is idempotent and safe to re-run.
 
-Then grant the CI deploy identity the access the pipeline needs to apply migrations — replace `<ci-identity-name>` with the `ciIdentityName` output. This grants `db_ddladmin` (schema changes) **and** `db_datawriter`, because EF migrations carry DML: `HasData` seed data (e.g. the `DietaryTags` reference rows, emitted as `InsertData`/`UpdateData`/`DeleteData`) and any `migrationBuilder.Sql` backfill. It deliberately withholds `db_datareader` — CI can write via reviewed migrations but never reads application data, which (together with column encryption) keeps PII confidential from the CI identity:
+Then grant the CI deploy identity the access the pipeline needs to apply migrations — replace `<ci-identity-name>` with the `ciIdentityName` output. This grants **`db_owner`**. Migrations need more than DDL + write: every `AuditableEntity` table is system-versioned temporal, and altering an existing temporal table makes EF toggle `SYSTEM_VERSIONING`, which requires `CONTROL` (`db_ddladmin` is insufficient and the migration fails with `Msg 13538`). `db_owner` supplies `CONTROL` and also covers the DML that migrations carry (`HasData` seed data and `migrationBuilder.Sql` backfills). Tradeoff: `db_owner` implies `SELECT`, so the earlier "no-read" posture is dropped; Always-Encrypted PII columns stay ciphertext to CI (it has no Key Vault crypto access) while non-encrypted columns are readable:
 
 ```bash
 sqlcmd -S <sql-server-fqdn> -d gatherstead --authentication-method ActiveDirectoryDefault \
@@ -191,13 +191,12 @@ az sql server firewall-rule delete --resource-group <resource-group> --server <s
 
 ### 5. Configure Encryption and Temporal Retention
 
-**Run this manually as a SQL admin — it is deliberately not part of CI.** Encrypting the
-system-versioned temporal tables requires toggling `SYSTEM_VERSIONING`, which needs `CONTROL` on the
-current *and* history tables. `CONTROL` implies `SELECT`, so granting it to the no-read CI identity
-would defeat the load-bearing PII confidentiality control (see [ci-grant.sql](../infrastructure/ci-grant.sql)).
-Run it as an identity in the **`Gatherstead SQL Admins`** group (which has `CONTROL`) that also has
-**Key Vault Crypto User** on the vault. It is idempotent, so re-run it whenever PII columns are added or
-changed; routine schema migrations (step 4) remain automated in CI.
+**Run this manually as a SQL admin — it is deliberately not part of CI.** Wrapping the CEK requires
+**Key Vault Crypto User** access on the vault, which the CI identity does not have, and the setup is
+driven by the `Gatherstead.Data.Setup` tool rather than a raw script (it must generate/wrap the CEK and
+encrypt temporal columns). Run it as an identity in the **`Gatherstead SQL Admins`** group (which has
+`CONTROL`) that also has **Key Vault Crypto User** on the vault. It is idempotent, so re-run it whenever
+PII columns are added or changed; routine schema migrations (step 4) remain automated in CI.
 
 Authenticate with `az login` as that admin, then run the setup utility with the CMK's **Key Vault key
 URL** as the second argument. This must be the key's `https://<vault>.vault.azure.net/keys/...`

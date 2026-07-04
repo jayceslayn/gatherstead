@@ -3,9 +3,8 @@
 --
 -- This targets the API app identity ONLY (id-<workload>-<env>-<region>, e.g. id-gat-prod-wus2),
 -- which gets read/write DML only. It is NOT the CI identity: the CI/migrations identity
--- (id-<workload>-ci-<env>-<region>, e.g. id-gat-ci-prod-wus2) gets db_ddladmin + db_datawriter
--- via the separate ci-grant.sql. Run both scripts; they grant different identities and do not
--- overlap.
+-- (id-<workload>-ci-<env>-<region>, e.g. id-gat-ci-prod-wus2) gets db_owner via the separate
+-- ci-grant.sql. Run both scripts; they grant different identities and do not overlap.
 --
 -- Prerequisites:
 --   - Connect using Entra ID authentication as the SQL administrator.
