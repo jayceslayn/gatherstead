@@ -1,6 +1,7 @@
 using Gatherstead.Api.Contracts.TenantUsers;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.TenantUsers;
 using Gatherstead.Api.Tests.Fixtures;
 using Gatherstead.Data;
@@ -42,7 +43,7 @@ public class TenantUserServiceTests : IAsyncLifetime
         var authService = Mock.Of<IMemberAuthorizationService>(s =>
             s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManageTenant || isAppAdmin));
 
-        return new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache());
+        return new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache(), Mock.Of<ISecurityEventLogger>());
     }
 
     private async Task SeedTenantUserAsync(Guid userId, TenantRole role)
@@ -169,7 +170,7 @@ public class TenantUserServiceTests : IAsyncLifetime
             c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>((bool?)false));
         var authService = Mock.Of<IMemberAuthorizationService>(s =>
             s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(true));
-        var svc = new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache());
+        var svc = new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache(), Mock.Of<ISecurityEventLogger>());
 
         var result = await svc.UpdateRoleAsync(
             _tenantId, _actorUserId,

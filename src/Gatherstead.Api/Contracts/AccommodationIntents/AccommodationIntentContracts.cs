@@ -13,10 +13,8 @@ public record AccommodationIntentDto(
     DateOnly EndNight,
     AccommodationIntentStatus Status,
     string? Notes,
-    AccommodationIntentDecision Decision,
     int? PartyAdults,
     int? PartyChildren,
-    int? Priority,
     AuditInfo? Audit);
 
 public class AccommodationIntentResponse : BaseEntityResponse<AccommodationIntentDto> { }
@@ -33,7 +31,6 @@ public record MyStayDto(
     DateOnly StartNight,
     DateOnly EndNight,
     AccommodationIntentStatus Status,
-    AccommodationIntentDecision Decision,
     int? PartyAdults,
     int? PartyChildren);
 
@@ -54,7 +51,6 @@ public class CreateAccommodationIntentRequest
     public string? Notes { get; init; }
     public int? PartyAdults { get; init; }
     public int? PartyChildren { get; init; }
-    public int? Priority { get; init; }
 }
 
 public class UpdateAccommodationIntentRequest
@@ -76,8 +72,6 @@ public class UpdateAccommodationIntentRequest
     public AccommodationIntentStatus Status { get; init; }
 
     public string? Notes { get; init; }
-    public AccommodationIntentDecision Decision { get; init; }
     public int? PartyAdults { get; init; }
     public int? PartyChildren { get; init; }
-    public int? Priority { get; init; }
 }

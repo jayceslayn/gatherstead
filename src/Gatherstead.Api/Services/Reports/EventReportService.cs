@@ -101,6 +101,7 @@ public class EventReportService : IEventReportService
         // Accommodations for the event's property → intents on the event's nights.
         var accommodations = await _dbContext.Accommodations
             .AsNoTracking()
+            .Include(a => a.Beds)
             .Where(a => a.TenantId == tenantId && a.PropertyId == @event.PropertyId)
             .ToListAsync(cancellationToken);
 
@@ -323,12 +324,11 @@ public class EventReportService : IEventReportService
     {
         // A declined request frees the slot, so it neither occupies nor appears as an occupant.
         var occupants = nightIntents
-            .Where(i => i.Decision != AccommodationIntentDecision.Declined)
+            .Where(i => i.Status != AccommodationIntentStatus.Declined)
             .Select(i => new EventReportOccupantDto(
                 i.HouseholdMemberId,
                 memberById.GetValueOrDefault(i.HouseholdMemberId)?.Name ?? string.Empty,
                 i.Status,
-                i.Decision,
                 i.PartyAdults,
                 i.PartyChildren))
             .OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
@@ -337,12 +337,14 @@ public class EventReportService : IEventReportService
         // A party with no adults/children counts still occupies one slot (the requesting member).
         var occupied = occupants.Sum(o => Math.Max((o.PartyAdults ?? 0) + (o.PartyChildren ?? 0), 1));
 
+        // Sleeps capacity from the bed inventory; null when no beds are recorded (unconstrained).
+        int? capacity = BedSizes.SleepsCapacity(accommodation.Beds.Select(b => (b.Size, b.Quantity)));
+
         return new EventReportAccommodationDto(
             accommodation.Id,
             accommodation.Name,
             accommodation.Type,
-            accommodation.CapacityAdults,
-            accommodation.CapacityChildren,
+            capacity,
             accommodation.Notes,
             occupied,
             occupants);

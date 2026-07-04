@@ -4,7 +4,7 @@ namespace Gatherstead.Api.Services.Authorization;
 /// Encapsulates the caller's sensitive-read permission for household member data.
 /// Global = can read sensitive fields for all households in the tenant.
 /// ForHouseholds = can read sensitive fields only for the specified household IDs.
-/// None = public fields only (Name, AgeBand, IsAdult); 403 on sub-entity endpoints.
+/// None = public fields only (Name, AgeBand, derived IsAdult); 403 on sub-entity endpoints.
 /// </summary>
 public sealed class SensitiveReadScope
 {

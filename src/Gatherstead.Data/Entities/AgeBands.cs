@@ -29,4 +29,7 @@ public static class AgeBands
             _     => AgeBand.Age65Plus,
         };
     }
+
+    /// <summary>An age band counts as adult from the 18–64 band upward.</summary>
+    public static bool IsAdult(AgeBand band) => band >= AgeBand.Age18To64;
 }

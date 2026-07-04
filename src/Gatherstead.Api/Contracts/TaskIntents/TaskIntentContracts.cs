@@ -9,12 +9,12 @@ public record TaskIntentDto(
     Guid TenantId,
     Guid TaskPlanId,
     Guid HouseholdMemberId,
-    bool Volunteered,
+    IntentSource Source,
     AuditInfo? Audit);
 
 public class TaskIntentResponse : BaseEntityResponse<TaskIntentDto> { }
 
-/// <summary>A member's volunteered task enriched with its plan day, task name and event context, for
+/// <summary>A member's signed-up task enriched with its plan day, task name and event context, for
 /// the "My Upcoming Tasks" dashboard/feature widget.</summary>
 public record MyTaskDto(
     Guid Id,
@@ -26,14 +26,12 @@ public record MyTaskDto(
     DateOnly Day,
     TaskTimeSlot? TimeSlot,
     bool Completed,
-    bool Volunteered);
+    IntentSource Source);
 
 public class UpsertTaskIntentRequest
 {
     [Required]
     public Guid HouseholdMemberId { get; init; }
-
-    public bool Volunteered { get; init; }
 }
 
 public class BulkUpsertTaskIntentItem
@@ -43,8 +41,6 @@ public class BulkUpsertTaskIntentItem
 
     [Required]
     public Guid HouseholdMemberId { get; init; }
-
-    public bool Volunteered { get; init; }
 }
 
 public class BulkUpsertTaskIntentRequest

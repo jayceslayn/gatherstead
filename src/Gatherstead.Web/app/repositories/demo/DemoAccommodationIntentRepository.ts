@@ -2,7 +2,6 @@ import type { IAccommodationIntentRepository } from '../interfaces'
 import type {
   AccommodationIntent,
   AccommodationIntentStatus,
-  AccommodationIntentDecision,
 } from '../types'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
 import { trackPersistence } from '../../utils/telemetry'
@@ -57,10 +56,8 @@ export class DemoAccommodationIntentRepository implements IAccommodationIntentRe
       endNight,
       status,
       notes: notes ?? null,
-      decision: 'Pending',
       partyAdults: partyAdults ?? null,
       partyChildren: partyChildren ?? null,
-      priority: null,
     }
     store.accommodationIntents.value.push(intent)
     persistDemoStore()
@@ -78,7 +75,6 @@ export class DemoAccommodationIntentRepository implements IAccommodationIntentRe
     startNight: string,
     endNight: string,
     status: AccommodationIntentStatus,
-    decision: AccommodationIntentDecision,
     notes?: string | null,
     partyAdults?: number | null,
     partyChildren?: number | null,
@@ -91,12 +87,11 @@ export class DemoAccommodationIntentRepository implements IAccommodationIntentRe
     intent.startNight = startNight
     intent.endNight = endNight
     intent.status = status
-    intent.decision = decision
     intent.notes = notes ?? null
     intent.partyAdults = partyAdults ?? null
     intent.partyChildren = partyChildren ?? null
     persistDemoStore()
-    trackPersistence('accommodation_intent', 'update', { status, decision })  
+    trackPersistence('accommodation_intent', 'update', { status })
   }
 
   async deleteIntent(

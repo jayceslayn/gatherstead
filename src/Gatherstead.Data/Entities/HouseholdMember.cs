@@ -19,7 +19,6 @@ public class HouseholdMember : AuditableEntity
 
     public TenantUser? LinkedTenantUser { get; set; }
 
-    public bool IsAdult { get; set; }
     public AgeBand? AgeBand { get; set; }
 
     // Encrypted fields

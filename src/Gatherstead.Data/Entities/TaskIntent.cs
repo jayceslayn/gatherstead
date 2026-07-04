@@ -24,5 +24,5 @@ public class TaskIntent : AuditableEntity
     [ForeignKey(nameof(HouseholdMemberId))]
     public HouseholdMember? HouseholdMember { get; set; }
 
-    public bool Volunteered { get; set; }
+    public IntentSource Source { get; set; }
 }

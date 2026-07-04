@@ -3234,7 +3234,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "SoftDelete" | "Restore" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
+                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
                     dateFrom?: string;
                     dateTo?: string;
                     page?: number;
@@ -3279,7 +3279,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "SoftDelete" | "Restore" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
+                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
                     dateFrom?: string;
                     dateTo?: string;
                     tenantId?: string;
@@ -4427,17 +4427,11 @@ export interface components {
             type?: "Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite";
             notes?: string | null;
             /** Format: int32 */
-            capacityAdults?: number | null;
+            capacity?: number | null;
             /** Format: int32 */
-            capacityChildren?: number | null;
+            occupied?: number;
             /** Format: int32 */
-            claimedAdults?: number;
-            /** Format: int32 */
-            claimedChildren?: number;
-            /** Format: int32 */
-            remainingAdults?: number | null;
-            /** Format: int32 */
-            remainingChildren?: number | null;
+            remaining?: number | null;
             hasSufficientCapacity?: boolean;
         };
         AccommodationAvailabilityDtoIReadOnlyCollectionBaseEntityResponse: {
@@ -4455,11 +4449,16 @@ export interface components {
             name?: string;
             /** @enum {string} */
             type?: "Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite";
-            /** Format: int32 */
-            capacityAdults?: number | null;
-            /** Format: int32 */
-            capacityChildren?: number | null;
+            /** Format: double */
+            widthMeters?: number | null;
+            /** Format: double */
+            depthMeters?: number | null;
+            /** Format: double */
+            areaSqMeters?: number | null;
+            /** Format: double */
+            effectiveAreaSqMeters?: number | null;
             notes?: string | null;
+            beds?: components["schemas"]["BedDto"][];
             attributes?: components["schemas"]["AttributeDto"][];
             audit?: components["schemas"]["AuditInfo"];
         };
@@ -4482,16 +4481,12 @@ export interface components {
             /** Format: date */
             endNight?: string;
             /** @enum {string} */
-            status?: "Intent" | "Hold" | "Confirmed";
+            status?: "Requested" | "Hold" | "Confirmed" | "Declined";
             notes?: string | null;
-            /** @enum {string} */
-            decision?: "Pending" | "Approved" | "Declined";
             /** Format: int32 */
             partyAdults?: number | null;
             /** Format: int32 */
             partyChildren?: number | null;
-            /** Format: int32 */
-            priority?: number | null;
             audit?: components["schemas"]["AuditInfo"];
         };
         AccommodationIntentDtoIReadOnlyCollectionBaseEntityResponse: {
@@ -4579,6 +4574,20 @@ export interface components {
             /** Format: uuid */
             deletedByUserId?: string | null;
         };
+        BedDto: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            size?: "Single" | "Double" | "Queen" | "King" | "Bunk" | "Sofa" | "Crib" | "Other";
+            /** Format: int32 */
+            quantity?: number;
+        };
+        BedWriteEntry: {
+            /** @enum {string} */
+            size?: "Single" | "Double" | "Queen" | "King" | "Bunk" | "Sofa" | "Crib" | "Other";
+            /** Format: int32 */
+            quantity?: number;
+        };
         BootstrapTenantDto: {
             /** Format: uuid */
             tenantId?: string;
@@ -4611,7 +4620,6 @@ export interface components {
             taskPlanId: string;
             /** Format: uuid */
             householdMemberId: string;
-            volunteered?: boolean;
         };
         BulkUpsertTaskIntentRequest: {
             items: components["schemas"]["BulkUpsertTaskIntentItem"][];
@@ -4647,24 +4655,25 @@ export interface components {
             /** Format: date */
             endNight: string;
             /** @enum {string} */
-            status: "Intent" | "Hold" | "Confirmed";
+            status: "Requested" | "Hold" | "Confirmed" | "Declined";
             notes?: string | null;
             /** Format: int32 */
             partyAdults?: number | null;
             /** Format: int32 */
             partyChildren?: number | null;
-            /** Format: int32 */
-            priority?: number | null;
         };
         CreateAccommodationRequest: {
             name: string;
             /** @enum {string} */
             type: "Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite";
-            /** Format: int32 */
-            capacityAdults?: number | null;
-            /** Format: int32 */
-            capacityChildren?: number | null;
+            /** Format: double */
+            widthMeters?: number | null;
+            /** Format: double */
+            depthMeters?: number | null;
+            /** Format: double */
+            areaSqMeters?: number | null;
             notes?: string | null;
+            beds?: components["schemas"]["BedWriteEntry"][] | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
         };
         CreateAddressRequest: {
@@ -4702,7 +4711,6 @@ export interface components {
         };
         CreateHouseholdMemberRequest: {
             name: string;
-            isAdult?: boolean;
             /** @enum {string|null} */
             ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             /** Format: date */
@@ -4837,14 +4845,6 @@ export interface components {
             day: string;
             /** @enum {string} */
             status: "Going" | "Maybe" | "NotGoing";
-            /** Format: date-time */
-            arrivalWindowStart?: string | null;
-            /** Format: date-time */
-            arrivalWindowEnd?: string | null;
-            /** Format: date-time */
-            departureWindowStart?: string | null;
-            /** Format: date-time */
-            departureWindowEnd?: string | null;
             notes?: string | null;
             audit?: components["schemas"]["AuditInfo"];
         };
@@ -4892,9 +4892,7 @@ export interface components {
             /** @enum {string} */
             type: "Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite";
             /** Format: int32 */
-            capacityAdults?: number | null;
-            /** Format: int32 */
-            capacityChildren?: number | null;
+            capacity?: number | null;
             notes?: string | null;
             /** Format: int32 */
             occupied: number;
@@ -4956,9 +4954,7 @@ export interface components {
             memberId: string;
             name: string;
             /** @enum {string} */
-            status: "Intent" | "Hold" | "Confirmed";
-            /** @enum {string} */
-            decision: "Pending" | "Approved" | "Declined";
+            status: "Requested" | "Hold" | "Confirmed" | "Declined";
             /** Format: int32 */
             partyAdults?: number | null;
             /** Format: int32 */
@@ -5014,7 +5010,7 @@ export interface components {
             /** Format: uuid */
             householdId?: string;
             name?: string;
-            isAdult?: boolean;
+            isAdult?: boolean | null;
             /** @enum {string|null} */
             ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             /** Format: date */
@@ -5136,7 +5132,8 @@ export interface components {
             mealPlanId?: string;
             /** Format: uuid */
             householdMemberId?: string;
-            volunteered?: boolean;
+            /** @enum {string} */
+            source?: "Volunteered" | "Assigned";
             audit?: components["schemas"]["AuditInfo"];
         };
         MealIntentDtoIReadOnlyCollectionBaseEntityResponse: {
@@ -5243,9 +5240,7 @@ export interface components {
             /** Format: date */
             endNight?: string;
             /** @enum {string} */
-            status?: "Intent" | "Hold" | "Confirmed";
-            /** @enum {string} */
-            decision?: "Pending" | "Approved" | "Declined";
+            status?: "Requested" | "Hold" | "Confirmed" | "Declined";
             /** Format: int32 */
             partyAdults?: number | null;
             /** Format: int32 */
@@ -5272,7 +5267,8 @@ export interface components {
             /** @enum {string|null} */
             timeSlot?: "Morning" | "Midday" | "Evening" | "Anytime" | null;
             completed?: boolean;
-            volunteered?: boolean;
+            /** @enum {string} */
+            source?: "Volunteered" | "Assigned";
         };
         MyTaskDtoIReadOnlyCollectionBaseEntityResponse: {
             entity?: components["schemas"]["MyTaskDto"][] | null;
@@ -5391,7 +5387,8 @@ export interface components {
             taskPlanId?: string;
             /** Format: uuid */
             householdMemberId?: string;
-            volunteered?: boolean;
+            /** @enum {string} */
+            source?: "Volunteered" | "Assigned";
             audit?: components["schemas"]["AuditInfo"];
         };
         TaskIntentDtoBulkUpsertResponse: {
@@ -5520,26 +5517,25 @@ export interface components {
             /** Format: date */
             endNight: string;
             /** @enum {string} */
-            status: "Intent" | "Hold" | "Confirmed";
+            status: "Requested" | "Hold" | "Confirmed" | "Declined";
             notes?: string | null;
-            /** @enum {string} */
-            decision?: "Pending" | "Approved" | "Declined";
             /** Format: int32 */
             partyAdults?: number | null;
             /** Format: int32 */
             partyChildren?: number | null;
-            /** Format: int32 */
-            priority?: number | null;
         };
         UpdateAccommodationRequest: {
             name: string;
             /** @enum {string} */
             type: "Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite";
-            /** Format: int32 */
-            capacityAdults?: number | null;
-            /** Format: int32 */
-            capacityChildren?: number | null;
+            /** Format: double */
+            widthMeters?: number | null;
+            /** Format: double */
+            depthMeters?: number | null;
+            /** Format: double */
+            areaSqMeters?: number | null;
             notes?: string | null;
+            beds?: components["schemas"]["BedWriteEntry"][] | null;
             attributes?: components["schemas"]["AttributeWriteEntry"][] | null;
         };
         UpdateAddressRequest: {
@@ -5575,7 +5571,6 @@ export interface components {
         };
         UpdateHouseholdMemberRequest: {
             name: string;
-            isAdult?: boolean;
             /** @enum {string|null} */
             ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             /** Format: date */
@@ -5665,14 +5660,6 @@ export interface components {
             day: string;
             /** @enum {string} */
             status: "Going" | "Maybe" | "NotGoing";
-            /** Format: date-time */
-            arrivalWindowStart?: string | null;
-            /** Format: date-time */
-            arrivalWindowEnd?: string | null;
-            /** Format: date-time */
-            departureWindowStart?: string | null;
-            /** Format: date-time */
-            departureWindowEnd?: string | null;
             notes?: string | null;
         };
         UpsertHouseholdUserRequest: {
@@ -5690,7 +5677,6 @@ export interface components {
         UpsertMealIntentRequest: {
             /** Format: uuid */
             householdMemberId: string;
-            volunteered?: boolean;
         };
         UpsertShoppingItemIntentRequest: {
             /** Format: double */
@@ -5702,7 +5688,6 @@ export interface components {
         UpsertTaskIntentRequest: {
             /** Format: uuid */
             householdMemberId: string;
-            volunteered?: boolean;
         };
         UserBootstrapDto: {
             /** Format: uuid */

@@ -44,51 +44,48 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
             .AsNoTracking()
             .Where(a => a.TenantId == tenantId)
             .Select(a => new AccommodationRow(
-                a.Id, a.PropertyId, a.Property!.Name, a.Name, a.Type, a.Notes, a.CapacityAdults, a.CapacityChildren))
+                a.Id, a.PropertyId, a.Property!.Name, a.Name, a.Type, a.Notes,
+                a.Beds.Select(b => new BedRow(b.Size, b.Quantity)).ToList()))
             .ToListAsync(cancellationToken);
 
         // Sum overlapping party sizes per accommodation. Two night spans overlap when each starts on
-        // or before the other ends. Intent/Hold/Confirmed all consume capacity; the global query
-        // filter already excludes soft-deleted intents.
+        // or before the other ends. Requested/Hold/Confirmed consume capacity; Declined stays do not.
+        // The global query filter already excludes soft-deleted intents.
         var claims = await _dbContext.AccommodationIntents
             .AsNoTracking()
-            .Where(i => i.TenantId == tenantId && i.StartNight <= endNight && i.EndNight >= startNight)
+            .Where(i => i.TenantId == tenantId
+                && i.Status != AccommodationIntentStatus.Declined
+                && i.StartNight <= endNight && i.EndNight >= startNight)
             .GroupBy(i => i.AccommodationId)
             .Select(g => new
             {
                 AccommodationId = g.Key,
-                ClaimedAdults = g.Sum(i => i.PartyAdults ?? 0),
-                ClaimedChildren = g.Sum(i => i.PartyChildren ?? 0),
+                Occupied = g.Sum(i => (i.PartyAdults ?? 0) + (i.PartyChildren ?? 0)),
             })
             .ToDictionaryAsync(c => c.AccommodationId, cancellationToken);
 
-        var requestedAdults = partyAdults ?? 0;
-        var requestedChildren = partyChildren ?? 0;
+        var requestedParty = (partyAdults ?? 0) + (partyChildren ?? 0);
 
         var results = new List<AccommodationAvailabilityDto>(accommodations.Count);
         foreach (var a in accommodations)
         {
             claims.TryGetValue(a.Id, out var claim);
-            var claimedAdults = claim?.ClaimedAdults ?? 0;
-            var claimedChildren = claim?.ClaimedChildren ?? 0;
+            var occupied = claim?.Occupied ?? 0;
 
-            int? remainingAdults = a.CapacityAdults.HasValue ? a.CapacityAdults.Value - claimedAdults : null;
-            int? remainingChildren = a.CapacityChildren.HasValue ? a.CapacityChildren.Value - claimedChildren : null;
+            // Sleeps capacity summed from bed inventory; null when no beds are recorded (unconstrained).
+            int? capacity = BedSizes.SleepsCapacity(a.Beds.Select(b => (b.Size, b.Quantity)));
 
-            // A null capacity dimension is unconstrained, so it is always sufficient.
-            var adultsOk = !remainingAdults.HasValue || remainingAdults.Value >= requestedAdults;
-            var childrenOk = !remainingChildren.HasValue || remainingChildren.Value >= requestedChildren;
-            var sufficient = adultsOk && childrenOk;
+            int? remaining = capacity.HasValue ? capacity.Value - occupied : null;
+
+            // A null capacity is unconstrained, so it is always sufficient.
+            var sufficient = !remaining.HasValue || remaining.Value >= requestedParty;
 
             if (requireCapacity && !sufficient)
                 continue;
 
             results.Add(new AccommodationAvailabilityDto(
                 a.Id, tenantId, a.PropertyId, a.PropertyName, a.Name, a.Type, a.Notes,
-                a.CapacityAdults, a.CapacityChildren,
-                claimedAdults, claimedChildren,
-                remainingAdults, remainingChildren,
-                sufficient));
+                capacity, occupied, remaining, sufficient));
         }
 
         // Sufficient options first, then a stable property/accommodation ordering.
@@ -108,6 +105,7 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
         string Name,
         AccommodationType Type,
         string? Notes,
-        int? CapacityAdults,
-        int? CapacityChildren);
+        List<BedRow> Beds);
+
+    private sealed record BedRow(BedSize Size, int Quantity);
 }

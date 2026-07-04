@@ -4,8 +4,10 @@ namespace Gatherstead.Api.Contracts.Accommodations;
 
 /// <summary>
 /// One accommodation's availability for a requested date span. Capacity is a soft signal: overlapping
-/// stays are intentionally permitted, so <see cref="RemainingAdults"/>/<see cref="RemainingChildren"/>
-/// can be negative when over-claimed. A null capacity dimension is unconstrained (always sufficient).
+/// stays are intentionally permitted, so <see cref="Remaining"/> can be negative when over-claimed.
+/// <see cref="Capacity"/> is the total sleeps derived from the bed inventory; a null capacity is
+/// unconstrained (always sufficient). <see cref="Occupied"/> sums the party size of overlapping,
+/// non-declined stays.
 /// </summary>
 public record AccommodationAvailabilityDto(
     Guid Id,
@@ -15,10 +17,7 @@ public record AccommodationAvailabilityDto(
     string Name,
     AccommodationType Type,
     string? Notes,
-    int? CapacityAdults,
-    int? CapacityChildren,
-    int ClaimedAdults,
-    int ClaimedChildren,
-    int? RemainingAdults,
-    int? RemainingChildren,
+    int? Capacity,
+    int Occupied,
+    int? Remaining,
     bool HasSufficientCapacity);

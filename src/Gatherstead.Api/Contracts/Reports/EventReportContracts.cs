@@ -51,8 +51,8 @@ public record EventReportAccommodationDto(
     [property: Required] Guid AccommodationId,
     [property: Required] string Name,
     [property: Required] AccommodationType Type,
-    int? CapacityAdults,
-    int? CapacityChildren,
+    /// <summary>Total sleeps derived from the bed inventory; null when no beds are recorded.</summary>
+    int? Capacity,
     string? Notes,
     [property: Required] int Occupied,
     [property: Required] IReadOnlyList<EventReportOccupantDto> Occupants);
@@ -61,7 +61,6 @@ public record EventReportOccupantDto(
     [property: Required] Guid MemberId,
     [property: Required] string Name,
     [property: Required] AccommodationIntentStatus Status,
-    [property: Required] AccommodationIntentDecision Decision,
     int? PartyAdults,
     int? PartyChildren);
 

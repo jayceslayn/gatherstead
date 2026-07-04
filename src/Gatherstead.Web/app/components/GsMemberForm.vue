@@ -4,7 +4,6 @@ import { useDietaryTags } from '~/composables/useDietaryTags'
 import { useAgeBands } from '~/composables/useAgeBands'
 
 const name = defineModel<string>('name', { required: true })
-const isAdult = defineModel<boolean>('isAdult', { required: true })
 const ageBand = defineModel<string>('ageBand', { required: true })
 const birthDate = defineModel<string>('birthDate', { required: true })
 const dietaryNotes = defineModel<string>('dietaryNotes', { required: true })
@@ -59,7 +58,7 @@ watch(birthDate, (bd) => {
 
 <template>
   <UForm
-    :state="{ name, isAdult, ageBand, birthDate, dietaryNotes, dietaryTags, notes }"
+    :state="{ name, ageBand, birthDate, dietaryNotes, dietaryTags, notes }"
     class="max-w-lg space-y-5"
     @submit="emit('submit')"
   >
@@ -71,10 +70,6 @@ watch(birthDate, (bd) => {
         class="w-full"
         @input="emit('clearNameError')"
       />
-    </UFormField>
-
-    <UFormField :label="t('member.isAdult')" name="isAdult">
-      <UCheckbox v-model="isAdult" :label="t('member.adult')" />
     </UFormField>
 
     <UFormField :label="t('member.birthDate')" name="birthDate">

@@ -67,16 +67,15 @@ export class LiveTaskRepository implements ITaskRepository {
     planId: string,
     householdId: string,
     memberId: string,
-    volunteered: boolean,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/task-templates/${templateId}/plans/${planId}/intents?householdId=${encodeURIComponent(householdId)}`,
       {
         method: 'PUT',
-        body: { householdMemberId: memberId, volunteered },
+        body: { householdMemberId: memberId },
       },
     )
-    trackPersistence('task_volunteer', 'set', { volunteered: volunteered ? 1 : 0 })
+    trackPersistence('task_volunteer', 'set')
   }
 
   async bulkUpsertIntents(
@@ -90,7 +89,7 @@ export class LiveTaskRepository implements ITaskRepository {
       {
         method: 'PUT',
         body: {
-          items: items.map(i => ({ taskPlanId: i.planId, householdMemberId: i.memberId, volunteered: i.volunteered })),
+          items: items.map(i => ({ taskPlanId: i.planId, householdMemberId: i.memberId })),
         },
       },
     ))

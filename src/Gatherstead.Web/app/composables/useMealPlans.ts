@@ -208,13 +208,14 @@ export function useMealPlanSection(
 
   watch([plans, memberId], () => loadIntents(), { immediate: true })
 
-  async function upsert(planId: string, volunteered: boolean) {
+  // Signing up creates (or revives) the intent row; withdrawal is deleteIntent below.
+  async function signUp(planId: string) {
     if (!memberId.value || !householdId.value) return
     updating.value = [...updating.value, planId]
     try {
       await repo.upsertIntent(
         tenantStore.currentTenantId!, eventId.value, templateId.value, planId,
-        householdId.value, memberId.value, volunteered,
+        householdId.value, memberId.value,
       )
       try {
         const intents = await repo.listIntentsForMember(
@@ -266,5 +267,5 @@ export function useMealPlanSection(
   }
 
   const pending = computed(() => plansPending.value || intentsPending.value)
-  return { plans, intentMap, pending, updating, upsert, deleteIntent }
+  return { plans, intentMap, pending, updating, signUp, deleteIntent }
 }

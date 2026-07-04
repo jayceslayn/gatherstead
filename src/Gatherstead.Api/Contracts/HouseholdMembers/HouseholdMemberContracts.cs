@@ -10,7 +10,8 @@ public record HouseholdMemberDto(
     Guid TenantId,
     Guid HouseholdId,
     string Name,
-    bool IsAdult,
+    /// <summary>Derived from the effective age band (BirthDate-derived else stored); null when neither is set.</summary>
+    bool? IsAdult,
     AgeBand? AgeBand,
     DateOnly? BirthDate,
     string? DietaryNotes,
@@ -26,8 +27,6 @@ public class CreateHouseholdMemberRequest
     [Required]
     [StringLength(200)]
     public string Name { get; init; } = string.Empty;
-
-    public bool IsAdult { get; init; }
 
     public AgeBand? AgeBand { get; init; }
 
@@ -56,8 +55,6 @@ public class UpdateHouseholdMemberRequest
         get => _name;
         init => _name = (value ?? string.Empty).Trim();
     }
-
-    public bool IsAdult { get; init; }
 
     public AgeBand? AgeBand { get; init; }
 

@@ -19,7 +19,8 @@ export type AttendanceStatus = NonNullable<S['EventAttendanceDto']['status']>
 export type InvitationStatus = NonNullable<S['InvitationDto']['status']>
 export type AccommodationType = NonNullable<S['AccommodationDto']['type']>
 export type AccommodationIntentStatus = NonNullable<S['AccommodationIntentDto']['status']>
-export type AccommodationIntentDecision = NonNullable<S['AccommodationIntentDto']['decision']>
+export type BedSize = NonNullable<S['BedDto']['size']>
+export type IntentSource = NonNullable<S['TaskIntentDto']['source']>
 export type DietaryCategory = NonNullable<S['DietaryTagDto']['category']>
 export type AgeBand = NonNullable<S['HouseholdMemberDto']['ageBand']>
 export type AgeBandOption = S['AgeBandOptionDto']
@@ -67,6 +68,9 @@ export type DietaryTag = S['DietaryTagDto']
 export type PropertySummary = OmitAudit<S['PropertyDto']>
 
 // ── Accommodations ────────────────────────────────────────────────────────
+// openapi-typescript marks all DTO fields optional; Required<> restores the non-nullable shape.
+export type Bed = Required<S['BedDto']>
+export type BedWriteEntry = Required<S['BedWriteEntry']>
 export type AccommodationSummary = OmitAudit<S['AccommodationDto']>
 export type AccommodationIntent = OmitAudit<S['AccommodationIntentDto']>
 export type AccommodationAvailability = OmitAudit<S['AccommodationAvailabilityDto']>

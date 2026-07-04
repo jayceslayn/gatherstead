@@ -1,10 +1,21 @@
-import type { IAccommodationRepository, AccommodationAvailabilityQuery } from '../interfaces'
-import type { AccommodationSummary, AccommodationType, AccommodationAvailability, MyStay, AttributeWriteEntry, AttributeEntry } from '../types'
+import type { IAccommodationRepository, AccommodationAvailabilityQuery, AccommodationDimensions } from '../interfaces'
+import type { AccommodationSummary, AccommodationType, AccommodationAvailability, MyStay, AttributeWriteEntry, AttributeEntry, Bed, BedWriteEntry } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
+import { sleepsCapacity } from './DemoHelpers'
+import { effectiveAreaSqMeters } from '../../utils/units'
 
 function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): AttributeEntry[] {
   if (!writes) return []
   return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
+}
+
+function bedsToEntries(beds: BedWriteEntry[]): Bed[] {
+  return beds.filter(b => b.quantity > 0).map(b => ({ id: demoId(), size: b.size, quantity: b.quantity }))
+}
+
+// Area override wins over width × depth; null when neither is known.
+function effectiveArea(d: AccommodationDimensions): number | null {
+  return effectiveAreaSqMeters(d.widthMeters, d.depthMeters, d.areaSqMeters)
 }
 
 export class DemoAccommodationRepository implements IAccommodationRepository {
@@ -27,22 +38,21 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
   async searchAvailability(tenantId: string, query: AccommodationAvailabilityQuery): Promise<AccommodationAvailability[]> {
     const store = getDemoStore()
     const propertyName = (id: string) => store.properties.value.find(p => p.id === id)?.name ?? ''
-    const requestedAdults = query.partyAdults ?? 0
-    const requestedChildren = query.partyChildren ?? 0
+    const requestedParty = (query.partyAdults ?? 0) + (query.partyChildren ?? 0)
 
     const results = store.accommodations.value
       .filter(a => a.tenantId === tenantId)
       .map((a): AccommodationAvailability => {
-        // Two night spans overlap when each starts on or before the other ends.
+        // Two night spans overlap when each starts on or before the other ends. Declined stays free the slot.
         const overlapping = store.accommodationIntents.value.filter(
-          i => i.accommodationId === a.id && i.startNight <= query.endNight && i.endNight >= query.startNight,
+          i => i.accommodationId === a.id
+            && i.status !== 'Declined'
+            && i.startNight <= query.endNight && i.endNight >= query.startNight,
         )
-        const claimedAdults = overlapping.reduce((s, i) => s + (i.partyAdults ?? 0), 0)
-        const claimedChildren = overlapping.reduce((s, i) => s + (i.partyChildren ?? 0), 0)
-        const remainingAdults = a.capacityAdults != null ? a.capacityAdults - claimedAdults : null
-        const remainingChildren = a.capacityChildren != null ? a.capacityChildren - claimedChildren : null
-        const adultsOk = remainingAdults == null || remainingAdults >= requestedAdults
-        const childrenOk = remainingChildren == null || remainingChildren >= requestedChildren
+        const occupied = overlapping.reduce((s, i) => s + (i.partyAdults ?? 0) + (i.partyChildren ?? 0), 0)
+        const capacity = sleepsCapacity(a.beds ?? [])
+        const remaining = capacity != null ? capacity - occupied : null
+        const hasSufficientCapacity = remaining == null || remaining >= requestedParty
         return {
           id: a.id,
           tenantId,
@@ -51,13 +61,10 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
           name: a.name,
           type: a.type,
           notes: a.notes,
-          capacityAdults: a.capacityAdults,
-          capacityChildren: a.capacityChildren,
-          claimedAdults,
-          claimedChildren,
-          remainingAdults,
-          remainingChildren,
-          hasSufficientCapacity: adultsOk && childrenOk,
+          capacity,
+          occupied,
+          remaining,
+          hasSufficientCapacity,
         }
       })
       .filter(r => !query.requireCapacity || r.hasSufficientCapacity)
@@ -86,7 +93,6 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
           startNight: i.startNight,
           endNight: i.endNight,
           status: i.status,
-          decision: i.decision,
           partyAdults: i.partyAdults,
           partyChildren: i.partyChildren,
         }
@@ -99,8 +105,8 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     propertyId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<AccommodationSummary> {
@@ -108,7 +114,17 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     if (store.accommodations.value.filter(a => a.propertyId === propertyId).length >= DEMO_LIMITS.accommodationsPerProperty) {
       throw new DemoLimitError('accommodationsPerProperty')
     }
-    const a: AccommodationSummary = { id: demoId(), tenantId, propertyId, name, type, capacityAdults, capacityChildren, notes, attributes: toAttributeEntries(attributes) }
+    const bedEntries = bedsToEntries(beds)
+    const a: AccommodationSummary = {
+      id: demoId(), tenantId, propertyId, name, type,
+      widthMeters: dimensions.widthMeters,
+      depthMeters: dimensions.depthMeters,
+      areaSqMeters: dimensions.areaSqMeters,
+      effectiveAreaSqMeters: effectiveArea(dimensions),
+      notes,
+      beds: bedEntries,
+      attributes: toAttributeEntries(attributes),
+    }
     store.accommodations.value.push(a)
     persistDemoStore()
     return a
@@ -120,8 +136,8 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     accommodationId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
@@ -130,8 +146,11 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     if (!a) return
     a.name = name
     a.type = type
-    a.capacityAdults = capacityAdults
-    a.capacityChildren = capacityChildren
+    a.widthMeters = dimensions.widthMeters
+    a.depthMeters = dimensions.depthMeters
+    a.areaSqMeters = dimensions.areaSqMeters
+    a.effectiveAreaSqMeters = effectiveArea(dimensions)
+    a.beds = bedsToEntries(beds)
     a.notes = notes
     if (attributes !== undefined) a.attributes = toAttributeEntries(attributes)
     persistDemoStore()

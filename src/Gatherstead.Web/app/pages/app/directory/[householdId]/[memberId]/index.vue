@@ -66,7 +66,7 @@ function formatDate(date: string | null) {
             <p class="font-semibold">{{ t('member.identity') }}</p>
           </template>
           <dl class="space-y-3 text-sm">
-            <div class="flex justify-between gap-4">
+            <div v-if="member.isAdult != null" class="flex justify-between gap-4">
               <dt class="text-muted">{{ t('member.isAdult') }}</dt>
               <dd>{{ member.isAdult ? t('member.adult') : t('member.child') }}</dd>
             </div>

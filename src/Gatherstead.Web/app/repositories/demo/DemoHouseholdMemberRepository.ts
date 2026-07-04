@@ -9,11 +9,18 @@ function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): A
   return writes.map(w => ({ id: demoId(), key: w.key, value: w.value, tenantMinRole: w.tenantMinRole, householdMinRole: w.householdMinRole ?? null }))
 }
 
+// Adult from the 18–64 band upward, mirroring the backend AgeBands.IsAdult.
+const ADULT_BANDS = new Set<AgeBand>(['Age18To64', 'Age65Plus'])
+function isAdultFromBand(band: AgeBand | null): boolean | null {
+  return band == null ? null : ADULT_BANDS.has(band)
+}
+
 // Mirrors the backend: when a birth date is present the age band is derived and
 // authoritative; the stored manual band is only used as a fallback when no birth date.
+// isAdult is always derived from the effective band (null when neither is set).
 function withDerivedAgeBand(m: HouseholdMember): HouseholdMember {
-  if (!m.birthDate) return m
-  return { ...m, ageBand: deriveAgeBand(m.birthDate, DEMO_AGE_BANDS) }
+  const ageBand = m.birthDate ? deriveAgeBand(m.birthDate, DEMO_AGE_BANDS) : m.ageBand
+  return { ...m, ageBand, isAdult: isAdultFromBand(ageBand) }
 }
 
 // Store the manual band only when there's no birth date (the backend nulls it otherwise).
@@ -39,7 +46,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     tenantId: string,
     householdId: string,
     name: string,
-    isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
@@ -56,7 +62,8 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
       tenantId,
       householdId,
       name,
-      isAdult,
+      // isAdult is derived from the band on read; store null.
+      isAdult: null,
       ageBand: bandForStorage(ageBand, birthDate),
       birthDate,
       dietaryNotes,
@@ -74,7 +81,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     _householdId: string,
     memberId: string,
     name: string,
-    isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
@@ -86,7 +92,6 @@ export class DemoHouseholdMemberRepository implements IHouseholdMemberRepository
     const m = store.members.value.find(x => x.id === memberId)
     if (!m) return
     m.name = name
-    m.isAdult = isAdult
     m.ageBand = bandForStorage(ageBand, birthDate)
     m.birthDate = birthDate
     m.dietaryNotes = dietaryNotes

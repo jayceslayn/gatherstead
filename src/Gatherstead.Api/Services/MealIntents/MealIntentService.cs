@@ -97,7 +97,8 @@ public class MealIntentService : IMealIntentService
         // Resolve + authorize the member by its own id; the client-supplied householdId is
         // advisory only (a member has exactly one household), so a stale/mismatched value no
         // longer produces a spurious "Household member not found."
-        if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
+        var source = await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken);
+        if (source is null)
             return response;
 
         var planExists = await _dbContext.MealPlans
@@ -110,10 +111,15 @@ public class MealIntentService : IMealIntentService
             return response;
         }
 
+        // Include soft-deleted rows so a re-sign-up after a withdrawal revives the existing row rather
+        // than colliding with it on the unique (TenantId, MealPlanId, HouseholdMemberId) index.
         var existing = await _dbContext.MealIntents
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Where(i => i.TenantId == tenantId && i.MealPlanId == planId && i.HouseholdMemberId == request.HouseholdMemberId)
             .SingleOrDefaultAsync(cancellationToken);
 
+        // Source records who initiated the sign-up; set on create or revive, preserved on a re-upsert
+        // of an already-live row.
         if (existing is null)
         {
             existing = new MealIntent
@@ -122,15 +128,15 @@ public class MealIntentService : IMealIntentService
                 TenantId = tenantId,
                 MealPlanId = planId,
                 HouseholdMemberId = request.HouseholdMemberId,
+                Source = source.Value,
             };
             _dbContext.MealIntents.Add(existing);
         }
         else if (existing.IsDeleted)
         {
             existing.IsDeleted = false;
+            existing.Source = source.Value;
         }
-
-        existing.Volunteered = request.Volunteered;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -175,6 +181,6 @@ public class MealIntentService : IMealIntentService
     }
 
     private MealIntentDto MapToDto(MealIntent i) => new(
-        i.Id, i.TenantId, i.MealPlanId, i.HouseholdMemberId, i.Volunteered,
+        i.Id, i.TenantId, i.MealPlanId, i.HouseholdMemberId, i.Source,
         i.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

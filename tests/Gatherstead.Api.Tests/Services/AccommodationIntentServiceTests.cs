@@ -37,7 +37,6 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
             PropertyId = _propertyId,
             Name = "Cabin A",
             Type = AccommodationType.Bedroom,
-            CapacityAdults = 4,
         });
         _dbContext.Accommodations.Add(new Accommodation
         {
@@ -46,7 +45,6 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
             PropertyId = _propertyId,
             Name = "Cabin B",
             Type = AccommodationType.Bedroom,
-            CapacityAdults = 4,
         });
         _dbContext.Households.Add(new Household { Id = _householdId, TenantId = _tenantId, Name = "Smith Household" });
         _dbContext.HouseholdMembers.Add(new HouseholdMember { Id = _member, TenantId = _tenantId, HouseholdId = _householdId, Name = "Alice" });
@@ -63,10 +61,13 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
     private AccommodationIntentService CreateService(bool canAssign = true)
     {
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId);
-        var auth = Mock.Of<IMemberAuthorizationService>(a =>
-            a.CanAssignIntentForMemberAsync(_tenantId, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())
-                == Task.FromResult(canAssign));
-        return new AccommodationIntentService(_dbContext, tenantContext, auth, Mock.Of<IAuditVisibilityContext>());
+        var auth = new Mock<IMemberAuthorizationService>();
+        // Update/Delete authorize via CanAssignIntentForMemberAsync; Create classifies via ClassifyIntentActorAsync.
+        auth.Setup(a => a.CanAssignIntentForMemberAsync(_tenantId, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(canAssign);
+        auth.Setup(a => a.ClassifyIntentActorAsync(_tenantId, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(canAssign ? IntentSource.Volunteered : (IntentSource?)null);
+        return new AccommodationIntentService(_dbContext, tenantContext, auth.Object, Mock.Of<IAuditVisibilityContext>());
     }
 
     private CreateAccommodationIntentRequest Request(DateOnly start, DateOnly end) => new()
@@ -74,7 +75,7 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
         HouseholdMemberId = _member,
         StartNight = start,
         EndNight = end,
-        Status = AccommodationIntentStatus.Intent,
+        Status = AccommodationIntentStatus.Requested,
         PartyAdults = 2,
     };
 
@@ -134,7 +135,7 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
             HouseholdMemberId = Guid.NewGuid(),
             StartNight = Day1,
             EndNight = Day2,
-            Status = AccommodationIntentStatus.Intent,
+            Status = AccommodationIntentStatus.Requested,
             PartyAdults = 1,
         };
 
@@ -147,7 +148,7 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UpdateAsync_PromotesStatusAndDecision()
+    public async Task UpdateAsync_PromotesStatus()
     {
         var service = CreateService();
         var created = await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
@@ -159,15 +160,33 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
             StartNight = Day1,
             EndNight = Day2,
             Status = AccommodationIntentStatus.Confirmed,
-            Decision = AccommodationIntentDecision.Approved,
             PartyAdults = 2,
             PartyChildren = 1,
         }, TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
         Assert.Equal(AccommodationIntentStatus.Confirmed, result.Entity!.Status);
-        Assert.Equal(AccommodationIntentDecision.Approved, result.Entity.Decision);
         Assert.Equal(1, result.Entity.PartyChildren);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeclineSetsDeclinedStatus()
+    {
+        var service = CreateService();
+        var created = await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        var result = await service.UpdateAsync(_tenantId, _accommodationId, created.Entity!.Id, new UpdateAccommodationIntentRequest
+        {
+            HouseholdMemberId = _member,
+            AccommodationId = _accommodationId,
+            StartNight = Day1,
+            EndNight = Day2,
+            Status = AccommodationIntentStatus.Declined,
+            PartyAdults = 2,
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(AccommodationIntentStatus.Declined, result.Entity!.Status);
     }
 
     [Fact]
@@ -183,8 +202,7 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
             AccommodationId = _accommodationId2,
             StartNight = Day1,
             EndNight = Day2,
-            Status = AccommodationIntentStatus.Intent,
-            Decision = AccommodationIntentDecision.Pending,
+            Status = AccommodationIntentStatus.Requested,
             PartyAdults = 2,
         }, TestContext.Current.CancellationToken);
 
@@ -211,8 +229,7 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
             AccommodationId = Guid.NewGuid(),
             StartNight = Day1,
             EndNight = Day2,
-            Status = AccommodationIntentStatus.Intent,
-            Decision = AccommodationIntentDecision.Pending,
+            Status = AccommodationIntentStatus.Requested,
         }, TestContext.Current.CancellationToken);
 
         Assert.False(result.Successful);

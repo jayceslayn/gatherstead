@@ -38,13 +38,12 @@ export class LiveMealPlanRepository implements IMealPlanRepository {
     planId: string,
     householdId: string,
     memberId: string,
-    volunteered: boolean,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates/${templateId}/plans/${planId}/intents?householdId=${encodeURIComponent(householdId)}`,
       {
         method: 'PUT',
-        body: { householdMemberId: memberId, volunteered },
+        body: { householdMemberId: memberId },
       },
     )
   }

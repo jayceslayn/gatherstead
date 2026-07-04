@@ -55,8 +55,9 @@ public class AccommodationService : IAccommodationService
 
         var accommodations = await query.ToListAsync(cancellationToken);
 
+        // List endpoints omit child collections (beds/attributes) — clients fetch them via single-GET.
         return BaseEntityResponse<IReadOnlyCollection<AccommodationDto>>.SuccessfulResponse(
-            accommodations.Select(a => MapToDto(a, [])).ToList());
+            accommodations.Select(a => MapToDto(a, [], [])).ToList());
     }
 
     public async Task<AccommodationResponse> GetAsync(
@@ -74,6 +75,7 @@ public class AccommodationService : IAccommodationService
             response,
             _dbContext.Accommodations.AsNoTracking()
                 .Include(a => a.Attributes)
+                .Include(a => a.Beds)
                 .Where(a => a.TenantId == tenantId && a.PropertyId == propertyId && a.Id == accommodationId),
             EntityDisplayName,
             cancellationToken);
@@ -81,7 +83,7 @@ public class AccommodationService : IAccommodationService
         if (accommodation is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(accommodation, VisibleAttributes(accommodation.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(accommodation, MapBeds(accommodation.Beds), VisibleAttributes(accommodation.Attributes, callerRole)));
         return response;
     }
 
@@ -131,12 +133,22 @@ public class AccommodationService : IAccommodationService
             PropertyId = propertyId,
             Name = normalizedName,
             Type = request.Type,
-            CapacityAdults = request.CapacityAdults,
-            CapacityChildren = request.CapacityChildren,
+            WidthMeters = request.WidthMeters,
+            DepthMeters = request.DepthMeters,
+            AreaSqMeters = request.AreaSqMeters,
             Notes = request.Notes?.Trim(),
         };
 
         _dbContext.Accommodations.Add(accommodation);
+
+        // Synced before the first SaveChanges so the accommodation and its beds flush together;
+        // the returned rows also serve the response without a re-query.
+        IReadOnlyList<BedDto> beds = [];
+        if (request.Beds is { Count: > 0 })
+        {
+            beds = MapBeds(await BedSyncHelper.SyncAsync(_dbContext.AccommodationBeds, tenantId, accommodation.Id, request.Beds, cancellationToken));
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
@@ -160,7 +172,7 @@ public class AccommodationService : IAccommodationService
             attrs = VisibleAttributes(savedAttrs, callerRole);
         }
 
-        response.SetSuccess(MapToDto(accommodation, attrs));
+        response.SetSuccess(MapToDto(accommodation, beds, attrs));
         return response;
     }
 
@@ -208,8 +220,9 @@ public class AccommodationService : IAccommodationService
 
         accommodation.Name = normalizedName;
         accommodation.Type = request.Type;
-        accommodation.CapacityAdults = request.CapacityAdults;
-        accommodation.CapacityChildren = request.CapacityChildren;
+        accommodation.WidthMeters = request.WidthMeters;
+        accommodation.DepthMeters = request.DepthMeters;
+        accommodation.AreaSqMeters = request.AreaSqMeters;
         accommodation.Notes = request.Notes?.Trim();
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
@@ -227,11 +240,19 @@ public class AccommodationService : IAccommodationService
                 cancellationToken);
         }
 
+        // Beds use full-replace semantics: supplying the array (even empty) replaces the inventory;
+        // omitting it leaves beds untouched. The sync result serves the response without a re-query.
+        IReadOnlyList<BedDto>? beds = null;
+        if (request.Beds is not null)
+        {
+            beds = MapBeds(await BedSyncHelper.SyncAsync(_dbContext.AccommodationBeds, tenantId, accommodationId, request.Beds, cancellationToken));
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var savedAttrs = await _dbContext.AccommodationAttributes.AsNoTracking()
             .Where(a => a.AccommodationId == accommodationId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(accommodation, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(accommodation, beds ?? await LoadBedsAsync(accommodationId, cancellationToken), VisibleAttributes(savedAttrs, callerRole)));
         return response;
     }
 
@@ -270,9 +291,14 @@ public class AccommodationService : IAccommodationService
         foreach (var attr in childAttrs)
             attr.IsDeleted = true;
 
+        var childBeds = await _dbContext.AccommodationBeds
+            .Where(b => b.AccommodationId == accommodationId).ToListAsync(cancellationToken);
+        foreach (var bed in childBeds)
+            bed.IsDeleted = true;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        response.SetSuccess(MapToDto(accommodation, []));
+        response.SetSuccess(MapToDto(accommodation, [], []));
         return response;
     }
 
@@ -284,9 +310,29 @@ public class AccommodationService : IAccommodationService
             .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
             .ToList();
 
-    private AccommodationDto MapToDto(Accommodation a, IReadOnlyList<AttributeDto> attributes) => new(
+    private async Task<IReadOnlyList<BedDto>> LoadBedsAsync(Guid accommodationId, CancellationToken ct)
+    {
+        var beds = await _dbContext.AccommodationBeds.AsNoTracking()
+            .Where(b => b.AccommodationId == accommodationId)
+            .ToListAsync(ct);
+        return MapBeds(beds);
+    }
+
+    private static IReadOnlyList<BedDto> MapBeds(IEnumerable<AccommodationBed> beds) => beds
+        .OrderBy(b => b.Size)
+        .Select(b => new BedDto(b.Id, b.Size, b.Quantity))
+        .ToList();
+
+    /// <summary>Area override when set, otherwise width × depth. Null when neither is available.</summary>
+    private static decimal? EffectiveArea(Accommodation a)
+        => a.AreaSqMeters ?? (a.WidthMeters.HasValue && a.DepthMeters.HasValue
+            ? a.WidthMeters.Value * a.DepthMeters.Value
+            : null);
+
+    private AccommodationDto MapToDto(Accommodation a, IReadOnlyList<BedDto> beds, IReadOnlyList<AttributeDto> attributes) => new(
         a.Id, a.TenantId, a.PropertyId, a.Name, a.Type,
-        a.CapacityAdults, a.CapacityChildren, a.Notes,
+        a.WidthMeters, a.DepthMeters, a.AreaSqMeters, EffectiveArea(a), a.Notes,
+        beds,
         attributes,
         a.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

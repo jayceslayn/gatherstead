@@ -133,10 +133,6 @@ public class EventAttendanceService : IEventAttendanceService
         }
 
         existing.Status = request.Status;
-        existing.ArrivalWindowStart = request.ArrivalWindowStart;
-        existing.ArrivalWindowEnd = request.ArrivalWindowEnd;
-        existing.DepartureWindowStart = request.DepartureWindowStart;
-        existing.DepartureWindowEnd = request.DepartureWindowEnd;
         existing.Notes = request.Notes?.Trim();
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -186,7 +182,7 @@ public class EventAttendanceService : IEventAttendanceService
         for (var index = 0; index < items.Count; index++)
         {
             var item = items[index];
-            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId) is string error)
+            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId)?.Error is string error)
             {
                 response.ItemErrors.Add(new BulkItemError(index, error));
                 continue;
@@ -211,10 +207,6 @@ public class EventAttendanceService : IEventAttendanceService
             }
 
             existing.Status = item.Status;
-            existing.ArrivalWindowStart = item.ArrivalWindowStart;
-            existing.ArrivalWindowEnd = item.ArrivalWindowEnd;
-            existing.DepartureWindowStart = item.DepartureWindowStart;
-            existing.DepartureWindowEnd = item.DepartureWindowEnd;
             existing.Notes = item.Notes?.Trim();
             upserted.Add(existing);
         }
@@ -263,6 +255,5 @@ public class EventAttendanceService : IEventAttendanceService
 
     private EventAttendanceDto MapToDto(EventAttendanceEntity a) => new(
         a.Id, a.TenantId, a.EventId, a.HouseholdMemberId, a.Day, a.Status,
-        a.ArrivalWindowStart, a.ArrivalWindowEnd, a.DepartureWindowStart, a.DepartureWindowEnd,
         a.Notes, a.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

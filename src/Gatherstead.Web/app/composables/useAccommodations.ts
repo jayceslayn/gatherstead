@@ -4,11 +4,11 @@ import type {
   AccommodationType,
   AccommodationIntent,
   AccommodationIntentStatus,
-  AccommodationIntentDecision,
+  BedWriteEntry,
   AccommodationAvailability,
 } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
-import type { AccommodationAvailabilityQuery } from '~/repositories/interfaces'
+import type { AccommodationAvailabilityQuery, AccommodationDimensions } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 
 
@@ -146,14 +146,14 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
   async function createAccommodation(
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
   ): Promise<boolean> {
     updating.value.push('new')
     try {
       await repo.createAccommodation(
-        tenantStore.currentTenantId!, propertyId.value, name, type, capacityAdults, capacityChildren, notes,
+        tenantStore.currentTenantId!, propertyId.value, name, type, dimensions, beds, notes,
       )
       await refresh()
       return true
@@ -175,14 +175,14 @@ export function useAccommodationActions(propertyId: Ref<string>, refresh: () => 
     accommodationId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
   ): Promise<boolean> {
     updating.value.push(accommodationId)
     try {
       await repo.updateAccommodation(
-        tenantStore.currentTenantId!, propertyId.value, accommodationId, name, type, capacityAdults, capacityChildren, notes,
+        tenantStore.currentTenantId!, propertyId.value, accommodationId, name, type, dimensions, beds, notes,
       )
       await refresh()
       return true
@@ -266,7 +266,6 @@ export function useAccommodationIntentActions(
     startNight: string,
     endNight: string,
     status: AccommodationIntentStatus,
-    decision: AccommodationIntentDecision,
     notes?: string | null,
     partyAdults?: number | null,
     partyChildren?: number | null,
@@ -284,7 +283,6 @@ export function useAccommodationIntentActions(
         startNight,
         endNight,
         status,
-        decision,
         notes,
         partyAdults,
         partyChildren,

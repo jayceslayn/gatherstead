@@ -101,7 +101,7 @@ function onModalDelete() {
               <div class="min-w-0 flex-1">
                 <p class="font-semibold">{{ member.name }}</p>
                 <div class="flex items-center gap-1.5 mt-0.5">
-                  <span class="text-sm text-muted">
+                  <span v-if="member.isAdult != null" class="text-sm text-muted">
                     {{ member.isAdult ? t('member.adult') : t('member.child') }}
                   </span>
                   <!-- eslint-disable-next-line @intlify/vue-i18n/no-raw-text -->

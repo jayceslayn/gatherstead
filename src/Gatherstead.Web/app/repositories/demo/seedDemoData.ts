@@ -50,19 +50,30 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     DEMO_TENANT_ID, 'First Aid Kit', property.id, 'Restocked this spring. No capes inside.', [],
   )
 
-  // 2. Accommodations
+  // 2. Accommodations — bed inventory drives the sleeps capacity; dimensions are display-only.
   const cabinA = await repos.accommodations.createAccommodation(
-    DEMO_TENANT_ID, property.id, 'Cabin A', 'Bedroom', 4, 2,
+    DEMO_TENANT_ID, property.id, 'Cabin A', 'Bedroom',
+    { widthMeters: 4, depthMeters: 5, areaSqMeters: null },
+    [{ size: 'Queen', quantity: 2 }, { size: 'Bunk', quantity: 1 }],
     'Main cabin with lake views. No capes near the fireplace.',
   )
   const cabinB = await repos.accommodations.createAccommodation(
-    DEMO_TENANT_ID, property.id, 'Cabin B', 'Bedroom', 2, 0, null,
+    DEMO_TENANT_ID, property.id, 'Cabin B', 'Bedroom',
+    { widthMeters: 3, depthMeters: 3.5, areaSqMeters: null },
+    [{ size: 'Double', quantity: 1 }],
+    null,
   )
   const rvPad = await repos.accommodations.createAccommodation(
-    DEMO_TENANT_ID, property.id, 'RV Pad 1', 'RvPad', 2, 2, null,
+    DEMO_TENANT_ID, property.id, 'RV Pad 1', 'RvPad',
+    { widthMeters: 4, depthMeters: 10, areaSqMeters: null },
+    [],
+    null,
   )
   await repos.accommodations.createAccommodation(
-    DEMO_TENANT_ID, property.id, 'Tent Site 1', 'Tent', 4, 0, null,
+    DEMO_TENANT_ID, property.id, 'Tent Site 1', 'Tent',
+    { widthMeters: 6, depthMeters: 6, areaSqMeters: null },
+    [{ size: 'Single', quantity: 4 }],
+    null,
   )
 
   // 3. Households — the Parr household carries notes + a role-gated custom attribute.
@@ -77,36 +88,36 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   // Birth date present → age band is derived (and read-only in the form); birth date
   // absent → the manual band is used as the fallback.
   const bob = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Bob Parr', true, null, birthDateYearsAgo(45),
+    DEMO_TENANT_ID, parrFamily.id, 'Bob Parr', null, birthDateYearsAgo(45),
     'Large portions — saving the world burns a lot of calories.',
     'Prefers a downstairs room — the knees are not what they used to be.', [],
     [{ key: 'Supersuit Size', value: 'XL (reinforced seams)', tenantMinRole: 3 }], // Members and above
   )
   const helen = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', true, 'Age18To64', null, null, null, [],
+    DEMO_TENANT_ID, parrFamily.id, 'Helen Parr', 'Age18To64', null, null, null, [],
   )
   const violet = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Violet Parr', false, null, birthDateYearsAgo(15),
+    DEMO_TENANT_ID, parrFamily.id, 'Violet Parr', null, birthDateYearsAgo(15),
     'Will not eat anything if people are watching.', null, [],
   )
   const dash = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Dash Parr', false, 'Age6To12', null,
+    DEMO_TENANT_ID, parrFamily.id, 'Dash Parr', 'Age6To12', null,
     'Eats at top speed. Food must be secured to the plate.', null, [],
   )
   const jackJack = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, parrFamily.id, 'Jack-Jack Parr', false, null, birthDateYearsAgo(1),
+    DEMO_TENANT_ID, parrFamily.id, 'Jack-Jack Parr', null, birthDateYearsAgo(1),
     'Baby food only. Keep away from raccoons.', null, [],
   )
 
   const lucius = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', true, 'Age18To64', null, null, null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', 'Age18To64', null, null, null, [],
   )
   const honey = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', true, null, birthDateYearsAgo(42), null, null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', null, birthDateYearsAgo(42), null, null, [],
   )
 
   const edna = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, ednaStudio.id, 'Edna Mode', true, 'Age65Plus', null,
+    DEMO_TENANT_ID, ednaStudio.id, 'Edna Mode', 'Age65Plus', null,
     'No capes. Also no gluten.',
     'Do not, under any circumstances, discuss capes.', ['gluten-free'],
   )
@@ -172,20 +183,20 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   const setUpPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, setUpTemplate.id)
   const day1SetUp = setUpPlans.find(p => p.day === day1)
   if (day1SetUp) {
-    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, setUpTemplate.id, day1SetUp.id, parrFamily.id, bob.id, true)
-    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, setUpTemplate.id, day1SetUp.id, parrFamily.id, helen.id, true)
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, setUpTemplate.id, day1SetUp.id, parrFamily.id, bob.id)
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, setUpTemplate.id, day1SetUp.id, parrFamily.id, helen.id)
   }
   // "Suit Inventory Check" (min 1): Edna covers day 1; days 2–3 left open.
   const suitCheckPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, suitCheckTemplate.id)
   const day1SuitCheck = suitCheckPlans.find(p => p.day === day1)
   if (day1SuitCheck) {
-    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, suitCheckTemplate.id, day1SuitCheck.id, ednaStudio.id, edna.id, true)
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, suitCheckTemplate.id, day1SuitCheck.id, ednaStudio.id, edna.id)
   }
   // "Keep Dash From Running" (min 2): only Helen volunteers on day 1 → partial; rest open.
   const keepDashPlans = await repos.tasks.listPlans(DEMO_TENANT_ID, event.id, keepDashTemplate.id)
   const day1KeepDash = keepDashPlans.find(p => p.day === day1)
   if (day1KeepDash) {
-    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, keepDashTemplate.id, day1KeepDash.id, parrFamily.id, helen.id, true)
+    await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, keepDashTemplate.id, day1KeepDash.id, parrFamily.id, helen.id)
   }
   // "Dinner" (auto-generated from the Dinner meal template, no minimum): Bob cooks day 1,
   // Helen day 2 → covered; day 3 left open.
@@ -196,10 +207,10 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
     const day1DinnerTask = dinnerTaskPlans.find(p => p.day === day1)
     const day2DinnerTask = dinnerTaskPlans.find(p => p.day === day2)
     if (day1DinnerTask) {
-      await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id, day1DinnerTask.id, parrFamily.id, bob.id, true)
+      await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id, day1DinnerTask.id, parrFamily.id, bob.id)
     }
     if (day2DinnerTask) {
-      await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id, day2DinnerTask.id, parrFamily.id, helen.id, true)
+      await repos.tasks.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTaskTemplate.id, day2DinnerTask.id, parrFamily.id, helen.id)
     }
   }
 
@@ -322,29 +333,23 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   // Edna: first day only (matches 1-night accommodation)
   await repos.eventAttendance.upsertAttendance(DEMO_TENANT_ID, event.id, ednaStudio.id, edna.id, day1, 'Going')
 
-  // 11. Accommodation stays (each is a single span of nights)
-  // Bob: Cabin A, day1–day3 — Confirmed/Approved, party of 3 adults + 2 children
-  const bobStay = await repos.accommodationIntents.createIntent(
+  // 11. Accommodation stays (each is a single span of nights). The merged status enum lets seeds
+  // create rows in their final state directly (no separate decision step).
+  // Bob: Cabin A, day1–day3 — Confirmed, party of 3 adults + 2 children
+  await repos.accommodationIntents.createIntent(
     DEMO_TENANT_ID, property.id, cabinA.id, parrFamily.id, bob.id, day1, day3, 'Confirmed', null, 3, 2,
   )
-  await repos.accommodationIntents.updateIntent(
-    DEMO_TENANT_ID, property.id, cabinA.id, bobStay.id, bob.id, cabinA.id, day1, day3, 'Confirmed', 'Approved', null, 3, 2,
-  )
 
-  // Lucius: RV Pad, day1–day2 — Hold/Pending, party of 2 adults
+  // Lucius: RV Pad, day1–day2 — Hold, party of 2 adults
   await repos.accommodationIntents.createIntent(
     DEMO_TENANT_ID, property.id, rvPad.id, frozoneHousehold.id, lucius.id,
     day1, day2, 'Hold', "Honey said RV or nothing. We'll see.", 2, null,
   )
 
-  // Edna: Cabin B, day1 only — Confirmed/Approved, party of 1 adult
-  const ednaIntent = await repos.accommodationIntents.createIntent(
+  // Edna: Cabin B, day1 only — Confirmed, party of 1 adult
+  await repos.accommodationIntents.createIntent(
     DEMO_TENANT_ID, property.id, cabinB.id, ednaStudio.id, edna.id,
     day1, day1, 'Confirmed', 'Separate cabin. Non-negotiable.', 1, null,
-  )
-  await repos.accommodationIntents.updateIntent(
-    DEMO_TENANT_ID, property.id, cabinB.id, ednaIntent.id, edna.id, cabinB.id,
-    day1, day1, 'Confirmed', 'Approved', 'Separate cabin. Non-negotiable.', 1, null,
   )
 
   // 12. Shopping items — one property staple, one event supply, and a couple of meal

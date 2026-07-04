@@ -2,7 +2,6 @@ import type { IAccommodationIntentRepository } from '../interfaces'
 import type {
   AccommodationIntent,
   AccommodationIntentStatus,
-  AccommodationIntentDecision,
 } from '../types'
 import { trackPersistence } from '../../utils/telemetry'
 
@@ -66,7 +65,6 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
     startNight: string,
     endNight: string,
     status: AccommodationIntentStatus,
-    decision: AccommodationIntentDecision,
     notes?: string | null,
     partyAdults?: number | null,
     partyChildren?: number | null,
@@ -77,10 +75,10 @@ export class LiveAccommodationIntentRepository implements IAccommodationIntentRe
       `/api/proxy/tenants/${tenantId}/properties/${propertyId}/accommodations/${accommodationId}/intents/${intentId}`,
       {
         method: 'PUT',
-        body: { householdMemberId: memberId, accommodationId: targetAccommodationId, startNight, endNight, status, decision, notes, partyAdults, partyChildren },
+        body: { householdMemberId: memberId, accommodationId: targetAccommodationId, startNight, endNight, status, notes, partyAdults, partyChildren },
       },
     )
-    trackPersistence('accommodation_intent', 'update', { status, decision })
+    trackPersistence('accommodation_intent', 'update', { status })
   }
 
   async deleteIntent(

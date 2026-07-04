@@ -60,12 +60,12 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
         return new TaskIntentService(_dbContext, tenantContext, Mock.Of<IMemberAuthorizationService>(), Mock.Of<IAuditVisibilityContext>());
     }
 
-    private async Task AddIntentAsync(Guid planId, Guid memberId, bool volunteered)
+    private async Task AddIntentAsync(Guid planId, Guid memberId, bool deleted = false)
     {
         _dbContext.TaskIntents.Add(new TaskIntent
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, TaskPlanId = planId,
-            HouseholdMemberId = memberId, Volunteered = volunteered,
+            HouseholdMemberId = memberId, Source = IntentSource.Volunteered, IsDeleted = deleted,
         });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -73,7 +73,7 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
     [Fact]
     public async Task ListForMemberAsync_EnrichesWithTaskAndEventContext()
     {
-        await AddIntentAsync(_futurePlanId, _member, volunteered: true);
+        await AddIntentAsync(_futurePlanId, _member);
 
         var result = await CreateService().ListForMemberAsync(_tenantId, new[] { _member }, null, TestContext.Current.CancellationToken);
 
@@ -86,9 +86,10 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ListForMemberAsync_ExcludesNonVolunteeredIntents()
+    public async Task ListForMemberAsync_ExcludesSoftDeletedIntents()
     {
-        await AddIntentAsync(_futurePlanId, _member, volunteered: false);
+        // A withdrawn sign-up is a soft-deleted row; it must not appear in "my tasks".
+        await AddIntentAsync(_futurePlanId, _member, deleted: true);
 
         var result = await CreateService().ListForMemberAsync(_tenantId, new[] { _member }, null, TestContext.Current.CancellationToken);
 
@@ -99,7 +100,7 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
     [Fact]
     public async Task ListForMemberAsync_MemberFilter_ExcludesOtherMembers()
     {
-        await AddIntentAsync(_futurePlanId, _member2, volunteered: true);
+        await AddIntentAsync(_futurePlanId, _member2);
 
         var result = await CreateService().ListForMemberAsync(_tenantId, new[] { _member }, null, TestContext.Current.CancellationToken);
 
@@ -110,8 +111,8 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
     [Fact]
     public async Task ListForMemberAsync_FromDay_ExcludesPastPlans()
     {
-        await AddIntentAsync(_pastPlanId, _member, volunteered: true);
-        await AddIntentAsync(_futurePlanId, _member, volunteered: true);
+        await AddIntentAsync(_pastPlanId, _member);
+        await AddIntentAsync(_futurePlanId, _member);
 
         var result = await CreateService().ListForMemberAsync(_tenantId, new[] { _member }, Cutoff, TestContext.Current.CancellationToken);
 
@@ -125,7 +126,7 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
     {
         // Regression: the per-plan list projection must materialize before mapping, otherwise EF Core
         // rejects the instance MapToDto in the query shaper and the endpoint 500s.
-        await AddIntentAsync(_futurePlanId, _member, volunteered: true);
+        await AddIntentAsync(_futurePlanId, _member);
 
         var result = await CreateService().ListAsync(_tenantId, _futurePlanId, null, TestContext.Current.CancellationToken);
 
@@ -137,7 +138,7 @@ public class TaskIntentQueryServiceTests : IAsyncLifetime
     [Fact]
     public async Task ListAsync_MemberFilter_ExcludesOtherMembers()
     {
-        await AddIntentAsync(_futurePlanId, _member2, volunteered: true);
+        await AddIntentAsync(_futurePlanId, _member2);
 
         var result = await CreateService().ListAsync(_tenantId, _futurePlanId, new[] { _member }, TestContext.Current.CancellationToken);
 

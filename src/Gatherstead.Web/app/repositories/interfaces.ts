@@ -19,7 +19,7 @@ import type {
   AccommodationType,
   AccommodationIntent,
   AccommodationIntentStatus,
-  AccommodationIntentDecision,
+  BedWriteEntry,
   AccommodationAvailability,
   MyStay,
   MyTask,
@@ -73,7 +73,6 @@ export interface IHouseholdMemberRepository {
     tenantId: string,
     householdId: string,
     name: string,
-    isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
@@ -86,7 +85,6 @@ export interface IHouseholdMemberRepository {
     householdId: string,
     memberId: string,
     name: string,
-    isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
@@ -159,11 +157,10 @@ export interface BulkMealAttendanceItem {
   status: AttendanceStatus
 }
 
-/** One task-intent change in a bulk sign-up submission. */
+/** One task-intent change in a bulk sign-up submission. Row existence is the sign-up; Source is server-derived. */
 export interface BulkTaskIntentItem {
   planId: string
   memberId: string
-  volunteered: boolean
 }
 
 export interface IEventAttendanceRepository {
@@ -198,7 +195,6 @@ export interface IMealPlanRepository {
     planId: string,
     householdId: string,
     memberId: string,
-    volunteered: boolean,
   ): Promise<void>
   createTemplate(
     tenantId: string,
@@ -248,7 +244,7 @@ export interface IMealPlanRepository {
 }
 
 export interface ITaskRepository {
-  /** A member's volunteered tasks across all events, on or after `fromDay`. */
+  /** A member's signed-up tasks across all events, on or after `fromDay`. */
   listMyTasks(tenantId: string, memberId: string, fromDay: string): Promise<MyTask[]>
   listTaskTemplates(tenantId: string, eventId: string): Promise<TaskTemplate[]>
   listPlans(tenantId: string, eventId: string, templateId: string): Promise<TaskPlan[]>
@@ -274,7 +270,6 @@ export interface ITaskRepository {
     planId: string,
     householdId: string,
     memberId: string,
-    volunteered: boolean,
   ): Promise<void>
   /** Upserts many task intents in one request. householdId is derived server-side. */
   bulkUpsertIntents(tenantId: string, eventId: string, items: BulkTaskIntentItem[]): Promise<void>
@@ -372,6 +367,13 @@ export interface AccommodationAvailabilityQuery {
   requireCapacity: boolean
 }
 
+/** Room/spot dimensions in metres; area override wins over width × depth. Any field may be null. */
+export interface AccommodationDimensions {
+  widthMeters: number | null
+  depthMeters: number | null
+  areaSqMeters: number | null
+}
+
 export interface IAccommodationRepository {
   listAccommodations(tenantId: string, propertyId: string): Promise<AccommodationSummary[]>
   getAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<AccommodationSummary | null>
@@ -384,8 +386,8 @@ export interface IAccommodationRepository {
     propertyId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<AccommodationSummary>
@@ -395,8 +397,8 @@ export interface IAccommodationRepository {
     accommodationId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void>
@@ -429,7 +431,6 @@ export interface IAccommodationIntentRepository {
     startNight: string,
     endNight: string,
     status: AccommodationIntentStatus,
-    decision: AccommodationIntentDecision,
     notes?: string | null,
     partyAdults?: number | null,
     partyChildren?: number | null,

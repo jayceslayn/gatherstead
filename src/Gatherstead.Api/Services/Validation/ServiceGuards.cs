@@ -190,13 +190,13 @@ public static class ServiceGuards
     /// <summary>
     /// Resolves a member by (tenantId, memberId) — independent of any client-supplied
     /// householdId — then authorizes intent assignment against the member's ACTUAL household,
-    /// returning that household id. A member belongs to exactly one household, so deriving it
-    /// here removes the fragility of trusting a client householdId that can be stale or
-    /// mismatched (which previously surfaced as a spurious "Household member not found.").
+    /// returning the classified <see cref="IntentSource"/>. A member belongs to exactly one
+    /// household, so deriving it here removes the fragility of trusting a client householdId that
+    /// can be stale or mismatched (which previously surfaced as a spurious "Household member not found.").
     /// Attaches the not-found error when the member does not exist, or the standard permission
     /// error when authorization fails, and returns null in both cases so callers short-circuit.
     /// </summary>
-    public static async Task<Guid?> ResolveMemberForIntentAsync<T>(
+    public static async Task<IntentSource?> ResolveMemberForIntentAsync<T>(
         BaseEntityResponse<T> response,
         IMemberAuthorizationService authorizationService,
         GathersteadDbContext dbContext,
@@ -216,29 +216,31 @@ public static class ServiceGuards
             return null;
         }
 
-        if (!await authorizationService.CanAssignIntentForMemberAsync(tenantId, householdId.Value, memberId, cancellationToken))
+        var source = await authorizationService.ClassifyIntentActorAsync(tenantId, householdId.Value, memberId, cancellationToken);
+        if (source is null)
         {
             response.AddResponseMessage(MessageType.ERROR, "You do not have permission to assign intents for this member.");
             return null;
         }
 
-        return householdId;
+        return source;
     }
 
     /// <summary>
     /// Bulk counterpart to <see cref="ResolveMemberForIntentAsync{T}"/>: resolves and authorizes a
     /// set of members in one members query plus one authorization check per distinct member. Returns
-    /// a per-member outcome (null = authorized OK; otherwise the error message to report against each
-    /// item that references that member). Does not touch a response — callers record per-item errors.
+    /// a per-member outcome — <see cref="MemberIntentOutcome.Error"/> null with a non-null
+    /// <see cref="MemberIntentOutcome.Source"/> means authorized; otherwise the error message to report
+    /// against each item that references that member. Does not touch a response — callers record per-item errors.
     /// </summary>
-    public static async Task<Dictionary<Guid, string?>> ResolveMembersForIntentAsync(
+    public static async Task<Dictionary<Guid, MemberIntentOutcome>> ResolveMembersForIntentAsync(
         IMemberAuthorizationService authorizationService,
         GathersteadDbContext dbContext,
         Guid tenantId,
         IReadOnlyCollection<Guid> memberIds,
         CancellationToken cancellationToken)
     {
-        var outcomes = new Dictionary<Guid, string?>();
+        var outcomes = new Dictionary<Guid, MemberIntentOutcome>();
         if (memberIds.Count == 0) return outcomes;
 
         var distinct = memberIds.Distinct().ToList();
@@ -252,16 +254,21 @@ public static class ServiceGuards
         {
             if (!households.TryGetValue(memberId, out var householdId))
             {
-                outcomes[memberId] = "Household member not found.";
+                outcomes[memberId] = new MemberIntentOutcome("Household member not found.", null);
                 continue;
             }
 
-            var authorized = await authorizationService.CanAssignIntentForMemberAsync(tenantId, householdId, memberId, cancellationToken);
-            outcomes[memberId] = authorized ? null : "You do not have permission to assign intents for this member.";
+            var source = await authorizationService.ClassifyIntentActorAsync(tenantId, householdId, memberId, cancellationToken);
+            outcomes[memberId] = source is null
+                ? new MemberIntentOutcome("You do not have permission to assign intents for this member.", null)
+                : new MemberIntentOutcome(null, source.Value);
         }
 
         return outcomes;
     }
+
+    /// <summary>Per-member bulk outcome: an <paramref name="Error"/> to report, or a resolved <paramref name="Source"/>.</summary>
+    public sealed record MemberIntentOutcome(string? Error, IntentSource? Source);
 
     /// <summary>
     /// Materializes a single entity from the supplied query. Emits a "{entityDisplayName} not found."

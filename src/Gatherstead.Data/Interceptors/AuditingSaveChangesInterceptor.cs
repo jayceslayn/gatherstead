@@ -113,9 +113,13 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
                         updatedTenantId,
                         _currentUserContext.UserId);
 
-                    throw new InvalidOperationException(
+                    throw new CrossTenantWriteBlockedException(
                         $"Entity '{entry.Entity.GetType().Name}' TenantId cannot be changed from '{originalTenantId}' " +
-                        $"to '{updatedTenantId}'. Cross-tenant reassignment is not permitted.");
+                        $"to '{updatedTenantId}'. Cross-tenant reassignment is not permitted.",
+                        entry.Entity.GetType().Name,
+                        updatedTenantId,
+                        originalTenantId,
+                        CrossTenantWriteReason.Reassignment);
                 }
                 continue;
             }
@@ -132,10 +136,14 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
                     currentTenantId.Value,
                     _currentUserContext.UserId);
 
-                throw new InvalidOperationException(
+                throw new CrossTenantWriteBlockedException(
                     $"Entity '{entry.Entity.GetType().Name}' has TenantId '{entityTenantId}' " +
                     $"but the current tenant context is '{currentTenantId.Value}'. " +
-                    $"Cross-tenant writes are not permitted.");
+                    $"Cross-tenant writes are not permitted.",
+                    entry.Entity.GetType().Name,
+                    entityTenantId,
+                    currentTenantId.Value,
+                    CrossTenantWriteReason.AddMismatch);
             }
         }
     }
@@ -155,10 +163,20 @@ public class AuditingSaveChangesInterceptor : SaveChangesInterceptor
     private static void ApplySoftDeleteIfNeeded(EntityEntry<IAuditableEntity> entry, Guid userId, DateTimeOffset timestamp)
     {
         var isDeletedProperty = entry.Property(e => e.IsDeleted);
-        if (isDeletedProperty.IsModified && isDeletedProperty.CurrentValue)
+        if (!isDeletedProperty.IsModified)
+            return;
+
+        if (isDeletedProperty.CurrentValue)
         {
             entry.Entity.DeletedAt ??= timestamp;
             entry.Entity.DeletedByUserId ??= userId;
+        }
+        else
+        {
+            // Revive: clear the deletion stamp, otherwise a later soft delete would keep the stale
+            // timestamp/user (the ??= above) and misattribute the new deletion.
+            entry.Entity.DeletedAt = null;
+            entry.Entity.DeletedByUserId = null;
         }
     }
 

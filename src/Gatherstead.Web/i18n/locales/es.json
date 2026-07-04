@@ -429,19 +429,30 @@
     "partyChildren": "Niños",
     "name": "Nombre del Alojamiento",
     "type": "Tipo",
-    "capacityAdultsLabel": "Capacidad de Adultos",
-    "capacityChildrenLabel": "Capacidad de Niños",
+    "beds": "Camas",
+    "addBed": "Agregar cama",
+    "sleeps": "Plazas",
+    "occupied": "Ocupado",
+    "widthLabel": "Ancho (m)",
+    "depthLabel": "Profundidad (m)",
+    "areaOverrideLabel": "Área (m²)",
+    "areaPreview": "Área: {area}",
+    "bedSizes": {
+      "single": "Individual",
+      "double": "Doble",
+      "queen": "Queen",
+      "king": "King",
+      "bunk": "Litera",
+      "sofa": "Sofá cama",
+      "crib": "Cuna",
+      "other": "Otra"
+    },
     "createTitle": "Crear Alojamiento",
     "editTitle": "Editar Alojamiento",
     "deleteTitle": "Eliminar Alojamiento",
     "deleteConfirm": "Esto eliminará permanentemente este alojamiento y todas sus estadías. No se puede deshacer.",
     "promote": "Aprobar",
-    "decline": "Rechazar",
-    "decision": {
-      "pending": "Pendiente",
-      "approved": "Aprobado",
-      "declined": "Rechazado"
-    }
+    "decline": "Rechazar"
   },
   "status": {
     "covered": "Cubierto",
@@ -452,7 +463,7 @@
     "maybe": "Tal vez",
     "notGoing": "No asiste",
     "noResponse": "Sin respuesta",
-    "intent": "Solicitado",
+    "requested": "Solicitado",
     "hold": "En espera",
     "confirmed": "Confirmado",
     "declined": "Rechazado"

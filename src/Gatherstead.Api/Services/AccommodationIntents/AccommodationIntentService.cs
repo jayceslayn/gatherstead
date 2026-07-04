@@ -95,7 +95,6 @@ public class AccommodationIntentService : IAccommodationIntentService
                 i.StartNight,
                 i.EndNight,
                 i.Status,
-                i.Decision,
                 i.PartyAdults,
                 i.PartyChildren))
             .ToListAsync(cancellationToken);
@@ -174,7 +173,6 @@ public class AccommodationIntentService : IAccommodationIntentService
             Notes = request.Notes?.Trim(),
             PartyAdults = request.PartyAdults,
             PartyChildren = request.PartyChildren,
-            Priority = request.Priority,
         };
 
         _dbContext.AccommodationIntents.Add(intent);
@@ -235,10 +233,8 @@ public class AccommodationIntentService : IAccommodationIntentService
         intent.EndNight = request.EndNight;
         intent.Status = request.Status;
         intent.Notes = request.Notes?.Trim();
-        intent.Decision = request.Decision;
         intent.PartyAdults = request.PartyAdults;
         intent.PartyChildren = request.PartyChildren;
-        intent.Priority = request.Priority;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -284,7 +280,7 @@ public class AccommodationIntentService : IAccommodationIntentService
 
     private AccommodationIntentDto MapToDto(AccommodationIntent i) => new(
         i.Id, i.TenantId, i.AccommodationId, i.HouseholdMemberId, i.StartNight, i.EndNight, i.Status, i.Notes,
-        i.Decision, i.PartyAdults, i.PartyChildren, i.Priority,
+        i.PartyAdults, i.PartyChildren,
         i.ToAuditInfo(_auditVisibility.IncludeAudit));
 
     private static bool ValidateSpan(DateOnly startNight, DateOnly endNight, AccommodationIntentResponse response)

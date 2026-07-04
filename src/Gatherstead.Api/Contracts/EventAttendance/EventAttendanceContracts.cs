@@ -11,10 +11,6 @@ public record EventAttendanceDto(
     [property: Required] Guid HouseholdMemberId,
     [property: Required] DateOnly Day,
     [property: Required] AttendanceStatus Status,
-    DateTimeOffset? ArrivalWindowStart,
-    DateTimeOffset? ArrivalWindowEnd,
-    DateTimeOffset? DepartureWindowStart,
-    DateTimeOffset? DepartureWindowEnd,
     string? Notes,
     AuditInfo? Audit);
 
@@ -31,10 +27,6 @@ public class UpsertEventAttendanceRequest
     [Required]
     public AttendanceStatus Status { get; init; }
 
-    public DateTimeOffset? ArrivalWindowStart { get; init; }
-    public DateTimeOffset? ArrivalWindowEnd { get; init; }
-    public DateTimeOffset? DepartureWindowStart { get; init; }
-    public DateTimeOffset? DepartureWindowEnd { get; init; }
     public string? Notes { get; init; }
 }
 

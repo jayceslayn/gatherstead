@@ -49,10 +49,13 @@ public class EventAttendanceServiceTests : IAsyncLifetime
     private EventAttendanceService CreateService(bool canAssign = true)
     {
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId);
-        var auth = Mock.Of<IMemberAuthorizationService>(a =>
-            a.CanAssignIntentForMemberAsync(_tenantId, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>())
-                == Task.FromResult(canAssign));
-        return new EventAttendanceService(_dbContext, tenantContext, auth, Mock.Of<IAuditVisibilityContext>());
+        var auth = new Mock<IMemberAuthorizationService>();
+        // Delete authorizes via CanAssignIntentForMemberAsync; upsert/bulk resolve via ClassifyIntentActorAsync.
+        auth.Setup(a => a.CanAssignIntentForMemberAsync(_tenantId, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(canAssign);
+        auth.Setup(a => a.ClassifyIntentActorAsync(_tenantId, It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(canAssign ? IntentSource.Volunteered : (IntentSource?)null);
+        return new EventAttendanceService(_dbContext, tenantContext, auth.Object, Mock.Of<IAuditVisibilityContext>());
     }
 
     private UpsertEventAttendanceRequest Request(Guid memberId) => new()

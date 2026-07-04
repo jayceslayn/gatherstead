@@ -5,6 +5,7 @@ using Gatherstead.Api.Observability;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Attributes;
 using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -16,22 +17,28 @@ public class TenantService : ITenantService
 {
     private readonly GathersteadDbContext _dbContext;
     private readonly ICurrentTenantContext _currentTenantContext;
+    private readonly ICurrentUserContext _currentUserContext;
     private readonly IAppAdminContext _appAdminContext;
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly IAuditVisibilityContext _auditVisibility;
+    private readonly ISecurityEventLogger _securityEventLogger;
 
     public TenantService(
         GathersteadDbContext dbContext,
         ICurrentTenantContext currentTenantContext,
+        ICurrentUserContext currentUserContext,
         IAppAdminContext appAdminContext,
         IMemberAuthorizationService memberAuthorizationService,
-        IAuditVisibilityContext auditVisibility)
+        IAuditVisibilityContext auditVisibility,
+        ISecurityEventLogger securityEventLogger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
+        _currentUserContext = currentUserContext ?? throw new ArgumentNullException(nameof(currentUserContext));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
         _auditVisibility = auditVisibility ?? throw new ArgumentNullException(nameof(auditVisibility));
+        _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TenantSummary>>> ListAsync(
@@ -167,6 +174,14 @@ public class TenantService : ITenantService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordTenantCreated();
+
+        // App-admin-gated mutation — record it for the security audit trail.
+        await _securityEventLogger.LogAsync(
+            SecurityEventType.AppAdminAction, SecurityEventSeverity.Info,
+            resource: $"Tenant:{tenant.Id}",
+            detail: "{\"action\":\"TenantCreated\"}",
+            tenantId: tenant.Id, userId: _currentUserContext.UserId, cancellationToken: cancellationToken);
+
         response.SetSuccess(MapToDto(tenant, []));
         return response;
     }

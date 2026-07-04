@@ -139,7 +139,6 @@ public class HouseholdMemberService : IHouseholdMemberService
             TenantId = tenantId,
             HouseholdId = householdId,
             Name = normalizedName,
-            IsAdult = request.IsAdult,
             AgeBand = request.BirthDate is null ? request.AgeBand : null,
             BirthDate = request.BirthDate,
             DietaryNotes = request.DietaryNotes?.Trim(),
@@ -217,7 +216,6 @@ public class HouseholdMemberService : IHouseholdMemberService
         }
 
         member.Name = normalizedName;
-        member.IsAdult = request.IsAdult;
         member.AgeBand = request.BirthDate is null ? request.AgeBand : null;
         member.BirthDate = request.BirthDate;
         member.DietaryNotes = request.DietaryNotes?.Trim();
@@ -326,12 +324,15 @@ public class HouseholdMemberService : IHouseholdMemberService
             ? DataAgeBands.DeriveFromBirthDate(bd, today)
             : member.AgeBand;
 
+        // Adult status is derived from the effective band; null when neither BirthDate nor AgeBand is set.
+        bool? isAdult = ageBand is AgeBand band ? DataAgeBands.IsAdult(band) : null;
+
         return new(
             member.Id,
             member.TenantId,
             member.HouseholdId,
             member.Name,
-            member.IsAdult,
+            isAdult,
             ageBand,
             canReadSensitive ? member.BirthDate : null,
             canReadSensitive ? member.DietaryNotes : null,

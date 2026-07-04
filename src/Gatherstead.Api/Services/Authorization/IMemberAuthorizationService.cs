@@ -19,6 +19,16 @@ public interface IMemberAuthorizationService
     Task<bool> CanAssignIntentForMemberAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default);
 
     /// <summary>
+    /// Classifies how the current user is acting when signing the member up, or null if unauthorized.
+    /// <see cref="IntentSource.Volunteered"/> when the actor is the member themselves or a manager of the
+    /// member's household (a self-directed sign-up); <see cref="IntentSource.Assigned"/> when a privileged
+    /// actor (App Admin or tenant Owner/Manager/Coordinator) signs up someone else. Self / household-manager
+    /// are checked first, so a coordinator toggling their own sign-up is classified Volunteered.
+    /// This is the authorization gate for intent writes — a non-null result means authorized.
+    /// </summary>
+    Task<IntentSource?> ClassifyIntentActorAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default);
+
+    /// <summary>
     /// Determines if the current user can manage the specified household
     /// (add/remove members, edit household details, delete household).
     /// Returns true if: App Admin, tenant Owner/Manager, or household Manager.
@@ -43,7 +53,7 @@ public interface IMemberAuthorizationService
     /// Determines if the current user can edit a specific meal plan's menu — its ingredient
     /// shopping items and the shared <c>MealPlan.Notes</c> (planned menu / description).
     /// Returns true if: <see cref="CanManageEventAsync"/> (App Admin or Owner/Manager/Coordinator),
-    /// OR the caller's linked member has a volunteered <c>MealIntent</c> on that plan (the cook).
+    /// OR the caller's linked member has a <c>MealIntent</c> on that plan (a cook, regardless of source).
     /// </summary>
     Task<bool> CanEditMealPlanMenuAsync(Guid tenantId, Guid mealPlanId, CancellationToken ct = default);
 

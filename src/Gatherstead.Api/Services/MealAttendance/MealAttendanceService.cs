@@ -208,7 +208,7 @@ public class MealAttendanceService : IMealAttendanceService
         for (var index = 0; index < items.Count; index++)
         {
             var item = items[index];
-            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId) is string error)
+            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId)?.Error is string error)
             {
                 response.ItemErrors.Add(new BulkItemError(index, error));
                 continue;

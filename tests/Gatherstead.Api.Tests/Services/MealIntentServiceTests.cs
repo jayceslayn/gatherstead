@@ -66,7 +66,7 @@ public class MealIntentServiceTests : IAsyncLifetime
         _dbContext.MealIntents.Add(new MealIntent
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, MealPlanId = _planId,
-            HouseholdMemberId = memberId, Volunteered = true,
+            HouseholdMemberId = memberId, Source = IntentSource.Volunteered,
         });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }

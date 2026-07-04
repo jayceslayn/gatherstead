@@ -194,12 +194,13 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         return planId;
     }
 
-    private async Task SeedMealIntentAsync(Guid planId, Guid memberId, bool volunteered)
+    private async Task SeedMealIntentAsync(Guid planId, Guid memberId, bool deleted = false)
     {
         _dbContext.MealIntents.Add(new MealIntent
         {
             Id = Guid.NewGuid(), TenantId = _tenantId,
-            MealPlanId = planId, HouseholdMemberId = memberId, Volunteered = volunteered,
+            MealPlanId = planId, HouseholdMemberId = memberId,
+            Source = IntentSource.Volunteered, IsDeleted = deleted,
         });
         await _dbContext.SaveChangesAsync();
     }
@@ -224,7 +225,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         await SeedTenantUserAsync(TenantRole.Member);
         await SeedHouseholdMemberAsync(memberId, _householdId);
         await SeedLinkedMemberAsync(memberId);
-        await SeedMealIntentAsync(planId, memberId, volunteered: true);
+        await SeedMealIntentAsync(planId, memberId);
 
         var service = CreateService(_userId);
         Assert.True(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
@@ -244,14 +245,15 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CanEditMealPlanMenuAsync_MemberDeclinedToCook_ReturnsFalse()
+    public async Task CanEditMealPlanMenuAsync_MemberWithdrewFromCooking_ReturnsFalse()
     {
+        // A withdrawn cook has a soft-deleted intent row; the gate (row existence) excludes it.
         var planId = await SeedMealPlanAsync();
         var memberId = Guid.NewGuid();
         await SeedTenantUserAsync(TenantRole.Member);
         await SeedHouseholdMemberAsync(memberId, _householdId);
         await SeedLinkedMemberAsync(memberId);
-        await SeedMealIntentAsync(planId, memberId, volunteered: false);
+        await SeedMealIntentAsync(planId, memberId, deleted: true);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
@@ -266,7 +268,7 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         await SeedTenantUserAsync(TenantRole.Member);
         await SeedHouseholdMemberAsync(memberId, _householdId);
         await SeedLinkedMemberAsync(memberId);
-        await SeedMealIntentAsync(otherPlanId, memberId, volunteered: true);
+        await SeedMealIntentAsync(otherPlanId, memberId);
 
         var service = CreateService(_userId);
         Assert.False(await service.CanEditMealPlanMenuAsync(_tenantId, planId, TestContext.Current.CancellationToken));
@@ -337,6 +339,84 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
         await SeedTenantUserAsync(TenantRole.Member);
         var service = CreateService(_userId);
         Assert.False(await service.CanEditMemberAsync(_tenantId, _householdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
+    }
+
+    // ── ClassifyIntentActorAsync ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_Unauthenticated_ReturnsNull()
+    {
+        var service = CreateService(userId: null);
+        Assert.Null(await service.ClassifyIntentActorAsync(_tenantId, _householdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_Self_ReturnsVolunteered()
+    {
+        var memberId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+
+        var service = CreateService(_userId);
+        Assert.Equal(IntentSource.Volunteered,
+            await service.ClassifyIntentActorAsync(_tenantId, _householdId, memberId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_CoordinatorActingOnSelf_ReturnsVolunteered()
+    {
+        // Ordering case: the self check must run before the coordinator/admin branch so a coordinator
+        // toggling their own sign-up reads as Volunteered, not Assigned.
+        var memberId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Coordinator);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+
+        var service = CreateService(_userId);
+        Assert.Equal(IntentSource.Volunteered,
+            await service.ClassifyIntentActorAsync(_tenantId, _householdId, memberId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_HouseholdManagerOfMember_ReturnsVolunteered()
+    {
+        var otherMember = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdUserAsync(_householdId, HouseholdRole.Manager);
+        await SeedHouseholdMemberAsync(otherMember, _householdId);
+
+        var service = CreateService(_userId);
+        Assert.Equal(IntentSource.Volunteered,
+            await service.ClassifyIntentActorAsync(_tenantId, _householdId, otherMember, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_CoordinatorActingOnOther_ReturnsAssigned()
+    {
+        var otherHousehold = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Coordinator);
+
+        var service = CreateService(_userId);
+        Assert.Equal(IntentSource.Assigned,
+            await service.ClassifyIntentActorAsync(_tenantId, otherHousehold, Guid.NewGuid(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_AppAdminActingOnOther_ReturnsAssigned()
+    {
+        var service = CreateService(_userId, isAppAdmin: true);
+        Assert.Equal(IntentSource.Assigned,
+            await service.ClassifyIntentActorAsync(_tenantId, _householdId, Guid.NewGuid(), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task ClassifyIntentActorAsync_PlainMemberActingOnOther_ReturnsNull()
+    {
+        await SeedTenantUserAsync(TenantRole.Member);
+
+        var service = CreateService(_userId);
+        Assert.Null(await service.ClassifyIntentActorAsync(_tenantId, Guid.NewGuid(), Guid.NewGuid(), TestContext.Current.CancellationToken));
     }
 
     // ── CanManageHouseholdAsync ──────────────────────────────────────────────

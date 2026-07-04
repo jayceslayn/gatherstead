@@ -4,7 +4,9 @@ import { useAccommodations, useAccommodationIntents, useAccommodationIntentActio
 import { useAllMembers } from '~/composables/useHouseholdMembers'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useTenantRole } from '~/composables/useTenantRole'
-import type { AccommodationIntent, AccommodationIntentStatus, AccommodationIntentDecision, HouseholdMember } from '~/repositories/types'
+import type { AccommodationIntent, AccommodationIntentStatus, HouseholdMember } from '~/repositories/types'
+import { formatArea } from '~/utils/units'
+import { formatBedSummary } from '~/utils/beds'
 
 definePageMeta({ layout: 'default' })
 
@@ -49,14 +51,11 @@ function partyLabel(intent: AccommodationIntent): string {
   return parts.join(' · ')
 }
 
-// Status promotion flow for managers
+// Status promotion flow for managers — a single lifecycle enum (Requested → Hold → Confirmed),
+// with Declined as a terminal branch reached via the Decline action.
 const STATUS_PROGRESSION: Partial<Record<AccommodationIntentStatus, AccommodationIntentStatus>> = {
-  Intent: 'Hold',
+  Requested: 'Hold',
   Hold: 'Confirmed',
-}
-const DECISION_FOR_STATUS: Partial<Record<AccommodationIntentStatus, AccommodationIntentDecision>> = {
-  Hold: 'Pending',
-  Confirmed: 'Approved',
 }
 
 function nextStatus(current: AccommodationIntentStatus): AccommodationIntentStatus | null {
@@ -66,13 +65,16 @@ function nextStatus(current: AccommodationIntentStatus): AccommodationIntentStat
 async function handlePromote(intent: AccommodationIntent) {
   const next = nextStatus(intent.status)
   if (!next) return
-  const decision = DECISION_FOR_STATUS[next] ?? 'Pending'
-  await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, next, decision, intent.notes, intent.partyAdults, intent.partyChildren)
+  await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, next, intent.notes, intent.partyAdults, intent.partyChildren)
 }
 
 async function handleDecline(intent: AccommodationIntent) {
-  await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, intent.status, 'Declined', intent.notes, intent.partyAdults, intent.partyChildren)
+  await promoteIntent(intent.id, intent.householdMemberId, intent.startNight, intent.endNight, 'Declined', intent.notes, intent.partyAdults, intent.partyChildren)
 }
+
+// Accommodation display: bed inventory summary + effective area.
+const bedSummary = computed(() => formatBedSummary(accommodation.value?.beds, t))
+const areaLabel = computed(() => formatArea(accommodation.value?.effectiveAreaSqMeters ?? null))
 
 // Request modal for members — reuses GsAccommodationRequestModal in free-date mode (no event context).
 const showRequestModal = ref(false)
@@ -130,11 +132,11 @@ async function submitRequest(payload: {
       <UBadge color="neutral" variant="soft">
         {{ t(`accommodation.types.${accommodation.type.charAt(0).toLowerCase() + accommodation.type.slice(1)}`) }}
       </UBadge>
-      <UBadge v-if="accommodation.capacityAdults" color="neutral" variant="soft">
-        {{ t('accommodation.adults', { n: accommodation.capacityAdults }, accommodation.capacityAdults) }}
+      <UBadge v-if="bedSummary" color="neutral" variant="soft">
+        {{ bedSummary }}
       </UBadge>
-      <UBadge v-if="accommodation.capacityChildren" color="neutral" variant="soft">
-        {{ t('accommodation.children', { n: accommodation.capacityChildren }, accommodation.capacityChildren) }}
+      <UBadge v-if="areaLabel" color="neutral" variant="soft">
+        {{ areaLabel }}
       </UBadge>
     </div>
 
@@ -185,14 +187,6 @@ async function submitRequest(payload: {
             </p>
             <div class="flex flex-wrap gap-2 mt-1">
               <GsStatusBadge :status="intent.status" size="xs" />
-              <UBadge
-                v-if="intent.decision !== 'Pending'"
-                :color="intent.decision === 'Approved' ? 'success' : 'error'"
-                variant="soft"
-                size="xs"
-              >
-                {{ t(`accommodation.decision.${intent.decision.toLowerCase()}`) }}
-              </UBadge>
               <span v-if="partyLabel(intent)" class="text-xs text-muted self-center">
                 {{ partyLabel(intent) }}
               </span>
@@ -214,7 +208,7 @@ async function submitRequest(payload: {
                 {{ t('accommodation.promote') }}
               </UButton>
               <UButton
-                v-if="intent.decision !== 'Declined'"
+                v-if="intent.status !== 'Declined'"
                 size="xs"
                 color="error"
                 variant="soft"

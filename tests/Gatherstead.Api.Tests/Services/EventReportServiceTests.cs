@@ -213,7 +213,7 @@ public class EventReportServiceTests : IAsyncLifetime
                 TenantId = _tenantId,
                 TaskPlanId = planId,
                 HouseholdMemberId = memberId,
-                Volunteered = true,
+                Source = IntentSource.Volunteered,
             });
         }
 
@@ -290,9 +290,12 @@ public class EventReportServiceTests : IAsyncLifetime
             PropertyId = _propertyId,
             Name = "Cabin A",
             Type = AccommodationType.Bedroom,
-            CapacityAdults = 4,
-            CapacityChildren = 2,
             Notes = "Lake views. No capes near the fireplace.",
+        });
+        // 3 Queen beds → sleeps capacity 6.
+        _dbContext.AccommodationBeds.Add(new AccommodationBed
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, Size = BedSize.Queen, Quantity = 3,
         });
         return accommodationId;
     }
@@ -303,19 +306,18 @@ public class EventReportServiceTests : IAsyncLifetime
         var accommodationId = SeedAccommodation();
         _dbContext.AccommodationIntents.AddRange(
             // 4 adults + 1 child = 5 — counts fully.
-            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _alice, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Confirmed, Decision = AccommodationIntentDecision.Approved, PartyAdults = 4, PartyChildren = 1 },
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _alice, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Confirmed, PartyAdults = 4, PartyChildren = 1 },
             // No party counts — counts as 1 (the requesting member).
-            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _bob, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Hold, Decision = AccommodationIntentDecision.Pending },
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _bob, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Hold },
             // Declined — excluded entirely.
-            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _carol, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Intent, Decision = AccommodationIntentDecision.Declined, PartyAdults = 3 });
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _carol, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Declined, PartyAdults = 3 });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
 
         var accommodation = Assert.Single(result.Entity!.Days.Single(d => d.Day == Day1).Accommodations);
         Assert.Equal("Cabin A", accommodation.Name);
-        Assert.Equal(4, accommodation.CapacityAdults);
-        Assert.Equal(2, accommodation.CapacityChildren);
+        Assert.Equal(6, accommodation.Capacity);
         Assert.Equal("Lake views. No capes near the fireplace.", accommodation.Notes);
         Assert.Equal(6, accommodation.Occupied); // 5 + 1 (declined excluded)
         Assert.Equal(2, accommodation.Occupants.Count);
@@ -337,7 +339,6 @@ public class EventReportServiceTests : IAsyncLifetime
             StartNight = Day1,
             EndNight = Day1,
             Status = AccommodationIntentStatus.Confirmed,
-            Decision = AccommodationIntentDecision.Approved,
             PartyAdults = 2,
         });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -358,9 +359,9 @@ public class EventReportServiceTests : IAsyncLifetime
         var accommodationId = SeedAccommodation();
         _dbContext.AccommodationIntents.AddRange(
             // Alice spans both nights, party of 3.
-            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _alice, StartNight = Day1, EndNight = Day2, Status = AccommodationIntentStatus.Confirmed, Decision = AccommodationIntentDecision.Approved, PartyAdults = 2, PartyChildren = 1 },
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _alice, StartNight = Day1, EndNight = Day2, Status = AccommodationIntentStatus.Confirmed, PartyAdults = 2, PartyChildren = 1 },
             // Bob overlaps on Day1 only, party of 4 — pushing Day1 over the capacity of 6 (allowed; soft flag).
-            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _bob, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Hold, Decision = AccommodationIntentDecision.Pending, PartyAdults = 4 });
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _bob, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Hold, PartyAdults = 4 });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);

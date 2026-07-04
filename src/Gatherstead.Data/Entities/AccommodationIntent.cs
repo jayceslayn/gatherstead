@@ -35,8 +35,6 @@ public class AccommodationIntent : AuditableEntity
     [MaxLength(500)]
     public string? Notes { get; set; }
 
-    public AccommodationIntentDecision Decision { get; set; }
     public int? PartyAdults { get; set; }
     public int? PartyChildren { get; set; }
-    public int? Priority { get; set; }
 }

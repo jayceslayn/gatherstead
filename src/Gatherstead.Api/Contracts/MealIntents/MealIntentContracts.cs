@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.MealIntents;
 
@@ -9,7 +10,7 @@ public record MealIntentDto(
     Guid TenantId,
     Guid MealPlanId,
     Guid HouseholdMemberId,
-    bool Volunteered,
+    IntentSource Source,
     AuditInfo? Audit);
 
 public class MealIntentResponse : BaseEntityResponse<MealIntentDto> { }
@@ -18,6 +19,4 @@ public class UpsertMealIntentRequest
 {
     [Required]
     public Guid HouseholdMemberId { get; init; }
-
-    public bool Volunteered { get; init; }
 }

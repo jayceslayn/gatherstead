@@ -10,7 +10,7 @@ import type {
   EventReportOccupant,
 } from '../types'
 import { getDemoStore } from './DemoStore'
-import { enumDays } from './DemoHelpers'
+import { enumDays, sleepsCapacity } from './DemoHelpers'
 import { DEMO_DIETARY_TAGS } from './DemoDietaryTagRepository'
 import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '../../composables/useTemplateOrder'
 
@@ -163,12 +163,11 @@ export class DemoReportRepository implements IReportRepository {
           const occupants: EventReportOccupant[] = store.accommodationIntents.value
             .filter(i => i.accommodationId === accommodation.id
               && i.startNight <= day && i.endNight >= day
-              && i.decision !== 'Declined')
+              && i.status !== 'Declined')
             .map((i): EventReportOccupant => ({
               memberId: i.householdMemberId,
               name: memberById.get(i.householdMemberId)?.name ?? '',
-              status: i.status ?? 'Intent',
-              decision: i.decision ?? 'Pending',
+              status: i.status ?? 'Requested',
               partyAdults: i.partyAdults ?? null,
               partyChildren: i.partyChildren ?? null,
             }))
@@ -178,8 +177,7 @@ export class DemoReportRepository implements IReportRepository {
             accommodationId: accommodation.id,
             name: accommodation.name,
             type: accommodation.type ?? 'Bedroom',
-            capacityAdults: accommodation.capacityAdults ?? null,
-            capacityChildren: accommodation.capacityChildren ?? null,
+            capacity: sleepsCapacity(accommodation.beds ?? []),
             occupied: occupants.reduce((sum, o) => sum + Math.max((o.partyAdults ?? 0) + (o.partyChildren ?? 0), 1), 0),
             occupants,
           }

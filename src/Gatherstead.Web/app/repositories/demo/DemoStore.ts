@@ -35,7 +35,9 @@ export {
   DEMO_LIMITS,
 } from './demoConstants'
 
-const STORAGE_KEY = 'gs-demo-store'
+// v2: entity-layer rework changed persisted shapes (intent Source, accommodation beds/dimensions,
+// member isAdult derivation, accommodation-intent status merge). Bumping the key forces a clean reseed.
+const STORAGE_KEY = 'gs-demo-store-v2'
 
 export class DemoLimitError extends Error {
   constructor(public readonly limitKey: keyof typeof DEMO_LIMITS) {

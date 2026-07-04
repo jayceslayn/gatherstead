@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { AccommodationSummary, AccommodationIntentStatus } from '~/repositories/types'
+import { formatArea } from '~/utils/units'
+import { formatBedSummary } from '~/utils/beds'
 
 const props = defineProps<{
   accommodation: AccommodationSummary
@@ -22,13 +24,9 @@ const NuxtLink = resolveComponent('NuxtLink')
 
 const icon = computed(() => typeIcon[props.accommodation.type] ?? 'i-heroicons-home')
 
-const capacityLabel = computed(() => {
-  const { capacityAdults, capacityChildren } = props.accommodation
-  const parts: string[] = []
-  if (capacityAdults) parts.push(t('accommodation.adults', { n: capacityAdults }, capacityAdults))
-  if (capacityChildren) parts.push(t('accommodation.children', { n: capacityChildren }, capacityChildren))
-  return parts.join(', ')
-})
+const bedSummary = computed(() => formatBedSummary(props.accommodation.beds, t))
+
+const areaLabel = computed(() => formatArea(props.accommodation.effectiveAreaSqMeters ?? null))
 </script>
 
 <template>
@@ -47,7 +45,8 @@ const capacityLabel = computed(() => {
         <div class="min-w-0 flex-1">
           <p class="font-semibold truncate">{{ accommodation.name }}</p>
           <p class="text-sm text-muted">{{ t(`accommodation.types.${accommodation.type.charAt(0).toLowerCase() + accommodation.type.slice(1)}`) }}</p>
-          <p v-if="capacityLabel" class="text-xs text-muted mt-0.5">{{ capacityLabel }}</p>
+          <p v-if="bedSummary" class="text-xs text-muted mt-0.5">{{ bedSummary }}</p>
+          <p v-if="areaLabel" class="text-xs text-muted mt-0.5">{{ areaLabel }}</p>
         </div>
         <div class="flex flex-col items-end gap-1 shrink-0">
           <GsStatusBadge

@@ -59,12 +59,9 @@ export function occupancyState(occupied: number, capacity: number | null): Occup
   return 'partial'
 }
 
-/** Total capacity vs occupied party size. Capacity null → state is 'unknown' (count only, no colour). */
+/** Sleeps capacity vs occupied party size. Capacity null → state is 'unknown' (count only, no colour). */
 export function accommodationOccupancy(acc: EventReportAccommodation): Occupancy {
-  const capacity = acc.capacityAdults != null || acc.capacityChildren != null
-    ? (acc.capacityAdults ?? 0) + (acc.capacityChildren ?? 0)
-    : null
-
+  const capacity = acc.capacity ?? null
   return { capacity, occupied: acc.occupied, state: occupancyState(acc.occupied, capacity) }
 }
 

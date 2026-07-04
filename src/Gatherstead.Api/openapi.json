@@ -5630,8 +5630,6 @@
                 "AuthzDenial",
                 "CrossTenantWriteBlocked",
                 "TokenRevoked",
-                "SoftDelete",
-                "Restore",
                 "AppAdminAction",
                 "RateLimitBreach",
                 "InvitationCreated",
@@ -5714,8 +5712,6 @@
                 "AuthzDenial",
                 "CrossTenantWriteBlocked",
                 "TokenRevoked",
-                "SoftDelete",
-                "Restore",
                 "AppAdminAction",
                 "RateLimitBreach",
                 "InvitationCreated",
@@ -7650,30 +7646,16 @@
             "type": "string",
             "nullable": true
           },
-          "capacityAdults": {
+          "capacity": {
             "type": "integer",
             "format": "int32",
             "nullable": true
           },
-          "capacityChildren": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "claimedAdults": {
+          "occupied": {
             "type": "integer",
             "format": "int32"
           },
-          "claimedChildren": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "remainingAdults": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "remainingChildren": {
+          "remaining": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -7735,19 +7717,35 @@
             ],
             "type": "string"
           },
-          "capacityAdults": {
-            "type": "integer",
-            "format": "int32",
+          "widthMeters": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
-          "capacityChildren": {
-            "type": "integer",
-            "format": "int32",
+          "depthMeters": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "areaSqMeters": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "effectiveAreaSqMeters": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
           "notes": {
             "type": "string",
             "nullable": true
+          },
+          "beds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BedDto"
+            }
           },
           "attributes": {
             "type": "array",
@@ -7813,9 +7811,10 @@
           },
           "status": {
             "enum": [
-              "Intent",
+              "Requested",
               "Hold",
-              "Confirmed"
+              "Confirmed",
+              "Declined"
             ],
             "type": "string"
           },
@@ -7823,25 +7822,12 @@
             "type": "string",
             "nullable": true
           },
-          "decision": {
-            "enum": [
-              "Pending",
-              "Approved",
-              "Declined"
-            ],
-            "type": "string"
-          },
           "partyAdults": {
             "type": "integer",
             "format": "int32",
             "nullable": true
           },
           "partyChildren": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "priority": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -8120,6 +8106,56 @@
         },
         "additionalProperties": false
       },
+      "BedDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "size": {
+            "enum": [
+              "Single",
+              "Double",
+              "Queen",
+              "King",
+              "Bunk",
+              "Sofa",
+              "Crib",
+              "Other"
+            ],
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BedWriteEntry": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "enum": [
+              "Single",
+              "Double",
+              "Queen",
+              "King",
+              "Bunk",
+              "Sofa",
+              "Crib",
+              "Other"
+            ],
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "BootstrapTenantDto": {
         "type": "object",
         "properties": {
@@ -8231,9 +8267,6 @@
           "householdMemberId": {
             "type": "string",
             "format": "uuid"
-          },
-          "volunteered": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -8353,9 +8386,10 @@
           },
           "status": {
             "enum": [
-              "Intent",
+              "Requested",
               "Hold",
-              "Confirmed"
+              "Confirmed",
+              "Declined"
             ],
             "type": "string"
           },
@@ -8369,11 +8403,6 @@
             "nullable": true
           },
           "partyChildren": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "priority": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -8403,18 +8432,30 @@
             ],
             "type": "string"
           },
-          "capacityAdults": {
-            "type": "integer",
-            "format": "int32",
+          "widthMeters": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
-          "capacityChildren": {
-            "type": "integer",
-            "format": "int32",
+          "depthMeters": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "areaSqMeters": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
           "notes": {
             "type": "string",
+            "nullable": true
+          },
+          "beds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BedWriteEntry"
+            },
             "nullable": true
           },
           "attributes": {
@@ -8584,9 +8625,6 @@
             "maxLength": 200,
             "minLength": 0,
             "type": "string"
-          },
-          "isAdult": {
-            "type": "boolean"
           },
           "ageBand": {
             "enum": [
@@ -9116,26 +9154,6 @@
             ],
             "type": "string"
           },
-          "arrivalWindowStart": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "arrivalWindowEnd": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "departureWindowStart": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "departureWindowEnd": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "notes": {
             "type": "string",
             "nullable": true
@@ -9311,12 +9329,7 @@
             ],
             "type": "string"
           },
-          "capacityAdults": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "capacityChildren": {
+          "capacity": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -9531,7 +9544,6 @@
       },
       "EventReportOccupantDto": {
         "required": [
-          "decision",
           "memberId",
           "name",
           "status"
@@ -9548,16 +9560,9 @@
           },
           "status": {
             "enum": [
-              "Intent",
+              "Requested",
               "Hold",
-              "Confirmed"
-            ],
-            "type": "string"
-          },
-          "decision": {
-            "enum": [
-              "Pending",
-              "Approved",
+              "Confirmed",
               "Declined"
             ],
             "type": "string"
@@ -9747,7 +9752,8 @@
             "type": "string"
           },
           "isAdult": {
-            "type": "boolean"
+            "type": "boolean",
+            "nullable": true
           },
           "ageBand": {
             "enum": [
@@ -10187,8 +10193,12 @@
             "type": "string",
             "format": "uuid"
           },
-          "volunteered": {
-            "type": "boolean"
+          "source": {
+            "enum": [
+              "Volunteered",
+              "Assigned"
+            ],
+            "type": "string"
           },
           "audit": {
             "$ref": "#/components/schemas/AuditInfo"
@@ -10531,16 +10541,9 @@
           },
           "status": {
             "enum": [
-              "Intent",
+              "Requested",
               "Hold",
-              "Confirmed"
-            ],
-            "type": "string"
-          },
-          "decision": {
-            "enum": [
-              "Pending",
-              "Approved",
+              "Confirmed",
               "Declined"
             ],
             "type": "string"
@@ -10623,8 +10626,12 @@
           "completed": {
             "type": "boolean"
           },
-          "volunteered": {
-            "type": "boolean"
+          "source": {
+            "enum": [
+              "Volunteered",
+              "Assigned"
+            ],
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -10997,8 +11004,12 @@
             "type": "string",
             "format": "uuid"
           },
-          "volunteered": {
-            "type": "boolean"
+          "source": {
+            "enum": [
+              "Volunteered",
+              "Assigned"
+            ],
+            "type": "string"
           },
           "audit": {
             "$ref": "#/components/schemas/AuditInfo"
@@ -11455,9 +11466,10 @@
           },
           "status": {
             "enum": [
-              "Intent",
+              "Requested",
               "Hold",
-              "Confirmed"
+              "Confirmed",
+              "Declined"
             ],
             "type": "string"
           },
@@ -11465,25 +11477,12 @@
             "type": "string",
             "nullable": true
           },
-          "decision": {
-            "enum": [
-              "Pending",
-              "Approved",
-              "Declined"
-            ],
-            "type": "string"
-          },
           "partyAdults": {
             "type": "integer",
             "format": "int32",
             "nullable": true
           },
           "partyChildren": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "priority": {
             "type": "integer",
             "format": "int32",
             "nullable": true
@@ -11513,18 +11512,30 @@
             ],
             "type": "string"
           },
-          "capacityAdults": {
-            "type": "integer",
-            "format": "int32",
+          "widthMeters": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
-          "capacityChildren": {
-            "type": "integer",
-            "format": "int32",
+          "depthMeters": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "areaSqMeters": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           },
           "notes": {
             "type": "string",
+            "nullable": true
+          },
+          "beds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BedWriteEntry"
+            },
             "nullable": true
           },
           "attributes": {
@@ -11689,9 +11700,6 @@
             "maxLength": 200,
             "minLength": 0,
             "type": "string"
-          },
-          "isAdult": {
-            "type": "boolean"
           },
           "ageBand": {
             "enum": [
@@ -12081,26 +12089,6 @@
             ],
             "type": "string"
           },
-          "arrivalWindowStart": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "arrivalWindowEnd": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "departureWindowStart": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
-          "departureWindowEnd": {
-            "type": "string",
-            "format": "date-time",
-            "nullable": true
-          },
           "notes": {
             "type": "string",
             "nullable": true
@@ -12159,9 +12147,6 @@
           "householdMemberId": {
             "type": "string",
             "format": "uuid"
-          },
-          "volunteered": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -12202,9 +12187,6 @@
           "householdMemberId": {
             "type": "string",
             "format": "uuid"
-          },
-          "volunteered": {
-            "type": "boolean"
           }
         },
         "additionalProperties": false

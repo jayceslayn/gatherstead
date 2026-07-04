@@ -1,5 +1,5 @@
-import type { IAccommodationRepository, AccommodationAvailabilityQuery } from '../interfaces'
-import type { AccommodationSummary, AccommodationType, AccommodationAvailability, MyStay, AttributeWriteEntry } from '../types'
+import type { IAccommodationRepository, AccommodationAvailabilityQuery, AccommodationDimensions } from '../interfaces'
+import type { AccommodationSummary, AccommodationType, AccommodationAvailability, MyStay, AttributeWriteEntry, BedWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
@@ -49,14 +49,14 @@ export class LiveAccommodationRepository implements IAccommodationRepository {
     propertyId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<AccommodationSummary> {
     const r = await $fetch<ApiResponse<AccommodationSummary>>(
       `/api/proxy/tenants/${tenantId}/properties/${propertyId}/accommodations`,
-      { method: 'POST', body: { name, type, capacityAdults, capacityChildren, notes, attributes: attributes ?? null } },
+      { method: 'POST', body: { name, type, ...dimensions, beds, notes, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -67,14 +67,14 @@ export class LiveAccommodationRepository implements IAccommodationRepository {
     accommodationId: string,
     name: string,
     type: AccommodationType,
-    capacityAdults: number | null,
-    capacityChildren: number | null,
+    dimensions: AccommodationDimensions,
+    beds: BedWriteEntry[],
     notes: string | null,
     attributes?: AttributeWriteEntry[] | null,
   ): Promise<void> {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/properties/${propertyId}/accommodations/${accommodationId}`,
-      { method: 'PUT', body: { name, type, capacityAdults, capacityChildren, notes, attributes: attributes ?? null } },
+      { method: 'PUT', body: { name, type, ...dimensions, beds, notes, attributes: attributes ?? null } },
     )
   }
 

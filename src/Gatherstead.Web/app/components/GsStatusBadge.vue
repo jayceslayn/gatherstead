@@ -2,7 +2,7 @@
 type StatusValue =
   | 'Covered' | 'Partial' | 'Open' | 'Exception'
   | 'Going' | 'Maybe' | 'NotGoing' | 'NoResponse'
-  | 'Intent' | 'Hold' | 'Confirmed' | 'Declined'
+  | 'Requested' | 'Hold' | 'Confirmed' | 'Declined'
 
 const props = defineProps<{
   status: StatusValue
@@ -26,7 +26,7 @@ const statusMap: Record<StatusValue, StatusConfig> = {
   Maybe: { color: 'secondary', icon: 'i-heroicons-question-mark-circle', labelKey: 'status.maybe' },
   NotGoing: { color: 'neutral', icon: 'i-heroicons-x-mark', labelKey: 'status.notGoing' },
   NoResponse: { color: 'neutral', icon: 'i-heroicons-minus', labelKey: 'status.noResponse' },
-  Intent: { color: 'neutral', icon: 'i-heroicons-hand-raised', labelKey: 'status.intent' },
+  Requested: { color: 'neutral', icon: 'i-heroicons-hand-raised', labelKey: 'status.requested' },
   Hold: { color: 'secondary', icon: 'i-heroicons-pause-circle', labelKey: 'status.hold' },
   Confirmed: { color: 'success', icon: 'i-heroicons-lock-closed', labelKey: 'status.confirmed' },
   Declined: { color: 'error', icon: 'i-heroicons-x-circle', labelKey: 'status.declined' },

@@ -1,4 +1,5 @@
 using Gatherstead.Api.Tests.Fixtures;
+using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Tests.Interceptors;
@@ -64,12 +65,15 @@ public class AuditingSaveChangesInterceptorTenantValidationTests : IDisposable
 
         _dbContext.Households.Add(household);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Assert.ThrowsAsync<CrossTenantWriteBlockedException>(
             () => _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken));
 
         Assert.Contains("Cross-tenant writes are not permitted", exception.Message);
         Assert.Contains(wrongTenantId.ToString(), exception.Message);
         Assert.Contains(_tenantId.ToString(), exception.Message);
+        Assert.Equal(CrossTenantWriteReason.AddMismatch, exception.Reason);
+        Assert.Equal(wrongTenantId, exception.EntityTenantId);
+        Assert.Equal(_tenantId, exception.CurrentTenantId);
     }
 
     [Fact]

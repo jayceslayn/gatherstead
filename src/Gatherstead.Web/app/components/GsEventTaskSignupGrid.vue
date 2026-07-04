@@ -30,14 +30,15 @@ const {
 const selectedDay = computed(() => props.days[selectedDayIndex.value] ?? '')
 
 // Only the current household's volunteers show; plus a picker to add the rest.
+// An intent row's presence is the sign-up (there is no volunteered flag).
 function planVolunteers(planId: string) {
   const byMember = intentMap.value[planId] ?? {}
-  return members.value.filter(m => byMember[m.id]?.volunteered)
+  return members.value.filter(m => byMember[m.id] != null)
 }
 
 function addableOptions(planId: string) {
   const byMember = intentMap.value[planId] ?? {}
-  return members.value.filter(m => !byMember[m.id]?.volunteered)
+  return members.value.filter(m => byMember[m.id] == null)
 }
 
 // A stateless "Add volunteer" menu — each not-yet-signed-up member volunteers on select.

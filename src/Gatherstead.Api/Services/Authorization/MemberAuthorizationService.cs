@@ -76,20 +76,7 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         var userId = _currentUserContext.UserId;
         if (!userId.HasValue) return false;
 
-        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
-            return true;
-
-        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
-        if (info?.Role <= TenantRole.Coordinator)
-            return true;
-
-        // Self check — linked member in this tenant
-        if (info?.LinkedMemberId == memberId)
-            return true;
-
-        // Household Manager check
-        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
-        if (householdUsers.Any(hu => hu.HouseholdId == householdId && hu.Role == HouseholdRole.Manager))
+        if (await ClassifyIntentActorAsync(tenantId, householdId, memberId, ct) is not null)
             return true;
 
         _logger.LogWarning(
@@ -102,6 +89,31 @@ public class MemberAuthorizationService : IMemberAuthorizationService
             detail: "{\"reason\":\"InsufficientHouseholdRole\"}",
             tenantId: tenantId, userId: userId, cancellationToken: ct);
         return false;
+    }
+
+    public async Task<IntentSource?> ClassifyIntentActorAsync(Guid tenantId, Guid householdId, Guid memberId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return null;
+
+        var info = await GetTenantUserInfoAsync(tenantId, userId.Value, ct);
+
+        // Self, or a manager of the member's own household → a self-directed sign-up. Checked before
+        // the coordinator/admin branch so a coordinator toggling their own sign-up reads as Volunteered.
+        if (info?.LinkedMemberId == memberId)
+            return IntentSource.Volunteered;
+
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        if (householdUsers.Any(hu => hu.HouseholdId == householdId && hu.Role == HouseholdRole.Manager))
+            return IntentSource.Volunteered;
+
+        // Otherwise a privileged actor signing up someone else → an assignment.
+        if (await _appAdminContext.IsAppAdminAsync(ct) == true)
+            return IntentSource.Assigned;
+        if (info?.Role <= TenantRole.Coordinator)
+            return IntentSource.Assigned;
+
+        return null;
     }
 
     public async Task<bool> CanManageHouseholdAsync(Guid tenantId, Guid householdId, CancellationToken ct = default)
@@ -157,14 +169,13 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         if (info?.LinkedMemberId is not Guid linkedMemberId)
             return false;
 
-        // The volunteer cook for this plan may set its menu. (A member could temporarily volunteer
-        // to gain this — an accepted, non-critical loophole.)
+        // A cook signed up for this plan (any MealIntent row, regardless of source) may set its menu.
+        // (A member could temporarily sign up to gain this — an accepted, non-critical loophole.)
         return await _dbContext.MealIntents
             .AsNoTracking()
             .AnyAsync(
                 mi => mi.MealPlanId == mealPlanId
-                    && mi.HouseholdMemberId == linkedMemberId
-                    && mi.Volunteered,
+                    && mi.HouseholdMemberId == linkedMemberId,
                 ct);
     }
 

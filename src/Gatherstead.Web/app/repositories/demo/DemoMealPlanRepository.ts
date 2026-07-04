@@ -37,22 +37,19 @@ export class DemoMealPlanRepository implements IMealPlanRepository {
     planId: string,
     _householdId: string,
     memberId: string,
-    volunteered: boolean,
   ): Promise<void> {
     const store = getDemoStore()
     const idx = store.mealIntents.value.findIndex(
       i => i.mealPlanId === planId && i.householdMemberId === memberId,
     )
-    if (idx >= 0) {
-      store.mealIntents.value[idx] = { ...store.mealIntents.value[idx]!, volunteered }
-    }
-    else {
+    // Row existence is the sign-up; the demo user always acts as self, so Source is Volunteered.
+    if (idx < 0) {
       store.mealIntents.value.push({
         id: demoId(),
         tenantId,
         mealPlanId: planId,
         householdMemberId: memberId,
-        volunteered,
+        source: 'Volunteered',
       })
     }
     persistDemoStore()

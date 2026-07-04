@@ -68,9 +68,10 @@ public class TaskIntentService : ITaskIntentService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Every intent row is a sign-up (withdrawal deletes the row), so no Source filter is applied.
         var query = _dbContext.TaskIntents
             .AsNoTracking()
-            .Where(i => i.TenantId == tenantId && i.Volunteered);
+            .Where(i => i.TenantId == tenantId);
 
         if (memberIds is not null)
         {
@@ -94,7 +95,7 @@ public class TaskIntentService : ITaskIntentService
                 i.TaskPlan.Day,
                 i.TaskPlan.TimeSlot,
                 i.TaskPlan.Completed,
-                i.Volunteered))
+                i.Source))
             .ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<MyTaskDto>>.SuccessfulResponse(tasks);
@@ -168,7 +169,8 @@ public class TaskIntentService : ITaskIntentService
         // Resolve + authorize the member by its own id; the client-supplied householdId is
         // advisory only (a member has exactly one household), so a stale/mismatched value no
         // longer produces a spurious "Household member not found."
-        if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
+        var source = await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken);
+        if (source is null)
             return response;
 
         var planExists = await _dbContext.TaskPlans
@@ -181,10 +183,15 @@ public class TaskIntentService : ITaskIntentService
             return response;
         }
 
+        // Include soft-deleted rows so a re-sign-up after a withdrawal revives the existing row rather
+        // than colliding with it on the unique (TenantId, TaskPlanId, HouseholdMemberId) index.
         var existing = await _dbContext.TaskIntents
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Where(i => i.TenantId == tenantId && i.TaskPlanId == planId && i.HouseholdMemberId == request.HouseholdMemberId)
             .SingleOrDefaultAsync(cancellationToken);
 
+        // Source records who initiated the sign-up; it is set on create or revive and preserved on a
+        // re-upsert of an already-live row (the first cause wins).
         if (existing is null)
         {
             existing = new TaskIntent
@@ -193,15 +200,15 @@ public class TaskIntentService : ITaskIntentService
                 TenantId = tenantId,
                 TaskPlanId = planId,
                 HouseholdMemberId = request.HouseholdMemberId,
+                Source = source.Value,
             };
             _dbContext.TaskIntents.Add(existing);
         }
         else if (existing.IsDeleted)
         {
             existing.IsDeleted = false;
+            existing.Source = source.Value;
         }
-
-        existing.Volunteered = request.Volunteered;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -239,7 +246,9 @@ public class TaskIntentService : ITaskIntentService
             .ToHashSet();
 
         var memberIds = items.Select(i => i.HouseholdMemberId).Distinct().ToList();
+        // Include soft-deleted rows so re-sign-ups revive withdrawals instead of colliding on the unique index.
         var existingByKey = (await _dbContext.TaskIntents
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
             .Where(i => i.TenantId == tenantId && planIds.Contains(i.TaskPlanId) && memberIds.Contains(i.HouseholdMemberId))
             .ToListAsync(cancellationToken))
             .ToDictionary(i => (i.TaskPlanId, i.HouseholdMemberId));
@@ -248,7 +257,8 @@ public class TaskIntentService : ITaskIntentService
         for (var index = 0; index < items.Count; index++)
         {
             var item = items[index];
-            if (memberOutcomes.GetValueOrDefault(item.HouseholdMemberId) is string error)
+            var outcome = memberOutcomes.GetValueOrDefault(item.HouseholdMemberId);
+            if (outcome?.Error is string error)
             {
                 response.ItemErrors.Add(new BulkItemError(index, error));
                 continue;
@@ -268,6 +278,7 @@ public class TaskIntentService : ITaskIntentService
                     TenantId = tenantId,
                     TaskPlanId = item.TaskPlanId,
                     HouseholdMemberId = item.HouseholdMemberId,
+                    Source = outcome!.Source!.Value,
                 };
                 _dbContext.TaskIntents.Add(existing);
                 existingByKey[(item.TaskPlanId, item.HouseholdMemberId)] = existing;
@@ -275,9 +286,9 @@ public class TaskIntentService : ITaskIntentService
             else if (existing.IsDeleted)
             {
                 existing.IsDeleted = false;
+                existing.Source = outcome!.Source!.Value;
             }
 
-            existing.Volunteered = item.Volunteered;
             upserted.Add(existing);
         }
 
@@ -324,6 +335,6 @@ public class TaskIntentService : ITaskIntentService
     }
 
     private TaskIntentDto MapToDto(TaskIntent i) => new(
-        i.Id, i.TenantId, i.TaskPlanId, i.HouseholdMemberId, i.Volunteered,
+        i.Id, i.TenantId, i.TaskPlanId, i.HouseholdMemberId, i.Source,
         i.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

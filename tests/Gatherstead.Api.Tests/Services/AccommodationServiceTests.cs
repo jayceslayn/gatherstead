@@ -1,3 +1,4 @@
+using Gatherstead.Api.Contracts.Accommodations;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Services.Accommodations;
 using Gatherstead.Api.Services.Authorization;
@@ -35,11 +36,22 @@ public class AccommodationServiceTests : IAsyncLifetime
             Mock.Of<IMemberAuthorizationService>(),
             Mock.Of<IAuditVisibilityContext>());
 
+    private AccommodationService CreateManagerService()
+    {
+        var auth = Mock.Of<IMemberAuthorizationService>(a =>
+            a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(true));
+        return new AccommodationService(
+            _dbContext,
+            Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId),
+            auth,
+            Mock.Of<IAuditVisibilityContext>());
+    }
+
     private void AddAccommodation(string name) =>
         _dbContext.Accommodations.Add(new Accommodation
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, PropertyId = _propertyId,
-            Name = name, Type = AccommodationType.Bedroom, CapacityAdults = 4,
+            Name = name, Type = AccommodationType.Bedroom,
         });
 
     [Fact]
@@ -55,5 +67,72 @@ public class AccommodationServiceTests : IAsyncLifetime
 
         Assert.True(result.Successful);
         Assert.Equal(2, result.Entity!.Count);
+    }
+
+    [Fact]
+    public async Task CreateAsync_PersistsBedsAndDimensions_GetReturnsThem()
+    {
+        var service = CreateManagerService();
+        var created = await service.CreateAsync(_tenantId, _propertyId, new CreateAccommodationRequest
+        {
+            Name = "Cabin A",
+            Type = AccommodationType.Bedroom,
+            WidthMeters = 3m,
+            DepthMeters = 4m,
+            Beds = [new BedWriteEntry(BedSize.Queen, 2), new BedWriteEntry(BedSize.Single, 1)],
+        }, TestContext.Current.CancellationToken);
+
+        Assert.True(created.Successful);
+
+        var got = await service.GetAsync(_tenantId, _propertyId, created.Entity!.Id, TestContext.Current.CancellationToken);
+        Assert.True(got.Successful);
+        Assert.Equal(3m, got.Entity!.WidthMeters);
+        Assert.Equal(4m, got.Entity.DepthMeters);
+        Assert.Null(got.Entity.AreaSqMeters);
+        Assert.Equal(12m, got.Entity.EffectiveAreaSqMeters); // 3 × 4, no override
+        Assert.Equal(2, got.Entity.Beds.Count);
+        Assert.Equal(2, got.Entity.Beds.Single(b => b.Size == BedSize.Queen).Quantity);
+        Assert.Equal(1, got.Entity.Beds.Single(b => b.Size == BedSize.Single).Quantity);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AreaOverride_WinsOverWidthTimesDepth()
+    {
+        var service = CreateManagerService();
+        var created = await service.CreateAsync(_tenantId, _propertyId, new CreateAccommodationRequest
+        {
+            Name = "Irregular Room",
+            Type = AccommodationType.Bedroom,
+            WidthMeters = 3m,
+            DepthMeters = 4m,
+            AreaSqMeters = 20m,
+        }, TestContext.Current.CancellationToken);
+
+        var got = await service.GetAsync(_tenantId, _propertyId, created.Entity!.Id, TestContext.Current.CancellationToken);
+        Assert.Equal(20m, got.Entity!.EffectiveAreaSqMeters);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Beds_FullReplace()
+    {
+        var service = CreateManagerService();
+        var created = await service.CreateAsync(_tenantId, _propertyId, new CreateAccommodationRequest
+        {
+            Name = "Cabin A",
+            Type = AccommodationType.Bedroom,
+            Beds = [new BedWriteEntry(BedSize.Queen, 2)],
+        }, TestContext.Current.CancellationToken);
+
+        await service.UpdateAsync(_tenantId, _propertyId, created.Entity!.Id, new UpdateAccommodationRequest
+        {
+            Name = "Cabin A",
+            Type = AccommodationType.Bedroom,
+            Beds = [new BedWriteEntry(BedSize.Single, 3)],
+        }, TestContext.Current.CancellationToken);
+
+        var got = await service.GetAsync(_tenantId, _propertyId, created.Entity.Id, TestContext.Current.CancellationToken);
+        var bed = Assert.Single(got.Entity!.Beds);
+        Assert.Equal(BedSize.Single, bed.Size);
+        Assert.Equal(3, bed.Quantity);
     }
 }

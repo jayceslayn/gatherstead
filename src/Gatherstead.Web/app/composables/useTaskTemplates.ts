@@ -223,22 +223,30 @@ export function useTaskPlanSection(
 
   async function toggle(planId: string) {
     if (!memberId.value || !householdId.value) return
+    // Row existence is the sign-up: withdrawing deletes the row rather than storing a false flag.
     const current = intentMap.value[planId]
-    const newValue = !current?.volunteered
     updating.value = [...updating.value, planId]
     try {
-      await repo.upsertIntent(
-        tenantStore.currentTenantId!, eventId.value, templateId.value, planId,
-        householdId.value, memberId.value, newValue,
-      )
-      try {
-        const intents = await repo.listIntentsForMember(
-          tenantStore.currentTenantId!, eventId.value, templateId.value, planId, memberId.value,
+      if (current) {
+        await repo.deleteIntent(
+          tenantStore.currentTenantId!, eventId.value, templateId.value, planId, current.id,
         )
-        intentMap.value[planId] = intents.find((i: TaskIntent) => i.householdMemberId === memberId.value) ?? null
-      }
-      catch {
         intentMap.value[planId] = null
+      }
+      else {
+        await repo.upsertIntent(
+          tenantStore.currentTenantId!, eventId.value, templateId.value, planId,
+          householdId.value, memberId.value,
+        )
+        try {
+          const intents = await repo.listIntentsForMember(
+            tenantStore.currentTenantId!, eventId.value, templateId.value, planId, memberId.value,
+          )
+          intentMap.value[planId] = intents.find((i: TaskIntent) => i.householdMemberId === memberId.value) ?? null
+        }
+        catch {
+          intentMap.value[planId] = null
+        }
       }
     }
     catch (e) {
@@ -390,8 +398,9 @@ export function useEventTaskSignup(
     return `${planId}:${memberId}`
   }
 
+  // A member is "volunteered" for a plan when an intent row exists for them (withdrawal deletes it).
   function isVolunteered(planId: string, memberId: string): boolean {
-    return intentMap.value[planId]?.[memberId]?.volunteered === true
+    return intentMap.value[planId]?.[memberId] != null
   }
 
   function isUpdating(planId: string, memberId: string): boolean {
@@ -399,19 +408,22 @@ export function useEventTaskSignup(
   }
 
   function volunteerCount(planId: string): number {
-    const byMember = intentMap.value[planId]
-    if (!byMember) return 0
-    return Object.values(byMember).filter(i => i.volunteered).length
+    return Object.keys(intentMap.value[planId] ?? {}).length
   }
 
   async function toggle(planId: string, templateId: string, memberId: string) {
     if (!householdId.value) return
     const tenantId = tenantStore.currentTenantId!
-    const newValue = !isVolunteered(planId, memberId)
+    const current = intentMap.value[planId]?.[memberId]
     const key = updatingKey(planId, memberId)
     updating.value = [...updating.value, key]
     try {
-      await repo.upsertIntent(tenantId, eventId.value, templateId, planId, householdId.value, memberId, newValue)
+      if (current) {
+        await repo.deleteIntent(tenantId, eventId.value, templateId, planId, current.id)
+      }
+      else {
+        await repo.upsertIntent(tenantId, eventId.value, templateId, planId, householdId.value, memberId)
+      }
       const intents = await repo.listPlanIntents(tenantId, eventId.value, templateId, planId).catch(() => [] as TaskIntent[])
       indexIntents(planId, intents)
     }

@@ -27,16 +27,30 @@ public enum MealType
 
 public enum AccommodationIntentStatus
 {
-    Intent,
-    Hold,
-    Confirmed
+    Requested = 0,  // was Intent (+ former Decision.Pending)
+    Hold = 1,
+    Confirmed = 2,  // was Confirmed (+ former Decision.Approved)
+    Declined = 3    // was former Decision.Declined
 }
 
-public enum AccommodationIntentDecision
+/// <summary>Records who initiated an intent row; the row's existence is the sign-up itself.</summary>
+public enum IntentSource
 {
-    Pending,
-    Approved,
-    Declined
+    Volunteered = 0,  // member signed themselves up (self or own-household manager)
+    Assigned = 1      // a coordinator/manager/owner/app-admin signed the member up
+}
+
+/// <summary>Bed inventory sizes for an accommodation. Implied sleeps counts live in <c>BedSizes.Sleeps</c>.</summary>
+public enum BedSize
+{
+    Single = 0,
+    Double = 1,
+    Queen = 2,
+    King = 3,
+    Bunk = 4,
+    Sofa = 5,
+    Crib = 6,
+    Other = 7
 }
 
 public enum TaskTimeSlot
@@ -103,16 +117,16 @@ public enum InvitationStatus
 
 public enum SecurityEventType
 {
-    AuthFailure,
-    AuthzDenial,
-    CrossTenantWriteBlocked,
-    TokenRevoked,
-    SoftDelete,
-    Restore,
-    AppAdminAction,
-    RateLimitBreach,
-    InvitationCreated,
-    InvitationAccepted
+    AuthFailure = 0,
+    AuthzDenial = 1,
+    CrossTenantWriteBlocked = 2,
+    TokenRevoked = 3,
+    // 4 (SoftDelete) and 5 (Restore) were never emitted and are removed. Their numeric
+    // values are reserved to keep the persisted EventType numbers stable — do not reuse.
+    AppAdminAction = 6,
+    RateLimitBreach = 7,
+    InvitationCreated = 8,
+    InvitationAccepted = 9
 }
 
 public enum SecurityEventSeverity

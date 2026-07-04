@@ -24,7 +24,7 @@ const typeLabel = computed(() => {
   return t(`accommodation.types.${ty.charAt(0).toLowerCase() + ty.slice(1)}`)
 })
 
-// Per-dimension remaining label: a null capacity is unconstrained.
+// Sleeps remaining label: a null capacity (no beds recorded) is unconstrained.
 function remainingLabel(remaining: number | null, capacity: number | null): string {
   if (capacity == null) return t('accommodations.unlimited')
   return t('accommodations.remainingOf', { remaining: Math.max(remaining ?? 0, 0), capacity })
@@ -52,12 +52,12 @@ function remainingLabel(remaining: number | null, capacity: number | null): stri
 
     <dl class="grid grid-cols-2 gap-2 mt-3 text-xs">
       <div>
-        <dt class="text-muted">{{ t('accommodation.partyAdults') }}</dt>
-        <dd>{{ remainingLabel(availability.remainingAdults, availability.capacityAdults) }}</dd>
+        <dt class="text-muted">{{ t('accommodation.sleeps') }}</dt>
+        <dd>{{ remainingLabel(availability.remaining, availability.capacity) }}</dd>
       </div>
       <div>
-        <dt class="text-muted">{{ t('accommodation.partyChildren') }}</dt>
-        <dd>{{ remainingLabel(availability.remainingChildren, availability.capacityChildren) }}</dd>
+        <dt class="text-muted">{{ t('accommodation.occupied') }}</dt>
+        <dd>{{ availability.occupied }}</dd>
       </div>
     </dl>
 

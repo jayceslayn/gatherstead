@@ -22,7 +22,6 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     tenantId: string,
     householdId: string,
     name: string,
-    isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
@@ -32,7 +31,7 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
   ): Promise<HouseholdMember> {
     const r = await $fetch<ApiResponse<HouseholdMember>>(
       `/api/proxy/tenants/${tenantId}/households/${householdId}/members`,
-      { method: 'POST', body: { name, isAdult, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes: attributes ?? null } },
+      { method: 'POST', body: { name, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes: attributes ?? null } },
     )
     return r.entity
   }
@@ -42,7 +41,6 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
     householdId: string,
     memberId: string,
     name: string,
-    isAdult: boolean,
     ageBand: string | null,
     birthDate: string | null,
     dietaryNotes: string | null,
@@ -52,7 +50,7 @@ export class LiveHouseholdMemberRepository implements IHouseholdMemberRepository
   ): Promise<void> {
     await $fetch(`/api/proxy/tenants/${tenantId}/households/${householdId}/members/${memberId}`, {
       method: 'PUT',
-      body: { name, isAdult, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes: attributes ?? null },
+      body: { name, ageBand, birthDate, dietaryNotes, notes, dietaryTags, attributes: attributes ?? null },
     })
   }
 

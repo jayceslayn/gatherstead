@@ -11,11 +11,21 @@ public record AccommodationDto(
     Guid PropertyId,
     string Name,
     AccommodationType Type,
-    int? CapacityAdults,
-    int? CapacityChildren,
+    decimal? WidthMeters,
+    decimal? DepthMeters,
+    decimal? AreaSqMeters,
+    /// <summary>Area override when set, otherwise width × depth. Null when neither is known.</summary>
+    decimal? EffectiveAreaSqMeters,
     string? Notes,
+    IReadOnlyList<BedDto> Beds,
     IReadOnlyList<AttributeDto> Attributes,
     AuditInfo? Audit);
+
+/// <summary>One line of bed inventory: a quantity of a given size.</summary>
+public record BedDto(Guid Id, BedSize Size, int Quantity);
+
+/// <summary>Write shape for a bed inventory line. One entry per <see cref="Size"/>; quantities collapse per size.</summary>
+public record BedWriteEntry(BedSize Size, int Quantity);
 
 public class AccommodationResponse : BaseEntityResponse<AccommodationDto> { }
 
@@ -28,9 +38,11 @@ public class CreateAccommodationRequest
     [Required]
     public AccommodationType Type { get; init; }
 
-    public int? CapacityAdults { get; init; }
-    public int? CapacityChildren { get; init; }
+    public decimal? WidthMeters { get; init; }
+    public decimal? DepthMeters { get; init; }
+    public decimal? AreaSqMeters { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<BedWriteEntry>? Beds { get; init; }
     public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }
 
@@ -43,8 +55,10 @@ public class UpdateAccommodationRequest
     [Required]
     public AccommodationType Type { get; init; }
 
-    public int? CapacityAdults { get; init; }
-    public int? CapacityChildren { get; init; }
+    public decimal? WidthMeters { get; init; }
+    public decimal? DepthMeters { get; init; }
+    public decimal? AreaSqMeters { get; init; }
     public string? Notes { get; init; }
+    public IReadOnlyList<BedWriteEntry>? Beds { get; init; }
     public IReadOnlyList<AttributeWriteEntry>? Attributes { get; init; }
 }

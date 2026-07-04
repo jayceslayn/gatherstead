@@ -21,7 +21,6 @@ const saving = computed(() => updating.value.includes('new'))
 
 const form = reactive({
   name: '',
-  isAdult: true,
   ageBand: '',
   birthDate: '',
   dietaryNotes: '',
@@ -41,7 +40,6 @@ async function onSubmit() {
 
   const created = await createMember(
     form.name.trim(),
-    form.isAdult,
     form.ageBand.trim() || null,
     form.birthDate || null,
     form.dietaryNotes.trim() || null,
@@ -70,7 +68,6 @@ async function onSubmit() {
 
     <GsMemberForm
       v-model:name="form.name"
-      v-model:is-adult="form.isAdult"
       v-model:age-band="form.ageBand"
       v-model:birth-date="form.birthDate"
       v-model:dietary-notes="form.dietaryNotes"

@@ -17,8 +17,9 @@ export class DemoTaskRepository implements ITaskRepository {
     const template = (id: string | undefined) => store.taskTemplates.value.find(t => t.id === id)
     const eventName = (id: string | undefined) => store.events.value.find(e => e.id === id)?.name ?? ''
 
+    // Every stored intent is a sign-up (withdrawal deletes the row), so no source filter is applied.
     return store.taskIntents.value
-      .filter(i => i.tenantId === tenantId && i.householdMemberId === memberId && i.volunteered)
+      .filter(i => i.tenantId === tenantId && i.householdMemberId === memberId)
       .map((i): MyTask | null => {
         const p = plan(i.taskPlanId)
         if (!p || p.day < fromDay) return null
@@ -33,7 +34,7 @@ export class DemoTaskRepository implements ITaskRepository {
           day: p.day,
           timeSlot: p.timeSlot,
           completed: p.completed,
-          volunteered: i.volunteered,
+          source: i.source,
         }
       })
       .filter((t): t is MyTask => t !== null)
@@ -76,26 +77,23 @@ export class DemoTaskRepository implements ITaskRepository {
     planId: string,
     _householdId: string,
     memberId: string,
-    volunteered: boolean,
   ): Promise<void> {
     const store = getDemoStore()
     const idx = store.taskIntents.value.findIndex(
       i => i.taskPlanId === planId && i.householdMemberId === memberId,
     )
-    if (idx >= 0) {
-      store.taskIntents.value[idx] = { ...store.taskIntents.value[idx]!, volunteered }
-    }
-    else {
+    // The row's existence is the sign-up; the demo user always acts as self, so Source is Volunteered.
+    if (idx < 0) {
       store.taskIntents.value.push({
         id: demoId(),
         tenantId,
         taskPlanId: planId,
         householdMemberId: memberId,
-        volunteered,
+        source: 'Volunteered',
       })
     }
     persistDemoStore()
-    trackPersistence('task_volunteer', 'set', { volunteered: volunteered ? 1 : 0 })
+    trackPersistence('task_volunteer', 'set')
   }
 
   async listEventIntents(_tenantId: string, eventId: string): Promise<TaskIntent[]> {
@@ -111,7 +109,7 @@ export class DemoTaskRepository implements ITaskRepository {
     items: BulkTaskIntentItem[],
   ): Promise<void> {
     for (const item of items) {
-      await this.upsertIntent(tenantId, eventId, '', item.planId, '', item.memberId, item.volunteered)
+      await this.upsertIntent(tenantId, eventId, '', item.planId, '', item.memberId)
     }
   }
 

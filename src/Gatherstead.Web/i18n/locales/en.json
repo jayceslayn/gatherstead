@@ -429,19 +429,30 @@
     "partyChildren": "Children",
     "name": "Accommodation Name",
     "type": "Type",
-    "capacityAdultsLabel": "Adult Capacity",
-    "capacityChildrenLabel": "Child Capacity",
+    "beds": "Beds",
+    "addBed": "Add bed",
+    "sleeps": "Sleeps",
+    "occupied": "Occupied",
+    "widthLabel": "Width (m)",
+    "depthLabel": "Depth (m)",
+    "areaOverrideLabel": "Area (m²)",
+    "areaPreview": "Area: {area}",
+    "bedSizes": {
+      "single": "Single",
+      "double": "Double",
+      "queen": "Queen",
+      "king": "King",
+      "bunk": "Bunk",
+      "sofa": "Sofa Bed",
+      "crib": "Crib",
+      "other": "Other"
+    },
     "createTitle": "Create Accommodation",
     "editTitle": "Edit Accommodation",
     "deleteTitle": "Delete Accommodation",
     "deleteConfirm": "This will permanently remove this accommodation and all its stays. This cannot be undone.",
     "promote": "Approve",
-    "decline": "Decline",
-    "decision": {
-      "pending": "Pending",
-      "approved": "Approved",
-      "declined": "Declined"
-    }
+    "decline": "Decline"
   },
   "status": {
     "covered": "Covered",
@@ -452,7 +463,7 @@
     "maybe": "Maybe",
     "notGoing": "Not Going",
     "noResponse": "No Response",
-    "intent": "Requested",
+    "requested": "Requested",
     "hold": "Hold",
     "confirmed": "Confirmed",
     "declined": "Declined"

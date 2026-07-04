@@ -11,8 +11,8 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     private GathersteadDbContext _dbContext = null!;
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly Guid _propertyId = Guid.NewGuid();
-    private readonly Guid _capped = Guid.NewGuid();        // CapacityAdults=4, CapacityChildren=2
-    private readonly Guid _uncapped = Guid.NewGuid();      // null capacity (unconstrained)
+    private readonly Guid _capped = Guid.NewGuid();        // 3 Queen beds → sleeps capacity 6
+    private readonly Guid _uncapped = Guid.NewGuid();      // no beds → null capacity (unconstrained)
     private readonly Guid _householdId = Guid.NewGuid();
     private readonly Guid _member = Guid.NewGuid();
 
@@ -29,7 +29,12 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         _dbContext.Accommodations.Add(new Accommodation
         {
             Id = _capped, TenantId = _tenantId, PropertyId = _propertyId, Name = "Cabin A",
-            Type = AccommodationType.Bedroom, CapacityAdults = 4, CapacityChildren = 2,
+            Type = AccommodationType.Bedroom,
+        });
+        // 3 Queen beds → 3 × 2 = 6 sleeps.
+        _dbContext.AccommodationBeds.Add(new AccommodationBed
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = _capped, Size = BedSize.Queen, Quantity = 3,
         });
         _dbContext.Accommodations.Add(new Accommodation
         {
@@ -53,13 +58,15 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         return new AccommodationAvailabilityService(_dbContext, tenantContext);
     }
 
-    private async Task AddIntentAsync(Guid accommodationId, DateOnly start, DateOnly end, int? adults, int? children)
+    private async Task AddIntentAsync(
+        Guid accommodationId, DateOnly start, DateOnly end, int? adults, int? children,
+        AccommodationIntentStatus status = AccommodationIntentStatus.Requested)
     {
         _dbContext.AccommodationIntents.Add(new AccommodationIntent
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId,
             HouseholdMemberId = _member, StartNight = start, EndNight = end,
-            Status = AccommodationIntentStatus.Intent, PartyAdults = adults, PartyChildren = children,
+            Status = status, PartyAdults = adults, PartyChildren = children,
         });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
@@ -78,9 +85,9 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
 
         Assert.True(result.Successful);
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
-        Assert.Equal(0, cabin.ClaimedAdults);
-        Assert.Equal(4, cabin.RemainingAdults);
-        Assert.Equal(2, cabin.RemainingChildren);
+        Assert.Equal(6, cabin.Capacity);
+        Assert.Equal(0, cabin.Occupied);
+        Assert.Equal(6, cabin.Remaining);
         Assert.True(cabin.HasSufficientCapacity);
     }
 
@@ -92,21 +99,21 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 1, true, TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
-        Assert.Equal(3, cabin.ClaimedAdults);
-        Assert.Equal(1, cabin.RemainingAdults);
-        Assert.Equal(1, cabin.RemainingChildren);
+        Assert.Equal(4, cabin.Occupied);
+        Assert.Equal(2, cabin.Remaining);
         Assert.True(cabin.HasSufficientCapacity);
     }
 
     [Fact]
-    public async Task SearchAsync_AdultsAndChildrenCheckedIndependently()
+    public async Task SearchAsync_PartyExceedingRemaining_IsInsufficient()
     {
-        // Enough adult room (1 left) but children request exceeds remaining (1 left, asking 2).
+        // Occupied 4 of 6 leaves 2; a party of 3 does not fit.
         await AddIntentAsync(_capped, Jun10, Jun12, adults: 3, children: 1);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 2, requireCapacity: false, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 2, 1, requireCapacity: false, TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
+        Assert.Equal(2, cabin.Remaining);
         Assert.False(cabin.HasSufficientCapacity);
     }
 
@@ -119,7 +126,20 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 4, 2, true, TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
-        Assert.Equal(0, cabin.ClaimedAdults);
+        Assert.Equal(0, cabin.Occupied);
+        Assert.True(cabin.HasSufficientCapacity);
+    }
+
+    [Fact]
+    public async Task SearchAsync_DeclinedIntent_DoesNotConsumeCapacity()
+    {
+        // A declined stay overlapping the window must not count toward occupancy.
+        await AddIntentAsync(_capped, Jun10, Jun12, adults: 6, children: 0, status: AccommodationIntentStatus.Declined);
+
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 4, 0, requireCapacity: true, TestContext.Current.CancellationToken);
+
+        var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
+        Assert.Equal(0, cabin.Occupied);
         Assert.True(cabin.HasSufficientCapacity);
     }
 
@@ -127,13 +147,13 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     public async Task SearchAsync_TouchingNight_CountsAsOverlap()
     {
         // Stay [Jun12, Jun14] shares night Jun12 with the requested window [Jun10, Jun12].
-        await AddIntentAsync(_capped, Jun12, Jun14, adults: 4, children: 0);
+        await AddIntentAsync(_capped, Jun12, Jun14, adults: 6, children: 0);
 
         var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
-        Assert.Equal(4, cabin.ClaimedAdults);
-        Assert.Equal(0, cabin.RemainingAdults);
+        Assert.Equal(6, cabin.Occupied);
+        Assert.Equal(0, cabin.Remaining);
         Assert.False(cabin.HasSufficientCapacity);
     }
 
@@ -145,14 +165,15 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 50, 50, true, TestContext.Current.CancellationToken);
 
         var tent = Assert.Single(result.Entity!, a => a.Id == _uncapped);
-        Assert.Null(tent.RemainingAdults);
+        Assert.Null(tent.Capacity);
+        Assert.Null(tent.Remaining);
         Assert.True(tent.HasSufficientCapacity);
     }
 
     [Fact]
     public async Task SearchAsync_RequireCapacity_FiltersOutFullOptions()
     {
-        await AddIntentAsync(_capped, Jun10, Jun12, adults: 4, children: 2);
+        await AddIntentAsync(_capped, Jun10, Jun12, adults: 6, children: 0);
 
         var filtered = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: true, TestContext.Current.CancellationToken);
         Assert.DoesNotContain(filtered.Entity!, a => a.Id == _capped);

@@ -31,7 +31,6 @@ async function confirmDelete() {
 
 const form = reactive({
   name: '',
-  isAdult: true,
   ageBand: '',
   birthDate: '',
   dietaryNotes: '',
@@ -46,7 +45,6 @@ const isDirty = ref(false)
 watch(member, (val: HouseholdMember | null) => {
   if (!val) return
   form.name = val.name
-  form.isAdult = val.isAdult
   form.ageBand = val.ageBand ?? ''
   form.birthDate = val.birthDate ?? ''
   form.dietaryNotes = val.dietaryNotes ?? ''
@@ -75,7 +73,6 @@ async function onSubmit() {
   const ok = await updateMember(
     memberId.value,
     form.name.trim(),
-    form.isAdult,
     form.ageBand.trim() || null,
     form.birthDate || null,
     form.dietaryNotes.trim() || null,
@@ -110,7 +107,6 @@ async function onSubmit() {
 
       <GsMemberForm
         v-model:name="form.name"
-        v-model:is-adult="form.isAdult"
         v-model:age-band="form.ageBand"
         v-model:birth-date="form.birthDate"
         v-model:dietary-notes="form.dietaryNotes"

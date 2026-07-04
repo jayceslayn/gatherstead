@@ -45,6 +45,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
     public DbSet<Property> Properties => Set<Property>();
     public DbSet<Accommodation> Accommodations => Set<Accommodation>();
+    public DbSet<AccommodationBed> AccommodationBeds => Set<AccommodationBed>();
     public DbSet<AccommodationIntent> AccommodationIntents => Set<AccommodationIntent>();
     public DbSet<Event> Events => Set<Event>();
     public DbSet<MealTemplate> MealTemplates => Set<MealTemplate>();

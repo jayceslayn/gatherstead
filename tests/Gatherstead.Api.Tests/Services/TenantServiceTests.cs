@@ -1,6 +1,8 @@
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Api.Contracts.Tenants;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Tenants;
 using Gatherstead.Api.Tests.Fixtures;
 using Gatherstead.Data;
@@ -42,13 +44,15 @@ public class TenantServiceTests : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 
-    private TenantService CreateService()
+    private TenantService CreateService(ISecurityEventLogger? securityEventLogger = null)
     {
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == (Guid?)null);
+        var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == _userId);
         var appAdminContext = Mock.Of<IAppAdminContext>();
         var authService = Mock.Of<IMemberAuthorizationService>();
         var auditVisibility = Mock.Of<IAuditVisibilityContext>();
-        return new TenantService(_dbContext, tenantContext, appAdminContext, authService, auditVisibility);
+        return new TenantService(_dbContext, tenantContext, userContext, appAdminContext, authService, auditVisibility,
+            securityEventLogger ?? Mock.Of<ISecurityEventLogger>());
     }
 
     private async Task SeedMembershipAsync(Guid tenantId, Guid userId, TenantRole role, bool deleted = false)
@@ -130,5 +134,28 @@ public class TenantServiceTests : IAsyncLifetime
         Assert.True(result.Successful);
         var tenant = Assert.Single(result.Entity!);
         Assert.Equal(_otherTenantId, tenant.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AsAppAdmin_EmitsAppAdminActionSecurityEvent()
+    {
+        // _userId (creator) and _otherUserId (owner) are seeded in InitializeAsync.
+        var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == (Guid?)null);
+        var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == _userId);
+        var appAdminContext = Mock.Of<IAppAdminContext>(c =>
+            c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(true));
+        var securityLogger = new Mock<ISecurityEventLogger>();
+        var service = new TenantService(_dbContext, tenantContext, userContext, appAdminContext,
+            Mock.Of<IMemberAuthorizationService>(), Mock.Of<IAuditVisibilityContext>(), securityLogger.Object);
+
+        var result = await service.CreateAsync(
+            new CreateTenantRequest { Name = "New Tenant", OwnerUserId = _otherUserId },
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        securityLogger.Verify(s => s.LogAsync(
+            SecurityEventType.AppAdminAction, It.IsAny<SecurityEventSeverity>(),
+            It.IsAny<string>(), It.IsAny<string?>(),
+            It.IsAny<Guid?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

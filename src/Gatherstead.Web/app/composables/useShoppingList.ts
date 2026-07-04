@@ -102,7 +102,8 @@ export function useShoppingList(scope: Ref<ShoppingScope | null>) {
         await Promise.all(plans.map(async (plan) => {
           try {
             const intents = await mealRepo.listIntentsForMember(tenantId, evId, templateId, plan.id, memberId!)
-            if (intents.some(i => i.householdMemberId === memberId && i.volunteered)) volunteered.add(plan.id)
+            // Any intent row means the member is a cook for this plan (row existence = sign-up).
+            if (intents.some(i => i.householdMemberId === memberId)) volunteered.add(plan.id)
           }
           catch { /* best-effort gating; backend still enforces */ }
         }))

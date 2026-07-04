@@ -3,6 +3,7 @@ using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Contracts.TenantUsers;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Authorization;
+using Gatherstead.Api.Services.Observability;
 using Gatherstead.Api.Services.Validation;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
@@ -18,6 +19,7 @@ public class TenantUserService : ITenantUserService
     private readonly IMemberAuthorizationService _memberAuthorizationService;
     private readonly IAppAdminContext _appAdminContext;
     private readonly IAuthCache _authCache;
+    private readonly ISecurityEventLogger _securityEventLogger;
 
     public TenantUserService(
         GathersteadDbContext dbContext,
@@ -25,7 +27,8 @@ public class TenantUserService : ITenantUserService
         ICurrentUserContext currentUserContext,
         IMemberAuthorizationService memberAuthorizationService,
         IAppAdminContext appAdminContext,
-        IAuthCache authCache)
+        IAuthCache authCache,
+        ISecurityEventLogger securityEventLogger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _currentTenantContext = currentTenantContext ?? throw new ArgumentNullException(nameof(currentTenantContext));
@@ -33,6 +36,7 @@ public class TenantUserService : ITenantUserService
         _memberAuthorizationService = memberAuthorizationService ?? throw new ArgumentNullException(nameof(memberAuthorizationService));
         _appAdminContext = appAdminContext ?? throw new ArgumentNullException(nameof(appAdminContext));
         _authCache = authCache ?? throw new ArgumentNullException(nameof(authCache));
+        _securityEventLogger = securityEventLogger ?? throw new ArgumentNullException(nameof(securityEventLogger));
     }
 
     public async Task<BaseEntityResponse<IReadOnlyCollection<TenantUserDto>>> ListAsync(
@@ -131,6 +135,16 @@ public class TenantUserService : ITenantUserService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         await _authCache.InvalidateTenantUserAsync(tenantId, userId, cancellationToken);
+
+        // An App Admin bypassing tenant authorization to change a role is a privileged action worth auditing.
+        if (isAppAdmin)
+        {
+            await _securityEventLogger.LogAsync(
+                SecurityEventType.AppAdminAction, SecurityEventSeverity.Info,
+                resource: $"TenantUser:{userId}",
+                detail: $"{{\"action\":\"RoleUpdated\",\"newRole\":\"{request.Role}\"}}",
+                tenantId: tenantId, userId: _currentUserContext.UserId, cancellationToken: cancellationToken);
+        }
 
         response.SetSuccess(MapToDto(tenantUser));
         return response;

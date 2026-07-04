@@ -28,10 +28,6 @@ public class EventAttendance : AuditableEntity
 
     public DateOnly Day { get; set; }
     public AttendanceStatus Status { get; set; }
-    public DateTimeOffset? ArrivalWindowStart { get; set; }
-    public DateTimeOffset? ArrivalWindowEnd { get; set; }
-    public DateTimeOffset? DepartureWindowStart { get; set; }
-    public DateTimeOffset? DepartureWindowEnd { get; set; }
     [MaxLength(500)]
     public string? Notes { get; set; }
 }

@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import type { AccommodationSummary, AccommodationIntent, HouseholdMember, AccommodationIntentStatus } from '~/repositories/types'
+import type { AccommodationIntent, HouseholdMember, AccommodationIntentStatus } from '~/repositories/types'
+
+// The picker only needs id + name, so this accepts both AccommodationSummary and availability results.
+interface AccommodationOption { id: string, name: string }
 
 const props = defineProps<{
   open: boolean
-  accommodations: AccommodationSummary[]
+  accommodations: AccommodationOption[]
   members: HouseholdMember[]
   eventDays: string[]
   defaultMemberId: string | null
@@ -37,7 +40,7 @@ const { formatDate } = useFormatDate()
 
 const accommodationId = ref('')
 const memberId = ref('')
-const status = ref<AccommodationIntentStatus>('Intent')
+const status = ref<AccommodationIntentStatus>('Requested')
 const partyAdults = ref<number | null>(null)
 const partyChildren = ref<number | null>(null)
 const notes = ref('')
@@ -61,7 +64,7 @@ watch(() => props.open, (isOpen) => {
   if (edit) {
     accommodationId.value = edit.accommodationId
     memberId.value = edit.householdMemberId
-    status.value = edit.status ?? 'Intent'
+    status.value = edit.status ?? 'Requested'
     partyAdults.value = edit.partyAdults ?? null
     partyChildren.value = edit.partyChildren ?? null
     notes.value = edit.notes ?? ''
@@ -71,7 +74,7 @@ watch(() => props.open, (isOpen) => {
   }
   accommodationId.value = props.accommodations[0]?.id ?? ''
   memberId.value = props.defaultMemberId ?? props.members[0]?.id ?? ''
-  status.value = 'Intent'
+  status.value = 'Requested'
   partyAdults.value = null
   partyChildren.value = null
   notes.value = ''
@@ -84,7 +87,7 @@ const memberItems = computed(() => props.members.map(m => ({ label: m.name, valu
 const nightItems = computed(() => props.eventDays.map(d => ({ label: formatDate(d), value: d })))
 
 const statusItems = computed(() => [
-  { label: t('status.intent'), value: 'Intent' as AccommodationIntentStatus },
+  { label: t('status.requested'), value: 'Requested' as AccommodationIntentStatus },
   { label: t('status.hold'), value: 'Hold' as AccommodationIntentStatus },
 ])
 

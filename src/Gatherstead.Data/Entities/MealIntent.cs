@@ -18,5 +18,5 @@ public class MealIntent : AuditableEntity
     public Guid HouseholdMemberId { get; set; }
     [ForeignKey(nameof(HouseholdMemberId))]
     public HouseholdMember? HouseholdMember { get; set; }
-    public bool Volunteered { get; set; }
+    public IntentSource Source { get; set; }
 }
