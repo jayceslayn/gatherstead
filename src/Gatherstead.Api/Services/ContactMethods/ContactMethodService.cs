@@ -44,6 +44,8 @@ public class ContactMethodService : IContactMethodService
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         var query = _dbContext.ContactMethods
             .AsNoTracking()
@@ -76,6 +78,8 @@ public class ContactMethodService : IContactMethodService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeSensitiveReadAsync(response, _memberAuthorizationService, tenantId, householdId, cancellationToken))
+            return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
         var contact = await ServiceGuards.LoadOrNotFoundAsync(
@@ -152,6 +156,8 @@ public class ContactMethodService : IContactMethodService
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
             return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
+            return response;
 
         ServiceValidationHelper.TryNormalizeString(request.Value, "Contact value", response, out string normalizedValue);
         if (ServiceValidationHelper.HasErrors(response))
@@ -193,6 +199,8 @@ public class ContactMethodService : IContactMethodService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
         if (!await ServiceGuards.AuthorizeMemberEditAsync(response, _memberAuthorizationService, tenantId, householdId, memberId, cancellationToken))
+            return response;
+        if (!await ServiceGuards.RequireMemberExistsAsync(response, _dbContext, tenantId, householdId, memberId, cancellationToken))
             return response;
 
         var contact = await ServiceGuards.LoadOrNotFoundAsync(

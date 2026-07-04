@@ -105,6 +105,8 @@ resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     siteConfig: {
       linuxFxVersion: 'DOTNETCORE|10.0'
+      minTlsVersion: '1.2'   // reject TLS < 1.2 at the platform edge (don't rely on the default)
+      ftpsState: 'Disabled'  // no FTP/FTPS deployment surface; deploys go through run-from-package
       alwaysOn: appServicePlanSku != 'F1'
       appSettings: [
         // Tells DefaultAzureCredential which user-assigned identity to use
@@ -151,6 +153,8 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
     keyVaultReferenceIdentity: webManagedIdentityId
     siteConfig: {
       linuxFxVersion: 'NODE|24-lts'
+      minTlsVersion: '1.2'   // reject TLS < 1.2 at the platform edge (don't rely on the default)
+      ftpsState: 'Disabled'  // no FTP/FTPS deployment surface; deploys go through run-from-package
       alwaysOn: appServicePlanSku != 'F1'
       appCommandLine: 'node .output/server/index.mjs'
       appSettings: [
