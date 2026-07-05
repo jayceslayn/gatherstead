@@ -48,8 +48,8 @@ export interface paths {
                 header?: never;
                 path: {
                     tenantId: string;
-                    accommodationId: string;
                     propertyId: string;
+                    accommodationId: string;
                 };
                 cookie?: never;
             };
