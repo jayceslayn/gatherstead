@@ -392,6 +392,8 @@
     "subtitle": "Find a place to stay — set your party and dates to see what's available.",
     "checkIn": "First night",
     "checkOut": "Last night",
+    "propertyFilter": "Properties",
+    "allProperties": "All properties",
     "onlyAvailable": "Only show options with room",
     "available": "Available",
     "full": "Full",

@@ -51,7 +51,11 @@ public class HouseholdService : IHouseholdService
                 query = query.Where(h => idList.Contains(h.Id));
         }
 
-        var households = await query.ToListAsync(cancellationToken);
+        // Ordered by name. Sorted in-memory because Name is an Always Encrypted (PII) column and
+        // cannot be ORDER BY'd in SQL.
+        var households = (await query.ToListAsync(cancellationToken))
+            .OrderBy(h => h.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>.SuccessfulResponse(
             households.Select(h => MapToDto(h, [])).ToList());

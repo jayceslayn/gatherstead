@@ -374,4 +374,67 @@ public class EventReportServiceTests : IAsyncLifetime
         Assert.Equal(3, day2.Occupied); // Alice's span still covers Day2; Bob's does not
         Assert.Equal(["Alice"], day2.Occupants.Select(o => o.Name));
     }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_Accommodations_OrderedByTypeThenName()
+    {
+        SeedAccommodation(); // "Cabin A", Bedroom
+        // "Aardvark Camp" (Tent) sorts before "Cabin A" by name, but Bedroom precedes Tent by type.
+        _dbContext.Accommodations.Add(new Accommodation
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, PropertyId = _propertyId,
+            Name = "Aardvark Camp", Type = AccommodationType.Tent,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var accommodations = result.Entity!.Days.Single(d => d.Day == Day1).Accommodations;
+        Assert.Equal(["Cabin A", "Aardvark Camp"], accommodations.Select(a => a.Name));
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_Occupants_GroupedByHouseholdThenName()
+    {
+        // Second household sorts before "Smith Household" by name, but its member "Zoe" sorts AFTER
+        // Smith's "Alice" — so household-first ordering must place Zoe ahead of Alice.
+        var otherHouseholdId = Guid.NewGuid();
+        var zoe = Guid.NewGuid();
+        _dbContext.Households.Add(new Household { Id = otherHouseholdId, TenantId = _tenantId, Name = "Aaa Household" });
+        _dbContext.HouseholdMembers.Add(new HouseholdMember { Id = zoe, TenantId = _tenantId, HouseholdId = otherHouseholdId, Name = "Zoe" });
+
+        var accommodationId = SeedAccommodation();
+        _dbContext.AccommodationIntents.AddRange(
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = _alice, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Confirmed },
+            new AccommodationIntent { Id = Guid.NewGuid(), TenantId = _tenantId, AccommodationId = accommodationId, HouseholdMemberId = zoe, StartNight = Day1, EndNight = Day1, Status = AccommodationIntentStatus.Confirmed });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var accommodation = Assert.Single(result.Entity!.Days.Single(d => d.Day == Day1).Accommodations);
+        Assert.Equal(["Zoe", "Alice"], accommodation.Occupants.Select(o => o.Name));
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_Attendees_GroupedByHouseholdThenName()
+    {
+        var otherHouseholdId = Guid.NewGuid();
+        var zoe = Guid.NewGuid();
+        _dbContext.Households.Add(new Household { Id = otherHouseholdId, TenantId = _tenantId, Name = "Aaa Household" });
+        _dbContext.HouseholdMembers.Add(new HouseholdMember { Id = zoe, TenantId = _tenantId, HouseholdId = otherHouseholdId, Name = "Zoe" });
+
+        _dbContext.MealTemplates.Add(new MealTemplate { Id = _templateId, TenantId = _tenantId, EventId = _eventId, Name = "Day 1 Dinner", MealTypes = MealTypeFlags.Dinner });
+        var planId = Guid.NewGuid();
+        _dbContext.MealPlans.Add(new MealPlan { Id = planId, TenantId = _tenantId, MealTemplateId = _templateId, Day = Day1, MealType = MealType.Dinner });
+        _dbContext.MealAttendances.AddRange(
+            new MealAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, MealPlanId = planId, HouseholdMemberId = _alice, Status = AttendanceStatus.Going },
+            new MealAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, MealPlanId = planId, HouseholdMemberId = zoe, Status = AttendanceStatus.Going });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var meal = result.Entity!.Days.Single(d => d.Day == Day1).Meals.Single();
+        // "Aaa Household" (Zoe) precedes "Smith Household" (Alice) despite Alice < Zoe by name.
+        Assert.Equal(["Zoe", "Alice"], meal.Attendees.Select(a => a.Name));
+    }
 }

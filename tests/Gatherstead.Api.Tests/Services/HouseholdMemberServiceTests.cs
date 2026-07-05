@@ -76,4 +76,37 @@ public class HouseholdMemberServiceTests : IAsyncLifetime
         Assert.Null(result.Entity!.Single(m => m.Id == unknownId).IsAdult);
         Assert.True(result.Entity!.Single(m => m.Id == byBirthDateId).IsAdult);
     }
+
+    [Fact]
+    public async Task ListAsync_OrdersByAgeBandThenName_NullBandLast()
+    {
+        _dbContext.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Zed", AgeBand = AgeBand.Age0To2 },
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Nora", AgeBand = AgeBand.Age18To64 },
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Amy", AgeBand = AgeBand.Age18To64 },
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Unbanded" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, _householdId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        // Age0To2 (Zed), then Age18To64 by name (Amy, Nora), then the null-band member last.
+        Assert.Equal(["Zed", "Amy", "Nora", "Unbanded"], result.Entity!.Select(m => m.Name));
+    }
+
+    [Fact]
+    public async Task ListAsync_OrdersByEffectiveBand_DerivedFromBirthDate()
+    {
+        // A birth-date-derived infant band must sort ahead of an explicitly-banded adult, proving the
+        // sort keys off the effective (mapped) band rather than the stored column.
+        _dbContext.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Adult", AgeBand = AgeBand.Age18To64 },
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Baby", BirthDate = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-1) });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, _householdId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(["Baby", "Adult"], result.Entity!.Select(m => m.Name));
+    }
 }

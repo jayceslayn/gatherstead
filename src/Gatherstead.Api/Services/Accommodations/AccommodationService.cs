@@ -53,7 +53,12 @@ public class AccommodationService : IAccommodationService
                 query = query.Where(a => idList.Contains(a.Id));
         }
 
-        var accommodations = await query.ToListAsync(cancellationToken);
+        // Ordered by type (canonical enum order) then name. Sorted in-memory because Name is an
+        // Always Encrypted (PII) column and cannot be ORDER BY'd in SQL.
+        var accommodations = (await query.ToListAsync(cancellationToken))
+            .OrderBy(a => a.Type)
+            .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         // List endpoints omit child collections (beds/attributes) — clients fetch them via single-GET.
         return BaseEntityResponse<IReadOnlyCollection<AccommodationDto>>.SuccessfulResponse(

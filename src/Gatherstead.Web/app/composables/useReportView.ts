@@ -1,5 +1,6 @@
 import type { EventReportDay, EventReportTask, EventReportAccommodation, EventReportMeal } from '~/repositories/types'
 import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '~/composables/useTemplateOrder'
+import { compareAccommodations } from '~/utils/sorting'
 
 // ── Coverage / occupancy derivation ─────────────────────────────────────────
 // Kept in one place so the desktop strip, mobile pager, and print stack never
@@ -157,5 +158,12 @@ export function buildAccommodationLanes(days: EventReportDay[]): ReportLane<Even
       lane.byDay[d.day] = acc
     }
   }
-  return [...lanes.values()]
+  // Order lanes by accommodation type then name (a lane spans days but its type/name are
+  // constant, so any day's cell is a valid sort key).
+  return [...lanes.values()].sort((a, b) => {
+    const ac = Object.values(a.byDay)[0]
+    const bc = Object.values(b.byDay)[0]
+    if (!ac || !bc) return 0
+    return compareAccommodations(ac, bc)
+  })
 }

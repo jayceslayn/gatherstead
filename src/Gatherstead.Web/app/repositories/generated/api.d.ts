@@ -406,6 +406,7 @@ export interface paths {
                     partyAdults?: number;
                     partyChildren?: number;
                     requireCapacity?: boolean;
+                    propertyIds?: string[];
                 };
                 header?: never;
                 path: {

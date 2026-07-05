@@ -392,6 +392,8 @@
     "subtitle": "Encuentra un lugar para alojarte — indica tu grupo y fechas para ver la disponibilidad.",
     "checkIn": "Primera noche",
     "checkOut": "Última noche",
+    "propertyFilter": "Propiedades",
+    "allProperties": "Todas las propiedades",
     "onlyAvailable": "Mostrar solo opciones con espacio",
     "available": "Disponible",
     "full": "Lleno",

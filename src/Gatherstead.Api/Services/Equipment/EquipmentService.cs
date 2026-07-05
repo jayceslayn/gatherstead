@@ -55,8 +55,29 @@ public class EquipmentService : IEquipmentService
 
         var equipment = await query.ToListAsync(cancellationToken);
 
+        // Order by property name (unassigned equipment last) then equipment name. Sorted in-memory:
+        // Name is an Always Encrypted (PII) column, and equipment carries only a PropertyId, so the
+        // property names are resolved here rather than ORDER BY'd in SQL.
+        var propertyIds = equipment
+            .Where(e => e.PropertyId.HasValue)
+            .Select(e => e.PropertyId!.Value)
+            .Distinct()
+            .ToList();
+        var propertyNameById = propertyIds.Count > 0
+            ? await _dbContext.Properties
+                .AsNoTracking()
+                .Where(p => p.TenantId == tenantId && propertyIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.Name, cancellationToken)
+            : [];
+
+        var ordered = equipment
+            .OrderBy(e => e.PropertyId.HasValue ? 0 : 1)
+            .ThenBy(e => e.PropertyId.HasValue ? propertyNameById.GetValueOrDefault(e.PropertyId!.Value, string.Empty) : string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         return BaseEntityResponse<IReadOnlyCollection<EquipmentDto>>.SuccessfulResponse(
-            equipment.Select(e => MapToDto(e, [])).ToList());
+            ordered.Select(e => MapToDto(e, [])).ToList());
     }
 
     public async Task<EquipmentResponse> GetAsync(

@@ -10,6 +10,7 @@ import type {
 import { DemoLimitError } from '~/repositories/interfaces'
 import type { AccommodationAvailabilityQuery, AccommodationDimensions } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { compareAccommodations, compareAvailability } from '~/utils/sorting'
 
 
 export function useAccommodations(propertyId: Ref<string>) {
@@ -22,7 +23,12 @@ export function useAccommodations(propertyId: Ref<string>) {
     { watch: [propertyId, () => tenantStore.currentTenantId] },
   )
 
-  return { accommodations: computed(() => data.value ?? []), pending, error, refresh }
+  return {
+    accommodations: computed(() => [...(data.value ?? [])].sort(compareAccommodations)),
+    pending,
+    error,
+    refresh,
+  }
 }
 
 /**
@@ -50,7 +56,7 @@ export function useAccommodationSearch() {
   }
 
   return {
-    results: computed(() => data.value ?? []),
+    results: computed(() => [...(data.value ?? [])].sort(compareAvailability)),
     hasSearched: computed(() => params.value !== null),
     params: computed(() => params.value),
     pending,

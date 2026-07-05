@@ -142,6 +142,18 @@ public class EventReportService : IEventReportService
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         var memberById = members.ToDictionary(m => m.Id);
+
+        // Household name per member, so report occupant/attendee lists group same-household people
+        // together (ordered by household name, then member name) rather than scattering them.
+        var householdIds = members.Select(m => m.HouseholdId).Distinct().ToList();
+        var householdNameById = await _dbContext.Households
+            .AsNoTracking()
+            .Where(h => h.TenantId == tenantId && householdIds.Contains(h.Id))
+            .ToDictionaryAsync(h => h.Id, h => h.Name, cancellationToken);
+        var householdNameByMemberId = members.ToDictionary(
+            m => m.Id,
+            m => householdNameById.GetValueOrDefault(m.HouseholdId, string.Empty));
+
         var dietaryByMember = members.ToDictionary(
             m => m.Id,
             m => (IReadOnlyList<string>)m.DietaryTags
@@ -195,7 +207,7 @@ public class EventReportService : IEventReportService
                 .ThenBy(p => mealOrderKey[(p.MealTemplateId, p.MealType)].FirstDay)
                 .ThenByDescending(p => mealOrderKey[(p.MealTemplateId, p.MealType)].EffectiveCount)
                 .ThenBy(p => templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), StringComparer.OrdinalIgnoreCase)
-                .Select(p => BuildMeal(p, templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), attendancesByPlan.GetValueOrDefault(p.Id, []), memberById, dietaryByMember))
+                .Select(p => BuildMeal(p, templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), attendancesByPlan.GetValueOrDefault(p.Id, []), memberById, dietaryByMember, householdNameByMemberId))
                 .ToList();
 
             // Timed slots lead in order, then "Anytime"/unslotted; within a slot, the template
@@ -211,12 +223,14 @@ public class EventReportService : IEventReportService
             // Emit every accommodation each day (occupied 0 when empty) so the occupancy badge
             // renders on all days; occupants are the stays whose span covers this night.
             var dayAccommodations = new List<EventReportAccommodationDto>();
-            foreach (var accommodation in accommodations.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
+            foreach (var accommodation in accommodations
+                .OrderBy(a => a.Type)
+                .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase))
             {
                 var nightIntents = accommodationIntentsByAccommodation.GetValueOrDefault(accommodation.Id, [])
                     .Where(i => i.StartNight <= day && i.EndNight >= day)
                     .ToList();
-                dayAccommodations.Add(BuildAccommodation(accommodation, nightIntents, memberById));
+                dayAccommodations.Add(BuildAccommodation(accommodation, nightIntents, memberById, householdNameByMemberId));
             }
 
             days.Add(new EventReportDayDto(day, going, maybe, meals, tasks, dayAccommodations));
@@ -231,7 +245,8 @@ public class EventReportService : IEventReportService
         string templateName,
         List<MealAttendanceEntity> attendance,
         IReadOnlyDictionary<Guid, HouseholdMember> memberById,
-        IReadOnlyDictionary<Guid, IReadOnlyList<string>> dietaryByMember)
+        IReadOnlyDictionary<Guid, IReadOnlyList<string>> dietaryByMember,
+        IReadOnlyDictionary<Guid, string> householdNameByMemberId)
     {
         var going = attendance.Count(a => a.Status == AttendanceStatus.Going);
         var maybe = attendance.Count(a => a.Status == AttendanceStatus.Maybe);
@@ -247,7 +262,8 @@ public class EventReportService : IEventReportService
                 a.BringOwnFood,
                 dietaryByMember.GetValueOrDefault(a.HouseholdMemberId, []),
                 memberById.GetValueOrDefault(a.HouseholdMemberId)?.DietaryNotes))
-            .OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(a => householdNameByMemberId.GetValueOrDefault(a.MemberId, string.Empty), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         // Group attendees by their full sorted tag combination so cooks know how many plates
@@ -320,7 +336,8 @@ public class EventReportService : IEventReportService
     private static EventReportAccommodationDto BuildAccommodation(
         Accommodation accommodation,
         List<AccommodationIntent> nightIntents,
-        IReadOnlyDictionary<Guid, HouseholdMember> memberById)
+        IReadOnlyDictionary<Guid, HouseholdMember> memberById,
+        IReadOnlyDictionary<Guid, string> householdNameByMemberId)
     {
         // A declined request frees the slot, so it neither occupies nor appears as an occupant.
         var occupants = nightIntents
@@ -331,7 +348,8 @@ public class EventReportService : IEventReportService
                 i.Status,
                 i.PartyAdults,
                 i.PartyChildren))
-            .OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(o => householdNameByMemberId.GetValueOrDefault(o.MemberId, string.Empty), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         // A party with no adults/children counts still occupies one slot (the requesting member).

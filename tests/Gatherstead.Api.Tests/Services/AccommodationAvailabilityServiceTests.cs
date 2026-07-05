@@ -74,14 +74,14 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     [Fact]
     public async Task SearchAsync_InvertedSpan_ReturnsError()
     {
-        var result = await CreateService().SearchAsync(_tenantId, Jun14, Jun10, 1, 0, true, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun14, Jun10, 1, 0, true, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Successful);
     }
 
     [Fact]
     public async Task SearchAsync_NoIntents_ShowsFullRemainingCapacity()
     {
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 2, 1, true, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 2, 1, true, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
@@ -96,7 +96,7 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     {
         await AddIntentAsync(_capped, Jun10, Jun12, adults: 3, children: 1);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 1, true, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 1, true, cancellationToken: TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
         Assert.Equal(4, cabin.Occupied);
@@ -110,7 +110,7 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         // Occupied 4 of 6 leaves 2; a party of 3 does not fit.
         await AddIntentAsync(_capped, Jun10, Jun12, adults: 3, children: 1);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 2, 1, requireCapacity: false, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 2, 1, requireCapacity: false, cancellationToken: TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
         Assert.Equal(2, cabin.Remaining);
@@ -123,7 +123,7 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         // Stay [Jun13, Jun14] does not overlap the requested window [Jun10, Jun12].
         await AddIntentAsync(_capped, Jun13, Jun14, adults: 4, children: 2);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 4, 2, true, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 4, 2, true, cancellationToken: TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
         Assert.Equal(0, cabin.Occupied);
@@ -136,7 +136,7 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         // A declined stay overlapping the window must not count toward occupancy.
         await AddIntentAsync(_capped, Jun10, Jun12, adults: 6, children: 0, status: AccommodationIntentStatus.Declined);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 4, 0, requireCapacity: true, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 4, 0, requireCapacity: true, cancellationToken: TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
         Assert.Equal(0, cabin.Occupied);
@@ -149,7 +149,7 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
         // Stay [Jun12, Jun14] shares night Jun12 with the requested window [Jun10, Jun12].
         await AddIntentAsync(_capped, Jun12, Jun14, adults: 6, children: 0);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, cancellationToken: TestContext.Current.CancellationToken);
 
         var cabin = Assert.Single(result.Entity!, a => a.Id == _capped);
         Assert.Equal(6, cabin.Occupied);
@@ -162,7 +162,7 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     {
         await AddIntentAsync(_uncapped, Jun10, Jun12, adults: 99, children: 99);
 
-        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 50, 50, true, TestContext.Current.CancellationToken);
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 50, 50, true, cancellationToken: TestContext.Current.CancellationToken);
 
         var tent = Assert.Single(result.Entity!, a => a.Id == _uncapped);
         Assert.Null(tent.Capacity);
@@ -175,19 +175,95 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     {
         await AddIntentAsync(_capped, Jun10, Jun12, adults: 6, children: 0);
 
-        var filtered = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: true, TestContext.Current.CancellationToken);
+        var filtered = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: true, cancellationToken: TestContext.Current.CancellationToken);
         Assert.DoesNotContain(filtered.Entity!, a => a.Id == _capped);
 
-        var all = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, TestContext.Current.CancellationToken);
+        var all = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, cancellationToken: TestContext.Current.CancellationToken);
         var cabin = Assert.Single(all.Entity!, a => a.Id == _capped);
         Assert.False(cabin.HasSufficientCapacity);
+    }
+
+    [Fact]
+    public async Task SearchAsync_OrdersByTypeThenName()
+    {
+        // "Aardvark Camp" (Tent) sorts before "Cabin A" by name, but Bedroom precedes Tent by type,
+        // so type ordering must win: Cabin A (Bedroom), then the tents by name.
+        _dbContext.Accommodations.Add(new Accommodation
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, PropertyId = _propertyId,
+            Name = "Aardvark Camp", Type = AccommodationType.Tent,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(
+            ["Cabin A", "Aardvark Camp", "Open Field"],
+            result.Entity!.Select(a => a.Name));
+    }
+
+    [Fact]
+    public async Task SearchAsync_GroupsByPropertyThenTypeThenName()
+    {
+        // A second property whose name ("Alpine Lodge") sorts before "Lake House"; its accommodation
+        // name ("Zed Suite") sorts last overall — so property-first grouping must lead with it.
+        var otherPropertyId = Guid.NewGuid();
+        _dbContext.Properties.Add(new Property { Id = otherPropertyId, TenantId = _tenantId, Name = "Alpine Lodge" });
+        _dbContext.Accommodations.Add(new Accommodation
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, PropertyId = otherPropertyId,
+            Name = "Zed Suite", Type = AccommodationType.Bedroom,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().SearchAsync(_tenantId, Jun10, Jun12, 1, 0, requireCapacity: false, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(
+            ["Zed Suite", "Cabin A", "Open Field"],
+            result.Entity!.Select(a => a.Name));
+    }
+
+    [Fact]
+    public async Task SearchAsync_ScopedToSelectedProperties()
+    {
+        var otherPropertyId = Guid.NewGuid();
+        var otherAccommodationId = Guid.NewGuid();
+        _dbContext.Properties.Add(new Property { Id = otherPropertyId, TenantId = _tenantId, Name = "Alpine Lodge" });
+        _dbContext.Accommodations.Add(new Accommodation
+        {
+            Id = otherAccommodationId, TenantId = _tenantId, PropertyId = otherPropertyId,
+            Name = "Suite 1", Type = AccommodationType.Bedroom,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().SearchAsync(
+            _tenantId, Jun10, Jun12, 1, 0, requireCapacity: false,
+            propertyIds: [otherPropertyId], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var only = Assert.Single(result.Entity!);
+        Assert.Equal(otherAccommodationId, only.Id);
+    }
+
+    [Fact]
+    public async Task SearchAsync_EmptyPropertyIds_SearchesAllProperties()
+    {
+        var result = await CreateService().SearchAsync(
+            _tenantId, Jun10, Jun12, 1, 0, requireCapacity: false,
+            propertyIds: [], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        // Both fixture accommodations under "Lake House" are returned when no property filter applies.
+        Assert.Equal(2, result.Entity!.Count);
     }
 
     [Fact]
     public async Task SearchAsync_WrongTenantContext_ReturnsError()
     {
         var result = await CreateService(contextTenantId: Guid.NewGuid())
-            .SearchAsync(_tenantId, Jun10, Jun12, 1, 0, true, TestContext.Current.CancellationToken);
+            .SearchAsync(_tenantId, Jun10, Jun12, 1, 0, true, cancellationToken: TestContext.Current.CancellationToken);
         Assert.False(result.Successful);
     }
 }

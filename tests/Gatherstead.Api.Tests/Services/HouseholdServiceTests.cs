@@ -47,4 +47,18 @@ public class HouseholdServiceTests : IAsyncLifetime
         Assert.True(result.Successful);
         Assert.Equal(2, result.Entity!.Count);
     }
+
+    [Fact]
+    public async Task ListAsync_OrdersByNameCaseInsensitive()
+    {
+        _dbContext.Households.Add(new Household { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Zephyr" });
+        _dbContext.Households.Add(new Household { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "alpha" });
+        _dbContext.Households.Add(new Household { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Mason" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(["alpha", "Mason", "Zephyr"], result.Entity!.Select(h => h.Name));
+    }
 }

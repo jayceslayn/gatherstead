@@ -3,6 +3,7 @@ import { useProperty, usePropertyActions } from '~/composables/useProperties'
 import { useAccommodations, useAccommodationActions } from '~/composables/useAccommodations'
 import { useTenantRole } from '~/composables/useTenantRole'
 import type { AccommodationSummary, AccommodationType } from '~/repositories/types'
+import { ACCOMMODATION_TYPE_ORDER } from '~/utils/sorting'
 
 definePageMeta({ layout: 'default' })
 
@@ -31,11 +32,9 @@ function onPropertyModalDelete() {
   showDeleteConfirm.value = true
 }
 
-const TYPE_ORDER: AccommodationType[] = ['Bedroom', 'Bunk', 'RvPad', 'Tent', 'Offsite']
-
 const grouped = computed(() => {
   const map = new Map<AccommodationType, AccommodationSummary[]>()
-  for (const type of TYPE_ORDER) {
+  for (const type of ACCOMMODATION_TYPE_ORDER) {
     const group = accommodations.value.filter(a => a.type === type)
     if (group.length) map.set(type, group)
   }

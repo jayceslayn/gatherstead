@@ -2,6 +2,7 @@ import { useTenantStore } from '~/stores/tenant'
 import type { HouseholdSummary, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { compareHouseholds } from '~/utils/sorting'
 
 
 export function useHouseholds() {
@@ -14,7 +15,12 @@ export function useHouseholds() {
     { watch: [() => tenantStore.currentTenantId] },
   )
 
-  return { households: computed(() => data.value ?? []), pending, error, refresh }
+  return {
+    households: computed(() => [...(data.value ?? [])].sort(compareHouseholds)),
+    pending,
+    error,
+    refresh,
+  }
 }
 
 export function useHousehold(householdId: Ref<string>) {

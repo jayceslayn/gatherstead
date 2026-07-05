@@ -47,11 +47,13 @@ public class AccommodationServiceTests : IAsyncLifetime
             Mock.Of<IAuditVisibilityContext>());
     }
 
-    private void AddAccommodation(string name) =>
+    private void AddAccommodation(string name) => AddAccommodation(name, AccommodationType.Bedroom);
+
+    private void AddAccommodation(string name, AccommodationType type) =>
         _dbContext.Accommodations.Add(new Accommodation
         {
             Id = Guid.NewGuid(), TenantId = _tenantId, PropertyId = _propertyId,
-            Name = name, Type = AccommodationType.Bedroom,
+            Name = name, Type = type,
         });
 
     [Fact]
@@ -67,6 +69,25 @@ public class AccommodationServiceTests : IAsyncLifetime
 
         Assert.True(result.Successful);
         Assert.Equal(2, result.Entity!.Count);
+    }
+
+    [Fact]
+    public async Task ListAsync_OrdersByTypeThenName()
+    {
+        // "Aardvark Tent" sorts before "Cabin A" by name, but Bedroom precedes Tent by type — so
+        // type ordering must win over the name tiebreak.
+        AddAccommodation("Aardvark Tent", AccommodationType.Tent);
+        AddAccommodation("Cabin A", AccommodationType.Bedroom);
+        AddAccommodation("Barn Loft", AccommodationType.Bedroom);
+        AddAccommodation("Cedar Bunk", AccommodationType.Bunk);
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, _propertyId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(
+            ["Barn Loft", "Cabin A", "Cedar Bunk", "Aardvark Tent"],
+            result.Entity!.Select(a => a.Name));
     }
 
     [Fact]

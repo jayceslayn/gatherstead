@@ -27,6 +27,7 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
         int? partyAdults,
         int? partyChildren,
         bool requireCapacity,
+        IReadOnlyCollection<Guid>? propertyIds = null,
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<AccommodationAvailabilityDto>>();
@@ -40,9 +41,18 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
             return response;
         }
 
-        var accommodations = await _dbContext.Accommodations
+        var query = _dbContext.Accommodations
             .AsNoTracking()
-            .Where(a => a.TenantId == tenantId)
+            .Where(a => a.TenantId == tenantId);
+
+        // Scope to the selected properties when any are given; an empty selection spans all properties.
+        if (propertyIds is { Count: > 0 })
+        {
+            var propertyIdList = propertyIds.ToList();
+            query = query.Where(a => propertyIdList.Contains(a.PropertyId));
+        }
+
+        var accommodations = await query
             .Select(a => new AccommodationRow(
                 a.Id, a.PropertyId, a.Property!.Name, a.Name, a.Type, a.Notes,
                 a.Beds.Select(b => new BedRow(b.Size, b.Quantity)).ToList()))
@@ -88,11 +98,13 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
                 capacity, occupied, remaining, sufficient));
         }
 
-        // Sufficient options first, then a stable property/accommodation ordering.
+        // This search spans every property, so results group by property first, then by accommodation
+        // type (canonical enum order) and name — matching the accommodation list ordering within each
+        // property. Sorted in-memory because Name/PropertyName are Always Encrypted (PII) columns.
         var ordered = results
-            .OrderByDescending(r => r.HasSufficientCapacity)
-            .ThenBy(r => r.PropertyName)
-            .ThenBy(r => r.Name)
+            .OrderBy(r => r.PropertyName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(r => r.Type)
+            .ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<AccommodationAvailabilityDto>>.SuccessfulResponse(ordered);

@@ -2,6 +2,7 @@ import { useTenantStore } from '~/stores/tenant'
 import type { HouseholdMember, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { compareMembers } from '~/utils/sorting'
 
 
 export function useAllMembers() {
@@ -38,7 +39,12 @@ export function useHouseholdMembers(householdId: Ref<string>) {
     { watch: [householdId] },
   )
 
-  return { members: computed(() => data.value ?? []), pending, error, refresh }
+  return {
+    members: computed(() => [...(data.value ?? [])].sort(compareMembers)),
+    pending,
+    error,
+    refresh,
+  }
 }
 
 export function useMember(householdId: Ref<string>, memberId: Ref<string>) {

@@ -29,10 +29,11 @@ public class AccommodationSearchController : ControllerBase
         [FromQuery] int? partyAdults,
         [FromQuery] int? partyChildren,
         [FromQuery] bool? requireCapacity,
+        [FromQuery] Guid[]? propertyIds,
         CancellationToken cancellationToken)
     {
         var response = await _availabilityService.SearchAsync(
-            tenantId, startNight, endNight, partyAdults, partyChildren, requireCapacity ?? true, cancellationToken);
+            tenantId, startNight, endNight, partyAdults, partyChildren, requireCapacity ?? true, propertyIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);

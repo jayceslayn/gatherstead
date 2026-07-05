@@ -13,6 +13,7 @@ import { getDemoStore } from './DemoStore'
 import { enumDays, sleepsCapacity } from './DemoHelpers'
 import { DEMO_DIETARY_TAGS } from './DemoDietaryTagRepository'
 import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '../../composables/useTemplateOrder'
+import { byName, compareAccommodations } from '../../utils/sorting'
 
 const SLUG_TO_DISPLAY_NAME = new Map(DEMO_DIETARY_TAGS.map(t => [t.slug.toLowerCase(), t.displayName]))
 
@@ -38,6 +39,11 @@ export class DemoReportRepository implements IReportRepository {
     if (!event) return null
 
     const memberById = new Map(store.members.value.map(m => [m.id, m]))
+    // Household name per member, so occupant/attendee lists group same-household people together
+    // (household name, then member name) — mirrors the backend EventReportService ordering.
+    const householdNameById = new Map(store.households.value.map(h => [h.id, h.name]))
+    const householdNameForMember = (memberId: string): string =>
+      householdNameById.get(memberById.get(memberId)?.householdId ?? '') ?? ''
     const templateNameById = new Map(store.mealTemplates.value.map(t => [t.id, t.name]))
     const eventMealPlans = store.mealPlans.value.filter(p => templateNameById.has(p.mealTemplateId))
     const planIds = new Set(eventMealPlans.map(p => p.id))
@@ -100,7 +106,9 @@ export class DemoReportRepository implements IReportRepository {
             dietary: dietaryForMember(a.householdMemberId),
             dietaryNotes: memberById.get(a.householdMemberId)?.dietaryNotes ?? null,
           }))
-          .sort((x, y) => x.name.localeCompare(y.name))
+          .sort((x, y) =>
+            byName(householdNameForMember(x.memberId), householdNameForMember(y.memberId))
+            || byName(x.name, y.name))
 
         // Group attendees by their full sorted tag combo (mirrors backend per-member combo tally).
         const comboMap = new Map<string, number>()
@@ -171,7 +179,9 @@ export class DemoReportRepository implements IReportRepository {
               partyAdults: i.partyAdults ?? null,
               partyChildren: i.partyChildren ?? null,
             }))
-            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+            .sort((a, b) =>
+              byName(householdNameForMember(a.memberId), householdNameForMember(b.memberId))
+              || byName(a.name, b.name))
 
           return {
             accommodationId: accommodation.id,
@@ -182,7 +192,7 @@ export class DemoReportRepository implements IReportRepository {
             occupants,
           }
         })
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+        .sort(compareAccommodations)
 
       days.push({ day, going, maybe, meals, tasks, accommodations })
     }

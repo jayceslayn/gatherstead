@@ -195,4 +195,25 @@ public class EquipmentServiceTests : IAsyncLifetime
         Assert.True(result.Successful);
         Assert.Equal(2, result.Entity!.Count);
     }
+
+    [Fact]
+    public async Task ListAsync_OrdersByPropertyThenName_UnassignedLast()
+    {
+        // "Alpine Lodge" sorts before the fixture's "Test Property"; unassigned equipment sorts last
+        // even though "Aaa Gear" is alphabetically first by name.
+        var alpineId = Guid.NewGuid();
+        _dbContext.Properties.Add(new Property { Id = alpineId, TenantId = _tenantId, Name = "Alpine Lodge" });
+        _dbContext.Equipment.AddRange(
+            new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Aaa Gear", PropertyId = null },
+            new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Zzz Rake", PropertyId = _propertyId },
+            new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Mop", PropertyId = alpineId },
+            new Equipment { Id = Guid.NewGuid(), TenantId = _tenantId, Name = "Axe", PropertyId = _propertyId });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        // Alpine Lodge (Mop), then Test Property by name (Axe, Zzz Rake), then unassigned (Aaa Gear).
+        Assert.Equal(["Mop", "Axe", "Zzz Rake", "Aaa Gear"], result.Entity!.Select(e => e.Name));
+    }
 }

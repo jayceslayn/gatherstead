@@ -2,6 +2,7 @@
 import { useEquipment, useEquipmentActions } from '~/composables/useEquipment'
 import { useProperties } from '~/composables/useProperties'
 import { useTenantRole } from '~/composables/useTenantRole'
+import { byName } from '~/utils/sorting'
 import type { EquipmentSummary } from '~/repositories/types'
 
 definePageMeta({ layout: 'default' })
@@ -29,16 +30,22 @@ const propertyFilterItems = computed(() => [
 
 const filteredEquipment = computed(() => {
   const q = search.value.trim().toLowerCase()
-  return equipment.value.filter((item) => {
-    const matchesName = !q || item.name.toLowerCase().includes(q)
-    const matchesProperty
-      = propertyFilter.value === 'all'
-        ? true
-        : propertyFilter.value === 'none'
-          ? !item.propertyId
-          : item.propertyId === propertyFilter.value
-    return matchesName && matchesProperty
-  })
+  return equipment.value
+    .filter((item) => {
+      const matchesName = !q || item.name.toLowerCase().includes(q)
+      const matchesProperty
+        = propertyFilter.value === 'all'
+          ? true
+          : propertyFilter.value === 'none'
+            ? !item.propertyId
+            : item.propertyId === propertyFilter.value
+      return matchesName && matchesProperty
+    })
+    // Group by property name (unassigned equipment last), then by equipment name.
+    .sort((a, b) => {
+      if (!a.propertyId !== !b.propertyId) return a.propertyId ? -1 : 1
+      return byName(propertyName(a.propertyId), propertyName(b.propertyId)) || byName(a.name, b.name)
+    })
 })
 
 const showModal = ref(false)

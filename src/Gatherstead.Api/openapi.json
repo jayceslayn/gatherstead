@@ -784,6 +784,17 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "propertyIds",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
           }
         ],
         "responses": {

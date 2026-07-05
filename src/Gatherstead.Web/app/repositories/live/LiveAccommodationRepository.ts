@@ -19,6 +19,8 @@ export class LiveAccommodationRepository implements IAccommodationRepository {
     })
     if (query.partyAdults != null) params.set('partyAdults', String(query.partyAdults))
     if (query.partyChildren != null) params.set('partyChildren', String(query.partyChildren))
+    // Repeated `propertyIds` params bind to the endpoint's Guid[] (omitted → all properties).
+    for (const propertyId of query.propertyIds ?? []) params.append('propertyIds', propertyId)
     const r = await $fetch<ApiResponse<AccommodationAvailability[]>>(
       `/api/proxy/tenants/${tenantId}/accommodations/availability?${params.toString()}`,
     )

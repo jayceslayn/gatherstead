@@ -365,6 +365,8 @@ export interface AccommodationAvailabilityQuery {
   /** When true, only accommodations that can fit the party are returned; when false, all are
    * returned with a `hasSufficientCapacity` flag. */
   requireCapacity: boolean
+  /** Scopes the search to these properties; an empty/omitted list searches every property. */
+  propertyIds?: string[] | null
 }
 
 /** Room/spot dimensions in metres; area override wins over width × depth. Any field may be null. */
@@ -377,7 +379,7 @@ export interface AccommodationDimensions {
 export interface IAccommodationRepository {
   listAccommodations(tenantId: string, propertyId: string): Promise<AccommodationSummary[]>
   getAccommodation(tenantId: string, propertyId: string, accommodationId: string): Promise<AccommodationSummary | null>
-  /** Tenant-wide availability search across all properties for the given party + dates. */
+  /** Availability search for the given party + dates, scoped to `query.propertyIds` (all when empty). */
   searchAvailability(tenantId: string, query: AccommodationAvailabilityQuery): Promise<AccommodationAvailability[]>
   /** A member's stays across all accommodations, ending on or after `fromNight`. */
   listMyStays(tenantId: string, memberId: string, fromNight: string): Promise<MyStay[]>

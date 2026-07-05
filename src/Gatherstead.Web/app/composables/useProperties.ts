@@ -2,6 +2,7 @@ import { useTenantStore } from '~/stores/tenant'
 import type { PropertySummary, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { compareHouseholds } from '~/utils/sorting'
 
 
 export function useProperties() {
@@ -14,7 +15,13 @@ export function useProperties() {
     { watch: [() => tenantStore.currentTenantId] },
   )
 
-  return { properties: computed(() => data.value ?? []), pending, error, refresh }
+  // Properties sort by name (A–Z), mirroring the Households rule.
+  return {
+    properties: computed(() => [...(data.value ?? [])].sort(compareHouseholds)),
+    pending,
+    error,
+    refresh,
+  }
 }
 
 export function useProperty(propertyId: Ref<string>) {
