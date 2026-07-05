@@ -179,6 +179,8 @@ async function onSubmit(payload: {
       :default-member-id="memberStore.linkedMemberId"
       :default-start-night="orderedNights.start"
       :default-end-night="orderedNights.end"
+      :default-party-adults="partyAdults"
+      :default-party-children="partyChildren"
       :loading="submitting"
       @submit="onSubmit"
     />

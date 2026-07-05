@@ -70,6 +70,7 @@ public class AccommodationIntentsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<AccommodationIntentResponse>> CreateAccommodationIntent(
         Guid tenantId,
+        Guid propertyId,
         Guid accommodationId,
         [FromQuery] Guid householdId,
         [FromBody] CreateAccommodationIntentRequest request,
@@ -80,9 +81,11 @@ public class AccommodationIntentsController : ControllerBase
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);
 
+        // The Get route requires a non-null {propertyId:guid}; passing null here previously threw
+        // "No route matches the supplied values." *after* the row was saved, surfacing as a 500.
         return CreatedAtAction(
             nameof(GetAccommodationIntent),
-            new { tenantId, propertyId = (Guid?)null, accommodationId, intentId = response.Entity?.Id },
+            new { tenantId, propertyId, accommodationId, intentId = response.Entity?.Id },
             response);
     }
 

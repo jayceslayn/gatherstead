@@ -7,6 +7,11 @@ namespace Gatherstead.Data.Entities;
 
 [Index(nameof(TenantId), nameof(HouseholdMemberId))]
 [Index(nameof(TenantId), nameof(AccommodationId), nameof(StartNight), nameof(EndNight))]
+// Blocks true duplicate stays (identical member + accommodation + span) while still allowing a
+// member to hold multiple, even overlapping, non-identical spans. Backed by the upsert-with-revive
+// in AccommodationIntentService.CreateAsync so a re-request revives rather than colliding.
+[Index(nameof(TenantId), nameof(AccommodationId), nameof(HouseholdMemberId), nameof(StartNight), nameof(EndNight),
+    IsUnique = true, Name = "IX_AccommodationIntent_UniqueStay")]
 public class AccommodationIntent : AuditableEntity
 {
     public Guid Id { get; set; }

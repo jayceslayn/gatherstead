@@ -117,6 +117,39 @@ public class AccommodationIntentServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateAsync_SameSpanTwice_UpsertsSingleRow()
+    {
+        // A true duplicate (identical member + accommodation + span) must not create a second row —
+        // the second create upserts the existing one, backed by the unique index.
+        var service = CreateService();
+        var first = await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+        var second = await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        Assert.True(first.Successful);
+        Assert.True(second.Successful);
+        var count = await _dbContext.AccommodationIntents
+            .CountAsync(i => i.AccommodationId == _accommodationId && i.HouseholdMemberId == _member, TestContext.Current.CancellationToken);
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public async Task CreateAsync_AfterDelete_RevivesRow()
+    {
+        // Re-requesting a withdrawn stay revives the soft-deleted row rather than colliding with the
+        // unique index (which would surface as a 500).
+        var service = CreateService();
+        var created = await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+        await service.DeleteAsync(_tenantId, _accommodationId, created.Entity!.Id, TestContext.Current.CancellationToken);
+
+        var revived = await service.CreateAsync(_tenantId, _accommodationId, _householdId, Request(Day1, Day2), TestContext.Current.CancellationToken);
+
+        Assert.True(revived.Successful);
+        var liveCount = await _dbContext.AccommodationIntents
+            .CountAsync(i => i.AccommodationId == _accommodationId && i.HouseholdMemberId == _member, TestContext.Current.CancellationToken);
+        Assert.Equal(1, liveCount);
+    }
+
+    [Fact]
     public async Task CreateAsync_Unauthorized_ReturnsError()
     {
         var result = await CreateService(canAssign: false)

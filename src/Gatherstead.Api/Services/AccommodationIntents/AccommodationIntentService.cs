@@ -161,21 +161,41 @@ public class AccommodationIntentService : IAccommodationIntentService
         if (!ValidateSpan(request.StartNight, request.EndNight, response))
             return response;
 
-        var intent = new AccommodationIntent
-        {
-            Id = Guid.NewGuid(),
-            TenantId = tenantId,
-            AccommodationId = accommodationId,
-            HouseholdMemberId = request.HouseholdMemberId,
-            StartNight = request.StartNight,
-            EndNight = request.EndNight,
-            Status = request.Status,
-            Notes = request.Notes?.Trim(),
-            PartyAdults = request.PartyAdults,
-            PartyChildren = request.PartyChildren,
-        };
+        // Include soft-deleted rows so a re-request after a withdrawal revives the existing row rather
+        // than colliding with the unique (Tenant, Accommodation, Member, StartNight, EndNight) index.
+        var intent = await _dbContext.AccommodationIntents
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
+            .Where(i => i.TenantId == tenantId
+                && i.AccommodationId == accommodationId
+                && i.HouseholdMemberId == request.HouseholdMemberId
+                && i.StartNight == request.StartNight
+                && i.EndNight == request.EndNight)
+            .SingleOrDefaultAsync(cancellationToken);
 
-        _dbContext.AccommodationIntents.Add(intent);
+        if (intent is null)
+        {
+            intent = new AccommodationIntent
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                AccommodationId = accommodationId,
+                HouseholdMemberId = request.HouseholdMemberId,
+                StartNight = request.StartNight,
+                EndNight = request.EndNight,
+            };
+            _dbContext.AccommodationIntents.Add(intent);
+        }
+        else if (intent.IsDeleted)
+        {
+            intent.IsDeleted = false;   // revive; audit interceptor clears DeletedAt/DeletedByUserId
+        }
+
+        // Upsert the mutable fields from the request on create, revive, and live re-request alike.
+        intent.Status = request.Status;
+        intent.Notes = request.Notes?.Trim();
+        intent.PartyAdults = request.PartyAdults;
+        intent.PartyChildren = request.PartyChildren;
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(intent));
