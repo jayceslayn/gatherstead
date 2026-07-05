@@ -5298,7 +5298,12 @@ export interface components {
         ResponseMessage: {
             /** @enum {string} */
             type?: "ERROR" | "WARNING" | "INFORMATION";
+            /** @enum {string|null} */
+            code?: "ENTITY_NOT_FOUND" | "ENTITY_CONFLICT" | "VALIDATION_REQUIRED" | "VALIDATION_FORMAT" | "VALIDATION_RANGE" | "CAPACITY_EXCEEDED" | "INVALID_STATE" | "DEPENDENCY_EXISTS" | "INVALID_REFERENCE" | "PERMISSION_TENANT_MANAGE" | "PERMISSION_EVENT_MANAGE" | "PERMISSION_HOUSEHOLD_MANAGE" | "PERMISSION_MEMBER_EDIT" | "PERMISSION_INTENT_ASSIGN" | "PERMISSION_MEALPLAN_MENU" | "PERMISSION_SENSITIVE_READ" | "PERMISSION_ROLE_ESCALATION" | null;
             message?: string;
+            params?: {
+                [key: string]: string;
+            } | null;
         };
         SecurityEventDto: {
             /** Format: uuid */

@@ -19,6 +19,28 @@ public class BaseEntityResponse<T>
         return this;
     }
 
+    /// <summary>
+    /// Attaches a message carrying a stable <see cref="ErrorCode"/> and optional interpolation
+    /// <paramref name="params"/>, so the frontend can render a localized template while keeping
+    /// <paramref name="message"/> as the human-readable fallback.
+    /// </summary>
+    public BaseEntityResponse<T> AddResponseMessage(
+        MessageType type,
+        ErrorCode code,
+        string message,
+        IReadOnlyDictionary<string, string>? @params = null)
+    {
+        Messages.Add(new ResponseMessage
+        {
+            Type = type,
+            Code = code,
+            Message = message,
+            Params = @params
+        });
+
+        return this;
+    }
+
     public BaseEntityResponse<T> SetSuccess(T entity)
     {
         Entity = entity;

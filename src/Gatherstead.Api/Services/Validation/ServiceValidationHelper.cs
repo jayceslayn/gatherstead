@@ -10,13 +10,16 @@ public static class ServiceValidationHelper
     {
         if (tenantId == Guid.Empty)
         {
-            response.AddResponseMessage(MessageType.ERROR, "A valid tenant identifier is required.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.VALIDATION_REQUIRED,
+                "A valid tenant identifier is required.",
+                new Dictionary<string, string> { ["field"] = "tenant identifier" });
         }
 
         var currentTenantId = currentTenantContext.TenantId;
         if (currentTenantId.HasValue && currentTenantId.Value != tenantId)
         {
-            response.AddResponseMessage(MessageType.ERROR, "The tenant context does not match the requested tenant.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.INVALID_REFERENCE,
+                "The tenant context does not match the requested tenant.");
         }
 
         return !HasErrors(response);
@@ -28,7 +31,9 @@ public static class ServiceValidationHelper
 
         if (string.IsNullOrWhiteSpace(normalizedValue))
         {
-            response.AddResponseMessage(MessageType.ERROR, $"{fieldName} is required.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.VALIDATION_REQUIRED,
+                $"{fieldName} is required.",
+                new Dictionary<string, string> { ["field"] = fieldName });
             return false;
         }
 

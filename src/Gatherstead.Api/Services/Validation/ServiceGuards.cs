@@ -23,7 +23,8 @@ public static class ServiceGuards
         var scope = await authorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
         if (!scope.CanReadSensitive(householdId))
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to read sensitive details for this household.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_SENSITIVE_READ,
+                "You do not have permission to read sensitive details for this household.");
             return false;
         }
         return true;
@@ -38,7 +39,8 @@ public static class ServiceGuards
         var scope = await authorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
         if (!scope.IsGlobal)
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to read sensitive details across this tenant.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_SENSITIVE_READ,
+                "You do not have permission to read sensitive details across this tenant.");
             return false;
         }
         return true;
@@ -56,7 +58,8 @@ public static class ServiceGuards
     {
         if (roleBeingGranted < actorRole)
         {
-            response.AddResponseMessage(MessageType.ERROR, "You cannot grant a role more privileged than your own.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_ROLE_ESCALATION,
+                "You cannot grant a role more privileged than your own.");
             return false;
         }
         return true;
@@ -70,7 +73,9 @@ public static class ServiceGuards
     {
         if (request is null)
         {
-            response.AddResponseMessage(MessageType.ERROR, $"A {operationDescription} request is required.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.VALIDATION_REQUIRED,
+                $"A {operationDescription} request is required.",
+                new Dictionary<string, string> { ["field"] = $"{operationDescription} request" });
             return false;
         }
         return true;
@@ -86,7 +91,8 @@ public static class ServiceGuards
     {
         if (!await authorizationService.CanEditMemberAsync(tenantId, householdId, memberId, cancellationToken))
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this member.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_MEMBER_EDIT,
+                "You do not have permission to edit this member.");
             return false;
         }
         return true;
@@ -100,7 +106,8 @@ public static class ServiceGuards
     {
         if (!await authorizationService.CanManageTenantAsync(tenantId, cancellationToken))
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage this tenant's resources.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_TENANT_MANAGE,
+                "You do not have permission to manage this tenant's resources.");
             return false;
         }
         return true;
@@ -114,7 +121,8 @@ public static class ServiceGuards
     {
         if (!await authorizationService.CanManageEventAsync(tenantId, cancellationToken))
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to manage events for this tenant.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_EVENT_MANAGE,
+                "You do not have permission to manage events for this tenant.");
             return false;
         }
         return true;
@@ -129,7 +137,8 @@ public static class ServiceGuards
     {
         if (!await authorizationService.CanEditMealPlanMenuAsync(tenantId, mealPlanId, cancellationToken))
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to edit this meal's menu.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_MEALPLAN_MENU,
+                "You do not have permission to edit this meal's menu.");
             return false;
         }
         return true;
@@ -145,7 +154,8 @@ public static class ServiceGuards
     {
         if (!await authorizationService.CanAssignIntentForMemberAsync(tenantId, householdId, memberId, cancellationToken))
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to assign intents for this member.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_INTENT_ASSIGN,
+                "You do not have permission to assign intents for this member.");
             return false;
         }
         return true;
@@ -161,7 +171,7 @@ public static class ServiceGuards
     {
         if (!await authorizationService.CanManageHouseholdAsync(tenantId, householdId, cancellationToken))
         {
-            response.AddResponseMessage(MessageType.ERROR, deniedMessage);
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_HOUSEHOLD_MANAGE, deniedMessage);
             return false;
         }
         return true;
@@ -181,7 +191,9 @@ public static class ServiceGuards
 
         if (!exists)
         {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.ENTITY_NOT_FOUND,
+                "Household member not found.",
+                new Dictionary<string, string> { ["entity"] = "householdMember" });
             return false;
         }
         return true;
@@ -212,14 +224,17 @@ public static class ServiceGuards
 
         if (householdId is null)
         {
-            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.ENTITY_NOT_FOUND,
+                "Household member not found.",
+                new Dictionary<string, string> { ["entity"] = "householdMember" });
             return null;
         }
 
         var source = await authorizationService.ClassifyIntentActorAsync(tenantId, householdId.Value, memberId, cancellationToken);
         if (source is null)
         {
-            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to assign intents for this member.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_INTENT_ASSIGN,
+                "You do not have permission to assign intents for this member.");
             return null;
         }
 
@@ -284,7 +299,9 @@ public static class ServiceGuards
         var entity = await query.SingleOrDefaultAsync(cancellationToken);
         if (entity is null)
         {
-            response.AddResponseMessage(MessageType.ERROR, $"{entityDisplayName} not found.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.ENTITY_NOT_FOUND,
+                $"{entityDisplayName} not found.",
+                new Dictionary<string, string> { ["entity"] = entityDisplayName });
         }
         return entity;
     }

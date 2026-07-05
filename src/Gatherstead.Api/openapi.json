@@ -10743,8 +10743,38 @@
             ],
             "type": "string"
           },
+          "code": {
+            "enum": [
+              "ENTITY_NOT_FOUND",
+              "ENTITY_CONFLICT",
+              "VALIDATION_REQUIRED",
+              "VALIDATION_FORMAT",
+              "VALIDATION_RANGE",
+              "CAPACITY_EXCEEDED",
+              "INVALID_STATE",
+              "DEPENDENCY_EXISTS",
+              "INVALID_REFERENCE",
+              "PERMISSION_TENANT_MANAGE",
+              "PERMISSION_EVENT_MANAGE",
+              "PERMISSION_HOUSEHOLD_MANAGE",
+              "PERMISSION_MEMBER_EDIT",
+              "PERMISSION_INTENT_ASSIGN",
+              "PERMISSION_MEALPLAN_MENU",
+              "PERMISSION_SENSITIVE_READ",
+              "PERMISSION_ROLE_ESCALATION"
+            ],
+            "type": "string",
+            "nullable": true
+          },
           "message": {
             "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false

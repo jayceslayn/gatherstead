@@ -542,7 +542,25 @@
     "serverError": "Algo salió mal. Por favor intenta de nuevo más tarde.",
     "networkError": "No es posible conectarse. Por favor verifica tu conexión a internet."
   },
-  "apiError": {},
+  "apiError": {
+    "entity": {
+      "accommodation": "alojamiento",
+      "property": "propiedad",
+      "householdMember": "miembro del hogar"
+    },
+    "ENTITY_NOT_FOUND": "No se encontró ese {entity}.",
+    "ENTITY_CONFLICT": "Ya existe un {entity} llamado '{name}' aquí.",
+    "VALIDATION_REQUIRED": "{field} es obligatorio.",
+    "INVALID_REFERENCE": "Esa referencia no es válida o ya no existe.",
+    "PERMISSION_TENANT_MANAGE": "No tienes permiso para administrar los recursos de este grupo.",
+    "PERMISSION_EVENT_MANAGE": "No tienes permiso para administrar los eventos de este grupo.",
+    "PERMISSION_HOUSEHOLD_MANAGE": "No tienes permiso para administrar este hogar.",
+    "PERMISSION_MEMBER_EDIT": "No tienes permiso para editar a este miembro.",
+    "PERMISSION_INTENT_ASSIGN": "No tienes permiso para asignar estancias a este miembro.",
+    "PERMISSION_MEALPLAN_MENU": "No tienes permiso para editar el menú de esta comida.",
+    "PERMISSION_SENSITIVE_READ": "No tienes permiso para ver estos datos confidenciales.",
+    "PERMISSION_ROLE_ESCALATION": "No puedes otorgar un rol con más privilegios que el tuyo."
+  },
   "demo": {
     "banner": {
       "title": "Modo Demostración",

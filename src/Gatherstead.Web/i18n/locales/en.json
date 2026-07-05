@@ -542,7 +542,25 @@
     "serverError": "Something went wrong. Please try again later.",
     "networkError": "Unable to connect. Please check your internet connection."
   },
-  "apiError": {},
+  "apiError": {
+    "entity": {
+      "accommodation": "accommodation",
+      "property": "property",
+      "householdMember": "household member"
+    },
+    "ENTITY_NOT_FOUND": "That {entity} could not be found.",
+    "ENTITY_CONFLICT": "An {entity} named '{name}' already exists here.",
+    "VALIDATION_REQUIRED": "{field} is required.",
+    "INVALID_REFERENCE": "That reference is invalid or no longer exists.",
+    "PERMISSION_TENANT_MANAGE": "You do not have permission to manage this group's resources.",
+    "PERMISSION_EVENT_MANAGE": "You do not have permission to manage events for this group.",
+    "PERMISSION_HOUSEHOLD_MANAGE": "You do not have permission to manage this household.",
+    "PERMISSION_MEMBER_EDIT": "You do not have permission to edit this member.",
+    "PERMISSION_INTENT_ASSIGN": "You do not have permission to assign stays for this member.",
+    "PERMISSION_MEALPLAN_MENU": "You do not have permission to edit this meal's menu.",
+    "PERMISSION_SENSITIVE_READ": "You do not have permission to view these sensitive details.",
+    "PERMISSION_ROLE_ESCALATION": "You cannot grant a role more privileged than your own."
+  },
   "demo": {
     "banner": {
       "title": "Demo Mode",

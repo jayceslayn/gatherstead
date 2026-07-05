@@ -135,4 +135,48 @@ public class AccommodationServiceTests : IAsyncLifetime
         Assert.Equal(BedSize.Single, bed.Size);
         Assert.Equal(3, bed.Quantity);
     }
+
+    [Fact]
+    public async Task CreateAsync_DuplicateName_ReturnsConflictCodeWithParams()
+    {
+        AddAccommodation("Lakeside Cabin");
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateManagerService().CreateAsync(_tenantId, _propertyId, new CreateAccommodationRequest
+        {
+            Name = "Lakeside Cabin",
+            Type = AccommodationType.Bedroom,
+        }, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Successful);
+        var error = Assert.Single(result.Messages, m => m.Type == MessageType.ERROR);
+        Assert.Equal(ErrorCode.ENTITY_CONFLICT, error.Code);
+        Assert.NotNull(error.Params);
+        Assert.Equal("accommodation", error.Params!["entity"]);
+        Assert.Equal("Lakeside Cabin", error.Params!["name"]);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RenameToExistingName_ReturnsConflictCodeWithParams()
+    {
+        var service = CreateManagerService();
+        AddAccommodation("Barn Loft");
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var toRename = await service.CreateAsync(_tenantId, _propertyId, new CreateAccommodationRequest
+        {
+            Name = "Guest Room",
+            Type = AccommodationType.Bedroom,
+        }, TestContext.Current.CancellationToken);
+
+        var result = await service.UpdateAsync(_tenantId, _propertyId, toRename.Entity!.Id, new UpdateAccommodationRequest
+        {
+            Name = "Barn Loft",
+            Type = AccommodationType.Bedroom,
+        }, TestContext.Current.CancellationToken);
+
+        Assert.False(result.Successful);
+        var error = Assert.Single(result.Messages, m => m.Type == MessageType.ERROR);
+        Assert.Equal(ErrorCode.ENTITY_CONFLICT, error.Code);
+        Assert.Equal("Barn Loft", error.Params!["name"]);
+    }
 }

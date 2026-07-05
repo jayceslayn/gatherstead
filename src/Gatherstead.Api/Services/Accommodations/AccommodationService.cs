@@ -112,7 +112,9 @@ public class AccommodationService : IAccommodationService
 
         if (!propertyExists)
         {
-            response.AddResponseMessage(MessageType.ERROR, "Property not found.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.ENTITY_NOT_FOUND,
+                "Property not found.",
+                new Dictionary<string, string> { ["entity"] = "property" });
             return response;
         }
 
@@ -122,7 +124,9 @@ public class AccommodationService : IAccommodationService
 
         if (duplicateExists)
         {
-            response.AddResponseMessage(MessageType.ERROR, $"An accommodation named '{normalizedName}' already exists in this property.");
+            response.AddResponseMessage(MessageType.ERROR, ErrorCode.ENTITY_CONFLICT,
+                $"An accommodation named '{normalizedName}' already exists in this property.",
+                new Dictionary<string, string> { ["entity"] = "accommodation", ["name"] = normalizedName });
             return response;
         }
 
@@ -213,7 +217,9 @@ public class AccommodationService : IAccommodationService
 
             if (duplicateExists)
             {
-                response.AddResponseMessage(MessageType.ERROR, $"An accommodation named '{normalizedName}' already exists in this property.");
+                response.AddResponseMessage(MessageType.ERROR, ErrorCode.ENTITY_CONFLICT,
+                    $"An accommodation named '{normalizedName}' already exists in this property.",
+                    new Dictionary<string, string> { ["entity"] = "accommodation", ["name"] = normalizedName });
                 return response;
             }
         }
