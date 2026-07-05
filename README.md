@@ -33,6 +33,7 @@ Gatherstead keeps sprawling families organized and together: one source of truth
 ## 📚 Documentation
 For more detailed information about the project, please see the following documents:
 
+- **[User Guide](docs/USER_GUIDE.md)**: A task-oriented walkthrough of the main flows — onboarding, households and members, properties/accommodations/equipment, events, and the shopping list.
 - **[Architecture](docs/ARCHITECTURE.md)**: An overview of the technology stack, domain-driven design, and technical conventions.
 - **[Design Principles](docs/DESIGN_PRINCIPLES.md)**: The guiding principles for security, privacy, and data safety.
 - **[Web UI Design](docs/WEB-UI-DESIGN.md)**: Frontend UX/UI conventions — components, status language, mobile-first, and interaction patterns.

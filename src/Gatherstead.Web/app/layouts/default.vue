@@ -6,7 +6,7 @@ import { useCurrentMemberStore } from '~/stores/member'
 const { t } = useI18n()
 const { logout, user } = useAuth()
 const tenantStore = useTenantStore()
-const { isManagerOrAbove } = useTenantRole()
+const { isManagerOrAbove, isMemberOrAbove } = useTenantRole()
 const currentMemberStore = useCurrentMemberStore()
 
 const primaryNavItems = computed(() => [[
@@ -19,13 +19,14 @@ const primaryNavItems = computed(() => [[
   { label: t('nav.shopping'), icon: 'i-heroicons-shopping-bag', to: '/app/shopping' },
 ]])
 
-const managementNavItems = computed(() => isManagerOrAbove.value
-  ? [[
-      { label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' },
-      { label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' },
-    ]]
-  : [],
-)
+// Reports are viewable by Member+ (aggregated dietary needs are allergy-safety info); Settings is
+// Manager+ only. Build the group from whichever items the current role can see.
+const managementNavItems = computed(() => {
+  const items: Array<{ label: string; icon: string; to: string }> = []
+  if (isMemberOrAbove.value) items.push({ label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' })
+  if (isManagerOrAbove.value) items.push({ label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' })
+  return items.length ? [items] : []
+})
 
 const accountMenuItems = computed(() => {
   const profileItem = (currentMemberStore.linkedMemberId && currentMemberStore.linkedHouseholdId)
@@ -82,12 +83,10 @@ const mobileMoreItems = computed(() => {
     { label: t('nav.equipment'), icon: 'i-heroicons-wrench-screwdriver', to: '/app/equipment' },
     { label: t('nav.shopping'), icon: 'i-heroicons-shopping-bag', to: '/app/shopping' },
   ]]
-  if (isManagerOrAbove.value) {
-    groups.push([
-      { label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' },
-      { label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' },
-    ])
-  }
+  const mgmt: Array<{ label: string; icon: string; to: string }> = []
+  if (isMemberOrAbove.value) mgmt.push({ label: t('nav.reports'), icon: 'i-heroicons-chart-bar', to: '/app/reports' })
+  if (isManagerOrAbove.value) mgmt.push({ label: t('nav.settings'), icon: 'i-heroicons-cog-6-tooth', to: '/app/settings' })
+  if (mgmt.length) groups.push(mgmt)
   return groups
 })
 
