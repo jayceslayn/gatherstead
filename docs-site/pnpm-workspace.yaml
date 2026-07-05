@@ -1,0 +1,5 @@
+# Native/build-script dependencies this project trusts to run install scripts (pnpm 11+).
+# Mirrors the allowlist convention in ../src/Gatherstead.Web/pnpm-workspace.yaml.
+allowBuilds:
+  esbuild: true
+  sharp: true

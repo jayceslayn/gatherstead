@@ -1,0 +1,24 @@
+{
+  "name": "gatherstead-docs",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gatherstead documentation site (Astro + Starlight), published at docs.gatherstead.app.",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.35.0",
+    "astro": "^5.7.0",
+    "sharp": "^0.34.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8"
+}

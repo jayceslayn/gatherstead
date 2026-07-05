@@ -1,0 +1,44 @@
+---
+title: Places & things
+description: Set up properties, the accommodations inside them, and shared equipment.
+sidebar:
+  order: 4
+---
+
+import AccessBadge from '../../../components/AccessBadge.astro';
+
+These are the physical side of a gathering — where you meet, where people sleep, and what gear is on hand.
+
+> **Access at a glance:** 🟢 Everyone can view · 🟠 Manager + can set up.
+
+## Browsing places and equipment
+
+<AccessBadge level="everyone" />
+
+- View properties, their accommodations, and the group's equipment, all read-only.
+
+## Setting up properties
+
+<AccessBadge level="manager" />
+
+- **Properties → Create**, then give the place a name (notes and attributes optional). Open a property to edit it, delete it, or manage its accommodations.
+
+## Setting up accommodations
+
+<AccessBadge level="manager" />
+
+Accommodations live **inside a property** — open the property's page and add them there:
+
+- **Name** and **Type** (Bedroom, Bunk, RV pad, Tent, or Offsite).
+- A **bed list** (size + how many of each) — Gatherstead uses this to work out how many people the spot sleeps.
+- Optional room dimensions and notes.
+
+:::note
+The top-level **Accommodations** page in the nav is *not* where you set rooms up — it's the member-facing screen for searching and requesting a place to stay (see [Events](/guide/events/)).
+:::
+
+## Setting up equipment
+
+<AccessBadge level="manager" />
+
+- **Equipment → Create**. Name the item and, if it lives at a particular property (say, kayaks at the lake house), assign it there — otherwise leave it as shared/group-wide. Search and filter the list by property.

@@ -1,0 +1,29 @@
+---
+title: Shopping list
+description: View and claim shopping items, and (for coordinators) edit the list.
+sidebar:
+  order: 6
+---
+
+import AccessBadge from '../../../components/AccessBadge.astro';
+
+The **Shopping** page turns headcounts and meal plans into a checklist anyone can pitch in on.
+
+> **Access at a glance:** 🟢 Everyone can view & claim · 🟡 Coordinator + can edit.
+
+## Viewing and claiming items (shop mode)
+
+<AccessBadge level="everyone" />
+
+1. Pick a **list** from the "View list" dropdown — either an **event** (which bundles the property's staples plus a section per planned meal) or a **property**. The list you're viewing is saved in the page's web address, so you can bookmark or share it.
+2. Items are grouped by where they come from (Meal / Event / Property) and sorted by when they're needed.
+3. On each item, tap **Claim** to pledge you'll bring it, **Got it** once you have it, or **Undo**. Enter a quantity so several people can cover one item between them — its status moves Needed → Claimed → Covered as pledges come in.
+4. **Filter** by date (with a "Show past" toggle), by source, or to **unfulfilled only**. The list refreshes itself periodically and warns you if it's gone stale.
+
+Your personal **My shopping** list — everything you've committed to — appears here and on the Dashboard.
+
+## Editing the list (edit mode)
+
+<AccessBadge level="coordinator" />
+
+- Switch to **edit mode** to add, edit, and remove items (name, quantity, unit, needed-by date, category, notes). Meal items keep the meal's date; claimed or covered item names lock (delete and recreate to rename).

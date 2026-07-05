@@ -1,0 +1,107 @@
+/* Gatherstead docs theme — mirrors the app's palette (src/Gatherstead.Web/app/assets/css/theme.css):
+   forest green accent, warm-stone neutrals. Values are the same oklch tokens the app ships. */
+
+/* Accent = forest green. */
+:root {
+  --sl-color-accent-low: oklch(0.18 0.04 142);
+  --sl-color-accent: oklch(0.53 0.1 142);
+  --sl-color-accent-high: oklch(0.86 0.05 142);
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: oklch(0.93 0.03 142);
+  --sl-color-accent: oklch(0.45 0.09 142);
+  --sl-color-accent-high: oklch(0.27 0.06 142);
+}
+
+/* Warm-stone tint on the primary chrome surfaces so the site reads like the app. */
+:root {
+  --sl-color-bg: oklch(0.15 0.003 80);
+  --sl-color-bg-sidebar: oklch(0.18 0.004 80);
+  --sl-color-bg-nav: oklch(0.18 0.004 80);
+}
+:root[data-theme='light'] {
+  --sl-color-bg: oklch(0.98 0.005 80);
+  --sl-color-bg-sidebar: oklch(0.96 0.008 80);
+  --sl-color-bg-nav: oklch(0.98 0.005 80);
+}
+
+/* The square house-mark logo — keep it nav-height so it doesn't dominate the title. */
+.site-title img {
+  height: 2rem;
+  width: auto;
+}
+
+/* Role filter — lives at the top of the left nav (see DocsSidebar.astro). */
+.gs-role-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 1.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+  background: var(--sl-color-gray-6);
+}
+.gs-role-filter__label {
+  font-size: var(--sl-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--sl-color-gray-2);
+}
+.gs-role-filter__select {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.4rem;
+  background: var(--sl-color-bg);
+  color: inherit;
+  font-size: var(--sl-text-sm);
+}
+
+/* Access badge — the pill under each section heading. Color encodes the required role, but is
+   never the only signal: each pill keeps its emoji + label (accessibility). These are semantic
+   role colors, deliberately distinct from the forest brand accent. */
+.gs-access-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.9rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--gs-badge-border, var(--sl-color-gray-5));
+  border-radius: 999px;
+  background: var(--gs-badge-bg, var(--sl-color-gray-6));
+  font-size: var(--sl-text-xs);
+  line-height: 1.4;
+}
+.gs-access-badge__key {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  opacity: 0.7;
+}
+.gs-access-badge__value {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gs-access-badge[data-access='everyone'] {
+  --gs-badge-bg: color-mix(in srgb, #2f7d4f 16%, transparent);
+  --gs-badge-border: color-mix(in srgb, #2f7d4f 45%, transparent);
+}
+.gs-access-badge[data-access='member'] {
+  --gs-badge-bg: color-mix(in srgb, #2f6fb0 16%, transparent);
+  --gs-badge-border: color-mix(in srgb, #2f6fb0 45%, transparent);
+}
+.gs-access-badge[data-access='coordinator'] {
+  --gs-badge-bg: color-mix(in srgb, #c9a227 20%, transparent);
+  --gs-badge-border: color-mix(in srgb, #c9a227 50%, transparent);
+}
+.gs-access-badge[data-access='manager'] {
+  --gs-badge-bg: color-mix(in srgb, #d97a2b 18%, transparent);
+  --gs-badge-border: color-mix(in srgb, #d97a2b 48%, transparent);
+}
+.gs-access-badge[data-access='owner'] {
+  --gs-badge-bg: color-mix(in srgb, #c0392b 18%, transparent);
+  --gs-badge-border: color-mix(in srgb, #c0392b 48%, transparent);
+}

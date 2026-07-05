@@ -1,0 +1,10 @@
+---
+// Overrides Starlight's left navigation to host the global role filter above the site nav,
+// then renders the default sidebar unchanged. Placing it here (rendered once per page) replaces
+// the per-page <RoleFilter /> includes.
+import Default from '@astrojs/starlight/components/Sidebar.astro';
+import RoleFilter from './RoleFilter.astro';
+---
+
+<RoleFilter />
+<Default><slot /></Default>

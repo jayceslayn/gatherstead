@@ -1,6 +1,6 @@
 ---
-updated: 2026-06-25
-commit: 31a127e
+updated: 2026-07-05
+commit: 72c9ef5
 ---
 
 # 🏡 Gatherstead
@@ -9,6 +9,8 @@ commit: 31a127e
 [![Coverage](https://codecov.io/gh/jayceslayn/gatherstead/graph/badge.svg)](https://codecov.io/gh/jayceslayn/gatherstead)
 
 Gatherstead keeps sprawling families organized and together: one source of truth for everyone’s details, and one place to plan every shared weekend, holiday, or reunion.
+
+**🚀 Try the live demo: [demo.gatherstead.app](https://demo.gatherstead.app)** — explore the full app with sample data, no sign-in required.
 
 ## 🤔 Why Gatherstead
 - **Lead with togetherness**: Make it easy for any relative to step in and coordinate—no more scattered spreadsheets or phone trees.
@@ -31,9 +33,10 @@ Gatherstead keeps sprawling families organized and together: one source of truth
 - **Invite the family in**: Tenant managers invite relatives by email; invitees join automatically the next time they sign in, whether or not they already have an account.
 
 ## 📚 Documentation
-For more detailed information about the project, please see the following documents:
+**User guide:** [docs.gatherstead.app](https://docs.gatherstead.app) — a task-oriented walkthrough of the main flows (onboarding, households, properties/accommodations/equipment, events, and the shopping list), filterable by your role. Built with Astro Starlight; source in [docs-site/](docs-site/).
 
-- **[User Guide](docs/USER_GUIDE.md)**: A task-oriented walkthrough of the main flows — onboarding, households and members, properties/accommodations/equipment, events, and the shopping list.
+For engineering and project detail, see the following documents:
+
 - **[Architecture](docs/ARCHITECTURE.md)**: An overview of the technology stack, domain-driven design, and technical conventions.
 - **[Design Principles](docs/DESIGN_PRINCIPLES.md)**: The guiding principles for security, privacy, and data safety.
 - **[Web UI Design](docs/WEB-UI-DESIGN.md)**: Frontend UX/UI conventions — components, status language, mobile-first, and interaction patterns.

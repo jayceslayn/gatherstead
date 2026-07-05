@@ -1,0 +1,25 @@
+---
+// A single-level access badge placed directly under a section heading.
+// Its `data-access` token is the contract the RoleFilter reads to show/hide the section,
+// and is the same stable vocabulary documented in the guide: everyone | member | coordinator | manager | owner.
+type Level = 'everyone' | 'member' | 'coordinator' | 'manager' | 'owner';
+
+interface Props {
+  level: Level;
+}
+
+const { level } = Astro.props;
+
+const LABELS: Record<Level, string> = {
+  everyone: '🟢 Everyone',
+  member: '🔵 Member +',
+  coordinator: '🟡 Coordinator +',
+  manager: '🟠 Manager +',
+  owner: '🔴 Owner',
+};
+---
+
+<p class="gs-access-badge" data-access={level}>
+  <span class="gs-access-badge__key">Access</span>
+  <span class="gs-access-badge__value">{LABELS[level]}</span>
+</p>

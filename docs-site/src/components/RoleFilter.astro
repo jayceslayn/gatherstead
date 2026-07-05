@@ -1,0 +1,117 @@
+---
+// Compact per-page control that filters sections to the reader's chosen role.
+// It reads the `data-access` token on each section's <AccessBadge> and hides sections
+// whose required level exceeds the selected role. The choice persists in localStorage,
+// so it carries across pages even though the control is rendered per page.
+---
+
+<div class="gs-role-filter" role="region" aria-label="Filter by role">
+  <label class="gs-role-filter__label" for="gs-role-select">Show steps for my role</label>
+  <select id="gs-role-select" class="gs-role-filter__select">
+    <option value="owner">Owner — see everything</option>
+    <option value="manager">Manager</option>
+    <option value="coordinator">Coordinator</option>
+    <option value="member" selected>Member</option>
+    <option value="guest">Guest</option>
+  </select>
+</div>
+
+<script>
+  // Lowest role a section requires (from its AccessBadge token).
+  const REQUIRED: Record<string, number> = {
+    everyone: 0,
+    member: 1,
+    coordinator: 2,
+    manager: 3,
+    owner: 4,
+  };
+  // The reader's own role level.
+  const ROLE: Record<string, number> = {
+    guest: 0,
+    member: 1,
+    coordinator: 2,
+    manager: 3,
+    owner: 4,
+  };
+  const STORAGE_KEY = 'gs-docs-role';
+
+  function isHeading(el: Element | null): el is HTMLElement {
+    return !!el && /^H[1-6]$/.test(el.tagName);
+  }
+  function rank(el: Element): number {
+    return Number(el.tagName[1]);
+  }
+
+  function applyFilter(roleLevel: number): void {
+    const content = document.querySelector('.sl-markdown-content');
+    if (!content) return;
+    const kids = Array.from(content.children);
+    // Ids of headings we hide, so the on-this-page table of contents can drop them too.
+    const hiddenHeadingIds = new Set<string>();
+
+    for (let i = 0; i < kids.length; i++) {
+      const heading = kids[i];
+      if (!isHeading(heading)) continue;
+
+      // A section is filterable only if a badge sits between this heading and the next one.
+      let badge: Element | null = null;
+      for (let j = i + 1; j < kids.length; j++) {
+        if (isHeading(kids[j])) break;
+        if (kids[j].classList.contains('gs-access-badge')) {
+          badge = kids[j];
+          break;
+        }
+      }
+      if (!badge) continue;
+
+      const required = REQUIRED[badge.getAttribute('data-access') ?? 'everyone'] ?? 0;
+      const hide = roleLevel < required;
+      const headingRank = rank(heading);
+
+      (heading as HTMLElement).style.display = hide ? 'none' : '';
+      if (hide && heading.id) hiddenHeadingIds.add(heading.id);
+      for (let j = i + 1; j < kids.length; j++) {
+        const el = kids[j];
+        if (isHeading(el) && rank(el) <= headingRank) break;
+        (el as HTMLElement).style.display = hide ? 'none' : '';
+        if (hide && isHeading(el) && el.id) hiddenHeadingIds.add(el.id);
+      }
+    }
+
+    filterTableOfContents(hiddenHeadingIds);
+  }
+
+  // Hide the on-this-page entries whose heading is filtered out (desktop sidebar + mobile dropdown),
+  // so lower-privileged readers don't see links to sections that aren't there for them.
+  function filterTableOfContents(hiddenHeadingIds: Set<string>): void {
+    const links = document.querySelectorAll<HTMLAnchorElement>(
+      'starlight-toc a[href^="#"], mobile-starlight-toc a[href^="#"]',
+    );
+    links.forEach((link) => {
+      const id = decodeURIComponent((link.getAttribute('href') ?? '').slice(1));
+      const item = link.closest('li');
+      if (!item) return;
+      (item as HTMLElement).style.display = id && hiddenHeadingIds.has(id) ? 'none' : '';
+    });
+  }
+
+  function init(): void {
+    const select = document.getElementById('gs-role-select') as HTMLSelectElement | null;
+    if (!select || select.dataset.bound === 'true') return;
+    select.dataset.bound = 'true';
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && saved in ROLE) select.value = saved;
+
+    const run = () => {
+      localStorage.setItem(STORAGE_KEY, select.value);
+      applyFilter(ROLE[select.value] ?? 1);
+    };
+    select.addEventListener('change', run);
+    run();
+  }
+
+  init();
+  // Re-run if Astro client-side navigation is ever enabled.
+  document.addEventListener('astro:page-load', init);
+</script>
