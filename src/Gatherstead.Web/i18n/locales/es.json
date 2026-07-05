@@ -394,6 +394,8 @@
     "checkOut": "Última noche",
     "propertyFilter": "Propiedades",
     "allProperties": "Todas las propiedades",
+    "typeFilter": "Tipos",
+    "allTypes": "Todos los tipos",
     "onlyAvailable": "Mostrar solo opciones con espacio",
     "available": "Disponible",
     "full": "Lleno",

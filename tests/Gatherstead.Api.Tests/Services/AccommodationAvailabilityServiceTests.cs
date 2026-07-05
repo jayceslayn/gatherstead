@@ -260,6 +260,30 @@ public class AccommodationAvailabilityServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SearchAsync_ScopedToSelectedTypes()
+    {
+        var result = await CreateService().SearchAsync(
+            _tenantId, Jun10, Jun12, 1, 0, requireCapacity: false,
+            types: [AccommodationType.Tent], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var only = Assert.Single(result.Entity!);
+        Assert.Equal(_uncapped, only.Id);
+    }
+
+    [Fact]
+    public async Task SearchAsync_EmptyTypes_SearchesAllTypes()
+    {
+        var result = await CreateService().SearchAsync(
+            _tenantId, Jun10, Jun12, 1, 0, requireCapacity: false,
+            types: [], cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        // Both fixture accommodations (a Bedroom and a Tent) are returned when no type filter applies.
+        Assert.Equal(2, result.Entity!.Count);
+    }
+
+    [Fact]
     public async Task SearchAsync_WrongTenantContext_ReturnsError()
     {
         var result = await CreateService(contextTenantId: Guid.NewGuid())

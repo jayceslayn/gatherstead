@@ -795,6 +795,23 @@
                 "format": "uuid"
               }
             }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "Bedroom",
+                  "Bunk",
+                  "RvPad",
+                  "Tent",
+                  "Offsite"
+                ],
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {

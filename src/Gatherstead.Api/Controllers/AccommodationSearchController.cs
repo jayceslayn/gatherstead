@@ -3,6 +3,7 @@ using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Api.Security;
 using Gatherstead.Api.Services.Accommodations;
 using Gatherstead.Api.Services.Validation;
+using Gatherstead.Data.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,10 +31,11 @@ public class AccommodationSearchController : ControllerBase
         [FromQuery] int? partyChildren,
         [FromQuery] bool? requireCapacity,
         [FromQuery] Guid[]? propertyIds,
+        [FromQuery] AccommodationType[]? types,
         CancellationToken cancellationToken)
     {
         var response = await _availabilityService.SearchAsync(
-            tenantId, startNight, endNight, partyAdults, partyChildren, requireCapacity ?? true, propertyIds, cancellationToken);
+            tenantId, startNight, endNight, partyAdults, partyChildren, requireCapacity ?? true, propertyIds, types, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
             return BadRequest(response);

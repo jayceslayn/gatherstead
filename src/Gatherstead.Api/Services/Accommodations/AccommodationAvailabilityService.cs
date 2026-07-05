@@ -28,6 +28,7 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
         int? partyChildren,
         bool requireCapacity,
         IReadOnlyCollection<Guid>? propertyIds = null,
+        IReadOnlyCollection<AccommodationType>? types = null,
         CancellationToken cancellationToken = default)
     {
         var response = new BaseEntityResponse<IReadOnlyCollection<AccommodationAvailabilityDto>>();
@@ -50,6 +51,13 @@ public class AccommodationAvailabilityService : IAccommodationAvailabilityServic
         {
             var propertyIdList = propertyIds.ToList();
             query = query.Where(a => propertyIdList.Contains(a.PropertyId));
+        }
+
+        // Scope to the selected accommodation types when any are given; an empty selection spans all types.
+        if (types is { Count: > 0 })
+        {
+            var typeList = types.ToList();
+            query = query.Where(a => typeList.Contains(a.Type));
         }
 
         var accommodations = await query

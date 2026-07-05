@@ -41,9 +41,13 @@ export class DemoAccommodationRepository implements IAccommodationRepository {
     const requestedParty = (query.partyAdults ?? 0) + (query.partyChildren ?? 0)
     // Scope to the selected properties when any are given; an empty list spans all properties.
     const propertyIds = query.propertyIds ?? []
+    // Scope to the selected accommodation types when any are given; an empty list spans all types.
+    const types = query.types ?? []
 
     const results = store.accommodations.value
-      .filter(a => a.tenantId === tenantId && (propertyIds.length === 0 || propertyIds.includes(a.propertyId)))
+      .filter(a => a.tenantId === tenantId
+        && (propertyIds.length === 0 || propertyIds.includes(a.propertyId))
+        && (types.length === 0 || types.includes(a.type)))
       .map((a): AccommodationAvailability => {
         // Two night spans overlap when each starts on or before the other ends. Declined stays free the slot.
         const overlapping = store.accommodationIntents.value.filter(

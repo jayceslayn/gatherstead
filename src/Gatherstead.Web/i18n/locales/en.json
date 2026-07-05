@@ -394,6 +394,8 @@
     "checkOut": "Last night",
     "propertyFilter": "Properties",
     "allProperties": "All properties",
+    "typeFilter": "Types",
+    "allTypes": "All types",
     "onlyAvailable": "Only show options with room",
     "available": "Available",
     "full": "Full",

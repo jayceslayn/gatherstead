@@ -4,7 +4,7 @@ import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 import { useAccommodationSearch, useAccommodationStayRequest } from '~/composables/useAccommodations'
 import { useProperties } from '~/composables/useProperties'
 import { useMyStays } from '~/composables/useMyUpcoming'
-import type { AccommodationAvailability, AccommodationIntentStatus } from '~/repositories/types'
+import type { AccommodationAvailability, AccommodationIntentStatus, AccommodationType } from '~/repositories/types'
 
 definePageMeta({ layout: 'default' })
 
@@ -33,6 +33,16 @@ const selectedPropertyIds = ref<string[]>(
   route.query.propertyId ? [route.query.propertyId as string] : [],
 )
 
+// Type filter — applied client-side over the search results. Empty selection spans every type.
+const ALL_ACCOMMODATION_TYPES: AccommodationType[] = ['Bedroom', 'Bunk', 'RvPad', 'Tent', 'Offsite']
+const typeItems = computed(() =>
+  ALL_ACCOMMODATION_TYPES.map(type => ({
+    label: t(`accommodation.types.${type.charAt(0).toLowerCase() + type.slice(1)}`),
+    value: type,
+  })),
+)
+const selectedTypes = ref<AccommodationType[]>([])
+
 const { results, hasSearched, params, pending, search, refresh: refreshSearch } = useAccommodationSearch()
 
 const orderedNights = computed(() =>
@@ -49,6 +59,7 @@ function runSearch() {
     partyChildren: partyChildren.value,
     requireCapacity: requireCapacity.value,
     propertyIds: selectedPropertyIds.value,
+    types: selectedTypes.value,
   })
 }
 
@@ -126,18 +137,32 @@ async function onSubmit(payload: {
           <UFormField :label="t('event.dateRangeLabel')">
             <GsDateRangePicker v-model:start-date="startNight" v-model:end-date="endNight" />
           </UFormField>
-          <UFormField :label="t('accommodations.propertyFilter')" class="mt-4">
-            <USelectMenu
-              v-model="selectedPropertyIds"
-              :items="propertyItems"
-              value-key="value"
-              :placeholder="t('accommodations.allProperties')"
-              :content="{ side: 'bottom' }"
-              multiple
-              clear
-              class="w-full"
-            />
-          </UFormField>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <UFormField :label="t('accommodations.propertyFilter')">
+              <USelectMenu
+                v-model="selectedPropertyIds"
+                :items="propertyItems"
+                value-key="value"
+                :placeholder="t('accommodations.allProperties')"
+                :content="{ side: 'bottom' }"
+                multiple
+                clear
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField :label="t('accommodations.typeFilter')">
+              <USelectMenu
+                v-model="selectedTypes"
+                :items="typeItems"
+                value-key="value"
+                :placeholder="t('accommodations.allTypes')"
+                :content="{ side: 'bottom' }"
+                multiple
+                clear
+                class="w-full"
+              />
+            </UFormField>
+          </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <UFormField :label="t('accommodation.partyAdults')">
               <UInput v-model.number="partyAdults" type="number" min="0" class="w-full" />

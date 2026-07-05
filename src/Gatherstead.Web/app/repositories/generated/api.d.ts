@@ -407,6 +407,7 @@ export interface paths {
                     partyChildren?: number;
                     requireCapacity?: boolean;
                     propertyIds?: string[];
+                    types?: ("Bedroom" | "Bunk" | "RvPad" | "Tent" | "Offsite")[];
                 };
                 header?: never;
                 path: {

@@ -367,6 +367,8 @@ export interface AccommodationAvailabilityQuery {
   requireCapacity: boolean
   /** Scopes the search to these properties; an empty/omitted list searches every property. */
   propertyIds?: string[] | null
+  /** Scopes the search to these accommodation types; an empty/omitted list spans every type. */
+  types?: AccommodationType[] | null
 }
 
 /** Room/spot dimensions in metres; area override wins over width × depth. Any field may be null. */
