@@ -10,6 +10,13 @@ const { t } = useI18n()
 const { isMemberOrAbove } = useTenantRole()
 const { events, pending } = useEvents()
 const { formatDateRange } = useFormatDate()
+
+const search = ref('')
+const filteredEvents = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return events.value
+  return events.value.filter(e => e.name.toLowerCase().includes(q))
+})
 </script>
 
 <template>
@@ -29,6 +36,10 @@ const { formatDateRange } = useFormatDate()
       </h2>
       <p class="text-sm text-muted mb-4">{{ t('report.chooseEvent') }}</p>
 
+      <div v-if="events.length" class="mb-4">
+        <GsSearchInput v-model="search" :placeholder="t('report.searchPlaceholder')" />
+      </div>
+
       <div v-if="pending" class="py-16 text-center">
         <p class="text-muted">{{ t('common.loading') }}</p>
       </div>
@@ -39,9 +50,15 @@ const { formatDateRange } = useFormatDate()
         :title="t('report.noEvents')"
       />
 
+      <GsEmptyState
+        v-else-if="!filteredEvents.length"
+        icon="i-heroicons-magnifying-glass"
+        :title="t('common.noResults')"
+      />
+
       <div v-else class="flex flex-col gap-3">
         <NuxtLink
-          v-for="event in events"
+          v-for="event in filteredEvents"
           :key="event.id"
           :to="`/app/reports/events/${event.id}`"
         >

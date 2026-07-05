@@ -9,6 +9,13 @@ const { t } = useI18n()
 const { isManagerOrAbove } = useTenantRole()
 const { events, pending } = useEvents()
 
+const search = ref('')
+const filteredEvents = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return events.value
+  return events.value.filter(e => e.name.toLowerCase().includes(q))
+})
+
 const viewMode = ref<'calendar' | 'list'>('list')
 
 onMounted(() => {
@@ -49,6 +56,10 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
       </div>
     </GsPageHeader>
 
+    <div v-if="events.length" class="mb-4">
+      <GsSearchInput v-model="search" :placeholder="t('event.searchPlaceholder')" />
+    </div>
+
     <div v-if="pending" class="py-16 text-center">
       <p class="text-muted">{{ t('common.loading') }}</p>
     </div>
@@ -64,10 +75,16 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
       </UButton>
     </GsEmptyState>
 
+    <GsEmptyState
+      v-else-if="!filteredEvents.length"
+      icon="i-heroicons-magnifying-glass"
+      :title="t('common.noResults')"
+    />
+
     <GsEventCalendarList
       v-else
       v-model:view-mode="viewMode"
-      :events="events"
+      :events="filteredEvents"
       :show-toggle="false"
     />
   </div>

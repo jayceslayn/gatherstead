@@ -15,6 +15,7 @@
     "create": "Crear",
     "confirm": "¿Estás seguro?",
     "search": "Buscar",
+    "clear": "Borrar",
     "selectDates": "Seleccionar fechas",
     "noResults": "No se encontraron resultados",
     "notes": "Notas",
@@ -155,6 +156,7 @@
   },
   "event": {
     "title": "Eventos",
+    "searchPlaceholder": "Buscar eventos…",
     "createTitle": "Crear Evento",
     "name": "Nombre del Evento",
     "startDate": "Fecha de Inicio",
@@ -294,6 +296,7 @@
   },
   "property": {
     "title": "Propiedades",
+    "searchPlaceholder": "Buscar propiedades…",
     "name": "Nombre de la Propiedad",
     "createTitle": "Crear Propiedad",
     "editTitle": "Editar Propiedad",
@@ -346,6 +349,7 @@
   },
   "report": {
     "title": "Informes",
+    "searchPlaceholder": "Buscar informes…",
     "subtitle": "Información sobre tus reuniones.",
     "eventReports": "Informes de Eventos",
     "chooseEvent": "Elige un evento para ver la asistencia y los detalles de planificación de comidas.",

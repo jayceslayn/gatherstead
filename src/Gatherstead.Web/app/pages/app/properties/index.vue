@@ -9,6 +9,13 @@ const { isManagerOrAbove } = useTenantRole()
 const { properties, pending, refresh } = useProperties()
 
 const showCreate = ref(false)
+
+const search = ref('')
+const filteredProperties = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return properties.value
+  return properties.value.filter(p => p.name.toLowerCase().includes(q))
+})
 </script>
 
 <template>
@@ -25,6 +32,10 @@ const showCreate = ref(false)
       </GsRoleGate>
     </GsPageHeader>
 
+    <div v-if="properties.length" class="mb-4">
+      <GsSearchInput v-model="search" :placeholder="t('property.searchPlaceholder')" />
+    </div>
+
     <div v-if="pending" class="py-16 text-center">
       <p class="text-muted">{{ t('common.loading') }}</p>
     </div>
@@ -40,9 +51,15 @@ const showCreate = ref(false)
       </UButton>
     </GsEmptyState>
 
+    <GsEmptyState
+      v-else-if="!filteredProperties.length"
+      icon="i-heroicons-magnifying-glass"
+      :title="t('common.noResults')"
+    />
+
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <NuxtLink
-        v-for="property in properties"
+        v-for="property in filteredProperties"
         :key="property.id"
         :to="`/app/properties/${property.id}`"
         class="block"

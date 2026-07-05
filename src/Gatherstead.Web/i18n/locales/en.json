@@ -15,6 +15,7 @@
     "create": "Create",
     "confirm": "Are you sure?",
     "search": "Search",
+    "clear": "Clear",
     "selectDates": "Select dates",
     "noResults": "No results found",
     "notes": "Notes",
@@ -155,6 +156,7 @@
   },
   "event": {
     "title": "Events",
+    "searchPlaceholder": "Search events…",
     "createTitle": "Create Event",
     "name": "Event Name",
     "startDate": "Start Date",
@@ -294,6 +296,7 @@
   },
   "property": {
     "title": "Properties",
+    "searchPlaceholder": "Search properties…",
     "name": "Property Name",
     "createTitle": "Create Property",
     "editTitle": "Edit Property",
@@ -346,6 +349,7 @@
   },
   "report": {
     "title": "Reports",
+    "searchPlaceholder": "Search reports…",
     "subtitle": "Insights across your gatherings.",
     "eventReports": "Event Reports",
     "chooseEvent": "Choose an event to see attendance and meal planning details.",
