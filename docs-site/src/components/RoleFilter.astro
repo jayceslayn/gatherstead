@@ -1,8 +1,8 @@
 ---
-// Compact per-page control that filters sections to the reader's chosen role.
-// It reads the `data-access` token on each section's <AccessBadge> and hides sections
-// whose required level exceeds the selected role. The choice persists in localStorage,
-// so it carries across pages even though the control is rendered per page.
+// Global control (mounted once via DocsSidebar.astro) that filters sections to the reader's
+// chosen role. It reads the `data-access` token on each section's <AccessBadge> and hides
+// sections whose required level exceeds the selected role. The choice persists in localStorage,
+// so it carries across pages.
 ---
 
 <div class="gs-role-filter" role="region" aria-label="Filter by role">
@@ -35,11 +35,21 @@
   };
   const STORAGE_KEY = 'gs-docs-role';
 
-  function isHeading(el: Element | null): el is HTMLElement {
-    return !!el && /^H[1-6]$/.test(el.tagName);
+  // A section boundary is a heading. Starlight ≥0.32 wraps each markdown heading in a
+  // <div class="sl-heading-wrapper level-hN">, so a direct child of .sl-markdown-content is a
+  // heading boundary if it is itself an <hN> (older Starlight) or such a wrapper. Return the
+  // inner heading element so callers can read its level and id.
+  function headingOf(el: Element | null): HTMLElement | null {
+    if (!el) return null;
+    if (/^H[1-6]$/.test(el.tagName)) return el as HTMLElement;
+    if (el.classList.contains('sl-heading-wrapper')) {
+      return el.querySelector('h1, h2, h3, h4, h5, h6');
+    }
+    return null;
   }
   function rank(el: Element): number {
-    return Number(el.tagName[1]);
+    const h = headingOf(el);
+    return h ? Number(h.tagName[1]) : 0;
   }
 
   function applyFilter(roleLevel: number): void {
@@ -51,12 +61,13 @@
 
     for (let i = 0; i < kids.length; i++) {
       const heading = kids[i];
-      if (!isHeading(heading)) continue;
+      const headEl = headingOf(heading);
+      if (!headEl) continue;
 
       // A section is filterable only if a badge sits between this heading and the next one.
       let badge: Element | null = null;
       for (let j = i + 1; j < kids.length; j++) {
-        if (isHeading(kids[j])) break;
+        if (headingOf(kids[j])) break;
         if (kids[j].classList.contains('gs-access-badge')) {
           badge = kids[j];
           break;
@@ -68,13 +79,15 @@
       const hide = roleLevel < required;
       const headingRank = rank(heading);
 
+      // Toggle the direct child (the heading wrapper) so the whole heading block hides.
       (heading as HTMLElement).style.display = hide ? 'none' : '';
-      if (hide && heading.id) hiddenHeadingIds.add(heading.id);
+      if (hide && headEl.id) hiddenHeadingIds.add(headEl.id);
       for (let j = i + 1; j < kids.length; j++) {
         const el = kids[j];
-        if (isHeading(el) && rank(el) <= headingRank) break;
+        if (headingOf(el) && rank(el) <= headingRank) break;
         (el as HTMLElement).style.display = hide ? 'none' : '';
-        if (hide && isHeading(el) && el.id) hiddenHeadingIds.add(el.id);
+        const h = headingOf(el);
+        if (hide && h && h.id) hiddenHeadingIds.add(h.id);
       }
     }
 
