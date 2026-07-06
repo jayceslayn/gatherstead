@@ -31,9 +31,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Version comes from the `packageManager` field in docs-site/package.json.
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
+        with:
+          version: '11.10.0'
 
       - name: Setup Node
         uses: actions/setup-node@v4
