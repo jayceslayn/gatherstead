@@ -15,17 +15,20 @@ const { saving, invite } = useInvitationActions(props.refresh)
 
 const ASSIGNABLE_ROLES: TenantRole[] = ['Manager', 'Coordinator', 'Member', 'Guest']
 
+// USelect (Reka UI) rejects empty-string item values, so use a sentinel for "no household".
+const NO_HOUSEHOLD = '__none__'
+
 const form = reactive({
   email: '',
   role: 'Member' as TenantRole,
-  householdId: '' as string,
+  householdId: NO_HOUSEHOLD,
   householdRole: 'Member' as HouseholdRole,
 })
 const emailError = ref('')
 
 const roleItems = computed(() => ASSIGNABLE_ROLES.map(r => ({ label: t(`tenantUser.roles.${r}`), value: r })))
 const householdItems = computed(() => [
-  { label: t('tenantUser.invite.noHousehold'), value: '' },
+  { label: t('tenantUser.invite.noHousehold'), value: NO_HOUSEHOLD },
   ...households.value.map(h => ({ label: h.name, value: h.id })),
 ])
 const householdRoleItems = computed(() => [
@@ -37,7 +40,7 @@ watch(open, (isOpen) => {
   if (isOpen) {
     form.email = ''
     form.role = 'Member'
-    form.householdId = ''
+    form.householdId = NO_HOUSEHOLD
     form.householdRole = 'Member'
     emailError.value = ''
   }
@@ -54,11 +57,12 @@ async function submit() {
     emailError.value = t('validation.invalidEmail')
     return
   }
+  const householdId = form.householdId === NO_HOUSEHOLD ? null : form.householdId
   const ok = await invite(
     email,
     form.role,
-    form.householdId || null,
-    form.householdId ? form.householdRole : null,
+    householdId,
+    householdId ? form.householdRole : null,
   )
   if (ok) open.value = false
 }
@@ -88,7 +92,7 @@ async function submit() {
           <USelect v-model="form.householdId" :items="householdItems" class="w-full" />
         </UFormField>
 
-        <UFormField v-if="form.householdId" :label="t('tenantUser.invite.householdRole')">
+        <UFormField v-if="form.householdId !== NO_HOUSEHOLD" :label="t('tenantUser.invite.householdRole')">
           <USelect v-model="form.householdRole" :items="householdRoleItems" class="w-full" />
         </UFormField>
       </div>
