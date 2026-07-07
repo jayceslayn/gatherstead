@@ -1,0 +1,28 @@
+---
+// Overrides Starlight's Hero to resolve `{{DEMO_URL}}` / `{{LIVE_URL}}` placeholder tokens in hero
+// action links against PUBLIC_DEMO_URL / PUBLIC_LIVE_URL (baked in at build time from repo vars
+// DEMO_URL / LIVE_URL — see .github/workflows/docs.yml). An action whose placeholder has no
+// matching env value is dropped entirely (unset = CTA hidden). Same override-then-delegate
+// pattern as DocsSidebar.astro.
+import Default from '@astrojs/starlight/components/Hero.astro';
+
+const ENV_LINKS: Record<string, string | undefined> = {
+  '{{DEMO_URL}}': import.meta.env.PUBLIC_DEMO_URL,
+  '{{LIVE_URL}}': import.meta.env.PUBLIC_LIVE_URL,
+};
+
+const { entry } = Astro.locals.starlightRoute;
+if (entry.data.hero?.actions) {
+  const actions = entry.data.hero.actions.flatMap((action) => {
+    if (!(action.link in ENV_LINKS)) return [action];
+    const url = ENV_LINKS[action.link];
+    return url ? [{ ...action, link: url }] : [];
+  });
+  Astro.locals.starlightRoute.entry = {
+    ...entry,
+    data: { ...entry.data, hero: { ...entry.data.hero, actions } },
+  };
+}
+---
+
+<Default><slot /></Default>

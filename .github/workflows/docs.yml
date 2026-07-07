@@ -46,7 +46,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Optional repo variables (public site URLs baked into the docs build; unset = CTA hidden):
+      #   DEMO_URL (the "Try the live demo" hero CTA), LIVE_URL (the "Visit the live site" hero CTA).
       - name: Build
+        env:
+          PUBLIC_DEMO_URL: ${{ vars.DEMO_URL }}
+          PUBLIC_LIVE_URL: ${{ vars.LIVE_URL }}
         run: pnpm build
 
       - name: Upload Pages artifact

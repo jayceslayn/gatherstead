@@ -23,6 +23,9 @@ export default defineConfig({
       components: {
         // Move the role filter into the global left nav so it isn't repeated on every page.
         Sidebar: './src/components/DocsSidebar.astro',
+        // Resolves {{DEMO_URL}}/{{LIVE_URL}} placeholder tokens in hero action links against
+        // env vars baked in at build time — see DocsHero.astro.
+        Hero: './src/components/DocsHero.astro',
       },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/jayceslayn/gatherstead' },
