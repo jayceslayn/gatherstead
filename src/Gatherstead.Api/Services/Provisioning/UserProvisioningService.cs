@@ -256,32 +256,44 @@ public class UserProvisioningService : IUserProvisioningService
     private static string JsonId(Guid? id) => id is null ? "null" : $"\"{id}\"";
 
     /// <summary>
-    /// Resolves the caller's email for invitation matching, but only when the identity provider
-    /// asserts it is verified. Auto-claiming an invitation grants real tenant membership, so an
-    /// unverified or self-asserted address (or a username-style <c>preferred_username</c>, which is
-    /// not guaranteed to be an email) must never drive that flow — doing so would allow a user to
-    /// claim an invitation intended for someone else's address and escalate privileges. When the
-    /// email cannot be trusted this returns null; the user is still provisioned, just without
-    /// auto-claim.
+    /// Resolves the caller's email for invitation matching. Auto-claiming grants real tenant
+    /// membership, so the address must be trustworthy. The API validates the token issuer
+    /// (<c>ValidateIssuer</c>/<c>ValidIssuer</c>, see Program.cs), so every principal here was issued
+    /// by our single configured Entra External ID tenant, which owns the account's email — verified
+    /// via email OTP at self-service sign-up, or asserted by the federated social IdP — and is not
+    /// self-assertable. We therefore trust the issuer's email and block only when the IdP
+    /// <em>explicitly</em> marks it unverified (see <see cref="IsEmailExplicitlyUnverified"/>),
+    /// returning null then so the user is still provisioned, just without auto-claim.
     /// </summary>
     private static string? ResolveEmail(ClaimsPrincipal principal)
     {
-        if (!IsEmailVerified(principal))
+        if (IsEmailExplicitlyUnverified(principal))
             return null;
 
         return ResolveEmailClaim(principal);
     }
 
     /// <summary>
-    /// Reads the caller's email claim (normalized) with no verification gate. Safe for display of the
-    /// caller's own profile — the value is echoed back to the caller and never drives invitation
-    /// matching, which stays gated behind <see cref="ResolveEmail"/>.
+    /// Reads the caller's email claim (normalized) with no verification gate. Prefers the dedicated
+    /// email claims, then falls back to <c>preferred_username</c> only when it is email-shaped —
+    /// Entra External ID email accounts carry the address there, and the frontend session uses the
+    /// same fallback. Safe for display of the caller's own profile; invitation matching stays gated
+    /// behind <see cref="ResolveEmail"/>.
     /// </summary>
     private static string? ResolveEmailClaim(ClaimsPrincipal principal)
     {
         var email = principal.FindFirst(ClaimTypes.Email)?.Value
             ?? principal.FindFirst("email")?.Value
             ?? principal.FindFirst("emails")?.Value;
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            // preferred_username is not guaranteed to be an email, so only accept it when it looks like one.
+            var preferredUsername = principal.FindFirst("preferred_username")?.Value;
+            if (!string.IsNullOrWhiteSpace(preferredUsername) && preferredUsername.Contains('@'))
+                email = preferredUsername;
+        }
+
         return string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
     }
 
@@ -298,13 +310,17 @@ public class UserProvisioningService : IUserProvisioningService
     }
 
     /// <summary>
-    /// True only when the IdP explicitly marks the email as verified. Treated as unverified when
-    /// the claim is absent so an IdP that omits it cannot silently enable auto-claim.
+    /// True only when the IdP <em>explicitly</em> asserts the email is not verified — a verification
+    /// claim is present and false. Entra's authoritative signal is <c>xms_edov</c> ("email domain
+    /// owner verified"); <c>email_verified</c>/<c>verified_email</c> are honored too for generic OIDC.
+    /// An absent claim is NOT treated as unverified: the token issuer is already validated upstream, so
+    /// we trust the issuer's email rather than blocking every login whose token omits the claim.
     /// </summary>
-    private static bool IsEmailVerified(ClaimsPrincipal principal)
+    private static bool IsEmailExplicitlyUnverified(ClaimsPrincipal principal)
     {
-        var verified = principal.FindFirst("email_verified")?.Value
+        var verified = principal.FindFirst("xms_edov")?.Value
+            ?? principal.FindFirst("email_verified")?.Value
             ?? principal.FindFirst("verified_email")?.Value;
-        return string.Equals(verified, "true", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(verified, "false", StringComparison.OrdinalIgnoreCase);
     }
 }
