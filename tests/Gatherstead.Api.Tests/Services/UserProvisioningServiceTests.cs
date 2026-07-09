@@ -37,15 +37,19 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     private static IHttpContextAccessor BuildAccessor(
         string? externalId = ExternalId,
         string? email = Email,
-        bool emailVerified = true,
+        bool? emailVerified = null,
+        string? preferredUsername = null,
         bool authenticated = true,
         string? displayName = null)
     {
         var claims = new List<Claim>();
         if (externalId is not null) claims.Add(new Claim("sub", externalId));
         if (email is not null) claims.Add(new Claim("email", email));
+        if (preferredUsername is not null) claims.Add(new Claim("preferred_username", preferredUsername));
         if (displayName is not null) claims.Add(new Claim("name", displayName));
-        claims.Add(new Claim("email_verified", emailVerified ? "true" : "false"));
+        // Verification claims are optional: a real Entra External ID access token often omits them, and
+        // the code trusts the validated issuer's email unless a claim is explicitly false.
+        if (emailVerified is not null) claims.Add(new Claim("email_verified", emailVerified.Value ? "true" : "false"));
 
         var identity = authenticated ? new ClaimsIdentity(claims, "TestAuth") : new ClaimsIdentity();
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
@@ -144,6 +148,51 @@ public class UserProvisioningServiceTests : IAsyncLifetime
         Assert.Equal(0, result.Entity!.ClaimedInvitations);
         Assert.False(await _dbContext.TenantUsers.IgnoreQueryFilters().AnyAsync(TestContext.Current.CancellationToken));
 
+        var invite = await _dbContext.Invitations.IgnoreQueryFilters().SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(InvitationStatus.Pending, invite.Status);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_NoVerificationClaim_ClaimsPendingInvitation()
+    {
+        // The real-world Entra External ID access token carries no email_verified claim. The issuer is
+        // validated upstream, so we trust its email and still claim the invitation.
+        SeedPendingInvitation(Email);
+
+        var result = await CreateService(BuildAccessor(emailVerified: null))
+            .BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(1, result.Entity!.ClaimedInvitations);
+        var invite = await _dbContext.Invitations.IgnoreQueryFilters().SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(InvitationStatus.Accepted, invite.Status);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_EmailOnlyInPreferredUsername_ClaimsInvitation()
+    {
+        // No dedicated email claim; the email lives in preferred_username (email-shaped) as Entra
+        // External ID email accounts present it.
+        SeedPendingInvitation(Email);
+
+        var result = await CreateService(BuildAccessor(email: null, preferredUsername: Email))
+            .BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(1, result.Entity!.ClaimedInvitations);
+    }
+
+    [Fact]
+    public async Task BootstrapAsync_NonEmailPreferredUsername_DoesNotClaim()
+    {
+        // A username-style preferred_username is not an email, so it must not drive invitation matching.
+        SeedPendingInvitation(Email);
+
+        var result = await CreateService(BuildAccessor(email: null, preferredUsername: "someusername"))
+            .BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(0, result.Entity!.ClaimedInvitations);
         var invite = await _dbContext.Invitations.IgnoreQueryFilters().SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal(InvitationStatus.Pending, invite.Status);
     }
