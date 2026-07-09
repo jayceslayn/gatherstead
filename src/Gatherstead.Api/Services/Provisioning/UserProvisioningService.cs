@@ -311,16 +311,27 @@ public class UserProvisioningService : IUserProvisioningService
 
     /// <summary>
     /// True only when the IdP <em>explicitly</em> asserts the email is not verified — a verification
-    /// claim is present and false. Entra's authoritative signal is <c>xms_edov</c> ("email domain
-    /// owner verified"); <c>email_verified</c>/<c>verified_email</c> are honored too for generic OIDC.
-    /// An absent claim is NOT treated as unverified: the token issuer is already validated upstream, so
-    /// we trust the issuer's email rather than blocking every login whose token omits the claim.
+    /// claim is present and equal to <c>false</c>. Every present claim is checked, so a negative signal
+    /// can't be masked by another claim taking precedence. An absent claim is NOT treated as unverified:
+    /// the token issuer is validated upstream, so we trust the issuer's email rather than blocking every
+    /// login whose token omits the claim. Entra External ID doesn't emit these natively today; they are
+    /// honored for a generic-OIDC / custom-claims-provider signal or a future federated IdP.
+    /// <para>
+    /// <c>xms_edov</c> is intentionally NOT consulted: it reports email <em>domain-owner</em>
+    /// verification, which is <c>false</c> for consumer-domain email+password accounts even when the
+    /// mailbox was OTP-verified at sign-up — gating on it would reject legitimate users. Revisit if a
+    /// federated/social IdP is added, where <c>xms_edov</c> becomes a meaningful discriminator.
+    /// </para>
     /// </summary>
     private static bool IsEmailExplicitlyUnverified(ClaimsPrincipal principal)
     {
-        var verified = principal.FindFirst("xms_edov")?.Value
-            ?? principal.FindFirst("email_verified")?.Value
-            ?? principal.FindFirst("verified_email")?.Value;
-        return string.Equals(verified, "false", StringComparison.OrdinalIgnoreCase);
+        string?[] verificationClaims =
+        [
+            principal.FindFirst("email_verified")?.Value,
+            principal.FindFirst("verified_email")?.Value,
+        ];
+        return Array.Exists(
+            verificationClaims,
+            v => string.Equals(v, "false", StringComparison.OrdinalIgnoreCase));
     }
 }

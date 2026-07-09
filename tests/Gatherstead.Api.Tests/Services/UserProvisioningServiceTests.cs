@@ -38,7 +38,6 @@ public class UserProvisioningServiceTests : IAsyncLifetime
         string? externalId = ExternalId,
         string? email = Email,
         bool? emailVerified = null,
-        bool? xmsEdov = null,
         string? preferredUsername = null,
         bool authenticated = true,
         string? displayName = null)
@@ -51,7 +50,6 @@ public class UserProvisioningServiceTests : IAsyncLifetime
         // Verification claims are optional: a real Entra External ID access token often omits them, and
         // the code trusts the validated issuer's email unless a claim is explicitly false.
         if (emailVerified is not null) claims.Add(new Claim("email_verified", emailVerified.Value ? "true" : "false"));
-        if (xmsEdov is not null) claims.Add(new Claim("xms_edov", xmsEdov.Value ? "true" : "false"));
 
         var identity = authenticated ? new ClaimsIdentity(claims, "TestAuth") : new ClaimsIdentity();
         var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
@@ -157,44 +155,17 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     [Fact]
     public async Task BootstrapAsync_NoVerificationClaim_ClaimsPendingInvitation()
     {
-        // The real-world Entra External ID access token carries no email_verified/xms_edov claim.
-        // The issuer is validated upstream, so we trust its email and still claim the invitation.
+        // The real-world Entra External ID access token carries no email_verified claim. The issuer is
+        // validated upstream, so we trust its email and still claim the invitation.
         SeedPendingInvitation(Email);
 
-        var result = await CreateService(BuildAccessor(emailVerified: null, xmsEdov: null))
+        var result = await CreateService(BuildAccessor(emailVerified: null))
             .BootstrapAsync(TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
         Assert.Equal(1, result.Entity!.ClaimedInvitations);
         var invite = await _dbContext.Invitations.IgnoreQueryFilters().SingleAsync(TestContext.Current.CancellationToken);
         Assert.Equal(InvitationStatus.Accepted, invite.Status);
-    }
-
-    [Fact]
-    public async Task BootstrapAsync_XmsEdovTrue_ClaimsInvitation()
-    {
-        SeedPendingInvitation(Email);
-
-        var result = await CreateService(BuildAccessor(xmsEdov: true))
-            .BootstrapAsync(TestContext.Current.CancellationToken);
-
-        Assert.True(result.Successful);
-        Assert.Equal(1, result.Entity!.ClaimedInvitations);
-    }
-
-    [Fact]
-    public async Task BootstrapAsync_XmsEdovFalse_DoesNotClaimInvitation()
-    {
-        // Entra's authoritative "email domain owner verified" signal explicitly says not verified.
-        SeedPendingInvitation(Email);
-
-        var result = await CreateService(BuildAccessor(xmsEdov: false))
-            .BootstrapAsync(TestContext.Current.CancellationToken);
-
-        Assert.True(result.Successful);
-        Assert.Equal(0, result.Entity!.ClaimedInvitations);
-        var invite = await _dbContext.Invitations.IgnoreQueryFilters().SingleAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(InvitationStatus.Pending, invite.Status);
     }
 
     [Fact]

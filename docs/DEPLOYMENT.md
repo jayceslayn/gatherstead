@@ -272,13 +272,15 @@ web app registration is attached to. In the **Microsoft Entra admin center** (ex
    **Applications** add the web app registration (`webExternalIdentityClientId`). This is what makes its
    `/authorize` requests offer sign-up.
 2. Set the flow's **identity providers** to include **Email with password** so users can self-register, and keep
-   **email one-time-passcode verification required** — every account must prove mailbox control, which is what
-   sets the `email_verified` claim the API relies on.
+   **email one-time-passcode verification required** — every account proves mailbox control at sign-up. That is the
+   trust basis for auto-claiming invitations by email: the API trusts the validated issuer's `email` claim (Entra
+   External ID does not emit a per-token `email_verified` for these accounts), blocking only an explicit unverified
+   signal (see below).
 3. **Abuse baseline — enable the flow's built-in CAPTCHA** to block scripted bot signups. This is the primary
    mitigation for open sign-up; the API layer already provides defence-in-depth: bootstrap (`POST /api/me/bootstrap`)
    is JWT-gated so a `User` row can only be written after a real sign-up, provisioning is idempotent per `ExternalId`
-   (one identity = one row), invitations auto-claim only when `email_verified == true` (a bogus account lands
-   group-less with no access), and a per-IP rate limit applies. **Known residual gaps, intentionally not addressed
+   (one identity = one row), invitations auto-claim only against the validated issuer's email and are blocked if the
+   IdP explicitly marks it unverified (a bogus account lands group-less with no access), and a per-IP rate limit applies. **Known residual gaps, intentionally not addressed
    here:** no WAF/Front Door in front of the App Services, no anomaly alerting on User-creation rate, and no cleanup
    job for orphaned zero-tenant users — the residual risk is junk-row accumulation, not unauthorized access.
 
@@ -292,7 +294,7 @@ must also **return** it as a token claim:
    collected, and under **Application claims** (the claims the token returns) tick **Display Name** so it is
    emitted as the `name` claim.
 2. The backend reads the claim from the **access token** presented to `POST /api/me/bootstrap` (the same way it
-   reads `email`/`email_verified`). Confirm `name` is present there. If a deployment only emits `name` on the
+   reads the `email` claim). Confirm `name` is present there. If a deployment only emits `name` on the
    id_token, the seed will be empty and the user can still set their name manually on the Account page.
 
 This claim list is configured **in the portal only** — it is not represented in the Bicep under `infrastructure/`,
