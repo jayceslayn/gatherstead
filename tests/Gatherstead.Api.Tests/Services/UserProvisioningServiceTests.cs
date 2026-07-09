@@ -153,6 +153,34 @@ public class UserProvisioningServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BootstrapAsync_DuplicateVerificationClaims_TrueThenFalse_DoesNotClaimInvitation()
+    {
+        // A custom claims transform can append a second email_verified claim after the original. FindFirst
+        // would only see the leading "true" and miss the veto; every present claim must be checked.
+        SeedPendingInvitation(Email);
+
+        var claims = new List<Claim>
+        {
+            new("sub", ExternalId),
+            new("email", Email),
+            new("email_verified", "true"),
+            new("email_verified", "false"),
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var httpContext = new DefaultHttpContext { User = new ClaimsPrincipal(identity) };
+        var accessor = new HttpContextAccessor { HttpContext = httpContext };
+
+        var result = await CreateService(accessor).BootstrapAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(0, result.Entity!.ClaimedInvitations);
+        Assert.False(await _dbContext.TenantUsers.IgnoreQueryFilters().AnyAsync(TestContext.Current.CancellationToken));
+
+        var invite = await _dbContext.Invitations.IgnoreQueryFilters().SingleAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(InvitationStatus.Pending, invite.Status);
+    }
+
+    [Fact]
     public async Task BootstrapAsync_NoVerificationClaim_ClaimsPendingInvitation()
     {
         // The real-world Entra External ID access token carries no email_verified claim. The issuer is

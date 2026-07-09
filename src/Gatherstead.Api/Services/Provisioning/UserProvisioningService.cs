@@ -325,13 +325,9 @@ public class UserProvisioningService : IUserProvisioningService
     /// </summary>
     private static bool IsEmailExplicitlyUnverified(ClaimsPrincipal principal)
     {
-        string?[] verificationClaims =
-        [
-            principal.FindFirst("email_verified")?.Value,
-            principal.FindFirst("verified_email")?.Value,
-        ];
-        return Array.Exists(
-            verificationClaims,
-            v => string.Equals(v, "false", StringComparison.OrdinalIgnoreCase));
+        var verificationClaims = principal.FindAll("email_verified")
+            .Concat(principal.FindAll("verified_email"));
+        return verificationClaims.Any(
+            c => string.Equals(c.Value, "false", StringComparison.OrdinalIgnoreCase));
     }
 }
