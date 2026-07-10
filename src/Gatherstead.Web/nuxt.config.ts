@@ -45,6 +45,19 @@ export default defineNuxtConfig({
     typeCheck: 'build',
   },
 
+  // Force dark theme app-wide. The light palette currently has poor contrast, so we lock the
+  // color mode to dark and disable system detection (`preference: 'dark'` ignores the OS setting;
+  // `fallback` is the belt-and-braces default). There is no in-app color-mode toggle, so this is
+  // the single point of control. Revisit when the light theme is properly tuned.
+  colorMode: {
+    preference: 'dark',
+    fallback: 'dark',
+    // A previously stored preference in localStorage would otherwise win over `preference` above,
+    // leaving existing visitors on light. Bumping the storage key ignores any stale value so dark
+    // applies for everyone. Bump again if the enforcement ever needs another hard reset.
+    storageKey: 'gs-color-mode-dark',
+  },
+
   // Bundle used icons into the client at build time instead of fetching them from the Iconify
   // CDN (api.iconify.design) at runtime. The demo deploys as a static site (pnpm generate) with
   // no icon server endpoint, so without this every icon is fetched cross-origin — which App
