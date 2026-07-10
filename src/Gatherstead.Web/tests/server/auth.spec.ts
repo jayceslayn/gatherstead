@@ -42,7 +42,7 @@ vi.stubGlobal('$fetch', $fetch)
 vi.stubGlobal('createError', createError)
 vi.stubGlobal('useRuntimeConfig', useRuntimeConfig)
 
-const { buildAuthority, getValidAccessToken } = await import('~~/server/utils/auth')
+const { buildAuthority, buildLogoutUrl, getValidAccessToken } = await import('~~/server/utils/auth')
 
 // The event object is only forwarded to the mocked session helpers, so a bare cast suffices.
 const event = {} as never
@@ -50,6 +50,15 @@ const event = {} as never
 describe('buildAuthority', () => {
   it('builds the CIAM authority URL for a tenant', () => {
     expect(buildAuthority('contoso')).toBe('https://contoso.ciamlogin.com/contoso.onmicrosoft.com')
+  })
+})
+
+describe('buildLogoutUrl', () => {
+  it('builds the CIAM end-session URL with an encoded post-logout redirect', () => {
+    expect(buildLogoutUrl('contoso', 'https://app.example.com/')).toBe(
+      'https://contoso.ciamlogin.com/contoso.onmicrosoft.com/oauth2/v2.0/logout'
+      + '?post_logout_redirect_uri=https%3A%2F%2Fapp.example.com%2F',
+    )
   })
 })
 

@@ -248,8 +248,15 @@ One-time setup after provisioning:
 3. **Web app registration** — under *Authentication → Platform configurations*, register the redirect URI
    `https://<webAppUrl>/auth/azure` under a **Web** platform (**not** Single-page application — a SPA
    registration forces a browser cross-origin redemption and rejects the server-side exchange with
-   `AADSTS9002327`/HTTP 400). Then under *Certificates & secrets* create a **client secret**, and store it
-   in Key Vault so the app setting resolves it:
+   `AADSTS9002327`/HTTP 400). On the same **Web** platform, also add `https://<webAppUrl>/` to the redirect
+   URIs (**with the trailing slash**): the explicit sign-out
+   ([server/routes/auth/logout.get.ts](../src/Gatherstead.Web/server/routes/auth/logout.get.ts)) performs a
+   *federated* logout at Entra's end-session endpoint with `post_logout_redirect_uri=https://<webAppUrl>/`,
+   and Entra only honours a post-logout redirect that exactly matches a registered redirect URI — otherwise
+   it strands the user on its own signed-out page. (The federated logout is what lets a signed-out user sign
+   in as a different account or reach "Create one"; a timed-out session still resumes silently because the
+   silent re-auth path does not federate.) Then under *Certificates & secrets* create a **client secret**,
+   and store it in Key Vault so the app setting resolves it:
    ```bash
    az keyvault secret set --vault-name <vault-name> --name web-external-identity-client-secret \
      --value "<the client secret value>"

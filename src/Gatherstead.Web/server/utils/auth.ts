@@ -13,6 +13,17 @@ export function buildAuthority(tenantName: string): string {
   return `https://${tenantName}.ciamlogin.com/${tenantName}.onmicrosoft.com`
 }
 
+// Entra External ID end-session (federated sign-out) endpoint. Hitting it terminates the IdP's SSO
+// cookie so the *next* /auth/azure login is a full sign-in (or "Create one" sign-up) instead of a silent
+// SSO re-auth. Used only by the explicit logout route (server/routes/auth/logout.get.ts) — the silent
+// re-auth path deliberately does not, so a timed-out session resumes without an account picker.
+// `postLogoutRedirectUri` must exactly match a redirect URI registered on the web app registration, or
+// Entra ignores it and strands the user on its own signed-out page (see docs/DEPLOYMENT.md).
+export function buildLogoutUrl(tenantName: string, postLogoutRedirectUri: string): string {
+  const query = new URLSearchParams({ post_logout_redirect_uri: postLogoutRedirectUri })
+  return `${buildAuthority(tenantName)}/oauth2/v2.0/logout?${query}`
+}
+
 // Refresh slightly before the real expiry so an in-flight request never carries a token that
 // expires mid-flight (independent of the API's own clock skew).
 const EXPIRY_SKEW_MS = 60_000
