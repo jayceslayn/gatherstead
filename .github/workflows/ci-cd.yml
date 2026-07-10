@@ -138,7 +138,8 @@ jobs:
   #   (KEYVAULT_CMK_ID is no longer used by CI — it's an input to the manual admin
   #    Always Encrypted setup; see docs/DEPLOYMENT.md.)
   # Optional repo variables (public site URLs baked into the web/demo builds; unset = link/CTA hidden):
-  #   PROJECT_GITHUB_URL, DOCS_URL, LIVE_URL (demo's "Go live" CTA), DEMO_URL (prod's "Try the Demo" CTA).
+  #   PROJECT_GITHUB_URL, DOCS_URL, LIVE_URL (demo's "Go live" CTA), DEMO_URL (prod's "Try the Demo" CTA),
+  #   CONTACT_EMAIL (mailto on the /contact page; unset = neutral fallback, no mailto link).
   # ---------------------------------------------------------------------------
 
   deploy-migrations:
@@ -284,6 +285,7 @@ jobs:
           NUXT_PUBLIC_GITHUB_URL: ${{ vars.PROJECT_GITHUB_URL }}
           NUXT_PUBLIC_DOCS_URL: ${{ vars.DOCS_URL }}
           NUXT_PUBLIC_DEMO_URL: ${{ vars.DEMO_URL }}
+          NUXT_PUBLIC_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
         run: pnpm build
 
       - name: Package
