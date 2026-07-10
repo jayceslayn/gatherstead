@@ -178,7 +178,14 @@ onMounted(() => {
         </template>
 
         <template #accommodations>
-          <div class="mt-4">
+          <div class="mt-4 space-y-4">
+            <GsMyUpcomingStays
+              :filter-start="event.startDate"
+              :filter-end="event.endDate"
+              :show-heading="false"
+              :limit="0"
+              hide-when-empty
+            />
             <UCard>
               <div class="flex flex-col items-center text-center gap-3 py-6">
                 <div class="rounded-lg bg-primary/10 p-3">

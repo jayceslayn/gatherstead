@@ -51,6 +51,11 @@ const endNight = ref('')
 
 const isEditing = computed(() => !!props.editIntent)
 
+// Confirmed/Declined are manager-set states absent from the Requested/Hold select. Show them read-only
+// so a member editing dates/party/notes can't blank the picker or silently downgrade the status.
+const statusLocked = computed(() =>
+  isEditing.value && !['Requested', 'Hold'].includes(props.editIntent?.status ?? 'Requested'))
+
 // No event context (e.g. the property accommodation page) → pick nights with free date inputs
 // instead of selecting from a fixed event-day list.
 const isFreeDates = computed(() => props.eventDays.length === 0)
@@ -167,7 +172,8 @@ function confirmDelete() {
         </p>
 
         <UFormField :label="t('accommodation.status')">
-          <USelect v-model="status" :items="statusItems" class="w-full" />
+          <GsStatusBadge v-if="statusLocked" :status="status" />
+          <USelect v-else v-model="status" :items="statusItems" class="w-full" />
         </UFormField>
 
         <div class="grid grid-cols-2 gap-3">

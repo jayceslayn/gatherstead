@@ -412,7 +412,9 @@
     "startTitle": "Search for a stay",
     "startHint": "Choose your party size and dates, then search to see availability.",
     "linkRequired": "Link your member profile to request a stay.",
-    "stayRequested": "Stay requested"
+    "stayRequested": "Stay requested",
+    "stayUpdated": "Stay updated",
+    "stayDeleted": "Stay removed"
   },
   "accommodation": {
     "types": {

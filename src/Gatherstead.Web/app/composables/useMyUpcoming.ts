@@ -1,7 +1,13 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useRepositories } from '~/composables/useRepositories'
-import type { MyStay, MyTask, ShoppingItem } from '~/repositories/types'
+import type {
+  AccommodationIntent,
+  AccommodationIntentStatus,
+  MyStay,
+  MyTask,
+  ShoppingItem,
+} from '~/repositories/types'
 
 function today(): string {
   return new Date().toISOString().substring(0, 10)
@@ -25,6 +31,89 @@ export function useMyStays() {
   )
 
   return { stays: computed(() => data.value ?? []), pending, error, refresh }
+}
+
+/**
+ * View/edit/delete actions for a member's own stay. A `MyStay` carries its own property + accommodation
+ * ids, so each action takes the stay (rather than binding a single accommodation via refs like
+ * `useAccommodationIntentActions`), letting one widget span stays across many accommodations.
+ */
+export function useMyStayActions() {
+  const tenantStore = useTenantStore()
+  const { accommodationIntents: repo } = useRepositories()
+  const toast = useToast()
+  const { translateError } = useApiError()
+  const submitting = ref(false)
+  const deleting = ref(false)
+
+  // `MyStay` omits `notes`, so load the full intent before editing to avoid blanking it on save.
+  async function loadIntent(stay: MyStay): Promise<AccommodationIntent | null> {
+    const tenantId = tenantStore.currentTenantId
+    if (!tenantId) return null
+    try {
+      const intents = await repo.listIntentsForMember(
+        tenantId, stay.propertyId, stay.accommodationId, stay.householdMemberId,
+      )
+      return intents.find(i => i.id === stay.id) ?? null
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return null
+    }
+  }
+
+  async function updateStay(
+    stay: MyStay,
+    payload: {
+      accommodationId: string
+      memberId: string
+      startNight: string
+      endNight: string
+      status: AccommodationIntentStatus
+      notes: string | null
+      partyAdults: number | null
+      partyChildren: number | null
+    },
+  ): Promise<boolean> {
+    const tenantId = tenantStore.currentTenantId
+    if (!tenantId) return false
+    submitting.value = true
+    try {
+      await repo.updateIntent(
+        tenantId, stay.propertyId, stay.accommodationId, stay.id,
+        payload.memberId, payload.accommodationId,
+        payload.startNight, payload.endNight, payload.status,
+        payload.notes, payload.partyAdults, payload.partyChildren,
+      )
+      return true
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
+    }
+    finally {
+      submitting.value = false
+    }
+  }
+
+  async function deleteStay(stay: MyStay): Promise<boolean> {
+    const tenantId = tenantStore.currentTenantId
+    if (!tenantId) return false
+    deleting.value = true
+    try {
+      await repo.deleteIntent(tenantId, stay.propertyId, stay.accommodationId, stay.id)
+      return true
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
+    }
+    finally {
+      deleting.value = false
+    }
+  }
+
+  return { submitting, deleting, loadIntent, updateStay, deleteStay }
 }
 
 /** The current member's volunteered tasks scheduled today or later. */

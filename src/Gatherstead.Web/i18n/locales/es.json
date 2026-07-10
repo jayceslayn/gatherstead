@@ -412,7 +412,9 @@
     "startTitle": "Busca un alojamiento",
     "startHint": "Elige el tamaño de tu grupo y las fechas, luego busca para ver la disponibilidad.",
     "linkRequired": "Vincula tu perfil de miembro para solicitar una estancia.",
-    "stayRequested": "Estancia solicitada"
+    "stayRequested": "Estancia solicitada",
+    "stayUpdated": "Estancia actualizada",
+    "stayDeleted": "Estancia eliminada"
   },
   "accommodation": {
     "types": {
