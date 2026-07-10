@@ -50,6 +50,11 @@ const accountMenuItems = computed(() => {
         icon: 'i-heroicons-arrow-path',
         to: '/tenants',
       },
+      {
+        label: t('nav.support'),
+        icon: 'i-heroicons-lifebuoy',
+        to: '/contact',
+      },
     ],
   ]
 
