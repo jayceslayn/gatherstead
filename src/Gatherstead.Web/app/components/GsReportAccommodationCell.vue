@@ -4,8 +4,6 @@ import { accommodationOccupancy, OCCUPANCY_COLOR } from '~/composables/useReport
 
 const props = defineProps<{
   acc: EventReportAccommodation
-  /** The day this cell renders, used to namespace the expand-state key (an accommodation repeats across days). */
-  day: string
   expanded: Set<string>
 }>()
 
@@ -13,7 +11,9 @@ const emit = defineEmits<{ toggle: [id: string] }>()
 
 const { t } = useI18n()
 
-const key = computed(() => `${props.day}:${props.acc.accommodationId}`)
+// Expand state is keyed by accommodation only, so toggling any day's cell
+// expands the whole lane — one click reveals a reservation's full span.
+const key = computed(() => props.acc.accommodationId)
 const occupancy = computed(() => accommodationOccupancy(props.acc))
 
 function isExpanded(id: string) {

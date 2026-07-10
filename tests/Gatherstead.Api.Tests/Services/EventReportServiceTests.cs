@@ -416,6 +416,48 @@ public class EventReportServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetEventMealReportAsync_DayAttendees_ExcludeNotGoingAndCarryHousehold()
+    {
+        _dbContext.EventAttendances.AddRange(
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = _alice, Day = Day1, Status = AttendanceStatus.Going },
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = _bob, Day = Day1, Status = AttendanceStatus.NotGoing },
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = _carol, Day = Day1, Status = AttendanceStatus.Maybe });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var day1 = result.Entity!.Days.Single(d => d.Day == Day1);
+        // Bob (NotGoing) is excluded; Alice and Carol carry status + household grouping data.
+        Assert.Equal(["Alice", "Carol"], day1.Attendees.Select(a => a.Name));
+        Assert.Equal(AttendanceStatus.Going, day1.Attendees[0].Status);
+        Assert.Equal(AttendanceStatus.Maybe, day1.Attendees[1].Status);
+        Assert.All(day1.Attendees, a => Assert.Equal(_householdId, a.HouseholdId));
+        Assert.All(day1.Attendees, a => Assert.Equal("Smith Household", a.HouseholdName));
+
+        Assert.Empty(result.Entity.Days.Single(d => d.Day == Day2).Attendees);
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_DayAttendees_GroupedByHouseholdThenName()
+    {
+        // "Aaa Household" (Zoe) precedes "Smith Household" (Alice) despite Alice < Zoe by name.
+        var otherHouseholdId = Guid.NewGuid();
+        var zoe = Guid.NewGuid();
+        _dbContext.Households.Add(new Household { Id = otherHouseholdId, TenantId = _tenantId, Name = "Aaa Household" });
+        _dbContext.HouseholdMembers.Add(new HouseholdMember { Id = zoe, TenantId = _tenantId, HouseholdId = otherHouseholdId, Name = "Zoe" });
+
+        _dbContext.EventAttendances.AddRange(
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = _alice, Day = Day1, Status = AttendanceStatus.Going },
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = zoe, Day = Day1, Status = AttendanceStatus.Going });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var day1 = result.Entity!.Days.Single(d => d.Day == Day1);
+        Assert.Equal(["Zoe", "Alice"], day1.Attendees.Select(a => a.Name));
+    }
+
+    [Fact]
     public async Task GetEventMealReportAsync_Attendees_GroupedByHouseholdThenName()
     {
         var otherHouseholdId = Guid.NewGuid();

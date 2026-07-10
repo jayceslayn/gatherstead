@@ -21,7 +21,8 @@
     "notes": "Notes",
     "unsavedChanges": "You have unsaved changes. Leave anyway?",
     "back": "Back",
-    "next": "Next"
+    "next": "Next",
+    "you": "(you)"
   },
   "collapsible": {
     "show": "Show details",
@@ -263,7 +264,7 @@
       "anytime": "Anytime",
       "volunteer": "Sign Up",
       "volunteered": "Signed Up",
-      "addVolunteer": "Add volunteer",
+      "addVolunteer": "Volunteer",
       "removeVolunteer": "Remove {name}",
       "noVolunteers": "No volunteers yet",
       "noTemplates": "No tasks have been set up for this event.",
@@ -369,6 +370,7 @@
       "dietaryNeeds": "Dietary Needs",
       "noDietaryNeeds": "No special dietary needs noted.",
       "attendees": "Attendees",
+      "noAttendees": "No one attending this day.",
       "noMeals": "No meals planned for this day.",
       "noData": "No attendance or meal data recorded yet.",
       "print": "Print",
@@ -382,7 +384,6 @@
       "comingSoon": "This report section is coming soon.",
       "noTasks": "No tasks for this day.",
       "noAccommodations": "No one staying this day.",
-      "assignees": "Assigned",
       "noAssignees": "No one assigned yet.",
       "assigneeCount": "{n} assigned",
       "assigneeRatio": "{n}/{m} assigned",

@@ -20,9 +20,21 @@ public record EventReportDayDto(
     [property: Required] DateOnly Day,
     [property: Required] int Going,
     [property: Required] int Maybe,
+    [property: Required] IReadOnlyList<EventReportDayAttendeeDto> Attendees,
     [property: Required] IReadOnlyList<EventReportMealDto> Meals,
     [property: Required] IReadOnlyList<EventReportTaskDto> Tasks,
     [property: Required] IReadOnlyList<EventReportAccommodationDto> Accommodations);
+
+/// <summary>
+/// A member attending (or maybe attending) the event on a given day. Household id/name are
+/// included so the report can group each day's attendees by household.
+/// </summary>
+public record EventReportDayAttendeeDto(
+    [property: Required] Guid MemberId,
+    [property: Required] string Name,
+    [property: Required] AttendanceStatus Status,
+    [property: Required] Guid HouseholdId,
+    [property: Required] string HouseholdName);
 
 /// <summary>
 /// A task plan for a given day/slot with its assignee count. Coverage status (covered / partial /

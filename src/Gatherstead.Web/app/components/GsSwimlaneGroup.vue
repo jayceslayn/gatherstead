@@ -12,12 +12,12 @@ import { swimlaneKey } from '~/composables/useSwimlane'
  */
 const props = withDefaults(defineProps<{
   days: string[]
-  /** CSS track size for each day column; defaults to a min-width that forces horizontal scroll when there are many days. */
-  dayColWidth?: string
+  /** Minimum CSS width of each day column; forces horizontal scroll when there are many days. */
+  dayMinWidth?: string
   /** Desktop scroll-box max height. */
   maxHeightClass?: string
 }>(), {
-  dayColWidth: 'minmax(15rem, 1fr)',
+  dayMinWidth: '15rem',
   maxHeightClass: 'lg:max-h-[34rem]',
 })
 
@@ -36,9 +36,16 @@ watch(days, (value) => {
 
 const selectedDay = computed(() => props.days[selectedDayIndex.value])
 
+// The header and every lane are independent grids, so their columns only align if
+// each grid resolves the same width. `min-w-max` would let a lane's content widen
+// its own grid past the others, drifting cells out from under the day headers —
+// instead every grid shares an identical explicit minimum (days × column minimum,
+// via the --gs-swimlane-min-w variable) so the 1fr tracks always match.
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${props.days.length}, ${props.dayColWidth})`,
+  gridTemplateColumns: `repeat(${props.days.length}, minmax(${props.dayMinWidth}, 1fr))`,
 }))
+
+const minWidthVar = computed(() => `calc(${props.days.length} * ${props.dayMinWidth})`)
 
 function prevDay() {
   selectedDayIndex.value = Math.max(0, selectedDayIndex.value - 1)
@@ -71,19 +78,20 @@ provide(swimlaneKey, { days, gridStyle, selectedDayIndex, selectedDay })
   <div
     class="lg:overflow-auto lg:rounded-lg lg:border lg:border-default lg:snap-both lg:snap-mandatory"
     :class="maxHeightClass"
-    :style="{ scrollPaddingTop: `${headerHeight}px` }"
+    :style="{ scrollPaddingTop: `${headerHeight}px`, '--gs-swimlane-min-w': minWidthVar }"
   >
     <!-- ── Sticky header ──────────────────────────────────────────── -->
-    <!-- lg:min-w-max stretches the header to the scrollable content width so its
-         background + border stay opaque past the initial (visible) render width. -->
-    <div ref="headerEl" class="sticky top-[var(--gs-banner-h,0px)] lg:top-0 z-20 lg:min-w-max bg-default border-b border-default">
+    <!-- The shared min-width stretches the header to the scrollable content width so
+         its background + border stay opaque past the initial (visible) render width,
+         while keeping its columns aligned with every lane's. -->
+    <div ref="headerEl" class="sticky top-[var(--gs-banner-h,0px)] lg:top-0 z-20 lg:min-w-[var(--gs-swimlane-min-w)] bg-default border-b border-default">
 
       <!-- Desktop: one cell per day, aligned to the lane columns below. -->
       <div class="hidden lg:grid" :style="gridStyle">
         <div
           v-for="(day, i) in days"
           :key="`header-${day}`"
-          class="px-2 py-2 border-default"
+          class="px-2 py-2 border-default min-w-0"
           :class="i > 0 ? 'border-l' : ''"
         >
           <slot name="day-header" :day="day" :index="i">

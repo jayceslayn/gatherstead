@@ -200,6 +200,20 @@ public class EventReportService : IEventReportService
             var going = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Going);
             var maybe = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Maybe);
 
+            // Who is there that day, grouped for the report by household (household name,
+            // then member name — same convention as attendee/occupant lists).
+            var dayAttendees = dayEventAttendance
+                .Where(a => a.Status != AttendanceStatus.NotGoing)
+                .Select(a => new EventReportDayAttendeeDto(
+                    a.HouseholdMemberId,
+                    memberById.GetValueOrDefault(a.HouseholdMemberId)?.Name ?? string.Empty,
+                    a.Status,
+                    memberById.GetValueOrDefault(a.HouseholdMemberId)?.HouseholdId ?? Guid.Empty,
+                    householdNameByMemberId.GetValueOrDefault(a.HouseholdMemberId, string.Empty)))
+                .OrderBy(a => a.HouseholdName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
             // Slot order (Breakfast→Lunch→Dinner), then the template with the earliest effective
             // plan, then the template with more effective plans, then name.
             var meals = plansByDay.GetValueOrDefault(day, [])
@@ -233,7 +247,7 @@ public class EventReportService : IEventReportService
                 dayAccommodations.Add(BuildAccommodation(accommodation, nightIntents, memberById, householdNameByMemberId));
             }
 
-            days.Add(new EventReportDayDto(day, going, maybe, meals, tasks, dayAccommodations));
+            days.Add(new EventReportDayDto(day, going, maybe, dayAttendees, meals, tasks, dayAccommodations));
         }
 
         response.SetSuccess(new EventReportDto(@event.Id, @event.Name, @event.StartDate, @event.EndDate, days));

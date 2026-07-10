@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import type { EventReportDay } from '~/repositories/types'
+import type { EventReportDay, EventReportDayAttendee } from '~/repositories/types'
 
-type Section = 'meals' | 'tasks' | 'accommodations'
+type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
 const props = defineProps<{
   day: EventReportDay
-  // The single section to render on screen. Ignored when forcePrint is set.
+  // The single section to render.
   section?: Section
   expanded: Set<string>
-  // When true (print stack), every section renders and detail prints expanded.
-  forcePrint?: boolean
 }>()
 
 const emit = defineEmits<{ toggle: [id: string] }>()
@@ -17,9 +15,21 @@ const emit = defineEmits<{ toggle: [id: string] }>()
 const { t } = useI18n()
 const { formatDay } = useFormatDate()
 
-const showMeals = computed(() => props.forcePrint || props.section === 'meals')
-const showTasks = computed(() => props.forcePrint || props.section === 'tasks')
-const showAccommodations = computed(() => props.forcePrint || props.section === 'accommodations')
+const showAttendance = computed(() => props.section === 'attendance')
+const showMeals = computed(() => props.section === 'meals')
+const showTasks = computed(() => props.section === 'tasks')
+const showAccommodations = computed(() => props.section === 'accommodations')
+
+// One cell per household (the day's attendees are already ordered household → member).
+const attendeesByHousehold = computed(() => {
+  const groups = new Map<string, EventReportDayAttendee[]>()
+  for (const attendee of props.day.attendees) {
+    const group = groups.get(attendee.householdId)
+    if (group) group.push(attendee)
+    else groups.set(attendee.householdId, [attendee])
+  }
+  return [...groups.values()]
+})
 </script>
 
 <template>
@@ -38,9 +48,21 @@ const showAccommodations = computed(() => props.forcePrint || props.section === 
     </header>
 
     <div class="space-y-5">
+      <!-- ── Attendance ────────────────────────────────────────── -->
+      <div v-if="showAttendance">
+        <p v-if="!day.attendees.length" class="text-sm text-muted">{{ t('report.event.noAttendees') }}</p>
+        <div v-else class="space-y-2">
+          <GsReportAttendanceCell
+            v-for="group in attendeesByHousehold"
+            :key="group[0]!.householdId"
+            :attendees="group"
+            show-title
+          />
+        </div>
+      </div>
+
       <!-- ── Meals ─────────────────────────────────────────────── -->
       <div v-if="showMeals">
-        <p v-if="forcePrint" class="text-xs font-medium uppercase tracking-wide text-muted mb-2">{{ t('event.meals') }}</p>
         <p v-if="!day.meals.length" class="text-sm text-muted">{{ t('report.event.noMeals') }}</p>
         <div v-else class="space-y-2">
           <GsReportMealCell
@@ -55,29 +77,25 @@ const showAccommodations = computed(() => props.forcePrint || props.section === 
 
       <!-- ── Tasks ─────────────────────────────────────────────── -->
       <div v-if="showTasks">
-        <p v-if="forcePrint" class="text-xs font-medium uppercase tracking-wide text-muted mb-2">{{ t('event.tasks') }}</p>
         <p v-if="!day.tasks.length" class="text-sm text-muted">{{ t('report.event.noTasks') }}</p>
         <div v-else class="space-y-2">
           <GsReportTaskCell
             v-for="task in day.tasks"
             :key="task.taskPlanId"
             :task="task"
-            :expanded="expanded"
-            @toggle="emit('toggle', $event)"
+            show-title
           />
         </div>
       </div>
 
       <!-- ── Accommodations ────────────────────────────────────── -->
       <div v-if="showAccommodations">
-        <p v-if="forcePrint" class="text-xs font-medium uppercase tracking-wide text-muted mb-2">{{ t('event.accommodations') }}</p>
         <p v-if="!day.accommodations.length" class="text-sm text-muted">{{ t('report.event.noAccommodations') }}</p>
         <div v-else class="space-y-2">
           <GsReportAccommodationCell
             v-for="acc in day.accommodations"
             :key="acc.accommodationId"
             :acc="acc"
-            :day="day.day"
             :expanded="expanded"
             @toggle="emit('toggle', $event)"
           />

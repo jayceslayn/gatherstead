@@ -108,6 +108,7 @@ export type ShoppingItemIntentStatus = NonNullable<S['ShoppingItemIntentDto']['s
 // ── Reports ───────────────────────────────────────────────────────────────
 export type EventReport = S['EventReportDto']
 export type EventReportDay = S['EventReportDayDto']
+export type EventReportDayAttendee = S['EventReportDayAttendeeDto']
 export type EventReportMeal = S['EventReportMealDto']
 export type EventReportAttendee = S['EventReportAttendeeDto']
 export type EventReportDietaryTally = S['DietaryTallyDto']

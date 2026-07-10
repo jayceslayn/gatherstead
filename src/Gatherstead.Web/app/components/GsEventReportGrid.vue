@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { EventReportDay } from '~/repositories/types'
-import { buildAccommodationLanes, buildMealLanes, buildTaskLanes, reportDayTotals } from '~/composables/useReportView'
+import { buildAccommodationLanes, buildAttendanceLanes, buildMealLanes, buildTaskLanes, reportDayTotals } from '~/composables/useReportView'
 
-type Section = 'meals' | 'tasks' | 'accommodations'
+type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
 const props = defineProps<{
   days: EventReportDay[]
@@ -21,6 +21,7 @@ const dayKeys = computed(() => props.days.map(d => d.day))
 const dayTotals = computed(() => reportDayTotals(props.days))
 const selectedDay = computed(() => props.days[selectedDayIndex.value]?.day)
 
+const attendanceLanes = computed(() => buildAttendanceLanes(props.days))
 const mealLanes = computed(() => buildMealLanes(props.days))
 const taskLanes = computed(() => buildTaskLanes(props.days))
 const accommodationLanes = computed(() => buildAccommodationLanes(props.days))
@@ -50,7 +51,23 @@ function laneTypeIcon(lane: { byDay: Record<string, { type: string }> }): string
       </template>
     </template>
 
-    <template v-if="section === 'meals'">
+    <template v-if="section === 'attendance'">
+      <GsSwimlane
+        v-for="lane in attendanceLanes"
+        :key="lane.key"
+        :title="lane.title"
+        :hide-when-empty="!selectedDay || !lane.byDay[selectedDay]"
+      >
+        <template #day="{ day }">
+          <GsReportAttendanceCell
+            v-if="lane.byDay[day]"
+            :attendees="lane.byDay[day]!"
+          />
+        </template>
+      </GsSwimlane>
+    </template>
+
+    <template v-else-if="section === 'meals'">
       <GsSwimlane
         v-for="lane in mealLanes"
         :key="lane.key"
@@ -81,8 +98,6 @@ function laneTypeIcon(lane: { byDay: Record<string, { type: string }> }): string
           <GsReportTaskCell
             v-if="lane.byDay[day]"
             :task="lane.byDay[day]!"
-            :expanded="expanded"
-            @toggle="emit('toggle', $event)"
           />
         </template>
       </GsSwimlane>
@@ -101,7 +116,6 @@ function laneTypeIcon(lane: { byDay: Record<string, { type: string }> }): string
           <GsReportAccommodationCell
             v-if="lane.byDay[day]"
             :acc="lane.byDay[day]!"
-            :day="day"
             :expanded="expanded"
             @toggle="emit('toggle', $event)"
           />

@@ -1,4 +1,4 @@
-import type { EventReportDay, EventReportTask, EventReportAccommodation, EventReportMeal } from '~/repositories/types'
+import type { EventReportDay, EventReportDayAttendee, EventReportTask, EventReportAccommodation, EventReportMeal } from '~/repositories/types'
 import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '~/composables/useTemplateOrder'
 import { compareAccommodations } from '~/utils/sorting'
 
@@ -22,19 +22,20 @@ export function taskCoverage(task: EventReportTask): CoverageStatus {
 /**
  * Badge colour for a task's minimum-assignee coverage, shared by the report and
  * the event sign-up so both highlight identically: green (met), amber (partial),
- * red (none yet). Tasks with no minimum stay neutral (white) — coverage is N/A.
+ * red (none yet). Tasks with no minimum have no threshold to miss, but still
+ * distinguish "someone signed up" (green) from "nobody yet" (neutral).
  */
 export function taskCoverageColor(
   assigneeCount: number,
   minimumAssignees: number | null | undefined,
 ): 'neutral' | 'success' | 'warning' | 'error' {
-  if (minimumAssignees == null) return 'neutral'
+  if (minimumAssignees == null) return assigneeCount > 0 ? 'success' : 'neutral'
   if (assigneeCount >= minimumAssignees) return 'success'
   if (assigneeCount > 0) return 'warning'
   return 'error'
 }
 
-export type OccupancyState = 'vacant' | 'partial' | 'full' | 'over' | 'unknown'
+export type OccupancyState = 'vacant' | 'partial' | 'full' | 'over'
 
 export interface Occupancy {
   capacity: number | null
@@ -48,19 +49,18 @@ export const OCCUPANCY_COLOR: Record<OccupancyState, 'neutral' | 'success' | 'wa
   partial: 'success',
   full: 'warning',
   over: 'error',
-  unknown: 'neutral',
 }
 
-/** Derives occupancy state from raw counts. Capacity null → 'unknown' (count only, no colour). */
+/** Derives occupancy state from raw counts. Capacity null → never full/over, but occupied vs vacant still shows. */
 export function occupancyState(occupied: number, capacity: number | null): OccupancyState {
-  if (capacity == null) return 'unknown'
   if (occupied === 0) return 'vacant'
+  if (capacity == null) return 'partial'
   if (occupied > capacity) return 'over'
   if (occupied >= capacity) return 'full'
   return 'partial'
 }
 
-/** Sleeps capacity vs occupied party size. Capacity null → state is 'unknown' (count only, no colour). */
+/** Sleeps capacity vs occupied party size. Capacity null → never full/over (badge text stays count-only). */
 export function accommodationOccupancy(acc: EventReportAccommodation): Occupancy {
   const capacity = acc.capacity ?? null
   return { capacity, occupied: acc.occupied, state: occupancyState(acc.occupied, capacity) }
@@ -143,6 +143,27 @@ function laneOrderKey(
 ): { slotRank: number, firstEffectiveDay: string, effectiveCount: number, title: string } {
   const plans = Object.entries(lane.byDay).map(([day, cell]) => ({ day, isException: cell.isException }))
   return { slotRank, ...planAggregate(plans), title: lane.title }
+}
+
+/**
+ * Groups each day's attendees into lanes by household (the day arrays are already
+ * ordered household → member, so per-day cell order needs no re-sort). Lanes are
+ * sorted by household name.
+ */
+export function buildAttendanceLanes(days: EventReportDay[]): ReportLane<EventReportDayAttendee[]>[] {
+  const lanes = new Map<string, ReportLane<EventReportDayAttendee[]>>()
+  for (const d of days) {
+    for (const attendee of d.attendees) {
+      let lane = lanes.get(attendee.householdId)
+      if (!lane) {
+        lane = { key: attendee.householdId, title: attendee.householdName, byDay: {} }
+        lanes.set(attendee.householdId, lane)
+      }
+      (lane.byDay[d.day] ??= []).push(attendee)
+    }
+  }
+  return [...lanes.values()].sort((a, b) =>
+    a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }))
 }
 
 /** Groups each day's accommodations into lanes by accommodation id. */

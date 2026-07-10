@@ -21,7 +21,8 @@
     "notes": "Notas",
     "unsavedChanges": "Tienes cambios sin guardar. ¿Salir de todas formas?",
     "back": "Atrás",
-    "next": "Siguiente"
+    "next": "Siguiente",
+    "you": "(tú)"
   },
   "collapsible": {
     "show": "Mostrar detalles",
@@ -263,7 +264,7 @@
       "anytime": "Cualquier momento",
       "volunteer": "Inscribirse",
       "volunteered": "Inscrito",
-      "addVolunteer": "Añadir voluntario",
+      "addVolunteer": "Voluntario",
       "removeVolunteer": "Quitar a {name}",
       "noVolunteers": "Aún no hay voluntarios",
       "noTemplates": "No se han configurado tareas para este evento.",
@@ -369,6 +370,7 @@
       "dietaryNeeds": "Necesidades Dietéticas",
       "noDietaryNeeds": "No se indicaron necesidades dietéticas especiales.",
       "attendees": "Asistentes",
+      "noAttendees": "Nadie asiste este día.",
       "noMeals": "No hay comidas planificadas para este día.",
       "noData": "Aún no se han registrado datos de asistencia o comidas.",
       "print": "Imprimir",
@@ -382,7 +384,6 @@
       "comingSoon": "Esta sección del informe estará disponible pronto.",
       "noTasks": "No hay tareas para este día.",
       "noAccommodations": "Nadie se aloja este día.",
-      "assignees": "Asignados",
       "noAssignees": "Aún no hay nadie asignado.",
       "assigneeCount": "{n} asignados",
       "assigneeRatio": "{n}/{m} asignados",

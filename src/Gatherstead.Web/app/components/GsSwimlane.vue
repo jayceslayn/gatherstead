@@ -20,10 +20,11 @@ const { days, gridStyle, selectedDay, selectedDayIndex } = useSwimlaneContext()
 </script>
 
 <template>
-  <!-- lg:min-w-max stretches the lane to the scrollable content width so its top
-       separator spans the full width when scrolled horizontally. The lane is the
-       y-axis snap target (start none — leave x-snapping to the day cells). -->
-  <div class="border-t border-default lg:min-w-max lg:[scroll-snap-align:start_none]" :class="{ 'hidden lg:block': hideWhenEmpty }">
+  <!-- The group's shared min-width stretches the lane to the scrollable content width
+       (keeping its columns aligned with the header's) so its top separator spans the
+       full width when scrolled horizontally. The lane is the y-axis snap target
+       (start none — leave x-snapping to the day cells). -->
+  <div class="border-t border-default lg:min-w-[var(--gs-swimlane-min-w)] lg:[scroll-snap-align:start_none]" :class="{ 'hidden lg:block': hideWhenEmpty }">
     <!-- Rule: optional leading slot + title + sub-description + trailing slot. -->
     <div class="flex items-center justify-between gap-2 px-2 pt-2 pb-1">
       <!-- Pinned to the left edge so the member/template name stays visible while
@@ -48,7 +49,7 @@ const { days, gridStyle, selectedDay, selectedDayIndex } = useSwimlaneContext()
       <div
         v-for="(day, i) in days"
         :key="day"
-        class="px-2 lg:[scroll-snap-align:none_start]"
+        class="px-2 min-w-0 lg:[scroll-snap-align:none_start]"
         :class="i > 0 ? 'border-l border-default/60' : ''"
       >
         <slot name="day" :day="day" :index="i" />

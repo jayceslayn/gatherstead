@@ -7,7 +7,7 @@ definePageMeta({
   layout: 'default',
 })
 
-type Section = 'meals' | 'tasks' | 'accommodations'
+type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -23,15 +23,16 @@ const hasAnyData = computed(() =>
   days.value.some(d => d.going > 0 || d.maybe > 0 || d.meals.length > 0 || d.tasks.length > 0 || d.accommodations.length > 0),
 )
 
-// Three independent section tabs, mirroring the event sign-up page. Computed so labels
-// re-translate on locale switch.
+// Four independent section tabs, mirroring the event sign-up page (attendance first).
+// Computed so labels re-translate on locale switch.
 const tabs = computed(() => [
+  { value: 'attendance' as Section, label: t('event.attendance'), icon: 'i-heroicons-user-group' },
   { value: 'meals' as Section, label: t('event.meals'), icon: 'i-heroicons-cake' },
   { value: 'tasks' as Section, label: t('event.tasks'), icon: 'i-heroicons-clipboard-document-list' },
   { value: 'accommodations' as Section, label: t('event.accommodations'), icon: 'i-heroicons-home' },
 ])
 
-const activeTab = ref<Section>('meals')
+const activeTab = ref<Section>('attendance')
 
 watch(activeTab, (value) => {
   history.replaceState(null, '', `#${value}`)
@@ -42,7 +43,8 @@ onMounted(() => {
   if (tabs.value.some(tab => tab.value === hash)) activeTab.value = hash as Section
 })
 
-// Progressive disclosure — attendee/assignee/occupant detail is collapsed by default.
+// Progressive disclosure — meal attendee and accommodation occupant detail is collapsed
+// by default (attendance and task cells render inline with nothing to expand).
 const expanded = ref<Set<string>>(new Set())
 function toggle(id: string) {
   const next = new Set(expanded.value)

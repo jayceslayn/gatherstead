@@ -2,6 +2,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 import { useEventTaskSignup, type TaskTemplateLane } from '~/composables/useTaskTemplates'
+import { useCurrentMemberStore } from '~/stores/member'
 
 const props = defineProps<{
   eventId: string
@@ -17,6 +18,13 @@ const selectedDayIndex = defineModel<number>('selectedDayIndex', { default: 0 })
 const { t } = useI18n()
 
 const { members } = useHouseholdMembers(computed(() => props.householdId))
+const memberStore = useCurrentMemberStore()
+
+// Highlight the signed-in user's own signups; never matches when no member is
+// linked or the selected household isn't theirs.
+function isCurrentUser(memberId: string) {
+  return memberStore.linkedMemberId === memberId
+}
 const {
   templateLanes,
   intentMap,
@@ -117,9 +125,14 @@ function laneSubtitle(lane: TaskTemplateLane): string | undefined {
               <div
                 v-for="member in planVolunteers(plan.id)"
                 :key="member.id"
-                class="flex items-center justify-between gap-2"
+                class="flex items-center justify-between gap-2 rounded-md"
+                :class="isCurrentUser(member.id) ? 'bg-(--ui-primary)/5 -mx-1 px-1 py-0.5' : ''"
               >
-                <span class="text-sm truncate">{{ member.name }}</span>
+                <span class="flex items-center gap-1.5 min-w-0">
+                  <GsMemberAvatar :name="member.name" size="xs" />
+                  <span class="text-sm truncate" :class="isCurrentUser(member.id) ? 'font-medium text-primary' : ''">{{ member.name }}</span>
+                  <span v-if="isCurrentUser(member.id)" class="text-xs text-primary shrink-0">{{ t('common.you') }}</span>
+                </span>
                 <UButton
                   color="neutral"
                   variant="ghost"

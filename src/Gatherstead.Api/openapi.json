@@ -9469,9 +9469,47 @@
         },
         "additionalProperties": false
       },
+      "EventReportDayAttendeeDto": {
+        "required": [
+          "householdId",
+          "householdName",
+          "memberId",
+          "name",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "Going",
+              "Maybe",
+              "NotGoing"
+            ],
+            "type": "string"
+          },
+          "householdId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "householdName": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "EventReportDayDto": {
         "required": [
           "accommodations",
+          "attendees",
           "day",
           "going",
           "maybe",
@@ -9491,6 +9529,12 @@
           "maybe": {
             "type": "integer",
             "format": "int32"
+          },
+          "attendees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventReportDayAttendeeDto"
+            }
           },
           "meals": {
             "type": "array",

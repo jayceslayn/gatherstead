@@ -4,15 +4,15 @@ import { useTenantRole } from '~/composables/useTenantRole'
 import { useFormatDate } from '~/composables/useFormatDate'
 
 // Dedicated, chrome-free print view. Opened in its own tab from the report page. The document
-// is organised by category (Meals / Tasks / Accommodations), each starting on a fresh page,
-// with the days listed underneath. A CSS running header (see @page block below) repeats the
-// event name, generated date, and current category across every printed page. The print
-// dialog opens automatically once data is ready.
+// is organised by category (Attendance / Meals / Tasks / Accommodations), each starting on a
+// fresh page, with the days listed underneath. A CSS running header (see @page block below)
+// repeats the event name, generated date, and current category across every printed page. The
+// print dialog opens automatically once data is ready.
 definePageMeta({
   layout: 'report-print',
 })
 
-type Section = 'meals' | 'tasks' | 'accommodations'
+type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -27,7 +27,8 @@ const days = computed(() => report.value?.days ?? [])
 // One section per category, carrying only the days that actually have data for it. Empty
 // categories are dropped so we never print a page of "No meals planned".
 const categories = computed(() => {
-  const defs: Array<{ value: Section; label: string; key: 'meals' | 'tasks' | 'accommodations' }> = [
+  const defs: Array<{ value: Section; label: string; key: 'attendees' | 'meals' | 'tasks' | 'accommodations' }> = [
+    { value: 'attendance', label: t('event.attendance'), key: 'attendees' },
     { value: 'meals', label: t('event.meals'), key: 'meals' },
     { value: 'tasks', label: t('event.tasks'), key: 'tasks' },
     { value: 'accommodations', label: t('event.accommodations'), key: 'accommodations' },

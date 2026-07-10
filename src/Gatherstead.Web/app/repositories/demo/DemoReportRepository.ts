@@ -2,6 +2,7 @@ import type { IReportRepository } from '../interfaces'
 import type {
   EventReport,
   EventReportDay,
+  EventReportDayAttendee,
   EventReportMeal,
   EventReportAttendee,
   EventReportDietaryTally,
@@ -85,6 +86,18 @@ export class DemoReportRepository implements IReportRepository {
       const dayEventAttendance = store.attendance.value.filter(a => a.eventId === eventId && a.day === day)
       const going = dayEventAttendance.filter(a => a.status === 'Going').length
       const maybe = dayEventAttendance.filter(a => a.status === 'Maybe').length
+
+      // Who is there that day, grouped by household then name (mirrors backend ordering).
+      const dayAttendees: EventReportDayAttendee[] = dayEventAttendance
+        .filter(a => a.status !== 'NotGoing')
+        .map((a): EventReportDayAttendee => ({
+          memberId: a.householdMemberId,
+          name: memberById.get(a.householdMemberId)?.name ?? '',
+          status: a.status,
+          householdId: memberById.get(a.householdMemberId)?.householdId ?? '',
+          householdName: householdNameForMember(a.householdMemberId),
+        }))
+        .sort((x, y) => byName(x.householdName, y.householdName) || byName(x.name, y.name))
 
       const dayPlans = eventMealPlans
         .filter(p => p.day === day)
@@ -194,7 +207,7 @@ export class DemoReportRepository implements IReportRepository {
         })
         .sort(compareAccommodations)
 
-      days.push({ day, going, maybe, meals, tasks, accommodations })
+      days.push({ day, going, maybe, attendees: dayAttendees, meals, tasks, accommodations })
     }
 
     return {

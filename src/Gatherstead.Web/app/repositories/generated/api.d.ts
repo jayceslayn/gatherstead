@@ -4949,6 +4949,16 @@ export interface components {
             dietary: string[];
             dietaryNotes?: string | null;
         };
+        EventReportDayAttendeeDto: {
+            /** Format: uuid */
+            memberId: string;
+            name: string;
+            /** @enum {string} */
+            status: "Going" | "Maybe" | "NotGoing";
+            /** Format: uuid */
+            householdId: string;
+            householdName: string;
+        };
         EventReportDayDto: {
             /** Format: date */
             day: string;
@@ -4956,6 +4966,7 @@ export interface components {
             going: number;
             /** Format: int32 */
             maybe: number;
+            attendees: components["schemas"]["EventReportDayAttendeeDto"][];
             meals: components["schemas"]["EventReportMealDto"][];
             tasks: components["schemas"]["EventReportTaskDto"][];
             accommodations: components["schemas"]["EventReportAccommodationDto"][];
