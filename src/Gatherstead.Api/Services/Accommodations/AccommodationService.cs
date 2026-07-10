@@ -42,9 +42,18 @@ public class AccommodationService : IAccommodationService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Beds and visible attributes ride along on lists (mirrors GetAsync) so cards render bed
+        // summaries and list-sourced edits don't wipe either collection. A caller with no tenant
+        // role sees no attributes, so skip loading them entirely; when both collections load,
+        // split the query to avoid a cartesian-product JOIN.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.Accommodations
             .AsNoTracking()
+            .Include(a => a.Beds)
             .Where(a => a.TenantId == tenantId && a.PropertyId == propertyId);
+        if (callerRole is not null)
+            query = query.Include(a => a.Attributes).AsSplitQuery();
 
         if (ids is not null)
         {
@@ -60,9 +69,8 @@ public class AccommodationService : IAccommodationService
             .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // List endpoints omit child collections (beds/attributes) — clients fetch them via single-GET.
         return BaseEntityResponse<IReadOnlyCollection<AccommodationDto>>.SuccessfulResponse(
-            accommodations.Select(a => MapToDto(a, [], [])).ToList());
+            accommodations.Select(a => MapToDto(a, MapBeds(a.Beds), AttributeVisibilityHelper.Visible(a.Attributes, callerRole))).ToList());
     }
 
     public async Task<AccommodationResponse> GetAsync(
@@ -81,6 +89,7 @@ public class AccommodationService : IAccommodationService
             _dbContext.Accommodations.AsNoTracking()
                 .Include(a => a.Attributes)
                 .Include(a => a.Beds)
+                .AsSplitQuery()
                 .Where(a => a.TenantId == tenantId && a.PropertyId == propertyId && a.Id == accommodationId),
             EntityDisplayName,
             cancellationToken);
@@ -88,7 +97,7 @@ public class AccommodationService : IAccommodationService
         if (accommodation is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(accommodation, MapBeds(accommodation.Beds), VisibleAttributes(accommodation.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(accommodation, MapBeds(accommodation.Beds), AttributeVisibilityHelper.Visible(accommodation.Attributes, callerRole)));
         return response;
     }
 
@@ -169,7 +178,7 @@ public class AccommodationService : IAccommodationService
                 _dbContext.AccommodationAttributes.Where(a => a.AccommodationId == accommodation.Id),
                 _dbContext.AccommodationAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new AccommodationAttribute { TenantId = tenantId, AccommodationId = accommodation.Id },
                 applyExtra: null,
@@ -178,7 +187,7 @@ public class AccommodationService : IAccommodationService
 
             var savedAttrs = await _dbContext.AccommodationAttributes.AsNoTracking()
                 .Where(a => a.AccommodationId == accommodation.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(accommodation, beds, attrs));
@@ -244,7 +253,7 @@ public class AccommodationService : IAccommodationService
                 _dbContext.AccommodationAttributes.Where(a => a.AccommodationId == accommodationId),
                 _dbContext.AccommodationAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new AccommodationAttribute { TenantId = tenantId, AccommodationId = accommodationId },
                 applyExtra: null,
@@ -263,7 +272,7 @@ public class AccommodationService : IAccommodationService
 
         var savedAttrs = await _dbContext.AccommodationAttributes.AsNoTracking()
             .Where(a => a.AccommodationId == accommodationId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(accommodation, beds ?? await LoadBedsAsync(accommodationId, cancellationToken), VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(accommodation, beds ?? await LoadBedsAsync(accommodationId, cancellationToken), AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -312,14 +321,6 @@ public class AccommodationService : IAccommodationService
         response.SetSuccess(MapToDto(accommodation, [], []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<AccommodationAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private async Task<IReadOnlyList<BedDto>> LoadBedsAsync(Guid accommodationId, CancellationToken ct)
     {

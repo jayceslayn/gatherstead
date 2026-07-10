@@ -44,9 +44,17 @@ public class HouseholdMemberService : IHouseholdMemberService
 
         var scope = await _memberAuthorizationService.GetSensitiveReadScopeAsync(tenantId, cancellationToken);
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // The list is scoped to one household, so the household role resolves once. Skip loading
+        // attributes when the caller has neither role, since none would be visible.
+        var tenantRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+        var householdRole = await _memberAuthorizationService.GetCallerHouseholdRoleAsync(tenantId, householdId, cancellationToken);
+
         var query = _dbContext.HouseholdMembers
             .AsNoTracking()
             .Where(m => m.TenantId == tenantId && m.HouseholdId == householdId);
+        if (tenantRole is not null || householdRole is not null)
+            query = query.Include(m => m.Attributes);
 
         if (ids is not null)
         {
@@ -62,7 +70,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         // mapped DTOs because the effective band may be derived from BirthDate (see MapToDto) and
         // Name is an Always Encrypted (PII) column that cannot be ORDER BY'd in SQL.
         var dtos = members
-            .Select(m => MapToDto(m, canReadSensitive, []))
+            .Select(m => MapToDto(m, canReadSensitive, AttributeVisibilityHelper.Visible(m.Attributes, tenantRole, householdRole)))
             .OrderBy(d => d.AgeBand.HasValue ? (int)d.AgeBand.Value : int.MaxValue)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -99,7 +107,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         var householdRole = await _memberAuthorizationService.GetCallerHouseholdRoleAsync(tenantId, householdId, cancellationToken);
 
         response.SetSuccess(MapToDto(member, scope.CanReadSensitive(householdId),
-            VisibleAttributes(member.Attributes, tenantRole, householdRole)));
+            AttributeVisibilityHelper.Visible(member.Attributes, tenantRole, householdRole)));
         return response;
     }
 
@@ -167,7 +175,7 @@ public class HouseholdMemberService : IHouseholdMemberService
                 _dbContext.HouseholdMemberAttributes.Where(a => a.HouseholdMemberId == member.Id),
                 _dbContext.HouseholdMemberAttributes,
                 request.Attributes,
-                a => IsVisibleAttribute(a, tenantRole, householdRole),
+                a => AttributeVisibilityHelper.IsVisible(a, tenantRole, householdRole),
                 tenantId,
                 () => new HouseholdMemberAttribute { TenantId = tenantId, HouseholdMemberId = member.Id },
                 applyExtra: (attr, entry) => attr.HouseholdMinRole = entry.HouseholdMinRole,
@@ -176,7 +184,7 @@ public class HouseholdMemberService : IHouseholdMemberService
 
             var savedAttrs = await _dbContext.HouseholdMemberAttributes.AsNoTracking()
                 .Where(a => a.HouseholdMemberId == member.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, tenantRole, householdRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, tenantRole, householdRole);
         }
 
         GathersteadMetrics.RecordMemberCreated(tenantId, householdId);
@@ -239,7 +247,7 @@ public class HouseholdMemberService : IHouseholdMemberService
                 _dbContext.HouseholdMemberAttributes.Where(a => a.HouseholdMemberId == memberId),
                 _dbContext.HouseholdMemberAttributes,
                 request.Attributes,
-                a => IsVisibleAttribute(a, tenantRole, householdRole),
+                a => AttributeVisibilityHelper.IsVisible(a, tenantRole, householdRole),
                 tenantId,
                 () => new HouseholdMemberAttribute { TenantId = tenantId, HouseholdMemberId = memberId },
                 applyExtra: (attr, entry) => attr.HouseholdMinRole = entry.HouseholdMinRole,
@@ -251,7 +259,7 @@ public class HouseholdMemberService : IHouseholdMemberService
         var savedAttrs = await _dbContext.HouseholdMemberAttributes.AsNoTracking()
             .Where(a => a.HouseholdMemberId == memberId).ToListAsync(cancellationToken);
         response.SetSuccess(MapToDto(member, canReadSensitive: true,
-            VisibleAttributes(savedAttrs, tenantRole, householdRole)));
+            AttributeVisibilityHelper.Visible(savedAttrs, tenantRole, householdRole)));
         return response;
     }
 
@@ -312,18 +320,6 @@ public class HouseholdMemberService : IHouseholdMemberService
             .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
-
-    private static bool IsVisibleAttribute(HouseholdMemberAttribute a, TenantRole? tenantRole, HouseholdRole? householdRole)
-        => (tenantRole.HasValue && tenantRole.Value <= (TenantRole)a.TenantMinRole)
-        || (householdRole.HasValue && a.HouseholdMinRole.HasValue && householdRole.Value <= (HouseholdRole)a.HouseholdMinRole.Value);
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<HouseholdMemberAttribute> attrs, TenantRole? tenantRole, HouseholdRole? householdRole)
-        => attrs
-            .Where(a => IsVisibleAttribute(a, tenantRole, householdRole))
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole, a.HouseholdMinRole))
-            .ToList();
 
     private HouseholdMemberDto MapToDto(HouseholdMember member, bool canReadSensitive, IReadOnlyList<AttributeDto> attributes)
     {

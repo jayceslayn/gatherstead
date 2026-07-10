@@ -45,9 +45,15 @@ public class EventService : IEventService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // A caller with no tenant role sees none, so skip loading them entirely.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.Events
             .AsNoTracking()
             .Where(e => e.TenantId == tenantId);
+        if (callerRole is not null)
+            query = query.Include(e => e.Attributes);
 
         if (ids is not null)
         {
@@ -59,7 +65,7 @@ public class EventService : IEventService
         var events = await query.ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<EventDto>>.SuccessfulResponse(
-            events.Select(e => MapToDto(e, [])).ToList());
+            events.Select(e => MapToDto(e, AttributeVisibilityHelper.Visible(e.Attributes, callerRole))).ToList());
     }
 
     public async Task<EventResponse> GetAsync(
@@ -83,7 +89,7 @@ public class EventService : IEventService
         if (@event is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(@event, VisibleAttributes(@event.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(@event, AttributeVisibilityHelper.Visible(@event.Attributes, callerRole)));
         return response;
     }
 
@@ -130,7 +136,7 @@ public class EventService : IEventService
                 _dbContext.EventAttributes.Where(a => a.EventId == @event.Id),
                 _dbContext.EventAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new EventAttribute { TenantId = tenantId, EventId = @event.Id },
                 applyExtra: null,
@@ -139,7 +145,7 @@ public class EventService : IEventService
 
             var savedAttrs = await _dbContext.EventAttributes.AsNoTracking()
                 .Where(a => a.EventId == @event.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(@event, attrs));
@@ -193,7 +199,7 @@ public class EventService : IEventService
                 _dbContext.EventAttributes.Where(a => a.EventId == eventId),
                 _dbContext.EventAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new EventAttribute { TenantId = tenantId, EventId = eventId },
                 applyExtra: null,
@@ -204,7 +210,7 @@ public class EventService : IEventService
 
         var savedAttrs = await _dbContext.EventAttributes.AsNoTracking()
             .Where(a => a.EventId == eventId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(@event, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(@event, AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -273,14 +279,6 @@ public class EventService : IEventService
         response.SetSuccess(MapToDto(@event, []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<EventAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private EventDto MapToDto(Event @event, IReadOnlyList<AttributeDto> attributes) => new(
         @event.Id,

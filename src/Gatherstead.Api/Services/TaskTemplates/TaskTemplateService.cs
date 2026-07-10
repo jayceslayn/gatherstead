@@ -46,9 +46,15 @@ public class TaskTemplateService : ITaskTemplateService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // A caller with no tenant role sees none, so skip loading them entirely.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.TaskTemplates
             .AsNoTracking()
             .Where(t => t.TenantId == tenantId && t.EventId == eventId);
+        if (callerRole is not null)
+            query = query.Include(t => t.Attributes);
 
         if (ids is not null)
         {
@@ -60,7 +66,7 @@ public class TaskTemplateService : ITaskTemplateService
         var templates = await query.ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<TaskTemplateDto>>.SuccessfulResponse(
-            templates.Select(t => MapToDto(t, [])).ToList());
+            templates.Select(t => MapToDto(t, AttributeVisibilityHelper.Visible(t.Attributes, callerRole))).ToList());
     }
 
     public async Task<TaskTemplateResponse> GetAsync(
@@ -85,7 +91,7 @@ public class TaskTemplateService : ITaskTemplateService
         if (template is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(template, VisibleAttributes(template.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(template, AttributeVisibilityHelper.Visible(template.Attributes, callerRole)));
         return response;
     }
 
@@ -160,7 +166,7 @@ public class TaskTemplateService : ITaskTemplateService
                 _dbContext.TaskTemplateAttributes.Where(a => a.TaskTemplateId == template.Id),
                 _dbContext.TaskTemplateAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new TaskTemplateAttribute { TenantId = tenantId, TaskTemplateId = template.Id },
                 applyExtra: null,
@@ -169,7 +175,7 @@ public class TaskTemplateService : ITaskTemplateService
 
             var savedAttrs = await _dbContext.TaskTemplateAttributes.AsNoTracking()
                 .Where(a => a.TaskTemplateId == template.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(template, attrs));
@@ -251,7 +257,7 @@ public class TaskTemplateService : ITaskTemplateService
                 _dbContext.TaskTemplateAttributes.Where(a => a.TaskTemplateId == templateId),
                 _dbContext.TaskTemplateAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new TaskTemplateAttribute { TenantId = tenantId, TaskTemplateId = templateId },
                 applyExtra: null,
@@ -262,7 +268,7 @@ public class TaskTemplateService : ITaskTemplateService
 
         var savedAttrs = await _dbContext.TaskTemplateAttributes.AsNoTracking()
             .Where(a => a.TaskTemplateId == templateId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(template, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(template, AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -305,14 +311,6 @@ public class TaskTemplateService : ITaskTemplateService
         response.SetSuccess(MapToDto(template, []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<TaskTemplateAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private TaskTemplateDto MapToDto(TaskTemplate t, IReadOnlyList<AttributeDto> attributes) => new(
         t.Id, t.TenantId, t.EventId, t.Name, (int)t.TimeSlots,

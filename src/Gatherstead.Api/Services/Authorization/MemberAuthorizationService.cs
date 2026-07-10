@@ -217,6 +217,15 @@ public class MemberAuthorizationService : IMemberAuthorizationService
         return householdUsers.FirstOrDefault(hu => hu.HouseholdId == householdId)?.Role;
     }
 
+    public async Task<CallerHouseholdRoles> GetCallerHouseholdRolesAsync(Guid tenantId, CancellationToken ct = default)
+    {
+        var userId = _currentUserContext.UserId;
+        if (!userId.HasValue) return CallerHouseholdRoles.Empty;
+        var householdUsers = await GetHouseholdUserRolesAsync(tenantId, userId.Value, ct);
+        // A user has at most one HouseholdUser row per household, so keys are unique.
+        return new CallerHouseholdRoles(householdUsers.ToDictionary(hu => hu.HouseholdId, hu => hu.Role));
+    }
+
     private async Task<TenantUserInfo?> GetTenantUserInfoAsync(Guid tenantId, Guid userId, CancellationToken ct)
     {
         var items = _httpContextAccessor.HttpContext?.Items;

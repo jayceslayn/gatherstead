@@ -42,9 +42,15 @@ public class EquipmentService : IEquipmentService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // A caller with no tenant role sees none, so skip loading them entirely.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.Equipment
             .AsNoTracking()
             .Where(e => e.TenantId == tenantId);
+        if (callerRole is not null)
+            query = query.Include(e => e.Attributes);
 
         if (ids is not null)
         {
@@ -77,7 +83,7 @@ public class EquipmentService : IEquipmentService
             .ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<EquipmentDto>>.SuccessfulResponse(
-            ordered.Select(e => MapToDto(e, [])).ToList());
+            ordered.Select(e => MapToDto(e, AttributeVisibilityHelper.Visible(e.Attributes, callerRole))).ToList());
     }
 
     public async Task<EquipmentResponse> GetAsync(
@@ -101,7 +107,7 @@ public class EquipmentService : IEquipmentService
         if (equipment is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(equipment, VisibleAttributes(equipment.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(equipment, AttributeVisibilityHelper.Visible(equipment.Attributes, callerRole)));
         return response;
     }
 
@@ -166,7 +172,7 @@ public class EquipmentService : IEquipmentService
                 _dbContext.EquipmentAttributes.Where(a => a.EquipmentId == equipment.Id),
                 _dbContext.EquipmentAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new EquipmentAttribute { TenantId = tenantId, EquipmentId = equipment.Id },
                 applyExtra: null,
@@ -175,7 +181,7 @@ public class EquipmentService : IEquipmentService
 
             var savedAttrs = await _dbContext.EquipmentAttributes.AsNoTracking()
                 .Where(a => a.EquipmentId == equipment.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(equipment, attrs));
@@ -246,7 +252,7 @@ public class EquipmentService : IEquipmentService
                 _dbContext.EquipmentAttributes.Where(a => a.EquipmentId == equipmentId),
                 _dbContext.EquipmentAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new EquipmentAttribute { TenantId = tenantId, EquipmentId = equipmentId },
                 applyExtra: null,
@@ -257,7 +263,7 @@ public class EquipmentService : IEquipmentService
 
         var savedAttrs = await _dbContext.EquipmentAttributes.AsNoTracking()
             .Where(a => a.EquipmentId == equipmentId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(equipment, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(equipment, AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -300,14 +306,6 @@ public class EquipmentService : IEquipmentService
         response.SetSuccess(MapToDto(equipment, []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<EquipmentAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private EquipmentDto MapToDto(Gatherstead.Data.Entities.Equipment e, IReadOnlyList<AttributeDto> attributes) => new(
         e.Id,

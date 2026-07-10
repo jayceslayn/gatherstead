@@ -46,9 +46,15 @@ public class MealTemplateService : IMealTemplateService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // A caller with no tenant role sees none, so skip loading them entirely.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.MealTemplates
             .AsNoTracking()
             .Where(t => t.TenantId == tenantId && t.EventId == eventId);
+        if (callerRole is not null)
+            query = query.Include(t => t.Attributes);
 
         if (ids is not null)
         {
@@ -60,7 +66,7 @@ public class MealTemplateService : IMealTemplateService
         var templates = await query.ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<MealTemplateDto>>.SuccessfulResponse(
-            templates.Select(t => MapToDto(t, [])).ToList());
+            templates.Select(t => MapToDto(t, AttributeVisibilityHelper.Visible(t.Attributes, callerRole))).ToList());
     }
 
     public async Task<MealTemplateResponse> GetAsync(
@@ -85,7 +91,7 @@ public class MealTemplateService : IMealTemplateService
         if (template is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(template, VisibleAttributes(template.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(template, AttributeVisibilityHelper.Visible(template.Attributes, callerRole)));
         return response;
     }
 
@@ -164,7 +170,7 @@ public class MealTemplateService : IMealTemplateService
                 _dbContext.MealTemplateAttributes.Where(a => a.MealTemplateId == template.Id),
                 _dbContext.MealTemplateAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new MealTemplateAttribute { TenantId = tenantId, MealTemplateId = template.Id },
                 applyExtra: null,
@@ -173,7 +179,7 @@ public class MealTemplateService : IMealTemplateService
 
             var savedAttrs = await _dbContext.MealTemplateAttributes.AsNoTracking()
                 .Where(a => a.MealTemplateId == template.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(template, attrs));
@@ -254,7 +260,7 @@ public class MealTemplateService : IMealTemplateService
                 _dbContext.MealTemplateAttributes.Where(a => a.MealTemplateId == templateId),
                 _dbContext.MealTemplateAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new MealTemplateAttribute { TenantId = tenantId, MealTemplateId = templateId },
                 applyExtra: null,
@@ -265,7 +271,7 @@ public class MealTemplateService : IMealTemplateService
 
         var savedAttrs = await _dbContext.MealTemplateAttributes.AsNoTracking()
             .Where(a => a.MealTemplateId == templateId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(template, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(template, AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -308,14 +314,6 @@ public class MealTemplateService : IMealTemplateService
         response.SetSuccess(MapToDto(template, []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<MealTemplateAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private MealTemplateDto MapToDto(MealTemplate t, IReadOnlyList<AttributeDto> attributes) => new(
         t.Id, t.TenantId, t.EventId, t.Name, (int)t.MealTypes,

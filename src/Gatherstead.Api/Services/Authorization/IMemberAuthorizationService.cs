@@ -76,4 +76,10 @@ public interface IMemberAuthorizationService
     /// HouseholdUser entry for that household. Used for household-attribute visibility filtering.
     /// </summary>
     Task<HouseholdRole?> GetCallerHouseholdRoleAsync(Guid tenantId, Guid householdId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the caller's HouseholdRole for every household they belong to in the tenant. Used for
+    /// per-row household-attribute visibility filtering in list endpoints.
+    /// </summary>
+    Task<CallerHouseholdRoles> GetCallerHouseholdRolesAsync(Guid tenantId, CancellationToken ct = default);
 }

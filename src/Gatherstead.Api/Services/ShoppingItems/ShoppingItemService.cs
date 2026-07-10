@@ -52,10 +52,17 @@ public class ShoppingItemService : IShoppingItemService
             return response;
         }
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // A caller with no tenant role sees none, so skip loading them entirely. When both Intents
+        // and Attributes load, split the query to avoid a cartesian-product JOIN.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.ShoppingItems
             .AsNoTracking()
             .Include(i => i.Intents)
             .Where(i => i.TenantId == tenantId);
+        if (callerRole is not null)
+            query = query.Include(i => i.Attributes).AsSplitQuery();
 
         if (eventId is Guid ev) query = query.Where(i => i.EventId == ev);
         if (propertyId is Guid prop) query = query.Where(i => i.PropertyId == prop);
@@ -67,7 +74,7 @@ public class ShoppingItemService : IShoppingItemService
             query = query.Where(i => i.Intents.Any(x => x.HouseholdMemberId == member && x.Status == ShoppingItemIntentStatus.Claimed));
 
         var items = await query.ToListAsync(cancellationToken);
-        var dtos = items.Select(i => MapToDto(i, [])).ToList();
+        var dtos = items.Select(i => MapToDto(i, AttributeVisibilityHelper.Visible(i.Attributes, callerRole))).ToList();
 
         // Status is derived from intents, so it can't be a SQL predicate — filter the mapped DTOs.
         if (status is ShoppingItemStatus st)
@@ -88,6 +95,7 @@ public class ShoppingItemService : IShoppingItemService
             _dbContext.ShoppingItems.AsNoTracking()
                 .Include(i => i.Attributes)
                 .Include(i => i.Intents)
+                .AsSplitQuery()
                 .Where(i => i.TenantId == tenantId && i.Id == itemId),
             EntityDisplayName,
             cancellationToken);
@@ -95,7 +103,7 @@ public class ShoppingItemService : IShoppingItemService
         if (item is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(item, VisibleAttributes(item.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(item, AttributeVisibilityHelper.Visible(item.Attributes, callerRole)));
         return response;
     }
 
@@ -196,7 +204,7 @@ public class ShoppingItemService : IShoppingItemService
 
             var savedAttrs = await _dbContext.ShoppingItemAttributes.AsNoTracking()
                 .Where(a => a.ShoppingItemId == item.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(item, attrs));
@@ -247,7 +255,7 @@ public class ShoppingItemService : IShoppingItemService
 
         var savedAttrs = await _dbContext.ShoppingItemAttributes.AsNoTracking()
             .Where(a => a.ShoppingItemId == itemId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(item, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(item, AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -418,18 +426,11 @@ public class ShoppingItemService : IShoppingItemService
             _dbContext.ShoppingItemAttributes.Where(a => a.ShoppingItemId == itemId),
             _dbContext.ShoppingItemAttributes,
             attributes,
-            a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+            a => AttributeVisibilityHelper.IsVisible(a, callerRole),
             tenantId,
             () => new ShoppingItemAttribute { TenantId = tenantId, ShoppingItemId = itemId },
             applyExtra: null,
             ct);
-
-    private static List<AttributeDto> VisibleAttributes(IEnumerable<ShoppingItemAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private ShoppingItemDto MapToDto(ShoppingItem i, IReadOnlyList<AttributeDto> attributes)
     {

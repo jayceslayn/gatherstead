@@ -118,7 +118,7 @@ public class TenantService : ITenantService
         }
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        response.SetSuccess(MapToDto(tenant, VisibleAttributes(tenant.Attributes, callerRole)));
+        response.SetSuccess(MapToDto(tenant, AttributeVisibilityHelper.Visible(tenant.Attributes, callerRole)));
         return response;
     }
 
@@ -228,7 +228,7 @@ public class TenantService : ITenantService
                 _dbContext.TenantAttributes.Where(a => a.TenantId == tenantId),
                 _dbContext.TenantAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new TenantAttribute { TenantId = tenantId },
                 applyExtra: null,
@@ -239,7 +239,7 @@ public class TenantService : ITenantService
 
         var savedAttrs = await _dbContext.TenantAttributes.AsNoTracking()
             .Where(a => a.TenantId == tenantId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(tenant, VisibleAttributes(savedAttrs, callerRole)));
+        response.SetSuccess(MapToDto(tenant, AttributeVisibilityHelper.Visible(savedAttrs, callerRole)));
         return response;
     }
 
@@ -281,14 +281,6 @@ public class TenantService : ITenantService
         response.SetSuccess(MapToDto(tenant, []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<TenantAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private TenantDto MapToDto(Tenant tenant, IReadOnlyList<AttributeDto> attributes) => new(
         tenant.Id,

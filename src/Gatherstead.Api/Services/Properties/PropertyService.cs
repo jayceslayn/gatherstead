@@ -41,9 +41,15 @@ public class PropertyService : IPropertyService
         if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
             return response;
 
+        // Attributes ride along on lists (mirrors GetAsync) so list-sourced edits don't wipe them.
+        // A caller with no tenant role sees none, so skip loading them entirely.
+        var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
+
         var query = _dbContext.Properties
             .AsNoTracking()
             .Where(p => p.TenantId == tenantId);
+        if (callerRole is not null)
+            query = query.Include(p => p.Attributes);
 
         if (ids is not null)
         {
@@ -55,7 +61,7 @@ public class PropertyService : IPropertyService
         var properties = await query.ToListAsync(cancellationToken);
 
         return BaseEntityResponse<IReadOnlyCollection<PropertyDto>>.SuccessfulResponse(
-            properties.Select(p => MapToDto(p, [])).ToList());
+            properties.Select(p => MapToDto(p, AttributeVisibilityHelper.Visible(p.Attributes, callerRole))).ToList());
     }
 
     public async Task<PropertyResponse> GetAsync(
@@ -79,7 +85,7 @@ public class PropertyService : IPropertyService
         if (property is null) return response;
 
         var callerRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
-        var attrs = VisibleAttributes(property.Attributes, callerRole);
+        var attrs = AttributeVisibilityHelper.Visible(property.Attributes, callerRole);
 
         response.SetSuccess(MapToDto(property, attrs));
         return response;
@@ -133,7 +139,7 @@ public class PropertyService : IPropertyService
                 _dbContext.PropertyAttributes.Where(a => a.PropertyId == property.Id),
                 _dbContext.PropertyAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new PropertyAttribute { TenantId = tenantId, PropertyId = property.Id },
                 applyExtra: null,
@@ -142,7 +148,7 @@ public class PropertyService : IPropertyService
 
             var savedAttrs = await _dbContext.PropertyAttributes.AsNoTracking()
                 .Where(a => a.PropertyId == property.Id).ToListAsync(cancellationToken);
-            attrs = VisibleAttributes(savedAttrs, callerRole);
+            attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
         }
 
         response.SetSuccess(MapToDto(property, attrs));
@@ -200,7 +206,7 @@ public class PropertyService : IPropertyService
                 _dbContext.PropertyAttributes.Where(a => a.PropertyId == propertyId),
                 _dbContext.PropertyAttributes,
                 request.Attributes,
-                a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole,
+                a => AttributeVisibilityHelper.IsVisible(a, callerRole),
                 tenantId,
                 () => new PropertyAttribute { TenantId = tenantId, PropertyId = propertyId },
                 applyExtra: null,
@@ -211,7 +217,7 @@ public class PropertyService : IPropertyService
 
         var savedAttrs = await _dbContext.PropertyAttributes.AsNoTracking()
             .Where(a => a.PropertyId == propertyId).ToListAsync(cancellationToken);
-        var attrs = VisibleAttributes(savedAttrs, callerRole);
+        var attrs = AttributeVisibilityHelper.Visible(savedAttrs, callerRole);
 
         response.SetSuccess(MapToDto(property, attrs));
         return response;
@@ -255,14 +261,6 @@ public class PropertyService : IPropertyService
         response.SetSuccess(MapToDto(property, []));
         return response;
     }
-
-    private static List<AttributeDto> VisibleAttributes(
-        IEnumerable<PropertyAttribute> attrs, TenantRole? callerRole)
-        => attrs
-            .Where(a => callerRole.HasValue && callerRole.Value <= (TenantRole)a.TenantMinRole)
-            .OrderBy(a => a.Key)
-            .Select(a => new AttributeDto(a.Id, a.Key, a.Value, a.TenantMinRole))
-            .ToList();
 
     private PropertyDto MapToDto(Property p, IReadOnlyList<AttributeDto> attributes) => new(
         p.Id,

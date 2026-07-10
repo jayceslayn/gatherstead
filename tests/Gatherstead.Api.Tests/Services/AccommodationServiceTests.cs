@@ -117,6 +117,30 @@ public class AccommodationServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListAsync_IncludesBeds()
+    {
+        // Regression: the property page renders bed summaries from the list response, so ListAsync
+        // must carry beds (it previously mapped an empty collection, so cards showed nothing and the
+        // edit modal re-sent an empty bed list that wiped the inventory).
+        var service = CreateManagerService();
+        var created = await service.CreateAsync(_tenantId, _propertyId, new CreateAccommodationRequest
+        {
+            Name = "Cabin A",
+            Type = AccommodationType.Bedroom,
+            Beds = [new BedWriteEntry(BedSize.Queen, 2), new BedWriteEntry(BedSize.Single, 1)],
+        }, TestContext.Current.CancellationToken);
+        Assert.True(created.Successful);
+
+        var list = await CreateService().ListAsync(_tenantId, _propertyId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(list.Successful);
+        var listed = Assert.Single(list.Entity!);
+        Assert.Equal(2, listed.Beds.Count);
+        Assert.Equal(2, listed.Beds.Single(b => b.Size == BedSize.Queen).Quantity);
+        Assert.Equal(1, listed.Beds.Single(b => b.Size == BedSize.Single).Quantity);
+    }
+
+    [Fact]
     public async Task CreateAsync_AreaOverride_WinsOverWidthTimesDepth()
     {
         var service = CreateManagerService();

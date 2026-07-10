@@ -30,11 +30,12 @@ public class EquipmentServiceTests : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 
-    private EquipmentService CreateService(bool canManage = false, Guid? contextTenantId = null)
+    private EquipmentService CreateService(bool canManage = false, Guid? contextTenantId = null, TenantRole? callerRole = null)
     {
         var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == (contextTenantId ?? _tenantId));
         var auth = Mock.Of<IMemberAuthorizationService>(a =>
-            a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManage));
+            a.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManage) &&
+            a.GetCallerTenantRoleAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(callerRole));
         return new EquipmentService(_dbContext, tenantContext, auth,
             Mock.Of<Gatherstead.Api.Contracts.Responses.IAuditVisibilityContext>());
     }
@@ -215,5 +216,36 @@ public class EquipmentServiceTests : IAsyncLifetime
         Assert.True(result.Successful);
         // Alpine Lodge (Mop), then Test Property by name (Axe, Zzz Rake), then unassigned (Aaa Gear).
         Assert.Equal(["Mop", "Axe", "Zzz Rake", "Aaa Gear"], result.Entity!.Select(e => e.Name));
+    }
+
+    [Fact]
+    public async Task ListAsync_IncludesVisibleAttributes_FiltersHiddenByRole()
+    {
+        // Lists now carry visible attributes (mirrors GetAsync) so cards render them and an edit that
+        // re-sends the list-sourced attributes doesn't wipe the inventory. This tenant-role visibility
+        // path is shared by every attribute-bearing list endpoint; equipment stands in for them all.
+        var equipmentId = Guid.NewGuid();
+        _dbContext.Equipment.Add(new Equipment { Id = equipmentId, TenantId = _tenantId, Name = "Generator" });
+        _dbContext.EquipmentAttributes.AddRange(
+            new EquipmentAttribute
+            {
+                Id = Guid.NewGuid(), TenantId = _tenantId, EquipmentId = equipmentId,
+                Key = "fuel", Value = "diesel", TenantMinRole = (byte)TenantRole.Member,
+            },
+            new EquipmentAttribute
+            {
+                Id = Guid.NewGuid(), TenantId = _tenantId, EquipmentId = equipmentId,
+                Key = "serialNumber", Value = "SN-SECRET", TenantMinRole = (byte)TenantRole.Owner,
+            });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Caller is a Member: sees the Member-gated attribute, not the Owner-gated one.
+        var result = await CreateService(callerRole: TenantRole.Member)
+            .ListAsync(_tenantId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        var listed = Assert.Single(result.Entity!);
+        var attr = Assert.Single(listed.Attributes);
+        Assert.Equal("fuel", attr.Key);
     }
 }
