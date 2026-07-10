@@ -339,6 +339,7 @@ jobs:
           NUXT_PUBLIC_LIVE_URL: ${{ vars.LIVE_URL }}
           NUXT_PUBLIC_GITHUB_URL: ${{ vars.PROJECT_GITHUB_URL }}
           NUXT_PUBLIC_DOCS_URL: ${{ vars.DOCS_URL }}
+          NUXT_PUBLIC_CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
           # Demo App Insights (appi-gat-demo-*) — ingestion-only; safe to bake into the static build.
           NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING: ${{ secrets.DEMO_APPINSIGHTS_CONNECTION_STRING }}
         run: pnpm generate
