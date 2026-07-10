@@ -416,7 +416,7 @@ public class EventReportServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GetEventMealReportAsync_DayAttendees_ExcludeNotGoingAndCarryHousehold()
+    public async Task GetEventMealReportAsync_DayAttendees_IncludeAllResponsesAndCarryHousehold()
     {
         _dbContext.EventAttendances.AddRange(
             new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = _alice, Day = Day1, Status = AttendanceStatus.Going },
@@ -427,12 +427,17 @@ public class EventReportServiceTests : IAsyncLifetime
         var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
 
         var day1 = result.Entity!.Days.Single(d => d.Day == Day1);
-        // Bob (NotGoing) is excluded; Alice and Carol carry status + household grouping data.
-        Assert.Equal(["Alice", "Carol"], day1.Attendees.Select(a => a.Name));
+        // Every response is included — Bob's NotGoing too — with status + household grouping data.
+        Assert.Equal(["Alice", "Bob", "Carol"], day1.Attendees.Select(a => a.Name));
         Assert.Equal(AttendanceStatus.Going, day1.Attendees[0].Status);
-        Assert.Equal(AttendanceStatus.Maybe, day1.Attendees[1].Status);
+        Assert.Equal(AttendanceStatus.NotGoing, day1.Attendees[1].Status);
+        Assert.Equal(AttendanceStatus.Maybe, day1.Attendees[2].Status);
         Assert.All(day1.Attendees, a => Assert.Equal(_householdId, a.HouseholdId));
         Assert.All(day1.Attendees, a => Assert.Equal("Smith Household", a.HouseholdName));
+
+        // Day counts still tally Going/Maybe only.
+        Assert.Equal(1, day1.Going);
+        Assert.Equal(1, day1.Maybe);
 
         Assert.Empty(result.Entity.Days.Single(d => d.Day == Day2).Attendees);
     }

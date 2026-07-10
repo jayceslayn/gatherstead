@@ -57,6 +57,19 @@ function addableItems(planId: string, templateId: string): DropdownMenuItem[][] 
   }))]
 }
 
+// Row-wide collapse, default collapsed — a collapsed task row keeps the coverage
+// badge (the headline); expanding reveals volunteer names and the add menu.
+const expandedRows = ref<Set<string>>(new Set())
+function laneKey(lane: TaskTemplateLane): string {
+  return `${lane.template.id}:${lane.timeSlot ?? ''}`
+}
+function toggleRow(key: string) {
+  const next = new Set(expandedRows.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedRows.value = next
+}
+
 // Each lane is a single time slot, so the slot label leads the subtitle (with the
 // minimum-assignees and notes hints), replacing the per-plan slot label.
 function laneSubtitle(lane: TaskTemplateLane): string | undefined {
@@ -100,10 +113,13 @@ function laneSubtitle(lane: TaskTemplateLane): string | undefined {
 
     <GsSwimlane
       v-for="lane in templateLanes"
-      :key="`${lane.template.id}:${lane.timeSlot ?? ''}`"
+      :key="laneKey(lane)"
       :title="lane.template.name"
       :subtitle="laneSubtitle(lane)"
       :hide-when-empty="!(lane.plansByDay[selectedDay] ?? []).length"
+      collapsible
+      :expanded="expandedRows.has(laneKey(lane))"
+      @toggle="toggleRow(laneKey(lane))"
     >
       <template #day="{ day }">
         <div v-if="(lane.plansByDay[day] ?? []).length" class="space-y-3">
@@ -120,49 +136,51 @@ function laneSubtitle(lane: TaskTemplateLane): string | undefined {
               />
             </div>
 
-            <!-- Current household volunteers, each removable. -->
-            <div v-if="planVolunteers(plan.id).length" class="space-y-1">
-              <div
-                v-for="member in planVolunteers(plan.id)"
-                :key="member.id"
-                class="flex items-center justify-between gap-2 rounded-md"
-                :class="isCurrentUser(member.id) ? 'bg-(--ui-primary)/5 -mx-1 px-1 py-0.5' : ''"
+            <template v-if="expandedRows.has(laneKey(lane))">
+              <!-- Current household volunteers, each removable. -->
+              <div v-if="planVolunteers(plan.id).length" class="space-y-1">
+                <div
+                  v-for="member in planVolunteers(plan.id)"
+                  :key="member.id"
+                  class="flex items-center justify-between gap-2 rounded-md"
+                  :class="isCurrentUser(member.id) ? 'bg-(--ui-primary)/5 -mx-1 px-1 py-0.5' : ''"
+                >
+                  <span class="flex items-center gap-1.5 min-w-0">
+                    <GsMemberAvatar :name="member.name" size="xs" />
+                    <span class="text-sm truncate" :class="isCurrentUser(member.id) ? 'font-medium text-primary' : ''">{{ member.name }}</span>
+                    <span v-if="isCurrentUser(member.id)" class="text-xs text-primary shrink-0">{{ t('common.you') }}</span>
+                  </span>
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    icon="i-heroicons-x-mark"
+                    class="shrink-0"
+                    :loading="isUpdating(plan.id, member.id)"
+                    :aria-label="t('event.task.removeVolunteer', { name: member.name })"
+                    @click="toggle(plan.id, lane.template.id, member.id)"
+                  />
+                </div>
+              </div>
+              <p v-else class="text-xs text-muted">{{ t('event.task.noVolunteers') }}</p>
+
+              <!-- Click to volunteer: pick a not-yet-signed-up household member. -->
+              <UDropdownMenu
+                v-if="addableOptions(plan.id).length"
+                :items="addableItems(plan.id, lane.template.id)"
+                :content="{ align: 'start' }"
               >
-                <span class="flex items-center gap-1.5 min-w-0">
-                  <GsMemberAvatar :name="member.name" size="xs" />
-                  <span class="text-sm truncate" :class="isCurrentUser(member.id) ? 'font-medium text-primary' : ''">{{ member.name }}</span>
-                  <span v-if="isCurrentUser(member.id)" class="text-xs text-primary shrink-0">{{ t('common.you') }}</span>
-                </span>
                 <UButton
                   color="neutral"
-                  variant="ghost"
+                  variant="soft"
                   size="xs"
-                  square
-                  icon="i-heroicons-x-mark"
-                  class="shrink-0"
-                  :loading="isUpdating(plan.id, member.id)"
-                  :aria-label="t('event.task.removeVolunteer', { name: member.name })"
-                  @click="toggle(plan.id, lane.template.id, member.id)"
+                  icon="i-heroicons-plus"
+                  :label="t('event.task.addVolunteer')"
+                  block
                 />
-              </div>
-            </div>
-            <p v-else class="text-xs text-muted">{{ t('event.task.noVolunteers') }}</p>
-
-            <!-- Click to volunteer: pick a not-yet-signed-up household member. -->
-            <UDropdownMenu
-              v-if="addableOptions(plan.id).length"
-              :items="addableItems(plan.id, lane.template.id)"
-              :content="{ align: 'start' }"
-            >
-              <UButton
-                color="neutral"
-                variant="soft"
-                size="xs"
-                icon="i-heroicons-plus"
-                :label="t('event.task.addVolunteer')"
-                block
-              />
-            </UDropdownMenu>
+              </UDropdownMenu>
+            </template>
           </div>
         </div>
       </template>

@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import type { EventReportTask } from '~/repositories/types'
 
-// Read-only task cell matching the sign-up grid's inline style: coverage badge +
-// assignee names, always visible. In the swimlane grid the lane rule carries the
-// task name; the print day-stack has no rule, so it opts into `showTitle`.
-defineProps<{
+// One task plan on one day. Collapsed shows the headline coverage badge;
+// expanding the lane (or printing) reveals assignee names and any exception
+// reason. In the swimlane grid the lane rule carries the task name; the print
+// day-stack has no rule, so it opts into `showTitle`.
+const props = defineProps<{
   task: EventReportTask
+  expanded?: boolean
   showTitle?: boolean
 }>()
 
 const { t } = useI18n()
+
+// Detail stays in the DOM (hidden) so the print variant can reveal it without juggling state.
+const detailClass = computed(() =>
+  props.expanded ? 'space-y-2' : 'hidden print:block print:space-y-2')
 </script>
 
 <template>
@@ -27,14 +33,16 @@ const { t } = useI18n()
         />
       </div>
 
-      <p v-if="task.isException && task.exceptionReason" class="text-muted italic">
-        {{ task.exceptionReason }}
-      </p>
+      <div :class="detailClass">
+        <p v-if="task.isException && task.exceptionReason" class="text-muted italic">
+          {{ task.exceptionReason }}
+        </p>
 
-      <ul v-if="task.assignees.length" class="space-y-0.5">
-        <li v-for="(name, i) in task.assignees" :key="i" class="truncate">{{ name }}</li>
-      </ul>
-      <p v-else class="text-xs text-muted">{{ t('report.event.noAssignees') }}</p>
+        <ul v-if="task.assignees.length" class="space-y-0.5">
+          <li v-for="(name, i) in task.assignees" :key="i" class="truncate">{{ name }}</li>
+        </ul>
+        <p v-else class="text-xs text-muted">{{ t('report.event.noAssignees') }}</p>
+      </div>
     </div>
   </UCard>
 </template>

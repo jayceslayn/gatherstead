@@ -87,9 +87,9 @@ export class DemoReportRepository implements IReportRepository {
       const going = dayEventAttendance.filter(a => a.status === 'Going').length
       const maybe = dayEventAttendance.filter(a => a.status === 'Maybe').length
 
-      // Who is there that day, grouped by household then name (mirrors backend ordering).
+      // Every response for that day — including NotGoing — grouped by household then
+      // name (mirrors backend ordering).
       const dayAttendees: EventReportDayAttendee[] = dayEventAttendance
-        .filter(a => a.status !== 'NotGoing')
         .map((a): EventReportDayAttendee => ({
           memberId: a.householdMemberId,
           name: memberById.get(a.householdMemberId)?.name ?? '',

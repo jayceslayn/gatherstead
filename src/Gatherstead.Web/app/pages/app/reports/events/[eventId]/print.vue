@@ -40,9 +40,6 @@ const categories = computed(() => {
 
 const hasAnyData = computed(() => categories.value.length > 0)
 
-// Print stack always shows full detail; toggling is a no-op here but the prop is required.
-const expanded = ref<Set<string>>(new Set())
-
 function printNow() {
   if (import.meta.client) window.print()
 }
@@ -137,8 +134,6 @@ watch(
                 <GsEventReportDay
                   :day="day"
                   :section="category.value"
-                  :expanded="expanded"
-                  @toggle="() => {}"
                 />
               </td>
             </tr>

@@ -31,9 +31,9 @@ const attendanceByDay = computed(() => {
 
 // Tab state — computed so labels re-translate on locale switch.
 const tabs = computed<TabsItem[]>(() => [
-  { label: t('event.attendance'), value: 'attendance', slot: 'attendance' },
-  { label: t('event.tasks'), value: 'tasks', slot: 'tasks' },
-  { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations' },
+  { label: t('event.attendance'), value: 'attendance', slot: 'attendance', icon: 'i-heroicons-user-group' },
+  { label: t('event.tasks'), value: 'tasks', slot: 'tasks', icon: 'i-heroicons-clipboard-document-list' },
+  { label: t('event.accommodations'), value: 'accommodations', slot: 'accommodations', icon: 'i-heroicons-home' },
 ])
 
 const activeTab = ref<string | number>(tabs.value[0]?.value ?? 0)
@@ -149,10 +149,13 @@ onMounted(() => {
         </UFormField>
       </div>
 
+      <!-- On phones each trigger stacks a small label beneath its icon, like the mobile
+           nav bar — matching the event report's tab selector. -->
       <UTabs
         v-if="manageableHouseholds.length"
         v-model="activeTab"
         :items="tabs"
+        :ui="{ trigger: 'max-sm:flex-col max-sm:gap-0.5', label: 'max-sm:text-xs' }"
       >
         <template #attendance>
           <div class="mt-4">

@@ -2,6 +2,7 @@
 import { useEventReport } from '~/composables/useEventReport'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useFormatDate } from '~/composables/useFormatDate'
+import type { TabsItem } from '@nuxt/ui'
 
 definePageMeta({
   layout: 'default',
@@ -25,14 +26,15 @@ const hasAnyData = computed(() =>
 
 // Four independent section tabs, mirroring the event sign-up page (attendance first).
 // Computed so labels re-translate on locale switch.
-const tabs = computed(() => [
-  { value: 'attendance' as Section, label: t('event.attendance'), icon: 'i-heroicons-user-group' },
-  { value: 'meals' as Section, label: t('event.meals'), icon: 'i-heroicons-cake' },
-  { value: 'tasks' as Section, label: t('event.tasks'), icon: 'i-heroicons-clipboard-document-list' },
-  { value: 'accommodations' as Section, label: t('event.accommodations'), icon: 'i-heroicons-home' },
+const tabs = computed<TabsItem[]>(() => [
+  { value: 'attendance', label: t('event.attendance'), icon: 'i-heroicons-user-group' },
+  { value: 'meals', label: t('event.meals'), icon: 'i-heroicons-cake' },
+  { value: 'tasks', label: t('event.tasks'), icon: 'i-heroicons-clipboard-document-list' },
+  { value: 'accommodations', label: t('event.accommodations'), icon: 'i-heroicons-home' },
 ])
 
-const activeTab = ref<Section>('attendance')
+const activeTab = ref<string | number>('attendance')
+const activeSection = computed(() => activeTab.value as Section)
 
 watch(activeTab, (value) => {
   history.replaceState(null, '', `#${value}`)
@@ -40,11 +42,11 @@ watch(activeTab, (value) => {
 
 onMounted(() => {
   const hash = route.hash.substring(1)
-  if (tabs.value.some(tab => tab.value === hash)) activeTab.value = hash as Section
+  if (tabs.value.some(tab => tab.value === hash)) activeTab.value = hash
 })
 
-// Progressive disclosure — meal attendee and accommodation occupant detail is collapsed
-// by default (attendance and task cells render inline with nothing to expand).
+// Progressive disclosure — every row (swimlane) starts collapsed showing only its
+// headline badges; keys are `${section}:${laneKey}` so state survives tab switches.
 const expanded = ref<Set<string>>(new Set())
 function toggle(id: string) {
   const next = new Set(expanded.value)
@@ -115,29 +117,20 @@ const selectedDayIndex = ref(0)
       />
 
       <template v-else>
-        <!-- Section tabs -->
-        <div class="flex border-b border-default mb-4" role="tablist">
-          <button
-            v-for="tab in tabs"
-            :key="tab.value"
-            type="button"
-            role="tab"
-            :aria-selected="activeTab === tab.value"
-            class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors"
-            :class="activeTab === tab.value
-              ? 'border-primary text-primary'
-              : 'border-transparent text-muted hover:text-default'"
-            @click="activeTab = tab.value"
-          >
-            <UIcon :name="tab.icon" class="size-4" />
-            {{ tab.label }}
-          </button>
-        </div>
+        <!-- Section tabs — same UTabs selector as the event sign-up page. On phones each
+             trigger stacks a small label beneath its icon, like the mobile nav bar. -->
+        <UTabs
+          v-model="activeTab"
+          :items="tabs"
+          :content="false"
+          :ui="{ trigger: 'max-sm:flex-col max-sm:gap-0.5', label: 'max-sm:text-xs' }"
+          class="mb-4"
+        />
 
         <GsEventReportGrid
           v-model:selected-day-index="selectedDayIndex"
           :days="days"
-          :section="activeTab"
+          :section="activeSection"
           :expanded="expanded"
           @toggle="toggle"
         />

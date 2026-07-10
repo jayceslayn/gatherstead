@@ -26,8 +26,8 @@ public record EventReportDayDto(
     [property: Required] IReadOnlyList<EventReportAccommodationDto> Accommodations);
 
 /// <summary>
-/// A member attending (or maybe attending) the event on a given day. Household id/name are
-/// included so the report can group each day's attendees by household.
+/// A member's attendance response for the event on a given day — Going, Maybe, or NotGoing.
+/// Household id/name are included so the report can group each day's attendees by household.
 /// </summary>
 public record EventReportDayAttendeeDto(
     [property: Required] Guid MemberId,

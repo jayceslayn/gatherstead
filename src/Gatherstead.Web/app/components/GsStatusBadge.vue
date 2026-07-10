@@ -22,9 +22,11 @@ const statusMap: Record<StatusValue, StatusConfig> = {
   Partial: { color: 'secondary', icon: 'i-heroicons-clock', labelKey: 'status.partial' },
   Open: { color: 'neutral', icon: 'i-heroicons-question-mark-circle', labelKey: 'status.open' },
   Exception: { color: 'primary', icon: 'i-heroicons-x-circle', labelKey: 'status.exception' },
-  Going: { color: 'success', icon: 'i-heroicons-check-circle', labelKey: 'status.going' },
-  Maybe: { color: 'secondary', icon: 'i-heroicons-question-mark-circle', labelKey: 'status.maybe' },
-  NotGoing: { color: 'neutral', icon: 'i-heroicons-x-mark', labelKey: 'status.notGoing' },
+  // Going/Maybe/NotGoing mirror GsAttendanceToggle so attendance reads the same
+  // on the sign-up grid and in the reports.
+  Going: { color: 'success', icon: 'i-heroicons-check', labelKey: 'status.going' },
+  Maybe: { color: 'neutral', icon: 'i-heroicons-question-mark-circle', labelKey: 'status.maybe' },
+  NotGoing: { color: 'error', icon: 'i-heroicons-x-mark', labelKey: 'status.notGoing' },
   NoResponse: { color: 'neutral', icon: 'i-heroicons-minus', labelKey: 'status.noResponse' },
   Requested: { color: 'neutral', icon: 'i-heroicons-hand-raised', labelKey: 'status.requested' },
   Hold: { color: 'secondary', icon: 'i-heroicons-pause-circle', labelKey: 'status.hold' },

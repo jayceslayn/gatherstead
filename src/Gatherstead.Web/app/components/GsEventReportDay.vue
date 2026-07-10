@@ -3,14 +3,13 @@ import type { EventReportDay, EventReportDayAttendee } from '~/repositories/type
 
 type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
+// Cells render collapsed (headline badges) on screen; their detail is revealed
+// by print CSS, so no expansion state is threaded through here.
 const props = defineProps<{
   day: EventReportDay
   // The single section to render.
   section?: Section
-  expanded: Set<string>
 }>()
-
-const emit = defineEmits<{ toggle: [id: string] }>()
 
 const { t } = useI18n()
 const { formatDay } = useFormatDate()
@@ -69,8 +68,6 @@ const attendeesByHousehold = computed(() => {
             v-for="meal in day.meals"
             :key="meal.mealPlanId"
             :meal="meal"
-            :expanded="expanded"
-            @toggle="emit('toggle', $event)"
           />
         </div>
       </div>
@@ -96,8 +93,6 @@ const attendeesByHousehold = computed(() => {
             v-for="acc in day.accommodations"
             :key="acc.accommodationId"
             :acc="acc"
-            :expanded="expanded"
-            @toggle="emit('toggle', $event)"
           />
         </div>
       </div>

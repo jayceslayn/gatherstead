@@ -200,10 +200,10 @@ public class EventReportService : IEventReportService
             var going = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Going);
             var maybe = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Maybe);
 
-            // Who is there that day, grouped for the report by household (household name,
-            // then member name — same convention as attendee/occupant lists).
+            // Every response for that day — including NotGoing, so the report can show who
+            // declined — grouped for the report by household (household name, then member
+            // name — same convention as attendee/occupant lists).
             var dayAttendees = dayEventAttendance
-                .Where(a => a.Status != AttendanceStatus.NotGoing)
                 .Select(a => new EventReportDayAttendeeDto(
                     a.HouseholdMemberId,
                     memberById.GetValueOrDefault(a.HouseholdMemberId)?.Name ?? string.Empty,

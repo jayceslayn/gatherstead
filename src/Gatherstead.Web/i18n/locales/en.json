@@ -365,6 +365,7 @@
       "attendingCount": "{n} attending",
       "goingCount": "Going: {n}",
       "maybeCount": "Maybe: {n}",
+      "notGoingCount": "Not going: {n}",
       "dietaryTally": "{label} · {count}",
       "bringingOwnFood": "{n} bringing own food",
       "dietaryNeeds": "Dietary Needs",

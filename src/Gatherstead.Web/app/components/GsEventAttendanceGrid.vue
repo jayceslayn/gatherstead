@@ -48,6 +48,16 @@ const totals = computed<Record<string, { going: number, maybe: number }>>(() => 
 const dayUpdating = ref<Record<string, boolean>>({})
 const mealUpdating = ref<Record<string, boolean>>({})
 
+// Row-wide collapse, default collapsed — a collapsed member row keeps the day
+// attendance toggle (the primary action); expanding reveals the per-meal rows.
+const expandedRows = ref<Set<string>>(new Set())
+function toggleRow(memberId: string) {
+  const next = new Set(expandedRows.value)
+  if (next.has(memberId)) next.delete(memberId)
+  else next.add(memberId)
+  expandedRows.value = next
+}
+
 function cellKey(memberId: string, id: string) {
   return `${memberId}:${id}`
 }
@@ -211,6 +221,9 @@ watch(wizardOpen, (isOpen) => {
         v-for="member in members"
         :key="member.id"
         :title="member.name"
+        collapsible
+        :expanded="expandedRows.has(member.id)"
+        @toggle="toggleRow(member.id)"
       >
         <template #day="{ day }">
           <div class="flex justify-end">
@@ -222,7 +235,7 @@ watch(wizardOpen, (isOpen) => {
             />
           </div>
 
-          <div v-if="mealsVisible(member.id, day)" class="mt-2 space-y-1.5 border-t border-default pt-2">
+          <div v-if="expandedRows.has(member.id) && mealsVisible(member.id, day)" class="mt-2 space-y-1.5 border-t border-default pt-2">
             <div
               v-for="plan in sortedMealPlans(day)"
               :key="plan.id"
