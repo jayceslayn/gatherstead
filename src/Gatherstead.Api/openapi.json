@@ -7514,6 +7514,55 @@
         }
       }
     },
+    "/api/tenants/{tenantId}/users/{userId}": {
+      "delete": {
+        "tags": [
+          "TenantUsers"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantUserResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantUserResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantUserResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants/{tenantId}/users/{userId}/household-access": {
       "get": {
         "tags": [
@@ -8752,17 +8801,15 @@
             ],
             "type": "string"
           },
-          "householdId": {
+          "households": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitationHouseholdGrant"
+            }
+          },
+          "linkedMemberId": {
             "type": "string",
             "format": "uuid",
-            "nullable": true
-          },
-          "householdRole": {
-            "enum": [
-              "Manager",
-              "Member"
-            ],
-            "type": "string",
             "nullable": true
           }
         },
@@ -9947,6 +9994,7 @@
         "required": [
           "createdAt",
           "email",
+          "households",
           "id",
           "role",
           "status",
@@ -9976,17 +10024,15 @@
             ],
             "type": "string"
           },
-          "householdId": {
+          "households": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InvitationHouseholdGrant"
+            }
+          },
+          "linkedMemberId": {
             "type": "string",
             "format": "uuid",
-            "nullable": true
-          },
-          "householdRole": {
-            "enum": [
-              "Manager",
-              "Member"
-            ],
-            "type": "string",
             "nullable": true
           },
           "status": {
@@ -10028,6 +10074,26 @@
               "$ref": "#/components/schemas/ResponseMessage"
             },
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "InvitationHouseholdGrant": {
+        "required": [
+          "householdId"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "enum": [
+              "Manager",
+              "Member"
+            ],
+            "type": "string"
           }
         },
         "additionalProperties": false

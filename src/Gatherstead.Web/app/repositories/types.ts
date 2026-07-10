@@ -48,6 +48,7 @@ export type HouseholdUserSummary = S['HouseholdUserDto']
 
 // ── Invitations ────────────────────────────────────────────────────────────
 export type InvitationSummary = S['InvitationDto']
+export type InvitationHouseholdGrant = S['InvitationHouseholdGrant']
 
 // ── Current user (the authenticated caller's own profile) ───────────────────
 export type MeSummary = S['MeDto']

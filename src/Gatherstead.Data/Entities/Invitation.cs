@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
@@ -27,12 +28,14 @@ public class Invitation : AuditableEntity
 
     public TenantRole Role { get; set; }
 
-    // Optional initial household access granted when the invitation is claimed.
-    public Guid? HouseholdId { get; set; }
-    [ForeignKey(nameof(HouseholdId))]
-    public Household? Household { get; set; }
+    // Optional initial household access granted when the invitation is claimed. A user can hold a
+    // role in multiple households, so an invite may carry several grants (or none).
+    public ICollection<InvitationHouseholdAccess> Households { get; set; } = new List<InvitationHouseholdAccess>();
 
-    public HouseholdRole? HouseholdRole { get; set; }
+    // Optional: a HouseholdMember the invitee is linked to (a "Self" link) when the invitation is
+    // claimed. Stored as a plain reference — no FK/nav — since it is applied and re-validated at
+    // grant time and the invitation may outlive the member.
+    public Guid? LinkedMemberId { get; set; }
 
     public InvitationStatus Status { get; set; } = InvitationStatus.Pending;
 

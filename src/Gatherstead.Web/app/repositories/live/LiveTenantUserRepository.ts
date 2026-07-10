@@ -1,4 +1,4 @@
-import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary, InvitationSummary } from '../types'
+import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary, InvitationSummary, InvitationHouseholdGrant } from '../types'
 import type { ITenantUserRepository } from '../interfaces'
 
 export class LiveTenantUserRepository implements ITenantUserRepository {
@@ -20,6 +20,13 @@ export class LiveTenantUserRepository implements ITenantUserRepository {
     await $fetch(
       `/api/proxy/tenants/${tenantId}/users/${userId}/role`,
       { method: 'PUT', body: { role } },
+    )
+  }
+
+  async removeTenantUser(tenantId: string, userId: string): Promise<void> {
+    await $fetch(
+      `/api/proxy/tenants/${tenantId}/users/${userId}`,
+      { method: 'DELETE' },
     )
   }
 
@@ -55,12 +62,12 @@ export class LiveTenantUserRepository implements ITenantUserRepository {
     tenantId: string,
     email: string,
     role: TenantRole,
-    householdId?: string | null,
-    householdRole?: HouseholdRole | null,
+    households: InvitationHouseholdGrant[],
+    linkedMemberId?: string | null,
   ): Promise<InvitationSummary> {
     const response = await $fetch<{ entity: InvitationSummary }>(
       `/api/proxy/tenants/${tenantId}/invitations`,
-      { method: 'POST', body: { email, role, householdId: householdId ?? null, householdRole: householdRole ?? null } },
+      { method: 'POST', body: { email, role, households, linkedMemberId: linkedMemberId ?? null } },
     )
     return response.entity
   }

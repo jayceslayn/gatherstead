@@ -51,6 +51,23 @@ public class TenantUsersController : ControllerBase
         return Ok(response);
     }
 
+    [HttpDelete("{userId:guid}")]
+    public async Task<ActionResult<TenantUserResponse>> RemoveUser(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var response = await _tenantUserService.RemoveAsync(tenantId, userId, cancellationToken);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return BadRequest(response);
+
+        if (response.Entity is null)
+            return NotFound(response);
+
+        return Ok(response);
+    }
+
     [HttpGet("{userId:guid}/household-access")]
     public async Task<IActionResult> ListUserHouseholdAccess(
         Guid tenantId,

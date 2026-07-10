@@ -31,6 +31,7 @@ import type {
   AttributeWriteEntry,
   EventReport,
   InvitationSummary,
+  InvitationHouseholdGrant,
   MeSummary,
   ShoppingItem,
   ShoppingItemIntentStatus,
@@ -99,6 +100,7 @@ export interface ITenantUserRepository {
   setLinkedMember(tenantId: string, userId: string, memberId: string | null): Promise<void>
   listTenantUsers(tenantId: string): Promise<TenantUserSummary[]>
   updateRole(tenantId: string, userId: string, role: TenantRole): Promise<void>
+  removeTenantUser(tenantId: string, userId: string): Promise<void>
   listHouseholdUsers(tenantId: string, householdId: string): Promise<HouseholdUserSummary[]>
   listUserHouseholdAccess(tenantId: string, userId: string): Promise<HouseholdUserSummary[]>
   upsertHouseholdUser(tenantId: string, householdId: string, userId: string, role: HouseholdRole): Promise<void>
@@ -107,8 +109,8 @@ export interface ITenantUserRepository {
     tenantId: string,
     email: string,
     role: TenantRole,
-    householdId?: string | null,
-    householdRole?: HouseholdRole | null,
+    households: InvitationHouseholdGrant[],
+    linkedMemberId?: string | null,
   ): Promise<InvitationSummary>
   listInvitations(tenantId: string): Promise<InvitationSummary[]>
   revokeInvitation(tenantId: string, invitationId: string): Promise<void>

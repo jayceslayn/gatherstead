@@ -40,6 +40,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<InvitationHouseholdAccess> InvitationHouseholdAccess => Set<InvitationHouseholdAccess>();
     public DbSet<Household> Households => Set<Household>();
     public DbSet<HouseholdUser> HouseholdUsers => Set<HouseholdUser>();
     public DbSet<HouseholdMember> HouseholdMembers => Set<HouseholdMember>();
@@ -168,6 +169,10 @@ public class GathersteadDbContext : DbContext
                 .IsUnique()
                 .HasFilter("[Status] = 0 AND [IsDeleted] = 0")
                 .HasDatabaseName("IX_Invitation_PendingPerTenantEmail");
+
+            b.HasMany(i => i.Households)
+                .WithOne(h => h.Invitation)
+                .HasForeignKey(h => h.InvitationId);
         });
 
         // Configure MemberRelationship to HouseholdMember relationship

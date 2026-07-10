@@ -1,7 +1,7 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useCurrentMemberStore } from '~/stores/member'
 import { useRepositories } from '~/composables/useRepositories'
-import type { TenantRole, HouseholdRole, InvitationSummary } from '~/repositories/types'
+import type { TenantRole, InvitationSummary, InvitationHouseholdGrant } from '~/repositories/types'
 
 export function useTenantUserList() {
   const tenantStore = useTenantStore()
@@ -61,7 +61,23 @@ export function useTenantUserActions(refresh?: () => Promise<void>) {
     }
   }
 
-  return { updating, setLinkedMember, updateRole }
+  async function removeUser(userId: string): Promise<boolean> {
+    updating.value.push(userId)
+    try {
+      await repo.removeTenantUser(tenantStore.currentTenantId!, userId)
+      await refresh?.()
+      return true
+    }
+    catch (e) {
+      toast.add({ title: translateError(e), color: 'error' })
+      return false
+    }
+    finally {
+      updating.value = updating.value.filter(k => k !== userId)
+    }
+  }
+
+  return { updating, setLinkedMember, updateRole, removeUser }
 }
 
 export function useInvitations() {
@@ -86,12 +102,12 @@ export function useInvitationActions(refresh?: () => Promise<void>) {
   async function invite(
     email: string,
     role: TenantRole,
-    householdId: string | null = null,
-    householdRole: HouseholdRole | null = null,
+    households: InvitationHouseholdGrant[] = [],
+    linkedMemberId: string | null = null,
   ): Promise<boolean> {
     saving.value = true
     try {
-      await repo.inviteUser(tenantStore.currentTenantId!, email, role, householdId, householdRole)
+      await repo.inviteUser(tenantStore.currentTenantId!, email, role, households, linkedMemberId)
       await refresh?.()
       toast.add({ title: t('tenantUser.invite.sent'), color: 'success' })
       return true

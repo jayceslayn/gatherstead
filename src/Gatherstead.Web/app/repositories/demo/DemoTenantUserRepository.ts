@@ -1,4 +1,4 @@
-import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary, InvitationSummary } from '../types'
+import type { HouseholdRole, HouseholdUserSummary, TenantRole, TenantUserSummary, InvitationSummary, InvitationHouseholdGrant } from '../types'
 import type { ITenantUserRepository } from '../interfaces'
 import { getDemoStore, persistDemoStore, demoId } from './DemoStore'
 
@@ -17,6 +17,13 @@ export class DemoTenantUserRepository implements ITenantUserRepository {
       user.role = role
       persistDemoStore()
     }
+  }
+
+  async removeTenantUser(_tenantId: string, userId: string): Promise<void> {
+    const store = getDemoStore()
+    store.tenantUsers.value = store.tenantUsers.value.filter(u => u.userId !== userId)
+    store.householdUsers.value = store.householdUsers.value.filter(hu => hu.userId !== userId)
+    persistDemoStore()
   }
 
   async setLinkedMember(_tenantId: string, userId: string, memberId: string | null): Promise<void> {
@@ -62,21 +69,29 @@ export class DemoTenantUserRepository implements ITenantUserRepository {
     tenantId: string,
     email: string,
     role: TenantRole,
-    householdId?: string | null,
-    householdRole?: HouseholdRole | null,
+    households: InvitationHouseholdGrant[],
+    linkedMemberId?: string | null,
   ): Promise<InvitationSummary> {
     const store = getDemoStore()
     const normalized = email.trim().toLowerCase()
     const existing = store.invitations.value.find(i => i.tenantId === tenantId && i.email === normalized && i.status === 'Pending')
-    if (existing) return existing
+    if (existing) {
+      // Mirrors the API: a re-invite updates the pending invite in place (last request wins)
+      // rather than silently discarding the newly requested role, grants, and link.
+      existing.role = role
+      existing.households = households
+      existing.linkedMemberId = linkedMemberId ?? null
+      persistDemoStore()
+      return existing
+    }
 
     const invitation: InvitationSummary = {
       id: demoId(),
       tenantId,
       email: normalized,
       role,
-      householdId: householdId ?? null,
-      householdRole: householdRole ?? null,
+      households,
+      linkedMemberId: linkedMemberId ?? null,
       status: 'Pending',
       createdAt: new Date().toISOString(),
       acceptedAt: null,

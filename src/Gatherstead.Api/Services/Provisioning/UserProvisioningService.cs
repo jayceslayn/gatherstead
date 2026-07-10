@@ -203,6 +203,7 @@ public class UserProvisioningService : IUserProvisioningService
         // resolved), so drop only the tenant filter; soft-delete stays enforced.
         var pending = await _dbContext.Invitations
             .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
+            .Include(i => i.Households)
             .Where(i => i.Email == email && i.Status == InvitationStatus.Pending && !i.IsDeleted)
             .ToListAsync(cancellationToken);
 
@@ -213,7 +214,8 @@ public class UserProvisioningService : IUserProvisioningService
         {
             await MembershipGrant.GrantAsync(
                 _dbContext, invite.TenantId, userId, invite.Role,
-                invite.HouseholdId, invite.HouseholdRole, cancellationToken);
+                invite.Households.Select(h => (h.HouseholdId, h.Role)).ToList(),
+                cancellationToken, invite.LinkedMemberId);
 
             invite.Status = InvitationStatus.Accepted;
             invite.AcceptedByUserId = userId;

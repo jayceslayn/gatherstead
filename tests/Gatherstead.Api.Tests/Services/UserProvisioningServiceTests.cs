@@ -70,8 +70,9 @@ public class UserProvisioningServiceTests : IAsyncLifetime
             TenantId = _tenantId,
             Email = email,
             Role = role,
-            HouseholdId = householdId,
-            HouseholdRole = householdRole,
+            Households = householdId is Guid hid
+                ? [new InvitationHouseholdAccess { TenantId = _tenantId, HouseholdId = hid, Role = householdRole ?? HouseholdRole.Member }]
+                : [],
             Status = InvitationStatus.Pending,
             InvitedByUserId = invitedByUserId,
         });

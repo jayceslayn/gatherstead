@@ -54,14 +54,88 @@ public static class ServiceGuards
     public static bool RequireNonEscalatingRole<T>(
         BaseEntityResponse<T> response,
         TenantRole actorRole,
-        TenantRole roleBeingGranted)
+        TenantRole roleBeingGranted,
+        string? message = null)
     {
         if (roleBeingGranted < actorRole)
         {
             response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_ROLE_ESCALATION,
-                "You cannot grant a role more privileged than your own.");
+                message ?? "You cannot grant a role more privileged than your own.");
             return false;
         }
+        return true;
+    }
+
+    /// <summary>
+    /// Validates that a member link may be granted: the member exists in the tenant, the caller can
+    /// manage the member's own household, no other tenant user already claims the member, and no
+    /// other pending invitation already promises it. Shared by direct linking
+    /// (<c>TenantUserService.SetLinkedMemberAsync</c>) and invitation creation so the rule and its
+    /// error messages cannot drift between the two paths.
+    /// </summary>
+    /// <param name="excludeUserId">
+    /// The user being linked, when known — their own existing claim on the member is not a conflict
+    /// (re-linking the same member is an idempotent no-op for the caller to handle).
+    /// </param>
+    /// <param name="excludeInvitationId">
+    /// A pending invitation being updated in place, when applicable — its own prior claim on the
+    /// member is not a conflict.
+    /// </param>
+    public static async Task<bool> ValidateMemberLinkAsync<T>(
+        BaseEntityResponse<T> response,
+        IMemberAuthorizationService authorizationService,
+        GathersteadDbContext dbContext,
+        Guid tenantId,
+        Guid memberId,
+        Guid? excludeUserId,
+        Guid? excludeInvitationId,
+        CancellationToken cancellationToken)
+    {
+        var memberHouseholdId = await dbContext.HouseholdMembers
+            .AsNoTracking()
+            .Where(m => m.TenantId == tenantId && m.Id == memberId)
+            .Select(m => (Guid?)m.HouseholdId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (memberHouseholdId is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+            return false;
+        }
+
+        // The caller must be able to manage the member's own household to link a user to it.
+        if (!await authorizationService.CanManageHouseholdAsync(tenantId, memberHouseholdId.Value, cancellationToken))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "You do not have permission to link a user to this member.");
+            return false;
+        }
+
+        var alreadyClaimed = await dbContext.TenantUsers
+            .AsNoTracking()
+            .AnyAsync(tu => tu.TenantId == tenantId && tu.LinkedMemberId == memberId
+                && (excludeUserId == null || tu.UserId != excludeUserId), cancellationToken);
+
+        if (alreadyClaimed)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "The specified member is already linked to another user in this tenant.");
+            return false;
+        }
+
+        // A pending invitation is an outstanding promise of the link; without this check two
+        // invites (or an invite plus a direct link) could claim the same member and the loser
+        // would be silently dropped at accept time.
+        var pendingClaim = await dbContext.Invitations
+            .AsNoTracking()
+            .AnyAsync(i => i.TenantId == tenantId && i.Status == InvitationStatus.Pending
+                && i.LinkedMemberId == memberId
+                && (excludeInvitationId == null || i.Id != excludeInvitationId), cancellationToken);
+
+        if (pendingClaim)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "A pending invitation already links this member to an invitee.");
+            return false;
+        }
+
         return true;
     }
 

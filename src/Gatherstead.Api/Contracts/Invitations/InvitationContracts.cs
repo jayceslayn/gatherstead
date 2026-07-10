@@ -4,13 +4,23 @@ using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.Invitations;
 
+/// <summary>A single household-access grant carried by an invitation.</summary>
+/// <remarks>
+/// <c>Role</c> defaults to <see cref="HouseholdRole.Member"/> so a request that omits it grants
+/// least privilege. Without the default, System.Text.Json would bind a missing value to
+/// <c>default(HouseholdRole)</c> = <see cref="HouseholdRole.Manager"/> (0) — a silent escalation.
+/// </remarks>
+public record InvitationHouseholdGrant(
+    [property: Required] Guid HouseholdId,
+    HouseholdRole Role = HouseholdRole.Member);
+
 public record InvitationDto(
     [property: Required] Guid Id,
     [property: Required] Guid TenantId,
     [property: Required] string Email,
     [property: Required] TenantRole Role,
-    Guid? HouseholdId,
-    HouseholdRole? HouseholdRole,
+    [property: Required] IReadOnlyList<InvitationHouseholdGrant> Households,
+    Guid? LinkedMemberId,
     [property: Required] InvitationStatus Status,
     [property: Required] DateTimeOffset CreatedAt,
     DateTimeOffset? AcceptedAt);
@@ -27,8 +37,13 @@ public class CreateInvitationRequest
     [Required]
     public TenantRole Role { get; init; }
 
-    public Guid? HouseholdId { get; init; }
-    public HouseholdRole? HouseholdRole { get; init; }
+    // Optional household-access grants applied on accept. A user can hold a role in multiple
+    // households, so several may be supplied (or none).
+    public IReadOnlyList<InvitationHouseholdGrant> Households { get; init; } = [];
+
+    // Optional: link the invitee to this HouseholdMember on accept (a self-service "Self" link).
+    // Independent of household access above.
+    public Guid? LinkedMemberId { get; init; }
 }
 
 public record BootstrapTenantDto(Guid TenantId, TenantRole Role);

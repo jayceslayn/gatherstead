@@ -22,7 +22,13 @@ const targetUserLabel = computed(() => {
   const u = targetUser.value
   return u ? (u.displayName || u.email || u.externalId) : undefined
 })
-const { updateRole, setLinkedMember, updating: userUpdating } = useTenantUserActions(refreshUsers)
+const { updateRole, setLinkedMember, removeUser, updating: userUpdating } = useTenantUserActions(refreshUsers)
+
+const confirmRemoveOpen = ref(false)
+async function handleRemove() {
+  const ok = await removeUser(userId.value)
+  if (ok) await navigateTo('/app/settings/users')
+}
 
 // Resolve linked member details from the full member map
 const { memberMap } = useAllMembers()
@@ -90,18 +96,18 @@ function householdName(householdId: string): string {
   return households.value.find(h => h.id === householdId)?.name ?? householdId
 }
 
-const roleOptions: { label: string, value: TenantRole }[] = [
+const roleOptions = computed((): { label: string, value: TenantRole }[] => [
   { label: t('tenantUser.roles.Owner'), value: 'Owner' },
   { label: t('tenantUser.roles.Manager'), value: 'Manager' },
   { label: t('tenantUser.roles.Coordinator'), value: 'Coordinator' },
   { label: t('tenantUser.roles.Member'), value: 'Member' },
   { label: t('tenantUser.roles.Guest'), value: 'Guest' },
-]
+])
 
-const hhRoleOptions: { label: string, value: HouseholdRole }[] = [
+const hhRoleOptions = computed((): { label: string, value: HouseholdRole }[] => [
   { label: t('tenantUser.householdRoles.Manager'), value: 'Manager' },
   { label: t('tenantUser.householdRoles.Member'), value: 'Member' },
-]
+])
 
 const householdOptions = computed(() =>
   households.value.map(h => ({ label: h.name, value: h.id })),
@@ -256,6 +262,35 @@ const memberPickerOptions = computed(() =>
           </p>
         </div>
       </UCard>
+
+      <!-- Remove from tenant -->
+      <GsRoleGate min-role="Manager">
+        <UCard>
+          <template #header>
+            <p class="font-semibold text-error">{{ t('tenantUser.remove') }}</p>
+          </template>
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <p class="text-sm text-muted">{{ t('tenantUser.removeConfirmBody') }}</p>
+            <UButton
+              color="error"
+              variant="soft"
+              :disabled="userUpdating.includes(userId)"
+              @click="confirmRemoveOpen = true"
+            >
+              {{ t('tenantUser.remove') }}
+            </UButton>
+          </div>
+        </UCard>
+      </GsRoleGate>
     </div>
+
+    <GsConfirmModal
+      v-model:open="confirmRemoveOpen"
+      :title="t('tenantUser.removeConfirmTitle')"
+      :description="t('tenantUser.removeConfirmBody')"
+      :confirm-label="t('tenantUser.remove')"
+      danger
+      @confirm="handleRemove"
+    />
   </div>
 </template>

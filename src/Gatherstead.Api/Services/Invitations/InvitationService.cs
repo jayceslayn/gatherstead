@@ -64,24 +64,84 @@ public class InvitationService : IInvitationService
         if (actorRole.HasValue && !ServiceGuards.RequireNonEscalatingRole(response, actorRole.Value, request.Role))
             return response;
 
-        if (request.HouseholdId is Guid householdId)
+        // Validate each requested household grant belongs to the tenant (one set query, not one per
+        // grant). Dedupe on householdId so a repeated household resolves to a single grant (last one wins).
+        var householdGrants = request.Households
+            .GroupBy(h => h.HouseholdId)
+            .Select(g => g.Last())
+            .ToList();
+        if (householdGrants.Count > 0)
         {
-            var householdExists = await _dbContext.Households
+            var requestedHouseholdIds = householdGrants.Select(g => g.HouseholdId).ToList();
+            var existingHouseholdCount = await _dbContext.Households
                 .AsNoTracking()
-                .AnyAsync(h => h.TenantId == tenantId && h.Id == householdId, cancellationToken);
-            if (!householdExists)
+                .CountAsync(h => h.TenantId == tenantId && requestedHouseholdIds.Contains(h.Id), cancellationToken);
+            if (existingHouseholdCount != requestedHouseholdIds.Count)
             {
                 response.AddResponseMessage(MessageType.ERROR, "Household not found.");
                 return response;
             }
         }
 
-        // Idempotent: an outstanding pending invite for the same email is returned as-is.
+        // Resolve the invitee's account and any outstanding pending invite up front — both feed the
+        // link validation (their own prior claim is not a conflict) and the merge-or-create decision.
+        // The pending invite loads its grant rows including soft-deleted ones (parent filtered
+        // explicitly) so a merge can reactivate a previously-removed grant instead of colliding on
+        // the composite primary key.
+        var existingUser = await _dbContext.Users
+            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
         var existingPending = await _dbContext.Invitations
-            .Where(i => i.TenantId == tenantId && i.Email == email && i.Status == InvitationStatus.Pending)
+            .IgnoreQueryFilters([GathersteadDbContext.SoftDeleteFilter])
+            .Include(i => i.Households)
+            .Where(i => i.TenantId == tenantId && i.Email == email && i.Status == InvitationStatus.Pending && !i.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
+
+        // Optional member pre-link. Household access (above) stays independent — a link alone grants
+        // the invitee self-service scope for that one member. Validate here so a bad link is rejected
+        // at invite time rather than silently dropped on accept.
+        if (request.LinkedMemberId is Guid linkedMemberId)
+        {
+            if (!await ServiceGuards.ValidateMemberLinkAsync(
+                    response, _memberAuthorizationService, _dbContext, tenantId, linkedMemberId,
+                    excludeUserId: existingUser?.Id, excludeInvitationId: existingPending?.Id, cancellationToken))
+                return response;
+
+            // An invitee who already holds a different link would otherwise have this one silently
+            // dropped on accept (grants never overwrite an established link) — reject up front.
+            if (existingUser is not null)
+            {
+                var currentLink = await _dbContext.TenantUsers
+                    .AsNoTracking()
+                    .Where(tu => tu.TenantId == tenantId && tu.UserId == existingUser.Id)
+                    .Select(tu => tu.LinkedMemberId)
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (currentLink is Guid current && current != linkedMemberId)
+                {
+                    response.AddResponseMessage(MessageType.ERROR, "The invited user is already linked to a different member in this tenant.");
+                    return response;
+                }
+            }
+        }
+
+        // Idempotent: an outstanding pending invite for the same email is updated in place with the
+        // newly requested role, link, and grants (last request wins) rather than returned stale —
+        // otherwise a re-invite that adds access would report success without ever applying it.
         if (existingPending is not null)
         {
+            existingPending.Role = request.Role;
+            existingPending.LinkedMemberId = request.LinkedMemberId;
+            MergeHouseholdGrants(existingPending, tenantId, householdGrants);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            await _securityEventLogger.LogAsync(
+                SecurityEventType.InvitationCreated,
+                SecurityEventSeverity.Info,
+                resource: $"Invitation:{existingPending.Id}",
+                detail: $"{{\"role\":\"{existingPending.Role}\",\"householdCount\":{existingPending.Households.Count(h => !h.IsDeleted)},\"updated\":true}}",
+                tenantId: tenantId,
+                userId: _currentUserContext.UserId,
+                cancellationToken: cancellationToken);
+
             response.SetSuccess(MapToDto(existingPending));
             return response;
         }
@@ -92,20 +152,22 @@ public class InvitationService : IInvitationService
             TenantId = tenantId,
             Email = email,
             Role = request.Role,
-            HouseholdId = request.HouseholdId,
-            HouseholdRole = request.HouseholdRole,
+            LinkedMemberId = request.LinkedMemberId,
             Status = InvitationStatus.Pending,
             InvitedByUserId = _currentUserContext.UserId,
+            Households = householdGrants
+                .Select(g => new InvitationHouseholdAccess { TenantId = tenantId, HouseholdId = g.HouseholdId, Role = g.Role })
+                .ToList(),
         };
 
         // If a user with this email already exists, accept immediately so the UX is identical
         // whether or not the invitee pre-existed.
-        var existingUser = await _dbContext.Users
-            .FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
-
         if (existingUser is not null)
         {
-            await MembershipGrant.GrantAsync(_dbContext, tenantId, existingUser.Id, request.Role, request.HouseholdId, request.HouseholdRole, cancellationToken);
+            await MembershipGrant.GrantAsync(
+                _dbContext, tenantId, existingUser.Id, request.Role,
+                householdGrants.Select(g => (g.HouseholdId, g.Role)).ToList(),
+                cancellationToken, request.LinkedMemberId);
             invitation.Status = InvitationStatus.Accepted;
             invitation.AcceptedByUserId = existingUser.Id;
             invitation.AcceptedAt = DateTimeOffset.UtcNow;
@@ -128,7 +190,7 @@ public class InvitationService : IInvitationService
             SecurityEventType.InvitationCreated,
             SecurityEventSeverity.Info,
             resource: $"Invitation:{invitation.Id}",
-            detail: $"{{\"role\":\"{invitation.Role}\",\"householdId\":{JsonId(invitation.HouseholdId)}}}",
+            detail: $"{{\"role\":\"{invitation.Role}\",\"householdCount\":{invitation.Households.Count}}}",
             tenantId: tenantId,
             userId: _currentUserContext.UserId,
             cancellationToken: cancellationToken);
@@ -166,6 +228,7 @@ public class InvitationService : IInvitationService
 
         var invitations = await _dbContext.Invitations
             .AsNoTracking()
+            .Include(i => i.Households)
             .Where(i => i.TenantId == tenantId)
             .ToListAsync(cancellationToken);
 
@@ -191,7 +254,7 @@ public class InvitationService : IInvitationService
 
         var invitation = await ServiceGuards.LoadOrNotFoundAsync(
             response,
-            _dbContext.Invitations.Where(i => i.TenantId == tenantId && i.Id == invitationId),
+            _dbContext.Invitations.Include(i => i.Households).Where(i => i.TenantId == tenantId && i.Id == invitationId),
             EntityDisplayName,
             cancellationToken);
 
@@ -199,14 +262,53 @@ public class InvitationService : IInvitationService
 
         invitation.Status = InvitationStatus.Revoked;
         invitation.IsDeleted = true;
+        // Revoking cancels the promised access too — leaving the grant rows active would let a
+        // future reader (audit, un-revoke) resurface access the admin believes was cancelled.
+        foreach (var grant in invitation.Households)
+            grant.IsDeleted = true;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         response.SetSuccess(MapToDto(invitation));
         return response;
     }
 
+    /// <summary>
+    /// Reconciles a pending invitation's grant rows with the newly requested set: updates roles in
+    /// place, reactivates previously-removed rows (the composite PK (InvitationId, HouseholdId)
+    /// forbids a fresh insert), soft-deletes rows no longer requested, and adds new ones.
+    /// Requires <paramref name="invitation"/>.Households to be loaded including soft-deleted rows.
+    /// </summary>
+    private static void MergeHouseholdGrants(
+        Invitation invitation,
+        Guid tenantId,
+        IReadOnlyList<InvitationHouseholdGrant> requested)
+    {
+        var requestedByHousehold = requested.ToDictionary(g => g.HouseholdId, g => g.Role);
+        foreach (var row in invitation.Households)
+        {
+            if (requestedByHousehold.TryGetValue(row.HouseholdId, out var role))
+            {
+                row.Role = role;
+                row.IsDeleted = false;
+                row.DeletedAt = null;
+                row.DeletedByUserId = null;
+                requestedByHousehold.Remove(row.HouseholdId);
+            }
+            else if (!row.IsDeleted)
+            {
+                row.IsDeleted = true;
+            }
+        }
+
+        foreach (var (householdId, role) in requestedByHousehold)
+            invitation.Households.Add(new InvitationHouseholdAccess { TenantId = tenantId, HouseholdId = householdId, Role = role });
+    }
+
+    // Soft-deleted grant rows can be present in memory (revoke, merge) — never surface them.
     private static InvitationDto MapToDto(Invitation i) => new(
-        i.Id, i.TenantId, i.Email, i.Role, i.HouseholdId, i.HouseholdRole, i.Status, i.CreatedAt, i.AcceptedAt);
+        i.Id, i.TenantId, i.Email, i.Role,
+        i.Households.Where(h => !h.IsDeleted).Select(h => new InvitationHouseholdGrant(h.HouseholdId, h.Role)).ToList(),
+        i.LinkedMemberId, i.Status, i.CreatedAt, i.AcceptedAt);
 
     private static string JsonId(Guid? id) => id is null ? "null" : $"\"{id}\"";
 }

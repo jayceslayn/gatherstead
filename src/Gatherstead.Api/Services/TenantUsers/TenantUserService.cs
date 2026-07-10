@@ -84,23 +84,9 @@ public class TenantUserService : ITenantUserService
 
         if (!isAppAdmin)
         {
-            var actorUserId = _currentUserContext.UserId;
-            if (!actorUserId.HasValue)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "Unable to determine acting user.");
-                return response;
-            }
-
-            var actorTenantUser = await _dbContext.TenantUsers
-                .AsNoTracking()
-                .Where(tu => tu.TenantId == tenantId && tu.UserId == actorUserId.Value)
-                .SingleOrDefaultAsync(cancellationToken);
-
+            var actorTenantUser = await ResolveActingManagerAsync(tenantId, response, cancellationToken);
             if (actorTenantUser is null)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "Acting user is not a member of this tenant.");
                 return response;
-            }
 
             if (!ServiceGuards.RequireNonEscalatingRole(response, actorTenantUser.Role, request.Role))
                 return response;
@@ -118,17 +104,10 @@ public class TenantUserService : ITenantUserService
         }
 
         // Protect against demoting the last Owner (App Admins bypass this)
-        if (!isAppAdmin && tenantUser.Role == TenantRole.Owner && request.Role != TenantRole.Owner)
+        if (!isAppAdmin && tenantUser.Role == TenantRole.Owner && request.Role != TenantRole.Owner
+            && !await RequireOtherOwnerExistsAsync(tenantId, userId, "Cannot demote the last Owner of this tenant.", response, cancellationToken))
         {
-            var otherOwnerExists = await _dbContext.TenantUsers
-                .AsNoTracking()
-                .AnyAsync(tu => tu.TenantId == tenantId && tu.UserId != userId && tu.Role == TenantRole.Owner, cancellationToken);
-
-            if (!otherOwnerExists)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "Cannot demote the last Owner of this tenant.");
-                return response;
-            }
+            return response;
         }
 
         tenantUser.Role = request.Role;
@@ -136,15 +115,8 @@ public class TenantUserService : ITenantUserService
 
         await _authCache.InvalidateTenantUserAsync(tenantId, userId, cancellationToken);
 
-        // An App Admin bypassing tenant authorization to change a role is a privileged action worth auditing.
         if (isAppAdmin)
-        {
-            await _securityEventLogger.LogAsync(
-                SecurityEventType.AppAdminAction, SecurityEventSeverity.Info,
-                resource: $"TenantUser:{userId}",
-                detail: $"{{\"action\":\"RoleUpdated\",\"newRole\":\"{request.Role}\"}}",
-                tenantId: tenantId, userId: _currentUserContext.UserId, cancellationToken: cancellationToken);
-        }
+            await LogAppAdminActionAsync(tenantId, userId, $"{{\"action\":\"RoleUpdated\",\"newRole\":\"{request.Role}\"}}", cancellationToken);
 
         response.SetSuccess(MapToDto(tenantUser));
         return response;
@@ -189,32 +161,10 @@ public class TenantUserService : ITenantUserService
                 return response;
             }
 
-            var targetMember = await _dbContext.HouseholdMembers
-                .AsNoTracking()
-                .Where(m => m.TenantId == tenantId && m.Id == request.MemberId.Value)
-                .SingleOrDefaultAsync(cancellationToken);
-
-            if (targetMember is null)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "Household member not found.");
+            if (!await ServiceGuards.ValidateMemberLinkAsync(
+                    response, _memberAuthorizationService, _dbContext, tenantId, request.MemberId.Value,
+                    excludeUserId: userId, excludeInvitationId: null, cancellationToken))
                 return response;
-            }
-
-            if (!await _memberAuthorizationService.CanManageHouseholdAsync(tenantId, targetMember.HouseholdId, cancellationToken))
-            {
-                response.AddResponseMessage(MessageType.ERROR, "You do not have permission to link a user to this member.");
-                return response;
-            }
-
-            var alreadyClaimed = await _dbContext.TenantUsers
-                .AsNoTracking()
-                .AnyAsync(tu => tu.TenantId == tenantId && tu.LinkedMemberId == request.MemberId && tu.UserId != userId, cancellationToken);
-
-            if (alreadyClaimed)
-            {
-                response.AddResponseMessage(MessageType.ERROR, "The specified member is already linked to another user in this tenant.");
-                return response;
-            }
 
             tenantUser.LinkedMemberId = request.MemberId;
         }
@@ -241,6 +191,85 @@ public class TenantUserService : ITenantUserService
 
         // LinkedMemberId is part of the cached TenantUserInfo (drives the Self check).
         await _authCache.InvalidateTenantUserAsync(tenantId, userId, cancellationToken);
+
+        response.SetSuccess(MapToDto(tenantUser));
+        return response;
+    }
+
+    public async Task<TenantUserResponse> RemoveAsync(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new TenantUserResponse();
+        ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response);
+
+        if (ServiceValidationHelper.HasErrors(response))
+            return response;
+
+        if (!await ServiceGuards.AuthorizeTenantManageAsync(response, _memberAuthorizationService, tenantId, cancellationToken))
+            return response;
+
+        var isAppAdmin = await _appAdminContext.IsAppAdminAsync(cancellationToken) == true;
+
+        var tenantUser = await _dbContext.TenantUsers
+            .Include(tu => tu.User)
+            .Where(tu => tu.TenantId == tenantId && tu.UserId == userId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (tenantUser is null)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "User is not a member of this tenant.");
+            return response;
+        }
+
+        if (!isAppAdmin)
+        {
+            var actorTenantUser = await ResolveActingManagerAsync(tenantId, response, cancellationToken);
+            if (actorTenantUser is null)
+                return response;
+
+            // Removing yourself through the admin surface would let a manager lock themselves out
+            // mid-session; leaving a tenant is a separate concern out of scope here.
+            if (actorTenantUser.UserId == userId)
+            {
+                response.AddResponseMessage(MessageType.ERROR, "You cannot remove yourself from the tenant.");
+                return response;
+            }
+
+            // Cannot remove a user more privileged than yourself (lower numeric value = higher privilege).
+            if (!ServiceGuards.RequireNonEscalatingRole(response, actorTenantUser.Role, tenantUser.Role,
+                    "You cannot remove a user more privileged than yourself."))
+                return response;
+
+            // Protect against removing the last Owner (App Admins bypass this).
+            if (tenantUser.Role == TenantRole.Owner
+                && !await RequireOtherOwnerExistsAsync(tenantId, userId, "Cannot remove the last Owner of this tenant.", response, cancellationToken))
+            {
+                return response;
+            }
+        }
+
+        // Clear the member link so the soft-deleted row does not hold the unique filtered index
+        // (IX_TenantUser_LinkedMemberId is filtered on LinkedMemberId only, not on IsDeleted),
+        // which would otherwise permanently block re-linking that member to anyone.
+        tenantUser.LinkedMemberId = null;
+        tenantUser.IsDeleted = true;
+
+        // Removing tenant membership also removes household-level access — no orphaned access remains.
+        var householdUsers = await _dbContext.HouseholdUsers
+            .Where(hu => hu.TenantId == tenantId && hu.UserId == userId)
+            .ToListAsync(cancellationToken);
+        foreach (var householdUser in householdUsers)
+            householdUser.IsDeleted = true;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _authCache.InvalidateTenantUserAsync(tenantId, userId, cancellationToken);
+        await _authCache.InvalidateHouseholdUsersAsync(tenantId, userId, cancellationToken);
+
+        if (isAppAdmin)
+            await LogAppAdminActionAsync(tenantId, userId, "{\"action\":\"Removed\"}", cancellationToken);
 
         response.SetSuccess(MapToDto(tenantUser));
         return response;
@@ -313,6 +342,65 @@ public class TenantUserService : ITenantUserService
 
         return BaseEntityResponse<TenantUserMeDto>.SuccessfulResponse(dto);
     }
+
+    /// <summary>
+    /// Resolves the non-app-admin actor's own tenant membership for a privileged per-user mutation,
+    /// attaching the standard error and returning null when the acting user cannot be determined or
+    /// is not a member of the tenant.
+    /// </summary>
+    private async Task<TenantUser?> ResolveActingManagerAsync(
+        Guid tenantId,
+        TenantUserResponse response,
+        CancellationToken cancellationToken)
+    {
+        var actorUserId = _currentUserContext.UserId;
+        if (!actorUserId.HasValue)
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Unable to determine acting user.");
+            return null;
+        }
+
+        var actorTenantUser = await _dbContext.TenantUsers
+            .AsNoTracking()
+            .Where(tu => tu.TenantId == tenantId && tu.UserId == actorUserId.Value)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (actorTenantUser is null)
+            response.AddResponseMessage(MessageType.ERROR, "Acting user is not a member of this tenant.");
+
+        return actorTenantUser;
+    }
+
+    /// <summary>
+    /// Guards the "a tenant always retains at least one Owner" invariant: fails with
+    /// <paramref name="errorMessage"/> when no Owner other than <paramref name="userId"/> exists.
+    /// </summary>
+    private async Task<bool> RequireOtherOwnerExistsAsync(
+        Guid tenantId,
+        Guid userId,
+        string errorMessage,
+        TenantUserResponse response,
+        CancellationToken cancellationToken)
+    {
+        var otherOwnerExists = await _dbContext.TenantUsers
+            .AsNoTracking()
+            .AnyAsync(tu => tu.TenantId == tenantId && tu.UserId != userId && tu.Role == TenantRole.Owner, cancellationToken);
+
+        if (!otherOwnerExists)
+        {
+            response.AddResponseMessage(MessageType.ERROR, errorMessage);
+            return false;
+        }
+        return true;
+    }
+
+    // An App Admin bypassing tenant authorization is a privileged action worth auditing.
+    private Task LogAppAdminActionAsync(Guid tenantId, Guid targetUserId, string detail, CancellationToken cancellationToken) =>
+        _securityEventLogger.LogAsync(
+            SecurityEventType.AppAdminAction, SecurityEventSeverity.Info,
+            resource: $"TenantUser:{targetUserId}",
+            detail: detail,
+            tenantId: tenantId, userId: _currentUserContext.UserId, cancellationToken: cancellationToken);
 
     private static TenantUserDto MapToDto(TenantUser tu) =>
         new(tu.UserId, tu.TenantId, tu.Role, tu.LinkedMemberId, tu.User?.ExternalId ?? string.Empty, tu.User?.Email, tu.User?.DisplayName);

@@ -22,6 +22,11 @@ public interface ITenantUserService
         SetLinkedMemberRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<TenantUserResponse> RemoveAsync(
+        Guid tenantId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task<BaseEntityResponse<IReadOnlyCollection<HouseholdUserDto>>> ListUserHouseholdAccessAsync(
         Guid tenantId,
         Guid userId,

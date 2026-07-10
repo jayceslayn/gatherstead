@@ -4295,6 +4295,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenants/{tenantId}/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    tenantId: string;
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TenantUserResponse"];
+                        "application/json": components["schemas"]["TenantUserResponse"];
+                        "text/json": components["schemas"]["TenantUserResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/{tenantId}/users/{userId}/household-access": {
         parameters: {
             query?: never;
@@ -4732,10 +4772,9 @@ export interface components {
             email: string;
             /** @enum {string} */
             role: "Owner" | "Manager" | "Coordinator" | "Member" | "Guest";
+            households?: components["schemas"]["InvitationHouseholdGrant"][];
             /** Format: uuid */
-            householdId?: string | null;
-            /** @enum {string|null} */
-            householdRole?: "Manager" | "Member" | null;
+            linkedMemberId?: string | null;
         };
         CreateMealTemplateRequest: {
             name: string;
@@ -5062,10 +5101,9 @@ export interface components {
             email: string;
             /** @enum {string} */
             role: "Owner" | "Manager" | "Coordinator" | "Member" | "Guest";
+            households: components["schemas"]["InvitationHouseholdGrant"][];
             /** Format: uuid */
-            householdId?: string | null;
-            /** @enum {string|null} */
-            householdRole?: "Manager" | "Member" | null;
+            linkedMemberId?: string | null;
             /** @enum {string} */
             status: "Pending" | "Accepted" | "Revoked";
             /** Format: date-time */
@@ -5077,6 +5115,12 @@ export interface components {
             entity?: components["schemas"]["InvitationDto"][] | null;
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
+        InvitationHouseholdGrant: {
+            /** Format: uuid */
+            householdId: string;
+            /** @enum {string} */
+            role?: "Manager" | "Member";
         };
         InvitationResponse: {
             entity?: components["schemas"]["InvitationDto"];

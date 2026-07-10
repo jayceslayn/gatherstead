@@ -6,6 +6,7 @@ using Gatherstead.Api.Services.TenantUsers;
 using Gatherstead.Api.Tests.Fixtures;
 using Gatherstead.Data;
 using Gatherstead.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace Gatherstead.Api.Tests.Services;
@@ -41,7 +42,8 @@ public class TenantUserServiceTests : IAsyncLifetime
 
         var canManageTenant = actorRole.HasValue && actorRole.Value <= TenantRole.Manager;
         var authService = Mock.Of<IMemberAuthorizationService>(s =>
-            s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManageTenant || isAppAdmin));
+            s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(canManageTenant || isAppAdmin)
+            && s.CanManageHouseholdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()) == Task.FromResult(canManageTenant || isAppAdmin));
 
         return new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache(), Mock.Of<ISecurityEventLogger>());
     }
@@ -225,5 +227,185 @@ public class TenantUserServiceTests : IAsyncLifetime
 
         Assert.False(result.Successful);
         Assert.Contains(result.Messages, m => m.Type == Gatherstead.Api.Contracts.Responses.MessageType.ERROR);
+    }
+
+    // ── RemoveAsync ────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RemoveAsync_SoftDeletesMembership_ClearsLink_AndCascadesHouseholdAccess()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Owner);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Member);
+
+        var householdId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        _dbContext.Households.Add(new Household { Id = householdId, TenantId = _tenantId, Name = "House" });
+        _dbContext.HouseholdMembers.Add(new HouseholdMember { Id = memberId, TenantId = _tenantId, HouseholdId = householdId, Name = "Alice" });
+        var target = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        target.LinkedMemberId = memberId;
+        _dbContext.HouseholdUsers.Add(new HouseholdUser { TenantId = _tenantId, HouseholdId = householdId, UserId = _targetUserId, Role = HouseholdRole.Member });
+        await _dbContext.SaveChangesAsync(ct);
+
+        var result = await CreateService(TenantRole.Owner).RemoveAsync(_tenantId, _targetUserId, ct);
+
+        Assert.True(result.Successful);
+        var removed = await _dbContext.TenantUsers.IgnoreQueryFilters()
+            .SingleAsync(tu => tu.TenantId == _tenantId && tu.UserId == _targetUserId, ct);
+        Assert.True(removed.IsDeleted);
+        Assert.Null(removed.LinkedMemberId);
+        var hu = await _dbContext.HouseholdUsers.IgnoreQueryFilters()
+            .SingleAsync(x => x.HouseholdId == householdId && x.UserId == _targetUserId, ct);
+        Assert.True(hu.IsDeleted);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_OwnerCanRemoveAnotherOwner()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Owner);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Owner);
+
+        var result = await CreateService(TenantRole.Owner).RemoveAsync(_tenantId, _targetUserId, ct);
+
+        Assert.True(result.Successful);
+        var removed = await _dbContext.TenantUsers.IgnoreQueryFilters()
+            .SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        Assert.True(removed.IsDeleted);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_SelfRemoval_Blocked()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Owner);
+
+        var result = await CreateService(TenantRole.Owner).RemoveAsync(_tenantId, _actorUserId, ct);
+
+        Assert.False(result.Successful);
+        var self = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _actorUserId, ct);
+        Assert.False(self.IsDeleted);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_RemovingMorePrivilegedUser_Blocked()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Manager);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Owner);
+
+        var result = await CreateService(TenantRole.Manager).RemoveAsync(_tenantId, _targetUserId, ct);
+
+        Assert.False(result.Successful);
+        var target = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        Assert.False(target.IsDeleted);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_WithoutManagePermission_Blocked()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Member);
+
+        // Coordinator cannot manage tenant users.
+        var result = await CreateService(TenantRole.Coordinator).RemoveAsync(_tenantId, _targetUserId, ct);
+
+        Assert.False(result.Successful);
+        var target = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        Assert.False(target.IsDeleted);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_UnknownUser_ReturnsError()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Owner);
+
+        var result = await CreateService(TenantRole.Owner).RemoveAsync(_tenantId, Guid.NewGuid(), ct);
+
+        Assert.False(result.Successful);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_AppAdmin_BypassesRoleGuards_AndAudits()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        // App Admin is not a tenant member and bypasses self/escalation/last-owner guards.
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Owner);
+
+        var tenantContext = Mock.Of<ICurrentTenantContext>(c => c.TenantId == _tenantId);
+        var userContext = Mock.Of<ICurrentUserContext>(c => c.UserId == _actorUserId);
+        var appAdminContext = Mock.Of<IAppAdminContext>(c =>
+            c.IsAppAdminAsync(It.IsAny<CancellationToken>()) == Task.FromResult<bool?>(true));
+        var authService = Mock.Of<IMemberAuthorizationService>(s =>
+            s.CanManageTenantAsync(_tenantId, It.IsAny<CancellationToken>()) == Task.FromResult(true));
+        var logger = new Mock<ISecurityEventLogger>();
+        var svc = new TenantUserService(_dbContext, tenantContext, userContext, authService, appAdminContext, new FakeAuthCache(), logger.Object);
+
+        var result = await svc.RemoveAsync(_tenantId, _targetUserId, ct);
+
+        Assert.True(result.Successful);
+        var removed = await _dbContext.TenantUsers.IgnoreQueryFilters()
+            .SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        Assert.True(removed.IsDeleted);
+        logger.Verify(s => s.LogAsync(
+            SecurityEventType.AppAdminAction, SecurityEventSeverity.Info,
+            It.IsAny<string>(), It.IsAny<string>(), _tenantId, _actorUserId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ── SetLinkedMemberAsync ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SetLinkedMemberAsync_LinksFreeMember()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Manager);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Member);
+        var memberId = await SeedMemberAsync();
+
+        var result = await CreateService(TenantRole.Manager).SetLinkedMemberAsync(
+            _tenantId, _targetUserId, new SetLinkedMemberRequest { MemberId = memberId }, ct);
+
+        Assert.True(result.Successful);
+        var target = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        Assert.Equal(memberId, target.LinkedMemberId);
+    }
+
+    [Fact]
+    public async Task SetLinkedMemberAsync_MemberPromisedToPendingInvitation_Rejected()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Manager);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Member);
+        var memberId = await SeedMemberAsync();
+        _dbContext.Invitations.Add(new Invitation
+        {
+            Id = Guid.NewGuid(), TenantId = _tenantId, Email = "promised@test.com",
+            Role = TenantRole.Member, Status = InvitationStatus.Pending, LinkedMemberId = memberId,
+        });
+        await _dbContext.SaveChangesAsync(ct);
+
+        // A pending invitation is an outstanding promise of the link; linking the member directly
+        // would silently strand the invitee's link at accept time.
+        var result = await CreateService(TenantRole.Manager).SetLinkedMemberAsync(
+            _tenantId, _targetUserId, new SetLinkedMemberRequest { MemberId = memberId }, ct);
+
+        Assert.False(result.Successful);
+        var target = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _targetUserId, ct);
+        Assert.Null(target.LinkedMemberId);
+    }
+
+    private async Task<Guid> SeedMemberAsync()
+    {
+        var householdId = Guid.NewGuid();
+        var memberId = Guid.NewGuid();
+        _dbContext.Households.Add(new Household { Id = householdId, TenantId = _tenantId, Name = "House" });
+        _dbContext.HouseholdMembers.Add(new HouseholdMember
+        {
+            Id = memberId, TenantId = _tenantId, HouseholdId = householdId, Name = "Alice",
+        });
+        await _dbContext.SaveChangesAsync();
+        return memberId;
     }
 }
