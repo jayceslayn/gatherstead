@@ -93,6 +93,7 @@ commit: 31a127e
   - **`useEventMealData` composable**: Fetches all `MealPlan` records across every template for an event, then loads `MealAttendance` per plan. Exposes `mealPlansByDay` (plans grouped and sorted by day), `getAttendance(planId, memberId)`, and `upsert(planId, householdId, memberId, status)`. Meal data loads asynchronously so it does not block the initial grid paint.
 
 ## Planned Enhancements
+- **Guest access (event-scoped guests)**: True-guest participation scoped to invited events — hidden per-tenant system household, `EventInvitee` entity, positive read scoping for the Guest role, one-step guest invitations, and guest-tailored frontend. Replaces the latent household-linked guest flavor. Full design: [agents/plans/GUEST-ACCESS.md](agents/plans/GUEST-ACCESS.md).
 - **Email/Graph invitation delivery**: Layer out-of-band invite delivery (Entra Graph invite or email) on top of the existing app-managed `Invitation` model — the data model and JIT claim flow are designed so this slots in without rework.
 - **Task sign-up flows**: Capacity enforcement using `TaskTemplate.MinimumAssignees` — surface unfilled slots and prevent overbooking when members volunteer via `TaskIntent`.
 - **Accommodation arbitration**: Surface arbitration metadata through dedicated admin endpoints so accommodation conflicts can be resolved with transparent priority rules and audit trails. (The previous unused `AccommodationIntent.Priority` placeholder column was removed; re-introduce a priority signal when this feature is designed against real requirements.)
