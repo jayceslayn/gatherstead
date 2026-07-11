@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ShoppingItem, ShoppingItemOrigin } from '~/repositories/types'
 import type { ShoppingScope, ShoppingScopeOption, ShoppingSection } from '~/composables/useShoppingList'
-import { useShoppingList } from '~/composables/useShoppingList'
+import { REFRESH_INTERVAL_S, useShoppingList } from '~/composables/useShoppingList'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
 import { today } from '~/utils/dates'
@@ -139,7 +139,11 @@ onMounted(() => { tick = setInterval(() => { now.value = Date.now() }, 15_000) }
 onUnmounted(() => { if (tick) clearInterval(tick) })
 
 const staleSeconds = computed(() => lastUpdatedAt.value ? Math.floor((now.value - lastUpdatedAt.value) / 1000) : 0)
-const isStale = computed(() => staleSeconds.value >= 90)
+// Only warn once a full auto-refresh cycle has clearly been missed (2× the interval), rather than
+// nagging one grace period after a single skipped/slow poll. Derived from the refresh rate so the
+// two stay in sync.
+const staleThresholdSeconds = (REFRESH_INTERVAL_S * 2)
+const isStale = computed(() => staleSeconds.value >= staleThresholdSeconds)
 const updatedLabel = computed(() => {
   if (!lastUpdatedAt.value) return ''
   const mins = Math.floor(staleSeconds.value / 60)

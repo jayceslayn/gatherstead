@@ -39,7 +39,7 @@ export interface ShoppingSection {
   items: ShoppingItem[]
 }
 
-const REFRESH_INTERVAL_MS = 45_000
+export const REFRESH_INTERVAL_S = 60
 
 export function useShoppingList(scope: Ref<ShoppingScope | null>) {
   const tenantStore = useTenantStore()
@@ -148,7 +148,11 @@ export function useShoppingList(scope: Ref<ShoppingScope | null>) {
     if (document.visibilityState === 'visible') void load()
   }
   onMounted(() => {
-    timer = setInterval(() => { void load() }, REFRESH_INTERVAL_MS)
+    // Skip the periodic poll while the tab is hidden to avoid wasting network requests;
+    // onVisible refreshes immediately when the tab regains focus.
+    timer = setInterval(() => {
+      if (document.visibilityState === 'visible') void load()
+    }, REFRESH_INTERVAL_S * 1000)
     document.addEventListener('visibilitychange', onVisible)
   })
   onUnmounted(() => {
