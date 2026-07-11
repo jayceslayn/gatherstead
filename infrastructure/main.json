@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "14578987755803356005"
+      "templateHash": "7216236386396246174"
     }
   },
   "parameters": {
@@ -711,7 +711,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "2535474733324505522"
+              "templateHash": "1851088656640380157"
             }
           },
           "parameters": {
@@ -790,7 +790,8 @@
                 "tenantId": "[subscription().tenantId]",
                 "enableRbacAuthorization": true,
                 "softDeleteRetentionInDays": 7,
-                "enableSoftDelete": true
+                "enableSoftDelete": true,
+                "enablePurgeProtection": true
               }
             },
             {
@@ -966,7 +967,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "13947628037851624733"
+              "templateHash": "2310115421498820444"
             }
           },
           "parameters": {
@@ -1063,15 +1064,13 @@
               "name": "[format('{0}/{1}', variables('sqlServerName'), 'gatherstead')]",
               "location": "[parameters('location')]",
               "sku": {
-                "name": "GP_S_Gen5_1",
-                "tier": "GeneralPurpose",
-                "family": "Gen5",
-                "capacity": 1
+                "name": "Basic",
+                "tier": "Basic",
+                "capacity": 5
               },
               "properties": {
                 "collation": "SQL_Latin1_General_CP1_CI_AS",
-                "autoPauseDelay": 60,
-                "minCapacity": "[json('0.5')]",
+                "maxSizeBytes": 2147483648,
                 "preferredEnclaveType": "VBS"
               },
               "dependsOn": [
@@ -1221,7 +1220,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.44.1.10279",
-              "templateHash": "5840717935938172479"
+              "templateHash": "7115816163055432949"
             }
           },
           "parameters": {
@@ -1409,6 +1408,8 @@
                 "httpsOnly": true,
                 "siteConfig": {
                   "linuxFxVersion": "DOTNETCORE|10.0",
+                  "minTlsVersion": "1.2",
+                  "ftpsState": "Disabled",
                   "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
                   "appSettings": [
                     {
@@ -1483,6 +1484,8 @@
                 "keyVaultReferenceIdentity": "[parameters('webManagedIdentityId')]",
                 "siteConfig": {
                   "linuxFxVersion": "NODE|24-lts",
+                  "minTlsVersion": "1.2",
+                  "ftpsState": "Disabled",
                   "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
                   "appCommandLine": "node .output/server/index.mjs",
                   "appSettings": [

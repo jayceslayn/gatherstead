@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "13947628037851624733"
+      "templateHash": "2310115421498820444"
     }
   },
   "parameters": {
@@ -102,15 +102,13 @@
       "name": "[format('{0}/{1}', variables('sqlServerName'), 'gatherstead')]",
       "location": "[parameters('location')]",
       "sku": {
-        "name": "GP_S_Gen5_1",
-        "tier": "GeneralPurpose",
-        "family": "Gen5",
-        "capacity": 1
+        "name": "Basic",
+        "tier": "Basic",
+        "capacity": 5
       },
       "properties": {
         "collation": "SQL_Latin1_General_CP1_CI_AS",
-        "autoPauseDelay": 60,
-        "minCapacity": "[json('0.5')]",
+        "maxSizeBytes": 2147483648,
         "preferredEnclaveType": "VBS"
       },
       "dependsOn": [
