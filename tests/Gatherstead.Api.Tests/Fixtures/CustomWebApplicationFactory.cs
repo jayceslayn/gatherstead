@@ -114,8 +114,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     /// <summary>
     /// Seeds a user directly via SQL, bypassing the auditing interceptor.
+    /// Set <paramref name="isAppAdmin"/> to grant App Admin, which bypasses tenant membership and
+    /// role checks (used to reach controller actions without seeding a full tenant).
     /// </summary>
-    public void SeedUser(Guid userId, string externalId)
+    public void SeedUser(Guid userId, string externalId, bool isAppAdmin = false)
     {
         if (_connection == null)
         {
@@ -126,10 +128,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         using var cmd = _connection!.CreateCommand();
         cmd.CommandText = """
             INSERT INTO Users (Id, ExternalId, IsAppAdmin, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
-            VALUES ($id, $externalId, 0, $now, $id, $now, $id, 0)
+            VALUES ($id, $externalId, $isAppAdmin, $now, $id, $now, $id, 0)
             """;
-        cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$id", userId.ToString()));
+        // Bind the Guid/bool as typed values (not hand-formatted strings) so Microsoft.Data.Sqlite
+        // serializes them exactly as EF Core reads them back — otherwise a `Where(u => u.Id == guid)`
+        // equality comparison won't match the stored value.
+        cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$id", userId));
         cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$externalId", externalId));
+        cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$isAppAdmin", isAppAdmin));
         cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$now", DateTimeOffset.UtcNow.ToString("O")));
         cmd.ExecuteNonQuery();
     }

@@ -10123,9 +10123,6 @@
         "additionalProperties": false
       },
       "InvitationHouseholdGrant": {
-        "required": [
-          "householdId"
-        ],
         "type": "object",
         "properties": {
           "householdId": {

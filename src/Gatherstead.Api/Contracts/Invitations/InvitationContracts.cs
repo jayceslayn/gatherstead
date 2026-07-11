@@ -11,7 +11,7 @@ namespace Gatherstead.Api.Contracts.Invitations;
 /// <c>default(HouseholdRole)</c> = <see cref="HouseholdRole.Manager"/> (0) — a silent escalation.
 /// </remarks>
 public record InvitationHouseholdGrant(
-    [property: Required] Guid HouseholdId,
+    [Required] Guid HouseholdId,
     HouseholdRole Role = HouseholdRole.Member);
 
 public record InvitationDto(

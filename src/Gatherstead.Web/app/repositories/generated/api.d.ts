@@ -5129,7 +5129,7 @@ export interface components {
         };
         InvitationHouseholdGrant: {
             /** Format: uuid */
-            householdId: string;
+            householdId?: string;
             /** @enum {string} */
             role?: "Manager" | "Member";
         };
