@@ -3,6 +3,7 @@ import type { HouseholdMember } from '~/repositories/types'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useHouseholds } from '~/composables/useHouseholds'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
+import { compareMembers } from '~/utils/sorting'
 
 definePageMeta({
   layout: 'default',
@@ -23,6 +24,7 @@ const membersByHousehold = computed(() => {
     if (list) list.push(member)
     else map.set(member.householdId, [member])
   }
+  for (const list of map.values()) list.sort(compareMembers)
   return map
 })
 

@@ -66,12 +66,14 @@ public class HouseholdMemberService : IHouseholdMemberService
         var members = await query.ToListAsync(cancellationToken);
         var canReadSensitive = scope.CanReadSensitive(householdId);
 
-        // Ordered by effective age band (canonical enum order, null last) then name. Sorted on the
-        // mapped DTOs because the effective band may be derived from BirthDate (see MapToDto) and
-        // Name is an Always Encrypted (PII) column that cannot be ORDER BY'd in SQL.
+        // Ordered by effective age band descending (canonical enum order, null last), then birth date
+        // descending (most recent first, null last), then name. Sorted on the mapped DTOs because the
+        // effective band may be derived from BirthDate (see MapToDto), BirthDate is null without
+        // sensitive-read scope, and Name is an Always Encrypted (PII) column that can't be ORDER BY'd in SQL.
         var dtos = members
             .Select(m => MapToDto(m, canReadSensitive, AttributeVisibilityHelper.Visible(m.Attributes, tenantRole, householdRole)))
-            .OrderBy(d => d.AgeBand.HasValue ? (int)d.AgeBand.Value : int.MaxValue)
+            .OrderByDescending(d => d.AgeBand.HasValue ? (int)d.AgeBand.Value : int.MinValue)
+            .ThenByDescending(d => d.BirthDate ?? DateOnly.MinValue)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 

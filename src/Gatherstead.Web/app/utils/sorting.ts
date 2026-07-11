@@ -12,7 +12,6 @@ const ranker = <T>(order: readonly T[]) => (v: T | null | undefined) => {
   return i < 0 ? order.length : i
 }
 export const accommodationTypeRank = ranker(ACCOMMODATION_TYPE_ORDER)
-export const ageBandRank = ranker(AGE_BAND_ORDER)
 
 export const byName = (a: string | null | undefined, b: string | null | undefined) =>
   (a ?? '').localeCompare(b ?? '', undefined, { sensitivity: 'base' })
@@ -31,7 +30,25 @@ export const compareAvailability = (
   b: { propertyName: string, type: AccommodationType, name: string },
 ) => byName(a.propertyName, b.propertyName) || compareAccommodations(a, b)
 
+// Members list: age band descending (oldest band first), then birth date descending (most recent
+// first within a band), then name ascending. Age band is the effective band (derived from birth
+// date server-side), so it buckets everyone by real age; actual birth date only refines order within
+// a band and is often null (needs sensitive-read scope). Unknown band / birth date always sort last
+// so partial data never leads.
+const ageBandDescRank = (b: AgeBand | null | undefined) => {
+  const i = b == null ? -1 : AGE_BAND_ORDER.indexOf(b)
+  return i < 0 ? Number.POSITIVE_INFINITY : AGE_BAND_ORDER.length - 1 - i
+}
+// ISO yyyy-mm-dd strings compare lexically == chronologically; most recent first, nulls sort last.
+const byBirthDateDesc = (a: string | null | undefined, b: string | null | undefined) => {
+  if (a === b) return 0
+  if (a == null) return 1
+  if (b == null) return -1
+  return a > b ? -1 : 1
+}
 export const compareMembers = (
-  a: { ageBand: AgeBand | null, name: string },
-  b: { ageBand: AgeBand | null, name: string },
-) => ageBandRank(a.ageBand) - ageBandRank(b.ageBand) || byName(a.name, b.name)
+  a: { ageBand: AgeBand | null, birthDate?: string | null, name: string },
+  b: { ageBand: AgeBand | null, birthDate?: string | null, name: string },
+) => ageBandDescRank(a.ageBand) - ageBandDescRank(b.ageBand)
+  || byBirthDateDesc(a.birthDate, b.birthDate)
+  || byName(a.name, b.name)

@@ -13,8 +13,10 @@ import type {
 import { getDemoStore } from './DemoStore'
 import { enumDays, sleepsCapacity } from './DemoHelpers'
 import { DEMO_DIETARY_TAGS } from './DemoDietaryTagRepository'
+import { DEMO_AGE_BANDS } from './DemoAgeBandRepository'
 import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '../../composables/useTemplateOrder'
-import { byName, compareAccommodations } from '../../utils/sorting'
+import { byName, compareAccommodations, compareMembers } from '../../utils/sorting'
+import { deriveAgeBand } from '../types'
 
 const SLUG_TO_DISPLAY_NAME = new Map(DEMO_DIETARY_TAGS.map(t => [t.slug.toLowerCase(), t.displayName]))
 
@@ -39,12 +41,27 @@ export class DemoReportRepository implements IReportRepository {
     const event = store.events.value.find(e => e.id === eventId)
     if (!event) return null
 
-    const memberById = new Map(store.members.value.map(m => [m.id, m]))
+    // Use the effective age band (derived from birth date, else the stored manual band) so members
+    // sort by real age — mirrors the list repo's withDerivedAgeBand and the backend's MapToDto. The
+    // store keeps the raw band (null when a birth date is set), so compareMembers would otherwise
+    // treat birth-dated members as unknown-band and sort them last.
+    const memberById = new Map(store.members.value.map(m =>
+      [m.id, { ...m, ageBand: m.birthDate ? deriveAgeBand(m.birthDate, DEMO_AGE_BANDS) : m.ageBand }]))
     // Household name per member, so occupant/attendee lists group same-household people together
     // (household name, then member name) — mirrors the backend EventReportService ordering.
     const householdNameById = new Map(store.households.value.map(h => [h.id, h.name]))
     const householdNameForMember = (memberId: string): string =>
       householdNameById.get(memberById.get(memberId)?.householdId ?? '') ?? ''
+    // Oldest-first member ordering (age band desc, then birth date, then name) — mirrors the
+    // backend EventReportService.MemberSortKey via the shared compareMembers.
+    const compareMembersById = (aId: string, bId: string): number => {
+      const a = memberById.get(aId)
+      const b = memberById.get(bId)
+      return compareMembers(
+        { ageBand: a?.ageBand ?? null, birthDate: a?.birthDate ?? null, name: a?.name ?? '' },
+        { ageBand: b?.ageBand ?? null, birthDate: b?.birthDate ?? null, name: b?.name ?? '' },
+      )
+    }
     const templateNameById = new Map(store.mealTemplates.value.map(t => [t.id, t.name]))
     const eventMealPlans = store.mealPlans.value.filter(p => templateNameById.has(p.mealTemplateId))
     const planIds = new Set(eventMealPlans.map(p => p.id))
@@ -58,11 +75,11 @@ export class DemoReportRepository implements IReportRepository {
     // Per (slot, template) ordering aggregates so days order templates by the shared scheme.
     const mealOrderKey = aggregateByKey(eventMealPlans, p => `${p.mealType}:${p.mealTemplateId}`)
     const taskOrderKey = aggregateByKey(taskPlansForEvent, p => `${p.templateId}:${p.timeSlot ?? ''}`)
-    const intentsByPlan = new Map<string, string[]>()
+    const intentsByPlan = new Map<string, string[]>() // taskPlanId → householdMemberId[]
     for (const intent of store.taskIntents.value) {
-      const names = intentsByPlan.get(intent.taskPlanId) ?? []
-      names.push(memberById.get(intent.householdMemberId)?.name ?? '')
-      intentsByPlan.set(intent.taskPlanId, names)
+      const ids = intentsByPlan.get(intent.taskPlanId) ?? []
+      ids.push(intent.householdMemberId)
+      intentsByPlan.set(intent.taskPlanId, ids)
     }
 
     // Accommodations for the event's property → intents on the event's nights.
@@ -88,7 +105,7 @@ export class DemoReportRepository implements IReportRepository {
       const maybe = dayEventAttendance.filter(a => a.status === 'Maybe').length
 
       // Every response for that day — including NotGoing — grouped by household then
-      // name (mirrors backend ordering).
+      // oldest-first member order (mirrors backend ordering).
       const dayAttendees: EventReportDayAttendee[] = dayEventAttendance
         .map((a): EventReportDayAttendee => ({
           memberId: a.householdMemberId,
@@ -97,7 +114,7 @@ export class DemoReportRepository implements IReportRepository {
           householdId: memberById.get(a.householdMemberId)?.householdId ?? '',
           householdName: householdNameForMember(a.householdMemberId),
         }))
-        .sort((x, y) => byName(x.householdName, y.householdName) || byName(x.name, y.name))
+        .sort((x, y) => byName(x.householdName, y.householdName) || compareMembersById(x.memberId, y.memberId))
 
       const dayPlans = eventMealPlans
         .filter(p => p.day === day)
@@ -121,7 +138,7 @@ export class DemoReportRepository implements IReportRepository {
           }))
           .sort((x, y) =>
             byName(householdNameForMember(x.memberId), householdNameForMember(y.memberId))
-            || byName(x.name, y.name))
+            || compareMembersById(x.memberId, y.memberId))
 
         // Group attendees by their full sorted tag combo (mirrors backend per-member combo tally).
         const comboMap = new Map<string, number>()
@@ -157,7 +174,8 @@ export class DemoReportRepository implements IReportRepository {
         .map((plan): EventReportTask => {
           const template = taskTemplateById.get(plan.templateId)
           const assignees = [...(intentsByPlan.get(plan.id) ?? [])]
-            .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+            .sort(compareMembersById)
+            .map(id => memberById.get(id)?.name ?? '')
           return {
             taskPlanId: plan.id,
             templateId: plan.templateId,
@@ -194,7 +212,7 @@ export class DemoReportRepository implements IReportRepository {
             }))
             .sort((a, b) =>
               byName(householdNameForMember(a.memberId), householdNameForMember(b.memberId))
-              || byName(a.name, b.name))
+              || compareMembersById(a.memberId, b.memberId))
 
           return {
             accommodationId: accommodation.id,

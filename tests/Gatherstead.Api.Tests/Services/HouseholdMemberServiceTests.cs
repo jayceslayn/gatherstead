@@ -78,7 +78,7 @@ public class HouseholdMemberServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ListAsync_OrdersByAgeBandThenName_NullBandLast()
+    public async Task ListAsync_OrdersOldestFirstThenName_NullBandLast()
     {
         _dbContext.HouseholdMembers.AddRange(
             new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Zed", AgeBand = AgeBand.Age0To2 },
@@ -90,15 +90,15 @@ public class HouseholdMemberServiceTests : IAsyncLifetime
         var result = await CreateService().ListAsync(_tenantId, _householdId, null, TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
-        // Age0To2 (Zed), then Age18To64 by name (Amy, Nora), then the null-band member last.
-        Assert.Equal(["Zed", "Amy", "Nora", "Unbanded"], result.Entity!.Select(m => m.Name));
+        // Oldest first: Age18To64 by name (Amy, Nora), then Age0To2 (Zed), then the null-band member last.
+        Assert.Equal(["Amy", "Nora", "Zed", "Unbanded"], result.Entity!.Select(m => m.Name));
     }
 
     [Fact]
     public async Task ListAsync_OrdersByEffectiveBand_DerivedFromBirthDate()
     {
-        // A birth-date-derived infant band must sort ahead of an explicitly-banded adult, proving the
-        // sort keys off the effective (mapped) band rather than the stored column.
+        // A birth-date-derived infant band must sort behind an explicitly-banded adult (oldest first),
+        // proving the sort keys off the effective (mapped) band rather than the stored column.
         _dbContext.HouseholdMembers.AddRange(
             new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Adult", AgeBand = AgeBand.Age18To64 },
             new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Baby", BirthDate = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-1) });
@@ -107,6 +107,22 @@ public class HouseholdMemberServiceTests : IAsyncLifetime
         var result = await CreateService().ListAsync(_tenantId, _householdId, null, TestContext.Current.CancellationToken);
 
         Assert.True(result.Successful);
-        Assert.Equal(["Baby", "Adult"], result.Entity!.Select(m => m.Name));
+        Assert.Equal(["Adult", "Baby"], result.Entity!.Select(m => m.Name));
+    }
+
+    [Fact]
+    public async Task ListAsync_WithinBand_OrdersByBirthDateDescThenName()
+    {
+        // Two members whose birth dates land in the same band: the more recent birth date sorts first
+        // even when its name sorts later, proving birth date (descending) beats name within a band.
+        _dbContext.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Amy", BirthDate = new DateOnly(1970, 1, 1) },
+            new HouseholdMember { Id = Guid.NewGuid(), TenantId = _tenantId, HouseholdId = _householdId, Name = "Zoe", BirthDate = new DateOnly(1990, 1, 1) });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().ListAsync(_tenantId, _householdId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(["Zoe", "Amy"], result.Entity!.Select(m => m.Name));
     }
 }

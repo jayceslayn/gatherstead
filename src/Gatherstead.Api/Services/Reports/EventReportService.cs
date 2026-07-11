@@ -6,6 +6,7 @@ using Gatherstead.Data;
 using Gatherstead.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using MealAttendanceEntity = Gatherstead.Data.Entities.MealAttendance;
+using DataAgeBands = Gatherstead.Data.Entities.AgeBands;
 
 namespace Gatherstead.Api.Services.Reports;
 
@@ -142,9 +143,10 @@ public class EventReportService : IEventReportService
             : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         var memberById = members.ToDictionary(m => m.Id);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         // Household name per member, so report occupant/attendee lists group same-household people
-        // together (ordered by household name, then member name) rather than scattering them.
+        // together (ordered by household name, then oldest-first member order) rather than scattering.
         var householdIds = members.Select(m => m.HouseholdId).Distinct().ToList();
         var householdNameById = await _dbContext.Households
             .AsNoTracking()
@@ -201,8 +203,8 @@ public class EventReportService : IEventReportService
             var maybe = dayEventAttendance.Count(a => a.Status == AttendanceStatus.Maybe);
 
             // Every response for that day — including NotGoing, so the report can show who
-            // declined — grouped for the report by household (household name, then member
-            // name — same convention as attendee/occupant lists).
+            // declined — grouped for the report by household (household name, then oldest-first
+            // member order — same convention as attendee/occupant lists).
             var dayAttendees = dayEventAttendance
                 .Select(a => new EventReportDayAttendeeDto(
                     a.HouseholdMemberId,
@@ -211,6 +213,7 @@ public class EventReportService : IEventReportService
                     memberById.GetValueOrDefault(a.HouseholdMemberId)?.HouseholdId ?? Guid.Empty,
                     householdNameByMemberId.GetValueOrDefault(a.HouseholdMemberId, string.Empty)))
                 .OrderBy(a => a.HouseholdName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => MemberSortKey(a.MemberId, memberById, today))
                 .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -221,7 +224,7 @@ public class EventReportService : IEventReportService
                 .ThenBy(p => mealOrderKey[(p.MealTemplateId, p.MealType)].FirstDay)
                 .ThenByDescending(p => mealOrderKey[(p.MealTemplateId, p.MealType)].EffectiveCount)
                 .ThenBy(p => templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), StringComparer.OrdinalIgnoreCase)
-                .Select(p => BuildMeal(p, templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), attendancesByPlan.GetValueOrDefault(p.Id, []), memberById, dietaryByMember, householdNameByMemberId))
+                .Select(p => BuildMeal(p, templateNames.GetValueOrDefault(p.MealTemplateId, string.Empty), attendancesByPlan.GetValueOrDefault(p.Id, []), memberById, dietaryByMember, householdNameByMemberId, today))
                 .ToList();
 
             // Timed slots lead in order, then "Anytime"/unslotted; within a slot, the template
@@ -231,7 +234,7 @@ public class EventReportService : IEventReportService
                 .ThenBy(p => taskOrderKey[(p.TemplateId, p.TimeSlot)].FirstDay)
                 .ThenByDescending(p => taskOrderKey[(p.TemplateId, p.TimeSlot)].EffectiveCount)
                 .ThenBy(p => taskTemplateById.GetValueOrDefault(p.TemplateId)?.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                .Select(p => BuildTask(p, taskTemplateById.GetValueOrDefault(p.TemplateId), taskIntentsByPlan.GetValueOrDefault(p.Id, []), memberById))
+                .Select(p => BuildTask(p, taskTemplateById.GetValueOrDefault(p.TemplateId), taskIntentsByPlan.GetValueOrDefault(p.Id, []), memberById, today))
                 .ToList();
 
             // Emit every accommodation each day (occupied 0 when empty) so the occupancy badge
@@ -244,7 +247,7 @@ public class EventReportService : IEventReportService
                 var nightIntents = accommodationIntentsByAccommodation.GetValueOrDefault(accommodation.Id, [])
                     .Where(i => i.StartNight <= day && i.EndNight >= day)
                     .ToList();
-                dayAccommodations.Add(BuildAccommodation(accommodation, nightIntents, memberById, householdNameByMemberId));
+                dayAccommodations.Add(BuildAccommodation(accommodation, nightIntents, memberById, householdNameByMemberId, today));
             }
 
             days.Add(new EventReportDayDto(day, going, maybe, dayAttendees, meals, tasks, dayAccommodations));
@@ -260,7 +263,8 @@ public class EventReportService : IEventReportService
         List<MealAttendanceEntity> attendance,
         IReadOnlyDictionary<Guid, HouseholdMember> memberById,
         IReadOnlyDictionary<Guid, IReadOnlyList<string>> dietaryByMember,
-        IReadOnlyDictionary<Guid, string> householdNameByMemberId)
+        IReadOnlyDictionary<Guid, string> householdNameByMemberId,
+        DateOnly today)
     {
         var going = attendance.Count(a => a.Status == AttendanceStatus.Going);
         var maybe = attendance.Count(a => a.Status == AttendanceStatus.Maybe);
@@ -277,6 +281,7 @@ public class EventReportService : IEventReportService
                 dietaryByMember.GetValueOrDefault(a.HouseholdMemberId, []),
                 memberById.GetValueOrDefault(a.HouseholdMemberId)?.DietaryNotes))
             .OrderBy(a => householdNameByMemberId.GetValueOrDefault(a.MemberId, string.Empty), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(a => MemberSortKey(a.MemberId, memberById, today))
             .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
@@ -313,6 +318,22 @@ public class EventReportService : IEventReportService
         return (source.Min(day), effective.Count);
     }
 
+    // Member age ordering key: effective age band descending (derived from birth date when present,
+    // else the stored band), then birth date descending. Unknown band / birth date sort last. The key
+    // is compared ascending, so both components are negated to read as descending; the day-number
+    // negation makes the more recent birth date sort first. Name is applied as a separate
+    // OrdinalIgnoreCase tiebreak at each call site. Mirrors compareMembers on the frontend so live and
+    // demo reports order identically.
+    private static (int BandRank, int BirthDateKey) MemberSortKey(
+        Guid memberId, IReadOnlyDictionary<Guid, HouseholdMember> memberById, DateOnly today)
+    {
+        var m = memberById.GetValueOrDefault(memberId);
+        var band = m?.BirthDate is DateOnly bd ? DataAgeBands.DeriveFromBirthDate(bd, today) : m?.AgeBand;
+        var rank = band is AgeBand b ? -(int)b : int.MaxValue;
+        var birthKey = m?.BirthDate is DateOnly bday ? -bday.DayNumber : int.MaxValue;
+        return (rank, birthKey);
+    }
+
     // Timed slots lead in their natural Morning → Midday → Evening order; "Anytime" (and
     // unslotted) tasks sort last so the day's scheduled work reads top-to-bottom.
     private static int TaskSlotRank(TaskTimeSlot? slot) => slot switch
@@ -325,13 +346,16 @@ public class EventReportService : IEventReportService
         TaskPlan plan,
         TaskTemplate? template,
         List<TaskIntent> intents,
-        IReadOnlyDictionary<Guid, HouseholdMember> memberById)
+        IReadOnlyDictionary<Guid, HouseholdMember> memberById,
+        DateOnly today)
     {
         // An intent row IS the assignment; Volunteered only distinguishes self-signup from
         // manager assignment and is not a coverage signal, so every intent counts toward coverage.
+        // Assignees span households (no household grouping), ordered oldest first, then by name.
         var assignees = intents
+            .OrderBy(i => MemberSortKey(i.HouseholdMemberId, memberById, today))
+            .ThenBy(i => memberById.GetValueOrDefault(i.HouseholdMemberId)?.Name ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .Select(i => memberById.GetValueOrDefault(i.HouseholdMemberId)?.Name ?? string.Empty)
-            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return new EventReportTaskDto(
@@ -351,7 +375,8 @@ public class EventReportService : IEventReportService
         Accommodation accommodation,
         List<AccommodationIntent> nightIntents,
         IReadOnlyDictionary<Guid, HouseholdMember> memberById,
-        IReadOnlyDictionary<Guid, string> householdNameByMemberId)
+        IReadOnlyDictionary<Guid, string> householdNameByMemberId,
+        DateOnly today)
     {
         // A declined request frees the slot, so it neither occupies nor appears as an occupant.
         var occupants = nightIntents
@@ -363,6 +388,7 @@ public class EventReportService : IEventReportService
                 i.PartyAdults,
                 i.PartyChildren))
             .OrderBy(o => householdNameByMemberId.GetValueOrDefault(o.MemberId, string.Empty), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(o => MemberSortKey(o.MemberId, memberById, today))
             .ThenBy(o => o.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 

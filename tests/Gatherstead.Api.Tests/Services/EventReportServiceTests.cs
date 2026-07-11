@@ -463,6 +463,28 @@ public class EventReportServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetEventMealReportAsync_DayAttendees_WithinHousehold_OrderedOldestFirst()
+    {
+        // Same household, varying ages: the senior sorts before the infant despite "Amy" < "Zed" by
+        // name — within a household the member order is oldest first, then name.
+        var senior = Guid.NewGuid();
+        var infant = Guid.NewGuid();
+        _dbContext.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = senior, TenantId = _tenantId, HouseholdId = _householdId, Name = "Zed", AgeBand = AgeBand.Age65Plus },
+            new HouseholdMember { Id = infant, TenantId = _tenantId, HouseholdId = _householdId, Name = "Amy", AgeBand = AgeBand.Age0To2 });
+
+        _dbContext.EventAttendances.AddRange(
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = senior, Day = Day1, Status = AttendanceStatus.Going },
+            new EventAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, EventId = _eventId, HouseholdMemberId = infant, Day = Day1, Status = AttendanceStatus.Going });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var day1 = result.Entity!.Days.Single(d => d.Day == Day1);
+        Assert.Equal(["Zed", "Amy"], day1.Attendees.Select(a => a.Name));
+    }
+
+    [Fact]
     public async Task GetEventMealReportAsync_Attendees_GroupedByHouseholdThenName()
     {
         var otherHouseholdId = Guid.NewGuid();
