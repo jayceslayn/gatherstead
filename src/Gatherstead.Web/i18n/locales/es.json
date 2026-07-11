@@ -22,7 +22,14 @@
     "unsavedChanges": "Tienes cambios sin guardar. ¿Salir de todas formas?",
     "back": "Atrás",
     "next": "Siguiente",
-    "you": "(tú)"
+    "you": "(tú)",
+    "hint": {
+      "show": "Mostrar consejo",
+      "expandRows": {
+        "title": "Consejo: las filas se despliegan",
+        "body": "Haz clic o toca una fila para desplegarla y ver más detalles, como quién asiste a cada comida."
+      }
+    }
   },
   "collapsible": {
     "show": "Mostrar detalles",
@@ -169,6 +176,16 @@
     "attendanceGrid": {
       "columnActions": "Establecer asistencia para {day}",
       "bulkSetAttendance": "Establecer asistencia en masa"
+    },
+    "hint": {
+      "attendance": {
+        "title": "Consejo: registra la asistencia",
+        "body": "Haz clic o toca la fila de un miembro para desplegarla y registrar su asistencia a cada comida. Usa \"Establecer asistencia en masa\" o el menú ··· de un día para registrar varias personas o días a la vez."
+      },
+      "tasks": {
+        "title": "Consejo: ofrécete voluntario",
+        "body": "Haz clic o toca la fila de una tarea para desplegarla y ver quién se ha ofrecido; luego apunta a miembros del hogar con el botón Voluntario."
+      }
     },
     "attendanceModal": {
       "orByMealType": "O por tipo de comida"
@@ -484,6 +501,10 @@
   },
   "shopping": {
     "title": "Compras",
+    "hint": {
+      "title": "Consejo: modos Comprar y Editar",
+      "body": "El modo Comprar sirve para marcar artículos rápidamente mientras compras: toca un artículo para reclamarlo o marcarlo como cubierto. Quienes editan pueden cambiar al modo Editar para añadir o modificar artículos. Los artículos con fecha vencida se ocultan a menos que actives Mostrar anteriores."
+    },
     "list": "Lista",
     "addItem": "Añadir artículo",
     "editItem": "Editar artículo",

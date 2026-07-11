@@ -158,7 +158,12 @@ onMounted(() => {
         :ui="{ trigger: 'max-sm:flex-col max-sm:gap-0.5', label: 'max-sm:text-xs' }"
       >
         <template #attendance>
-          <div class="mt-4">
+          <div class="mt-4 space-y-4">
+            <GsDismissibleHint
+              storage-key="gs-hint-event-signup-attendance"
+              :title="t('event.hint.attendance.title')"
+              :description="t('event.hint.attendance.body')"
+            />
             <GsEventAttendanceGrid
               v-model:selected-day-index="signupDayIndex"
               :event-id="eventId"
@@ -169,7 +174,13 @@ onMounted(() => {
         </template>
 
         <template #tasks>
-          <div class="mt-4">
+          <div class="mt-4 space-y-4">
+            <GsDismissibleHint
+              storage-key="gs-hint-event-signup-tasks"
+              icon="i-heroicons-hand-raised"
+              :title="t('event.hint.tasks.title')"
+              :description="t('event.hint.tasks.body')"
+            />
             <GsEventTaskSignupGrid
               v-model:selected-day-index="signupDayIndex"
               :event-id="eventId"

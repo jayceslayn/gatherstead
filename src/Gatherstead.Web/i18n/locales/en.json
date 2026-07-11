@@ -22,7 +22,14 @@
     "unsavedChanges": "You have unsaved changes. Leave anyway?",
     "back": "Back",
     "next": "Next",
-    "you": "(you)"
+    "you": "(you)",
+    "hint": {
+      "show": "Show hint",
+      "expandRows": {
+        "title": "Tip: rows expand",
+        "body": "Click or tap a row to expand it and see more detail, such as who's attending each meal."
+      }
+    }
   },
   "collapsible": {
     "show": "Show details",
@@ -169,6 +176,16 @@
     "attendanceGrid": {
       "columnActions": "Set attendance for {day}",
       "bulkSetAttendance": "Bulk set attendance"
+    },
+    "hint": {
+      "attendance": {
+        "title": "Tip: set attendance",
+        "body": "Click or tap a member's row to expand it and set their attendance for each meal. Use \"Bulk set attendance\" or a day's ··· menu to set several people or days at once."
+      },
+      "tasks": {
+        "title": "Tip: volunteer for tasks",
+        "body": "Click or tap a task row to expand it and see who's volunteered, then sign up household members with the Volunteer button."
+      }
     },
     "attendanceModal": {
       "orByMealType": "Or by meal type"
@@ -484,6 +501,10 @@
   },
   "shopping": {
     "title": "Shopping",
+    "hint": {
+      "title": "Tip: Shop and Edit modes",
+      "body": "Shop mode is for quick check-off while you shop — tap an item to claim it or mark it covered. Editors can switch to Edit mode to add or change items. Items past their need-by date are hidden unless you turn on Show past."
+    },
     "list": "List",
     "addItem": "Add item",
     "editItem": "Edit item",

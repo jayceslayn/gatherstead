@@ -67,6 +67,13 @@ watch(selected, (val) => {
         />
       </UFormField>
 
+      <GsDismissibleHint
+        storage-key="gs-hint-shopping-list"
+        icon="i-heroicons-shopping-cart"
+        :title="t('shopping.hint.title')"
+        :description="t('shopping.hint.body')"
+      />
+
       <GsShoppingList v-if="scope" :scope="scope" />
       <p v-else class="text-sm text-muted">{{ t('shopping.selectScope') }}</p>
     </div>

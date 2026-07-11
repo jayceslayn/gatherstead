@@ -126,6 +126,13 @@ const selectedDayIndex = ref(0)
           class="mb-4"
         />
 
+        <GsDismissibleHint
+          storage-key="gs-hint-event-report-rows"
+          :title="t('common.hint.expandRows.title')"
+          :description="t('common.hint.expandRows.body')"
+          class="mb-4"
+        />
+
         <GsEventReportGrid
           v-model:selected-day-index="selectedDayIndex"
           :days="days"
