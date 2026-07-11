@@ -21,8 +21,14 @@ export function useAllMembers() {
     { watch: [() => tenantStore.currentTenantId] },
   )
 
+  /** Display name for a member id, falling back to the id tail for unknown/removed members. */
+  function nameFor(id: string): string {
+    return data.value?.get(id)?.name ?? id.slice(-8)
+  }
+
   return {
     memberMap: computed(() => data.value ?? new Map<string, HouseholdMember>()),
+    nameFor,
     pending,
   }
 }

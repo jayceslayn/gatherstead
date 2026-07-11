@@ -10,6 +10,8 @@ import type {
 import { DemoLimitError } from '~/repositories/interfaces'
 import type { AccommodationAvailabilityQuery, AccommodationDimensions } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { useEntityList } from '~/composables/useEntityList'
+import { useTrackedAction } from '~/composables/useTrackedAction'
 import { compareAccommodations, compareAvailability } from '~/utils/sorting'
 
 
@@ -17,18 +19,13 @@ export function useAccommodations(propertyId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { accommodations: repo } = useRepositories()
 
-  const { data, pending, error, refresh } = useAsyncData<AccommodationSummary[]>(
+  const { items: accommodations, pending, error, refresh } = useEntityList<AccommodationSummary>(
     () => `accommodations-${tenantStore.currentTenantId}-${propertyId.value}`,
     () => repo.listAccommodations(tenantStore.currentTenantId!, propertyId.value),
-    { watch: [propertyId, () => tenantStore.currentTenantId] },
+    { watch: [propertyId, () => tenantStore.currentTenantId], sort: compareAccommodations },
   )
 
-  return {
-    accommodations: computed(() => [...(data.value ?? [])].sort(compareAccommodations)),
-    pending,
-    error,
-    refresh,
-  }
+  return { accommodations, pending, error, refresh }
 }
 
 /**
@@ -70,9 +67,8 @@ export function useAccommodationSearch() {
 export function useAccommodationStayRequest() {
   const tenantStore = useTenantStore()
   const { accommodationIntents: repo } = useRepositories()
-  const toast = useToast()
-  const { translateError } = useApiError()
-  const submitting = ref(false)
+  const { updating, run } = useTrackedAction()
+  const submitting = computed(() => updating.value.length > 0)
 
   async function requestStay(
     propertyId: string,
@@ -88,21 +84,10 @@ export function useAccommodationStayRequest() {
   ): Promise<boolean> {
     const tenantId = tenantStore.currentTenantId
     if (!tenantId) return false
-    submitting.value = true
-    try {
-      await repo.createIntent(
-        tenantId, propertyId, accommodationId, householdId, memberId,
-        startNight, endNight, status, notes, partyAdults, partyChildren,
-      )
-      return true
-    }
-    catch (e) {
-      toast.add({ title: translateError(e), color: 'error' })
-      return false
-    }
-    finally {
-      submitting.value = false
-    }
+    return run('new', () => repo.createIntent(
+      tenantId, propertyId, accommodationId, householdId, memberId,
+      startNight, endNight, status, notes, partyAdults, partyChildren,
+    ))
   }
 
   return { submitting, requestStay }

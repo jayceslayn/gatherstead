@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { EventReportDay } from '~/repositories/types'
 import { buildAccommodationLanes, buildAttendanceLanes, buildMealLanes, buildTaskLanes, reportDayTotals } from '~/composables/useReportView'
-
-type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
+import type { ReportSection as Section } from '~/composables/useReportView'
+import { accommodationTypeIcon } from '~/utils/accommodations'
 
 const props = defineProps<{
   days: EventReportDay[]
@@ -35,16 +35,8 @@ const mealLanes = computed(() => buildMealLanes(props.days))
 const taskLanes = computed(() => buildTaskLanes(props.days))
 const accommodationLanes = computed(() => buildAccommodationLanes(props.days))
 
-const accommodationTypeIcon: Record<string, string> = {
-  Bedroom: 'i-heroicons-home',
-  Bunk: 'i-heroicons-rectangle-stack',
-  RvPad: 'i-heroicons-truck',
-  Tent: 'i-heroicons-map',
-  Offsite: 'i-heroicons-arrow-top-right-on-square',
-}
 function laneTypeIcon(lane: { byDay: Record<string, { type: string }> }): string {
-  const type = Object.values(lane.byDay)[0]?.type
-  return accommodationTypeIcon[type ?? 'Bedroom'] ?? 'i-heroicons-home'
+  return accommodationTypeIcon(Object.values(lane.byDay)[0]?.type ?? 'Bedroom')
 }
 </script>
 

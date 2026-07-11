@@ -20,8 +20,8 @@ const props = defineProps<{
   householdId: string
   members: HouseholdMember[]
   mealPlansByDay: Record<string, MealPlan[]>
-  bulkUpsertDays: (items: { memberId: string, day: string, status: AttendanceStatus }[]) => Promise<void>
-  bulkUpsertMeals: (items: { planId: string, memberId: string, status: AttendanceStatus }[]) => Promise<void>
+  bulkUpsertDays: (items: { memberId: string, day: string, status: AttendanceStatus }[]) => Promise<boolean>
+  bulkUpsertMeals: (items: { planId: string, memberId: string, status: AttendanceStatus }[]) => Promise<boolean>
 }>()
 
 const open = defineModel<boolean>('open', { default: false })
@@ -144,7 +144,10 @@ async function apply() {
       }
     }
 
-    await Promise.all([props.bulkUpsertDays(dayItems), props.bulkUpsertMeals(mealItems)])
+    // Failures toast inside the composables and resolve false — keep the modal open so
+    // the user's selections aren't lost.
+    const [daysOk, mealsOk] = await Promise.all([props.bulkUpsertDays(dayItems), props.bulkUpsertMeals(mealItems)])
+    if (!daysOk || !mealsOk) return
     stateCache.delete(props.householdId)
     open.value = false
   }

@@ -2,6 +2,7 @@ import { useTenantStore } from '~/stores/tenant'
 import type { EventSummary, AttributeWriteEntry } from '~/repositories/types'
 import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { today } from '~/utils/dates'
 
 
 export function useEvents() {
@@ -16,9 +17,9 @@ export function useEvents() {
 
   const events = computed(() => data.value ?? [])
   const upcomingEvents = computed(() => {
-    const today = new Date().toISOString().substring(0, 10)
+    const cutoff = today()
     return [...events.value]
-      .filter(e => e.endDate >= today)
+      .filter(e => e.endDate >= cutoff)
       .sort((a, b) => a.startDate.localeCompare(b.startDate))
   })
 

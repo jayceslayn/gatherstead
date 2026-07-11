@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { EventReportDay, EventReportDayAttendee } from '~/repositories/types'
-
-type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
+import type { ReportSection as Section } from '~/composables/useReportView'
 
 // Cells render collapsed (headline badges) on screen; their detail is revealed
 // by print CSS, so no expansion state is threaded through here.

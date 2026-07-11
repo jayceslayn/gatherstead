@@ -19,8 +19,9 @@ export default defineConfig({
     alias: {
       '~~': root,
       '@@': root,
-      '~': root,
-      '@': root,
+      // Nuxt 4 maps `~`/`@` to srcDir (app/), not the package root.
+      '~': `${root}app`,
+      '@': `${root}app`,
     },
   },
 })

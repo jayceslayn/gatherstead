@@ -2,6 +2,7 @@
 import type { AccommodationSummary, AccommodationIntentStatus } from '~/repositories/types'
 import { formatArea } from '~/utils/units'
 import { formatBedSummary } from '~/utils/beds'
+import { accommodationTypeIcon, accommodationTypeLabelKey } from '~/utils/accommodations'
 
 const props = defineProps<{
   accommodation: AccommodationSummary
@@ -12,17 +13,9 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const typeIcon: Record<string, string> = {
-  Bedroom: 'i-heroicons-home',
-  Bunk: 'i-heroicons-rectangle-stack',
-  RvPad: 'i-heroicons-truck',
-  Tent: 'i-heroicons-map',
-  Offsite: 'i-heroicons-arrow-top-right-on-square',
-}
-
 const NuxtLink = resolveComponent('NuxtLink')
 
-const icon = computed(() => typeIcon[props.accommodation.type] ?? 'i-heroicons-home')
+const icon = computed(() => accommodationTypeIcon(props.accommodation.type))
 
 const bedSummary = computed(() => formatBedSummary(props.accommodation.beds, t))
 
@@ -44,7 +37,7 @@ const areaLabel = computed(() => formatArea(props.accommodation.effectiveAreaSqM
         </div>
         <div class="min-w-0 flex-1">
           <p class="font-semibold truncate">{{ accommodation.name }}</p>
-          <p class="text-sm text-muted">{{ t(`accommodation.types.${accommodation.type.charAt(0).toLowerCase() + accommodation.type.slice(1)}`) }}</p>
+          <p class="text-sm text-muted">{{ t(accommodationTypeLabelKey(accommodation.type)) }}</p>
           <p v-if="bedSummary" class="text-xs text-muted mt-0.5">{{ bedSummary }}</p>
           <p v-if="areaLabel" class="text-xs text-muted mt-0.5">{{ areaLabel }}</p>
         </div>

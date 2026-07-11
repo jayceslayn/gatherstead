@@ -2,6 +2,10 @@ import type { EventReportDay, EventReportDayAttendee, EventReportTask, EventRepo
 import { compareOrderKeys, mealSlotRank, planAggregate, taskSlotRank } from '~/composables/useTemplateOrder'
 import { compareAccommodations } from '~/utils/sorting'
 
+// The four report sections, shared by the report grid, day renderer, and both
+// report pages so adding a section is a single-union change.
+export type ReportSection = 'attendance' | 'meals' | 'tasks' | 'accommodations'
+
 // ── Coverage / occupancy derivation ─────────────────────────────────────────
 // Kept in one place so the desktop strip, mobile pager, and print stack never
 // disagree about what counts as covered or full.

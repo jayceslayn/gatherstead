@@ -4,6 +4,7 @@ import { useTenantRole } from '~/composables/useTenantRole'
 import { useHousehold } from '~/composables/useHouseholds'
 import { useMember } from '~/composables/useHouseholdMembers'
 import { useAgeBands } from '~/composables/useAgeBands'
+import { useFormatDate } from '~/composables/useFormatDate'
 
 definePageMeta({
   layout: 'default',
@@ -23,13 +24,7 @@ const isSelf = computed(() => memberStore.linkedMemberId === memberId.value)
 const { isManagerOrAbove } = useTenantRole()
 const canEdit = computed(() => isSelf.value || isManagerOrAbove.value)
 const { displayName: ageBandDisplayName } = useAgeBands()
-
-function formatDate(date: string | null) {
-  if (!date) return null
-  return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(
-    new Date(date + 'T00:00:00'),
-  )
-}
+const { formatDate } = useFormatDate()
 </script>
 
 <template>

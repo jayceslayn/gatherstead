@@ -1,13 +1,12 @@
 import { useTenantStore } from '~/stores/tenant'
 import type { AttendanceStatus, AttendanceRecord } from '~/repositories/types'
-import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
+import { useTrackedAction } from '~/composables/useTrackedAction'
 
 
 export function useEventAttendance(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { eventAttendance: repo } = useRepositories()
-  const { t } = useI18n()
 
   const { data, pending, error, refresh } = useAsyncData<AttendanceRecord[]>(
     () => `attendance-${tenantStore.currentTenantId}-${eventId.value}`,
@@ -17,46 +16,22 @@ export function useEventAttendance(eventId: Ref<string>) {
 
   const attendance = computed(() => data.value ?? [])
 
+  const { run } = useTrackedAction(refresh)
+
   async function upsert(householdId: string, memberId: string, day: string, status: AttendanceStatus) {
-    try {
-      await repo.upsertAttendance(tenantStore.currentTenantId!, eventId.value, householdId, memberId, day, status)
-      await refresh()
-    }
-    catch (e) {
-      if (e instanceof DemoLimitError) {
-        useToast().add({
-          title: t('demo.limitReached.title'),
-          description: t('demo.limitReached.description'),
-          color: 'warning',
-        })
-        return
-      }
-      throw e
-    }
+    return run(memberId, () =>
+      repo.upsertAttendance(tenantStore.currentTenantId!, eventId.value, householdId, memberId, day, status))
   }
 
   async function bulkUpsert(items: { memberId: string, day: string, status: AttendanceStatus }[]) {
-    if (!items.length) return
-    try {
-      await repo.bulkUpsertAttendance(tenantStore.currentTenantId!, eventId.value, items)
-      await refresh()
-    }
-    catch (e) {
-      if (e instanceof DemoLimitError) {
-        useToast().add({
-          title: t('demo.limitReached.title'),
-          description: t('demo.limitReached.description'),
-          color: 'warning',
-        })
-        return
-      }
-      throw e
-    }
+    if (!items.length) return true
+    return run('bulk', () =>
+      repo.bulkUpsertAttendance(tenantStore.currentTenantId!, eventId.value, items))
   }
 
   async function deleteAttendance(attendanceId: string) {
-    await repo.deleteAttendance(tenantStore.currentTenantId!, eventId.value, attendanceId)
-    await refresh()
+    return run(attendanceId, () =>
+      repo.deleteAttendance(tenantStore.currentTenantId!, eventId.value, attendanceId))
   }
 
   return { attendance, pending, error, refresh, upsert, bulkUpsert, deleteAttendance }

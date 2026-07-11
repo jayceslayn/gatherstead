@@ -3,12 +3,11 @@ import { useEventReport } from '~/composables/useEventReport'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useFormatDate } from '~/composables/useFormatDate'
 import type { TabsItem } from '@nuxt/ui'
+import type { ReportSection as Section } from '~/composables/useReportView'
 
 definePageMeta({
   layout: 'default',
 })
-
-type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
 const { t } = useI18n()
 const route = useRoute()

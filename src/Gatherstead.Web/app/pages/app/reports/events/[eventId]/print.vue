@@ -2,6 +2,7 @@
 import { useEventReport } from '~/composables/useEventReport'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useFormatDate } from '~/composables/useFormatDate'
+import type { ReportSection as Section } from '~/composables/useReportView'
 
 // Dedicated, chrome-free print view. Opened in its own tab from the report page. The document
 // is organised by category (Attendance / Meals / Tasks / Accommodations), each starting on a
@@ -11,8 +12,6 @@ import { useFormatDate } from '~/composables/useFormatDate'
 definePageMeta({
   layout: 'report-print',
 })
-
-type Section = 'attendance' | 'meals' | 'tasks' | 'accommodations'
 
 const { t } = useI18n()
 const route = useRoute()

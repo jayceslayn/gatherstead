@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { useHouseholdMembers } from '~/composables/useHouseholdMembers'
 import { useEventAttendance } from '~/composables/useEventAttendance'
 import { useEventMealData } from '~/composables/useEventMealData'
+import { useToggleSet } from '~/composables/useToggleSet'
 import type { AttendanceStatus, MealPlan } from '~/repositories/types'
 
 const props = defineProps<{
@@ -50,13 +51,7 @@ const mealUpdating = ref<Record<string, boolean>>({})
 
 // Row-wide collapse, default collapsed — a collapsed member row keeps the day
 // attendance toggle (the primary action); expanding reveals the per-meal rows.
-const expandedRows = ref<Set<string>>(new Set())
-function toggleRow(memberId: string) {
-  const next = new Set(expandedRows.value)
-  if (next.has(memberId)) next.delete(memberId)
-  else next.add(memberId)
-  expandedRows.value = next
-}
+const { has: isRowExpanded, toggle: toggleRow } = useToggleSet()
 
 function cellKey(memberId: string, id: string) {
   return `${memberId}:${id}`
@@ -104,8 +99,9 @@ async function setDayCell(memberId: string, day: string, status: AttendanceStatu
   const key = cellKey(memberId, day)
   dayUpdating.value[key] = true
   try {
-    await upsertDay(props.householdId, memberId, day, status)
-    if (status === 'NotGoing') {
+    // Only cascade the day's meals when the day upsert itself landed (failures toast and return false).
+    const ok = await upsertDay(props.householdId, memberId, day, status)
+    if (ok && status === 'NotGoing') {
       await Promise.all(
         (mealPlansByDay.value[day] ?? []).map(p => setMealCell(memberId, p.id, 'NotGoing')),
       )
@@ -222,7 +218,7 @@ watch(wizardOpen, (isOpen) => {
         :key="member.id"
         :title="member.name"
         collapsible
-        :expanded="expandedRows.has(member.id)"
+        :expanded="isRowExpanded(member.id)"
         @toggle="toggleRow(member.id)"
       >
         <template #day="{ day }">
@@ -235,7 +231,7 @@ watch(wizardOpen, (isOpen) => {
             />
           </div>
 
-          <div v-if="expandedRows.has(member.id) && mealsVisible(member.id, day)" class="mt-2 space-y-1.5 border-t border-default pt-2">
+          <div v-if="isRowExpanded(member.id) && mealsVisible(member.id, day)" class="mt-2 space-y-1.5 border-t border-default pt-2">
             <div
               v-for="plan in sortedMealPlans(day)"
               :key="plan.id"

@@ -3,6 +3,8 @@ import type { MealPlan, TaskPlan } from '~/repositories/types'
 import { useTenantStore } from '~/stores/tenant'
 import { useMealPlanActions } from '~/composables/useMealPlans'
 import { useTaskPlanActions } from '~/composables/useTaskTemplates'
+import { useTemplateFormatting } from '~/composables/useTemplateFormatting'
+import { mealSlotRank, taskSlotRank } from '~/composables/useTemplateOrder'
 
 const props = defineProps<{
   eventId: string
@@ -39,9 +41,6 @@ const mealActions = useMealPlanActions(eventIdRef, templateIdRef, refresh)
 const taskActions = useTaskPlanActions(eventIdRef, templateIdRef, refresh)
 const updating = computed(() => (props.kind === 'meal' ? mealActions.updating.value : taskActions.updating.value))
 
-const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner']
-const SLOT_ORDER = ['Anytime', 'Morning', 'Midday', 'Evening']
-
 interface PlanRow {
   id: string
   day: string
@@ -50,15 +49,19 @@ interface PlanRow {
   notes: string | null
 }
 
+const { mealTypeLabel, taskSlotLabel } = useTemplateFormatting()
+
 function slotLabel(p: MealPlan | TaskPlan): string {
-  if (props.kind === 'meal') return t(`event.meal.${(p as MealPlan).mealType.toLowerCase()}`)
+  if (props.kind === 'meal') return mealTypeLabel((p as MealPlan).mealType)
   const slot = (p as TaskPlan).timeSlot
-  return slot ? t(`event.task.${slot.toLowerCase()}`) : ''
+  return slot ? taskSlotLabel(slot) : ''
 }
 
+// Canonical slot ranking from useTemplateOrder (Anytime last), so this list orders
+// the same way as the sign-up grids and the report.
 function slotOrder(p: MealPlan | TaskPlan): number {
-  if (props.kind === 'meal') return MEAL_ORDER.indexOf((p as MealPlan).mealType)
-  return SLOT_ORDER.indexOf((p as TaskPlan).timeSlot ?? 'Anytime')
+  if (props.kind === 'meal') return mealSlotRank((p as MealPlan).mealType)
+  return taskSlotRank((p as TaskPlan).timeSlot)
 }
 
 const rows = computed<PlanRow[]>(() =>

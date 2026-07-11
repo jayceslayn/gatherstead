@@ -63,7 +63,7 @@ Read only what your task needs. Skip the rest.
 | Task type | Read these | Key facts inside |
 |-----------|-----------|-----------------|
 | **Backend (.NET)** | `docs/ARCHITECTURE.md` + `docs/IMPLEMENTATION_STATUS.md` | Controller patterns, EF conventions, FK layout, what's implemented |
-| **Frontend (Vue/Nuxt)** | `docs/ARCHITECTURE.md` (frontend section) + `docs/agents/plans/WEB-UI-DESIGN.md` | Composable patterns, repository injection, page structure, i18n |
+| **Frontend (Vue/Nuxt)** | `docs/ARCHITECTURE.md` (frontend section) + `docs/WEB-UI-DESIGN.md` | Composable patterns, repository injection, page structure, i18n |
 | **Planning / design** | `docs/ARCHITECTURE.md` + browse `docs/agents/plans/` for format precedent | Existing plan structure; scope conventions |
 | **Security / observability** | `docs/DESIGN_PRINCIPLES.md` + `docs/OBSERVABILITY.md` | PII logging ban, tenant isolation rules, OTel allowlist |
 | **Deployment / infra** | `docs/DEPLOYMENT.md` | Bicep modules, SKU differences, migration runbook |

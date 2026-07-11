@@ -5,6 +5,7 @@ import { useAccommodationSearch, useAccommodationStayRequest } from '~/composabl
 import { useProperties } from '~/composables/useProperties'
 import { useMyStays } from '~/composables/useMyUpcoming'
 import type { AccommodationAvailability, AccommodationIntentStatus, AccommodationType } from '~/repositories/types'
+import { today, todayOffset } from '~/utils/dates'
 
 definePageMeta({ layout: 'default' })
 
@@ -14,14 +15,8 @@ const toast = useToast()
 const memberStore = useCurrentMemberStore()
 
 // ── Intake form (prefilled from query params when deep-linked from an event) ──
-function todayStr(offsetDays = 0): string {
-  const d = new Date()
-  d.setDate(d.getDate() + offsetDays)
-  return d.toISOString().substring(0, 10)
-}
-
-const startNight = ref<string>((route.query.startNight as string) || todayStr())
-const endNight = ref<string>((route.query.endNight as string) || todayStr(1))
+const startNight = ref<string>((route.query.startNight as string) || today())
+const endNight = ref<string>((route.query.endNight as string) || todayOffset(1))
 const partyAdults = ref<number | null>(route.query.adults ? Number(route.query.adults) : 1)
 const partyChildren = ref<number | null>(route.query.children ? Number(route.query.children) : 0)
 const requireCapacity = ref(true)

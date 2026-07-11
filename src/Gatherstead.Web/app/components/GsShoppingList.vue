@@ -4,6 +4,7 @@ import type { ShoppingScope, ShoppingScopeOption, ShoppingSection } from '~/comp
 import { useShoppingList } from '~/composables/useShoppingList'
 import { useTenantRole } from '~/composables/useTenantRole'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
+import { today } from '~/utils/dates'
 
 const props = defineProps<{ scope: ShoppingScope | null }>()
 const { t } = useI18n()
@@ -17,10 +18,7 @@ const {
   createItem, updateItem, deleteItem,
 } = useShoppingList(scopeRef)
 
-const { memberMap } = useAllMembers()
-function memberName(id: string): string {
-  return memberMap.value.get(id)?.name ?? id.slice(-8)
-}
+const { nameFor: memberName } = useAllMembers()
 
 // ── Mode (Shop = stripped-down in-store check-off; Edit = full CRUD for editors) ──
 const mode = ref<'shop' | 'edit'>('shop')
@@ -35,16 +33,16 @@ const selectedSource = ref<'all' | ShoppingItemOrigin>('all')
 
 // Forward-looking by default: items whose need-by date has passed are "expired" and hidden
 // unless Show past is on (or explicitly surfaced via a specific date). Undated items (property
-// staples, undated event items) never expire. Local today as YYYY-MM-DD; en-CA formats as ISO.
+// staples, undated event items) never expire.
 const showPast = ref(false)
-const today = new Date().toLocaleDateString('en-CA')
+const todayIso = today()
 function isExpired(item: ShoppingItem): boolean {
-  return !!item.neededByDate && item.neededByDate < today
+  return !!item.neededByDate && item.neededByDate < todayIso
 }
 
 const dateOptions = computed(() => {
   const dates = [...new Set(allItems.value.map(i => i.neededByDate).filter((d): d is string => !!d))]
-    .filter(d => showPast.value || d >= today)
+    .filter(d => showPast.value || d >= todayIso)
     .sort()
   return [
     { label: t('shopping.allDates'), value: 'all' },

@@ -1,14 +1,13 @@
 import { useTenantStore } from '~/stores/tenant'
 import type { MealPlan, MealAttendance, AttendanceStatus } from '~/repositories/types'
-import { DemoLimitError } from '~/repositories/interfaces'
 import { useRepositories } from '~/composables/useRepositories'
 import { useMealTemplates } from '~/composables/useMealPlans'
+import { useTrackedAction } from '~/composables/useTrackedAction'
 import { compareOrderKeys, mealSlotRank, planAggregate } from '~/composables/useTemplateOrder'
 
 export function useEventMealData(eventId: Ref<string>) {
   const tenantStore = useTenantStore()
   const { mealPlans: plansRepo, mealAttendance: attendanceRepo } = useRepositories()
-  const { t } = useI18n()
   const { templates } = useMealTemplates(eventId)
 
   // Plans carry only a mealType (time slot); consumers that want to label a meal
@@ -99,10 +98,14 @@ export function useEventMealData(eventId: Ref<string>) {
     return attendanceMap.value[planId]?.find(a => a.householdMemberId === memberId) ?? null
   }
 
+  // Success paths update the local attendance map in place (no list re-fetch), so the
+  // tracker is created without a refresh callback.
+  const { run } = useTrackedAction()
+
   async function upsert(planId: string, householdId: string, memberId: string, status: AttendanceStatus) {
     const plan = allPlans.value.find(p => p.id === planId)
-    if (!plan) return
-    try {
+    if (!plan) return false
+    return run(planId, async () => {
       const record = await attendanceRepo.upsertMealAttendance(
         tenantStore.currentTenantId!, eventId.value, plan.mealTemplateId, planId,
         householdId, memberId, status, false,
@@ -112,23 +115,12 @@ export function useEventMealData(eventId: Ref<string>) {
       if (idx >= 0) list[idx] = record
       else list.push(record)
       attendanceMap.value[planId] = list
-    }
-    catch (e) {
-      if (e instanceof DemoLimitError) {
-        useToast().add({
-          title: t('demo.limitReached.title'),
-          description: t('demo.limitReached.description'),
-          color: 'warning',
-        })
-        return
-      }
-      throw e
-    }
+    })
   }
 
   async function bulkUpsert(items: { planId: string, memberId: string, status: AttendanceStatus }[]) {
-    if (!items.length) return
-    try {
+    if (!items.length) return true
+    return run('bulk', async () => {
       const records = await attendanceRepo.bulkUpsertMealAttendance(
         tenantStore.currentTenantId!, eventId.value, items,
       )
@@ -139,18 +131,7 @@ export function useEventMealData(eventId: Ref<string>) {
         else list.push(record)
         attendanceMap.value[record.mealPlanId] = list
       }
-    }
-    catch (e) {
-      if (e instanceof DemoLimitError) {
-        useToast().add({
-          title: t('demo.limitReached.title'),
-          description: t('demo.limitReached.description'),
-          color: 'warning',
-        })
-        return
-      }
-      throw e
-    }
+    })
   }
 
   const pending = computed(() => plansPending.value || attendancePending.value)

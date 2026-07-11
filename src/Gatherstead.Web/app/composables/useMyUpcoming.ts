@@ -8,10 +8,7 @@ import type {
   MyTask,
   ShoppingItem,
 } from '~/repositories/types'
-
-function today(): string {
-  return new Date().toISOString().substring(0, 10)
-}
+import { today } from '~/utils/dates'
 
 /** The current member's stays that haven't ended yet (dashboard + accommodations page widget). */
 export function useMyStays() {

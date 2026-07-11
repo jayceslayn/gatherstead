@@ -86,9 +86,7 @@ async function confirmDelete() {
 
     <p class="text-sm text-muted mb-6">{{ t('equipment.subtitle') }}</p>
 
-    <div v-if="pending || propertiesPending" class="py-16 text-center">
-      <p class="text-muted">{{ t('common.loading') }}</p>
-    </div>
+    <GsLoadingState v-if="pending || propertiesPending" />
 
     <GsEmptyState
       v-else-if="!equipment.length"

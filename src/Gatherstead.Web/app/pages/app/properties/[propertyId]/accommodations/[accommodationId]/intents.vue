@@ -32,12 +32,8 @@ const memberId = computed<string | null>(() =>
 const { intents, pending, refresh } = useAccommodationIntents(propertyId, accommodationId, memberId)
 const { updating, requestIntent, promoteIntent } = useAccommodationIntentActions(propertyId, accommodationId, refresh)
 
-const { memberMap, pending: membersPending } = useAllMembers()
+const { memberMap, nameFor: memberName, pending: membersPending } = useAllMembers()
 const { formatDateRange } = useFormatDate()
-
-function memberName(id: string): string {
-  return memberMap.value.get(id)?.name ?? id.slice(-8)
-}
 
 // One card per stay (a [startNight, endNight] span), earliest first.
 const stays = computed(() =>
@@ -125,7 +121,7 @@ async function submitRequest(payload: {
 
     <GsPageHeader
       :title="accommodation?.name ?? t('common.loading')"
-      :subtitle="property?.name"
+      :description="property?.name"
     />
 
     <div v-if="accommodation" class="flex flex-wrap gap-3 mb-6">
