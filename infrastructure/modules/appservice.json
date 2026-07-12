@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.44.1.10279",
-      "templateHash": "17795029780854529743"
+      "templateHash": "16309528226999050284"
     }
   },
   "parameters": {
@@ -154,6 +154,34 @@
       "metadata": {
         "description": "The API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user."
       }
+    },
+    "externalIdentityDirectoryManagementEnabled": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable deletion of the external-identity (Entra) account during account erasure. Requires the API managed identity to hold the Microsoft Graph User.DeleteRestricted.All app role (admin-consented). Off by default — application data is still fully erased when disabled; the directory account is left for manual removal."
+      }
+    },
+    "webContactEmail": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Public support/legal contact email shown on /contact, /terms and /privacy. Empty = neutral fallback (no mailto link)."
+      }
+    },
+    "webLegalProvider": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Legal provider named on /terms and /privacy (your legal name or registered entity). Empty = neutral fallback. Not committed to source so a fork reflects its own operator."
+      }
+    },
+    "webLegalJurisdiction": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Governing-law jurisdiction shown on /terms, e.g. Oregon. Empty = neutral fallback."
+      }
     }
   },
   "variables": {
@@ -193,6 +221,8 @@
         "httpsOnly": true,
         "siteConfig": {
           "linuxFxVersion": "DOTNETCORE|10.0",
+          "minTlsVersion": "1.2",
+          "ftpsState": "Disabled",
           "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
           "appSettings": [
             {
@@ -234,6 +264,10 @@
             {
               "name": "ExternalIdentity__ValidIssuer",
               "value": "[parameters('externalIdentityValidIssuer')]"
+            },
+            {
+              "name": "ExternalIdentity__DirectoryManagement__Enabled",
+              "value": "[string(parameters('externalIdentityDirectoryManagementEnabled'))]"
             }
           ],
           "connectionStrings": [
@@ -267,6 +301,8 @@
         "keyVaultReferenceIdentity": "[parameters('webManagedIdentityId')]",
         "siteConfig": {
           "linuxFxVersion": "NODE|24-lts",
+          "minTlsVersion": "1.2",
+          "ftpsState": "Disabled",
           "alwaysOn": "[not(equals(parameters('appServicePlanSku'), 'F1'))]",
           "appCommandLine": "node .output/server/index.mjs",
           "appSettings": [
@@ -291,6 +327,18 @@
               "value": "[parameters('appInsightsConnectionString')]"
             },
             {
+              "name": "NUXT_PUBLIC_CONTACT_EMAIL",
+              "value": "[parameters('webContactEmail')]"
+            },
+            {
+              "name": "NUXT_PUBLIC_LEGAL_PROVIDER",
+              "value": "[parameters('webLegalProvider')]"
+            },
+            {
+              "name": "NUXT_PUBLIC_LEGAL_JURISDICTION",
+              "value": "[parameters('webLegalJurisdiction')]"
+            },
+            {
               "name": "NUXT_EXTERNAL_IDENTITY_CLIENT_ID",
               "value": "[parameters('webExternalIdentityClientId')]"
             },
@@ -301,6 +349,10 @@
             {
               "name": "NUXT_EXTERNAL_IDENTITY_API_SCOPE",
               "value": "[parameters('webExternalIdentityApiScope')]"
+            },
+            {
+              "name": "NUXT_EXTERNAL_IDENTITY_CLIENT_SECRET",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/web-external-identity-client-secret/)', parameters('keyVaultUri'))]"
             },
             {
               "name": "NUXT_SESSION_PASSWORD",

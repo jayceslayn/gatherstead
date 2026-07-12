@@ -24,6 +24,14 @@ public interface IAuthCache
     /// <summary>Seeds the ExternalId → UserId mapping (called when a user row is first provisioned).</summary>
     Task SetUserIdAsync(string externalId, Guid userId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Evicts every entry keyed to a user — the ExternalId → UserId mapping, the app-admin flag, and
+    /// the tenant/household role entries for each supplied tenant — so no cached authorization
+    /// survives an account erasure. Owned here (next to the keys) so a new user-keyed dimension can
+    /// never be silently missed by a caller.
+    /// </summary>
+    Task InvalidateAllForUserAsync(string externalId, Guid userId, IReadOnlyCollection<Guid> tenantIds, CancellationToken ct = default);
+
     Task<bool?> GetIsAppAdminAsync(Guid userId, Func<CancellationToken, Task<bool?>> factory, CancellationToken ct = default);
 
     Task<bool> GetIsRevokedAsync(string jti, Func<CancellationToken, Task<bool>> factory, CancellationToken ct = default);
@@ -80,6 +88,17 @@ public sealed class AuthCache : IAuthCache
 
     public Task SetUserIdAsync(string externalId, Guid userId, CancellationToken ct = default) =>
         _cache.SetAsync(UserKey(externalId), (Guid?)userId, _userOptions, cancellationToken: ct).AsTask();
+
+    public async Task InvalidateAllForUserAsync(string externalId, Guid userId, IReadOnlyCollection<Guid> tenantIds, CancellationToken ct = default)
+    {
+        await _cache.RemoveAsync(UserKey(externalId), ct);
+        await _cache.RemoveAsync(AppAdminKey(userId), ct);
+        foreach (var tenantId in tenantIds)
+        {
+            await _cache.RemoveAsync(TenantUserKey(tenantId, userId), ct);
+            await _cache.RemoveAsync(HouseholdUsersKey(tenantId, userId), ct);
+        }
+    }
 
     public async Task<bool?> GetIsAppAdminAsync(Guid userId, Func<CancellationToken, Task<bool?>> factory, CancellationToken ct = default) =>
         await _cache.GetOrCreateAsync(AppAdminKey(userId), factory, InvokeAsync, _appAdminOptions, cancellationToken: ct);

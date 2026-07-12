@@ -36,6 +36,12 @@ public enum ErrorCode
     /// <summary>A supplied reference (id/foreign key) is invalid or does not resolve.</summary>
     INVALID_REFERENCE,
 
+    /// <summary>
+    /// Account erasure refused: the user is the sole Owner of shared groups and must transfer
+    /// ownership (or remove the other members) first. Param: <c>groups</c> (display names).
+    /// </summary>
+    ACCOUNT_SOLE_OWNER,
+
     // Permission variants — distinct codes so each localizes cleanly (rather than one code with an
     // English action phrase carried as a param).
     PERMISSION_TENANT_MANAGE,

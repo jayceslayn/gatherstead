@@ -1,5 +1,5 @@
 ---
-updated: 2026-06-25
+updated: 2026-07-12
 commit: 31a127e
 ---
 
@@ -95,6 +95,18 @@ Copy `infrastructure/parameters/prod.bicepparam.example` to `prod.bicepparam` (g
   ```bash
   az ad signed-in-user show --query id -o tsv
   ```
+
+Optional (safe empty/`false` defaults — set when you're ready):
+
+- **Public legal identity** (browser-exposed, non-secret; surfaced on `/contact`, `/terms`, `/privacy`):
+  `webContactEmail`, `webLegalProvider` (the party users contract with — your legal name, or a registered
+  entity once formed), and `webLegalJurisdiction` (governing-law US state, e.g. `Oregon`). Empty values
+  render neutral fallbacks. These are kept out of source so a fork reflects its own operator. Have the
+  drafted Terms/Privacy reviewed by counsel before relying on them.
+- **`externalIdentityDirectoryManagementEnabled`** — leave `false` until you have granted the Graph
+  permission in [Enable directory-account deletion](#enable-directory-account-deletion). When `false`,
+  account erasure still removes all application data; only the Entra directory account is left for manual
+  removal.
 
 ### 2. Provision Infrastructure
 
@@ -263,10 +275,12 @@ One-time setup after provisioning:
    az keyvault secret set --vault-name <vault-name> --name nuxt-session-password \
      --value "$(openssl rand -base64 48)"   # any random string ≥ 32 chars
    ```
-2. **API app registration** — under *Expose an API*, add a scope (e.g. `access_as_user`) and set the
+2. **API app registration** — in the **Microsoft Entra admin center** for the external tenant, create an
+   app registration for the API (no platform/redirect URI — it only validates bearer tokens). Under
+   *Expose an API*, add a scope (e.g. `access_as_user`) and set the
    Application ID URI. This is the `webExternalIdentityApiScope` value (`api://<api-client-id>/access_as_user`)
-   so the web app's access token is audienced for the API.
-3. **Web app registration** — under *Authentication → Platform configurations*, register the redirect URI
+   so the web app's access token is audienced for the API. Its client ID is `externalIdentityClientId`.
+3. **Web app registration** — create a second app registration for the web app. Under *Authentication → Platform configurations*, register the redirect URI
    `https://<webAppUrl>/auth/azure` under a **Web** platform (**not** Single-page application — a SPA
    registration forces a browser cross-origin redemption and rejects the server-side exchange with
    `AADSTS9002327`/HTTP 400). On the same **Web** platform, also add `https://<webAppUrl>/` to the redirect
@@ -282,7 +296,9 @@ One-time setup after provisioning:
    az keyvault secret set --vault-name <vault-name> --name web-external-identity-client-secret \
      --value "<the client secret value>"
    ```
-   Grant the registration delegated permission to the API scope from step 2. Its client ID is
+   Under *API permissions*, grant the registration delegated permission to the API scope from step 2,
+   then **Grant admin consent** for the tenant — external-tenant users cannot consent for themselves, so
+   without admin consent the sign-in fails with `AADSTS65001`. Its client ID is
    `webExternalIdentityClientId`.
 4. Fill the `externalIdentity*` and `webExternalIdentity*` values in `prod.bicepparam` (tenant, client IDs,
    issuer) and redeploy so the app settings pick them up. The web App Service should then show both the
@@ -312,18 +328,22 @@ web app registration is attached to. In the **Microsoft Entra admin center** (ex
    here:** no WAF/Front Door in front of the App Services, no anomaly alerting on User-creation rate, and no cleanup
    job for orphaned zero-tenant users — the residual risk is junk-row accumulation, not unauthorized access.
 
-#### Return the Display Name claim (required for `User.DisplayName`)
+#### Return the Display Name and Email claims
 
 The API seeds a user's editable `User.DisplayName` (shown/edited on **Settings → Account**) from the token
-`name` claim at first login. *Collecting* the Display Name attribute on the user flow is not enough — the flow
-must also **return** it as a token claim:
+`name` claim at first login, and resolves the caller's email from the token to refresh `User.Email` and
+auto-claim invitations (`ResolveEmailClaim` in
+[UserProvisioningService.cs](../src/Gatherstead.Api/Services/Provisioning/UserProvisioningService.cs) — it
+checks the standard email claims, then falls back to an email-shaped `preferred_username`). *Collecting* an
+attribute on the user flow is not enough — the flow must also **return** it as a token claim:
 
 1. **External Identities → User flows → sign-up and sign-in → User attributes** — ensure **Display Name** is
-   collected, and under **Application claims** (the claims the token returns) tick **Display Name** so it is
-   emitted as the `name` claim.
-2. The backend reads the claim from the **access token** presented to `POST /api/me/bootstrap` (the same way it
-   reads the `email` claim). Confirm `name` is present there. If a deployment only emits `name` on the
-   id_token, the seed will be empty and the user can still set their name manually on the Account page.
+   collected, and under **Application claims** (the claims the token returns) tick **Display Name** (emitted
+   as the `name` claim) and **Email Addresses** (emitted as the `email` claim).
+2. The backend reads both claims from the **access token** presented to `POST /api/me/bootstrap`. Confirm
+   they are present there. If a deployment only emits `name` on the id_token, the seed will be empty and the
+   user can still set their name manually on the Account page; a missing email claim is worse — invitation
+   auto-claim silently never matches.
 
 This claim list is configured **in the portal only** — it is not represented in the Bicep under `infrastructure/`,
 which carries the auth *parameters* (`Instance`, `Domain`, `ClientId`, `ValidIssuer`) but not the user-flow
@@ -331,6 +351,37 @@ attribute/claim selection.
 
 `SignUpSignInPolicyId` stays **empty** throughout — it is an Azure AD B2C concept; Entra External ID uses the
 tenant's user flow instead, not a policy ID in the authority URL.
+
+#### Enable directory-account deletion
+
+Account erasure (self-service `DELETE /api/me` and admin `DELETE /api/admin/users/{id}`) always hard-deletes
+a user's **application** data. Removing their **Entra directory account** as well is opt-in and off by
+default: until enabled, the API reports the directory outcome as `Skipped` and the account must be deleted
+manually in the Entra admin center.
+
+To enable it, grant the API's **managed identity** the Microsoft Graph application permission
+**`User.DeleteRestricted.All`** (or the broader `User.ReadWrite.All`) and admin-consent it. Assigning a Graph
+app role to a managed identity is a directory operation, not IaC — run it once as an Entra admin who can grant
+app roles (Privileged Role Administrator / Global Administrator):
+
+```bash
+GRAPH_APP_ID=00000003-0000-0000-c000-000000000000   # Microsoft Graph (well-known app id)
+GRAPH_SP_ID=$(az ad sp show --id $GRAPH_APP_ID --query id -o tsv)
+ROLE_ID=$(az ad sp show --id $GRAPH_APP_ID \
+  --query "appRoles[?value=='User.DeleteRestricted.All'].id | [0]" -o tsv)
+# Principal (object) ID of the API's user-assigned managed identity (the managedIdentityName output).
+MI_SP_ID=$(az identity show --resource-group <resource-group> --name <managed-identity-name> \
+  --query principalId -o tsv)
+az rest --method POST \
+  --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$MI_SP_ID/appRoleAssignments" \
+  --body "{\"principalId\":\"$MI_SP_ID\",\"resourceId\":\"$GRAPH_SP_ID\",\"appRoleId\":\"$ROLE_ID\"}"
+```
+
+Then set `externalIdentityDirectoryManagementEnabled = true` in `prod.bicepparam` and redeploy, so the API
+receives `ExternalIdentity__DirectoryManagement__Enabled=true`. A Graph delete that fails is logged and
+surfaced for manual follow-up — it never rolls back the (already-committed) application-data erasure. The
+identity ID `AccountDeletionService` passes to Graph is the user's stored `ExternalId` (the token `sub`); if
+your tenant's `sub` differs from the directory object id, a delete returns `NotFound` and is likewise flagged.
 
 ### 6. Deploy the Application
 

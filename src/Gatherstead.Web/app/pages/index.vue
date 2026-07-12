@@ -83,6 +83,20 @@ const features = computed(() => [
             {{ t('common.signIn') }}
           </UButton>
         </div>
+
+        <i18n-t
+          v-if="!isDemoMode && !loggedIn"
+          keypath="landing.consent"
+          tag="p"
+          class="text-sm text-neutral-500 dark:text-neutral-400 mt-6"
+        >
+          <template #terms>
+            <ULink to="/terms" class="underline hover:text-neutral-700 dark:hover:text-neutral-200">{{ t('landing.termsLink') }}</ULink>
+          </template>
+          <template #privacy>
+            <ULink to="/privacy" class="underline hover:text-neutral-700 dark:hover:text-neutral-200">{{ t('landing.privacyLink') }}</ULink>
+          </template>
+        </i18n-t>
       </UContainer>
     </section>
 

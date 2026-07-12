@@ -45,6 +45,18 @@ param webExternalIdentityClientId = '<web-app-registration-client-id>'
 param webExternalIdentityTenantName = '<tenant-subdomain>'
 param webExternalIdentityApiScope = 'api://<api-app-registration-client-id>/access_as_user'
 
+// Delete the Entra directory account during account erasure. Keep false until the API managed identity
+// has been granted the Graph User.DeleteRestricted.All app role (see DEPLOYMENT.md → "Enable directory-
+// account deletion"). When false, app data still erases fully; the directory account is left for manual removal.
+param externalIdentityDirectoryManagementEnabled = false
+
+// Public legal identity for /contact, /terms and /privacy (browser-exposed, non-secret). Empty = neutral
+// fallbacks. Provider = the party users contract with (your legal name, or a registered entity once formed);
+// jurisdiction = the governing-law US state. Have the drafted Terms/Privacy reviewed by counsel before launch.
+param webContactEmail = ''
+param webLegalProvider = ''
+param webLegalJurisdiction = ''
+
 // Provision the public demo static web app (+ its appi-gat-demo-* App Insights) in this resource
 // group, and grant the CI identity the role to fetch its deployment token. Set false to skip it.
 param deployDemo = true

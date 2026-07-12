@@ -72,6 +72,8 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { prerender: true },
+    // /terms and /privacy are deliberately left as default SSR (not prerendered) so their
+    // config-driven legal identity (NUXT_PUBLIC_LEGAL_*) is read at runtime, mirroring /contact.
     '/tenants/**': { ssr: false },
     '/app/**': { ssr: false },
     '/user/**': { ssr: false },
@@ -181,6 +183,11 @@ export default defineNuxtConfig({
       // Support contact address shown as a mailto link on the public /contact page. Bound from
       // NUXT_PUBLIC_CONTACT_EMAIL. Empty = the page shows a neutral fallback instead of a mailto link.
       contactEmail: '',
+      // Legal identity interpolated into /terms and /privacy at render. Kept out of source so a fork
+      // of this open repo reflects its own operator, not us. Bound from NUXT_PUBLIC_LEGAL_PROVIDER /
+      // NUXT_PUBLIC_LEGAL_JURISDICTION. Empty = neutral fallbacks (see app/content/legal/types.ts).
+      legalProvider: '',
+      legalJurisdiction: '',
       // App Insights JS SDK connection string (browser telemetry). Bound from
       // NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING. Empty = telemetry disabled (local dev).
       appInsightsConnectionString: '',

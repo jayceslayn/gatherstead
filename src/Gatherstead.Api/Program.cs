@@ -31,6 +31,8 @@ using Gatherstead.Api.Services.ShoppingItems;
 using Gatherstead.Api.Services.Reports;
 using Gatherstead.Api.Services.Invitations;
 using Gatherstead.Api.Services.Provisioning;
+using Gatherstead.Api.Services.AccountDeletion;
+using Gatherstead.Api.Services.Directory;
 using Gatherstead.Api.Contracts.Responses;
 using Gatherstead.Data.Entities;
 using Gatherstead.Api.Security;
@@ -125,6 +127,18 @@ builder.Services.AddScoped<IShoppingItemService, ShoppingItemService>();
 builder.Services.AddScoped<IEventReportService, EventReportService>();
 builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IUserProvisioningService, UserProvisioningService>();
+
+// Account erasure (self-service DELETE /api/me + admin DELETE /api/admin/users/{id}) and the
+// external-identity (Entra) account deletion it delegates to. Directory deletion is disabled by
+// default (see DirectoryManagementOptions) — enable it once the managed identity holds the Graph
+// User.DeleteRestricted.All permission; until then application data is still fully erased.
+var directoryOptions = builder.Configuration
+    .GetSection(DirectoryManagementOptions.SectionName).Get<DirectoryManagementOptions>()
+    ?? new DirectoryManagementOptions();
+builder.Services.AddSingleton(directoryOptions);
+builder.Services.AddHttpClient("graph");
+builder.Services.AddScoped<IDirectoryAccountService, GraphDirectoryAccountService>();
+builder.Services.AddScoped<IAccountDeletionService, AccountDeletionService>();
 
 // Configure JWT Bearer authentication with external identity provider (Entra External ID / Azure AD B2C)
 // Note: Consider PASETO migration when ecosystem support improves (broader library/provider adoption).

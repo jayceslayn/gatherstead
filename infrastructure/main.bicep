@@ -75,6 +75,20 @@ param webExternalIdentityTenantName string
 @description('API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user.')
 param webExternalIdentityApiScope string
 
+@description('Enable deletion of the external-identity (Entra) account during account erasure. Requires the API managed identity to hold the Microsoft Graph User.DeleteRestricted.All app role (admin-consented). Off by default — application data is still fully erased; the directory account is left for manual removal.')
+param externalIdentityDirectoryManagementEnabled bool = false
+
+// Public legal identity surfaced on the web app's /contact, /terms and /privacy pages. All non-secret
+// and browser-exposed; empty = neutral fallbacks. Kept out of source so a fork reflects its own operator.
+@description('Public support/legal contact email (NUXT_PUBLIC_CONTACT_EMAIL). Empty hides the mailto link.')
+param webContactEmail string = ''
+
+@description('Legal provider named on /terms and /privacy (NUXT_PUBLIC_LEGAL_PROVIDER) — your legal name or registered entity.')
+param webLegalProvider string = ''
+
+@description('Governing-law jurisdiction on /terms (NUXT_PUBLIC_LEGAL_JURISDICTION), e.g. Oregon.')
+param webLegalJurisdiction string = ''
+
 resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
@@ -180,6 +194,10 @@ module appservice 'modules/appservice.bicep' = {
     webExternalIdentityClientId: webExternalIdentityClientId
     webExternalIdentityTenantName: webExternalIdentityTenantName
     webExternalIdentityApiScope: webExternalIdentityApiScope
+    externalIdentityDirectoryManagementEnabled: externalIdentityDirectoryManagementEnabled
+    webContactEmail: webContactEmail
+    webLegalProvider: webLegalProvider
+    webLegalJurisdiction: webLegalJurisdiction
   }
 }
 

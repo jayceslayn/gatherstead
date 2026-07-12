@@ -15,7 +15,9 @@ export function useMeActions(refresh?: () => Promise<void>) {
   const toast = useToast()
   const { t } = useI18n()
   const { translateError } = useApiError()
+  const { logout } = useAuth()
   const saving = ref(false)
+  const deleting = ref(false)
 
   async function updateDisplayName(displayName: string): Promise<boolean> {
     saving.value = true
@@ -34,5 +36,23 @@ export function useMeActions(refresh?: () => Promise<void>) {
     }
   }
 
-  return { saving, updateDisplayName }
+  /**
+   * Erases the account. Returns null on success (the federated logout then navigates away — the
+   * landing page is the confirmation) or the localized error message so the caller can keep its
+   * confirmation dialog open and show the reason inline (e.g. sole owner of a shared group).
+   */
+  async function deleteAccount(): Promise<string | null> {
+    deleting.value = true
+    try {
+      await repo.deleteAccount()
+      await logout()
+      return null
+    }
+    catch (e) {
+      deleting.value = false
+      return translateError(e)
+    }
+  }
+
+  return { saving, updateDisplayName, deleting, deleteAccount }
 }

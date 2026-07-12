@@ -65,6 +65,18 @@ param webExternalIdentityTenantName string
 @description('The API scope the web app requests so its access token is audienced for the API, e.g. api://<api-client-id>/access_as_user.')
 param webExternalIdentityApiScope string
 
+@description('Enable deletion of the external-identity (Entra) account during account erasure. Requires the API managed identity to hold the Microsoft Graph User.DeleteRestricted.All app role (admin-consented). Off by default — application data is still fully erased when disabled; the directory account is left for manual removal.')
+param externalIdentityDirectoryManagementEnabled bool = false
+
+@description('Public support/legal contact email shown on /contact, /terms and /privacy. Empty = neutral fallback (no mailto link).')
+param webContactEmail string = ''
+
+@description('Legal provider named on /terms and /privacy (your legal name or registered entity). Empty = neutral fallback. Not committed to source so a fork reflects its own operator.')
+param webLegalProvider string = ''
+
+@description('Governing-law jurisdiction shown on /terms, e.g. Oregon. Empty = neutral fallback.')
+param webLegalJurisdiction string = ''
+
 var planName = 'asp-${workload}-${environment}-${locationAbbreviation}'
 var apiAppName = 'app-${workload}-api-${environment}-${locationAbbreviation}-${resourceToken}'
 var webAppName = 'app-${workload}-web-${environment}-${locationAbbreviation}-${resourceToken}'
@@ -123,6 +135,10 @@ resource apiApp 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'ExternalIdentity__ClientId', value: externalIdentityClientId }
         { name: 'ExternalIdentity__SignUpSignInPolicyId', value: externalIdentitySignUpSignInPolicyId }
         { name: 'ExternalIdentity__ValidIssuer', value: externalIdentityValidIssuer }
+        // Account erasure also deletes the Entra directory account when enabled (needs the Graph
+        // User.DeleteRestricted.All app role on this identity). Off by default: app data still erases,
+        // the directory account is reported "Skipped" for manual removal. Binds ExternalIdentity:DirectoryManagement:Enabled.
+        { name: 'ExternalIdentity__DirectoryManagement__Enabled', value: string(externalIdentityDirectoryManagementEnabled) }
       ]
       connectionStrings: [
         {
@@ -166,6 +182,11 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
         // Browser-facing key for the App Insights JS SDK (runtimeConfig.public.appInsightsConnectionString).
         // Same prod App Insights as the backend → end-to-end frontend/backend trace correlation.
         { name: 'NUXT_PUBLIC_APP_INSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
+        // Public legal identity surfaced on /contact, /terms and /privacy (runtimeConfig.public.*).
+        // Empty = neutral fallbacks; kept out of source so a fork reflects its own operator.
+        { name: 'NUXT_PUBLIC_CONTACT_EMAIL', value: webContactEmail }
+        { name: 'NUXT_PUBLIC_LEGAL_PROVIDER', value: webLegalProvider }
+        { name: 'NUXT_PUBLIC_LEGAL_JURISDICTION', value: webLegalJurisdiction }
         // Entra External ID (server-side OIDC authorization-code + PKCE) — bind
         // runtimeConfig.externalIdentity.* in nuxt.config.ts. The code is redeemed server-side as a
         // confidential web client, so a client secret is required (resolved from Key Vault below).

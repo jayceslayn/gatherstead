@@ -81,6 +81,20 @@ function onSignIn() {
       >
         {{ t('landing.contact') }}
       </UButton>
+      <UButton
+        to="/terms"
+        variant="link"
+        color="neutral"
+      >
+        {{ t('landing.terms') }}
+      </UButton>
+      <UButton
+        to="/privacy"
+        variant="link"
+        color="neutral"
+      >
+        {{ t('landing.privacy') }}
+      </UButton>
     </div>
   </UFooter>
 </template>

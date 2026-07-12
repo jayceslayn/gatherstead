@@ -21,6 +21,18 @@ public sealed class FakeAuthCache : IAuthCache
         return Task.CompletedTask;
     }
 
+    public Task InvalidateAllForUserAsync(string externalId, Guid userId, IReadOnlyCollection<Guid> tenantIds, CancellationToken ct = default)
+    {
+        Invalidations.Add($"user:{externalId}");
+        Invalidations.Add($"admin:{userId}");
+        foreach (var tenantId in tenantIds)
+        {
+            Invalidations.Add($"tenantuser:{tenantId}:{userId}");
+            Invalidations.Add($"hhusers:{tenantId}:{userId}");
+        }
+        return Task.CompletedTask;
+    }
+
     public Task<bool?> GetIsAppAdminAsync(Guid userId, Func<CancellationToken, Task<bool?>> factory, CancellationToken ct = default)
         => factory(ct);
 

@@ -126,7 +126,10 @@ public enum SecurityEventType
     AppAdminAction = 6,
     RateLimitBreach = 7,
     InvitationCreated = 8,
-    InvitationAccepted = 9
+    InvitationAccepted = 9,
+    // Emitted when a user's account and personal data are hard-erased (self-service or admin).
+    // Append-only and PII-free: the durable record that an erasure occurred. See AccountDeletionService.
+    AccountDeleted = 10
 }
 
 public enum SecurityEventSeverity

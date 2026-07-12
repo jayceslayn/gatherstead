@@ -57,6 +57,26 @@ public class UserProvisioningService : IUserProvisioningService
         Guid userId;
         if (user is null)
         {
+            // An access token can outlive an account erasure. Refuse to re-provision (resurrect) a
+            // recently-erased identity until every pre-erasure token has expired; a fresh sign-up
+            // after that window provisions a brand-new account as usual.
+            var externalIdHash = ErasedAccount.HashExternalId(externalId);
+            var recentlyErased = await _dbContext.ErasedAccounts
+                .AnyAsync(t => t.ExternalIdHash == externalIdHash && t.ExpiresAt > DateTime.UtcNow, cancellationToken);
+            if (recentlyErased)
+            {
+                await _securityEventLogger.LogAsync(
+                    SecurityEventType.AuthFailure,
+                    SecurityEventSeverity.Warning,
+                    resource: "User:erased",
+                    detail: "{\"reason\":\"bootstrapAfterErasure\"}",
+                    tenantId: null,
+                    userId: null,
+                    cancellationToken: cancellationToken);
+                response.AddResponseMessage(MessageType.ERROR, "This account was recently deleted.");
+                return response;
+            }
+
             userId = Guid.NewGuid();
             // Pre-seed the resolved user id so the auditing interceptor can stamp the brand-new
             // (self-created) row before it becomes queryable.

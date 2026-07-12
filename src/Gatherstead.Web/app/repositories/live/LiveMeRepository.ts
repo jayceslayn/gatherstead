@@ -14,4 +14,8 @@ export class LiveMeRepository implements IMeRepository {
     )
     return response.entity
   }
+
+  async deleteAccount(): Promise<void> {
+    await $fetch('/api/proxy/me', { method: 'DELETE' })
+  }
 }

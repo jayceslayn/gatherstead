@@ -76,6 +76,7 @@ public class GathersteadDbContext : DbContext
     public DbSet<MemberRelationship> MemberRelationships => Set<MemberRelationship>();
     public DbSet<DietaryTag> DietaryTags => Set<DietaryTag>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+    public DbSet<ErasedAccount> ErasedAccounts => Set<ErasedAccount>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -98,6 +99,9 @@ public class GathersteadDbContext : DbContext
                 // DietaryTag is app-wide reference data with no tenant/audit lifecycle.
                 if (entityType.ClrType == typeof(DietaryTag))
                     continue;
+                // ErasedAccount is a short-lived tombstone; history would outlive the erasure on purpose.
+                if (entityType.ClrType == typeof(ErasedAccount))
+                    continue;
                 modelBuilder.Entity(entityType.ClrType).ToTable(tb => tb.IsTemporal());
             }
         }
@@ -110,6 +114,13 @@ public class GathersteadDbContext : DbContext
             b.HasIndex(e => new { e.EventType, e.OccurredAt }).HasDatabaseName("IX_SecurityEvent_EventType_OccurredAt");
             b.HasIndex(e => e.UserId).HasDatabaseName("IX_SecurityEvent_UserId");
             b.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_SecurityEvent_CorrelationId");
+        });
+
+        modelBuilder.Entity<ErasedAccount>(b =>
+        {
+            b.ToTable("ErasedAccounts", "security");
+            b.Property(e => e.ExternalIdHash).HasMaxLength(32).IsRequired();
+            b.HasIndex(e => e.ExternalIdHash).HasDatabaseName("IX_ErasedAccount_ExternalIdHash");
         });
 
         modelBuilder.Entity<ContactMethod>(b =>

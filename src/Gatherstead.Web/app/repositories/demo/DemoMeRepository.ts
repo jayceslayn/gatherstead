@@ -25,4 +25,9 @@ export class DemoMeRepository implements IMeRepository {
     localStorage.setItem(DISPLAY_NAME_KEY, normalized)
     return { userId: DEMO_USER_ID, email: DEMO_USER_EXTERNAL_ID, displayName: normalized }
   }
+
+  async deleteAccount(): Promise<void> {
+    // The demo has a single hard-coded user with no backend, so there is nothing to erase.
+    throw new Error('Account deletion is not available in demo mode.')
+  }
 }

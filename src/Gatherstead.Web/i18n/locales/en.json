@@ -54,7 +54,21 @@
     "viewDocs": "Documentation",
     "tryDemo": "Try the Demo",
     "visitLiveSite": "Visit the Live Site",
-    "contact": "Contact"
+    "contact": "Contact",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "consent": "By continuing, you agree to our {terms} and {privacy}.",
+    "termsLink": "Terms of Service",
+    "privacyLink": "Privacy Policy"
+  },
+  "legal": {
+    "effectiveDate": "Last updated: {date}",
+    "englishGoverns": "This English-language version governs.",
+    "contactWithEmail": "If you have any questions about this document, you can contact us at {email}.",
+    "contactWithPage": "If you have any questions about this document, you can reach us through our {page}.",
+    "contactPageLink": "contact page",
+    "termsDescription": "The terms and conditions that govern your use of {app}.",
+    "privacyDescription": "How {app} collects, uses, and protects your personal information."
   },
   "contact": {
     "title": "Contact Us",
@@ -586,6 +600,7 @@
     "ENTITY_CONFLICT": "An {entity} named '{name}' already exists here.",
     "VALIDATION_REQUIRED": "{field} is required.",
     "INVALID_REFERENCE": "That reference is invalid or no longer exists.",
+    "ACCOUNT_SOLE_OWNER": "You are the sole owner of {groups}. Transfer ownership, remove the other members, or delete the group before deleting your account.",
     "PERMISSION_TENANT_MANAGE": "You do not have permission to manage this group's resources.",
     "PERMISSION_EVENT_MANAGE": "You do not have permission to manage events for this group.",
     "PERMISSION_HOUSEHOLD_MANAGE": "You do not have permission to manage this household.",
@@ -641,7 +656,19 @@
     "emailHelp": "Managed by your sign-in provider and can't be changed here.",
     "displayName": "Display name",
     "displayNameRequired": "Display name is required.",
-    "saved": "Profile updated"
+    "saved": "Profile updated",
+    "delete": {
+      "title": "Delete account",
+      "description": "Permanently delete your account and all of your personal data. This cannot be undone.",
+      "button": "Delete account",
+      "confirmTitle": "Delete your account?",
+      "confirmWarning": "This permanently erases your account and personal data.",
+      "bulletData": "Your profile, your household member details, and your activity are erased.",
+      "bulletGroups": "Groups where you are the only member, or that you deleted as their owner, are erased entirely.",
+      "bulletIrreversible": "This action cannot be undone.",
+      "confirmPrompt": "Type {phrase} to confirm",
+      "confirmButton": "Permanently delete"
+    }
   },
   "tenantUser": {
     "title": "Users",

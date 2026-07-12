@@ -612,6 +612,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AccountDeletionResponse"];
+                        "application/json": components["schemas"]["AccountDeletionResponse"];
+                        "text/json": components["schemas"]["AccountDeletionResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/age-bands": {
         parameters: {
             query?: never;
@@ -2234,7 +2273,28 @@ export interface paths {
             };
         };
         post?: never;
-        delete?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AccountDeletionResponse"];
+                        "application/json": components["schemas"]["AccountDeletionResponse"];
+                        "text/json": components["schemas"]["AccountDeletionResponse"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -3236,7 +3296,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
+                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted" | "AccountDeleted";
                     dateFrom?: string;
                     dateTo?: string;
                     page?: number;
@@ -3281,7 +3341,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted";
+                    eventType?: "AuthFailure" | "AuthzDenial" | "CrossTenantWriteBlocked" | "TokenRevoked" | "AppAdminAction" | "RateLimitBreach" | "InvitationCreated" | "InvitationAccepted" | "AccountDeleted";
                     dateFrom?: string;
                     dateTo?: string;
                     tenantId?: string;
@@ -4546,6 +4606,20 @@ export interface components {
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
         };
+        AccountDeletionResponse: {
+            entity?: components["schemas"]["AccountDeletionResultDto"];
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
+        AccountDeletionResultDto: {
+            /** Format: uuid */
+            userId: string;
+            /** Format: int32 */
+            tenantsPurged: number;
+            /** Format: int32 */
+            membershipsRemoved: number;
+            directoryOutcome: string;
+        };
         AddressDto: {
             /** Format: uuid */
             id?: string;
@@ -5356,7 +5430,7 @@ export interface components {
             /** @enum {string} */
             type?: "ERROR" | "WARNING" | "INFORMATION";
             /** @enum {string|null} */
-            code?: "ENTITY_NOT_FOUND" | "ENTITY_CONFLICT" | "VALIDATION_REQUIRED" | "VALIDATION_FORMAT" | "VALIDATION_RANGE" | "CAPACITY_EXCEEDED" | "INVALID_STATE" | "DEPENDENCY_EXISTS" | "INVALID_REFERENCE" | "PERMISSION_TENANT_MANAGE" | "PERMISSION_EVENT_MANAGE" | "PERMISSION_HOUSEHOLD_MANAGE" | "PERMISSION_MEMBER_EDIT" | "PERMISSION_INTENT_ASSIGN" | "PERMISSION_MEALPLAN_MENU" | "PERMISSION_SENSITIVE_READ" | "PERMISSION_ROLE_ESCALATION" | null;
+            code?: "ENTITY_NOT_FOUND" | "ENTITY_CONFLICT" | "VALIDATION_REQUIRED" | "VALIDATION_FORMAT" | "VALIDATION_RANGE" | "CAPACITY_EXCEEDED" | "INVALID_STATE" | "DEPENDENCY_EXISTS" | "INVALID_REFERENCE" | "ACCOUNT_SOLE_OWNER" | "PERMISSION_TENANT_MANAGE" | "PERMISSION_EVENT_MANAGE" | "PERMISSION_HOUSEHOLD_MANAGE" | "PERMISSION_MEMBER_EDIT" | "PERMISSION_INTENT_ASSIGN" | "PERMISSION_MEALPLAN_MENU" | "PERMISSION_SENSITIVE_READ" | "PERMISSION_ROLE_ESCALATION" | null;
             message?: string;
             params?: {
                 [key: string]: string;

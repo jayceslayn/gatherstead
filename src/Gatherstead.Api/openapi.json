@@ -1194,6 +1194,46 @@
         }
       }
     },
+    "/api/admin/users/{userId}": {
+      "delete": {
+        "tags": [
+          "AdminUsers"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/age-bands": {
       "get": {
         "tags": [
@@ -3757,6 +3797,33 @@
             }
           }
         }
+      },
+      "delete": {
+        "tags": [
+          "Me"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountDeletionResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/tenants/{tenantId}/events/{eventId}/meal-templates/{templateId}/plans/{planId}/attendance": {
@@ -5662,7 +5729,8 @@
                 "AppAdminAction",
                 "RateLimitBreach",
                 "InvitationCreated",
-                "InvitationAccepted"
+                "InvitationAccepted",
+                "AccountDeleted"
               ],
               "type": "string"
             }
@@ -5744,7 +5812,8 @@
                 "AppAdminAction",
                 "RateLimitBreach",
                 "InvitationCreated",
-                "InvitationAccepted"
+                "InvitationAccepted",
+                "AccountDeleted"
               ],
               "type": "string"
             }
@@ -7973,6 +8042,53 @@
               "$ref": "#/components/schemas/ResponseMessage"
             },
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccountDeletionResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "$ref": "#/components/schemas/AccountDeletionResultDto"
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "AccountDeletionResultDto": {
+        "required": [
+          "directoryOutcome",
+          "membershipsRemoved",
+          "tenantsPurged",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenantsPurged": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "membershipsRemoved": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "directoryOutcome": {
+            "minLength": 1,
+            "type": "string"
           }
         },
         "additionalProperties": false
@@ -10889,6 +11005,7 @@
               "INVALID_STATE",
               "DEPENDENCY_EXISTS",
               "INVALID_REFERENCE",
+              "ACCOUNT_SOLE_OWNER",
               "PERMISSION_TENANT_MANAGE",
               "PERMISSION_EVENT_MANAGE",
               "PERMISSION_HOUSEHOLD_MANAGE",
@@ -12416,6 +12533,9 @@
     },
     {
       "name": "Addresses"
+    },
+    {
+      "name": "AdminUsers"
     },
     {
       "name": "AgeBands"

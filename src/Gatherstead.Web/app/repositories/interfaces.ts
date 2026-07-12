@@ -119,6 +119,9 @@ export interface ITenantUserRepository {
 export interface IMeRepository {
   getMe(): Promise<MeSummary>
   updateDisplayName(displayName: string): Promise<MeSummary>
+  /** Permanently erases the caller's account and personal data. Rejects with a 409 when the caller
+   * is the sole owner of a shared group (ownership must be transferred first). */
+  deleteAccount(): Promise<void>
 }
 
 export interface IEventRepository {

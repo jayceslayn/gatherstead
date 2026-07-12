@@ -54,7 +54,21 @@
     "viewDocs": "Documentación",
     "tryDemo": "Probar la Demo",
     "visitLiveSite": "Visitar el Sitio en Vivo",
-    "contact": "Contacto"
+    "contact": "Contacto",
+    "terms": "Términos",
+    "privacy": "Privacidad",
+    "consent": "Al continuar, aceptas nuestros {terms} y nuestra {privacy}.",
+    "termsLink": "Términos de Servicio",
+    "privacyLink": "Política de Privacidad"
+  },
+  "legal": {
+    "effectiveDate": "Última actualización: {date}",
+    "englishGoverns": "La versión en inglés es la que rige.",
+    "contactWithEmail": "Si tienes alguna pregunta sobre este documento, puedes contactarnos en {email}.",
+    "contactWithPage": "Si tienes alguna pregunta sobre este documento, puedes contactarnos a través de nuestra {page}.",
+    "contactPageLink": "página de contacto",
+    "termsDescription": "Los términos y condiciones que rigen tu uso de {app}.",
+    "privacyDescription": "Cómo {app} recopila, usa y protege tu información personal."
   },
   "contact": {
     "title": "Contáctanos",
@@ -586,6 +600,7 @@
     "ENTITY_CONFLICT": "Ya existe un {entity} llamado '{name}' aquí.",
     "VALIDATION_REQUIRED": "{field} es obligatorio.",
     "INVALID_REFERENCE": "Esa referencia no es válida o ya no existe.",
+    "ACCOUNT_SOLE_OWNER": "Eres el único propietario de {groups}. Transfiere la propiedad, elimina a los demás miembros o elimina el grupo antes de eliminar tu cuenta.",
     "PERMISSION_TENANT_MANAGE": "No tienes permiso para administrar los recursos de este grupo.",
     "PERMISSION_EVENT_MANAGE": "No tienes permiso para administrar los eventos de este grupo.",
     "PERMISSION_HOUSEHOLD_MANAGE": "No tienes permiso para administrar este hogar.",
@@ -641,7 +656,19 @@
     "emailHelp": "Gestionado por tu proveedor de inicio de sesión y no se puede cambiar aquí.",
     "displayName": "Nombre para mostrar",
     "displayNameRequired": "El nombre para mostrar es obligatorio.",
-    "saved": "Perfil actualizado"
+    "saved": "Perfil actualizado",
+    "delete": {
+      "title": "Eliminar cuenta",
+      "description": "Elimina permanentemente tu cuenta y todos tus datos personales. Esta acción no se puede deshacer.",
+      "button": "Eliminar cuenta",
+      "confirmTitle": "¿Eliminar tu cuenta?",
+      "confirmWarning": "Esto borra permanentemente tu cuenta y tus datos personales.",
+      "bulletData": "Tu perfil, los datos de tus miembros del hogar y tu actividad se eliminan.",
+      "bulletGroups": "Los grupos en los que eres el único miembro, o que eliminaste como propietario, se borran por completo.",
+      "bulletIrreversible": "Esta acción no se puede deshacer.",
+      "confirmPrompt": "Escribe {phrase} para confirmar",
+      "confirmButton": "Eliminar permanentemente"
+    }
   },
   "tenantUser": {
     "title": "Usuarios",
