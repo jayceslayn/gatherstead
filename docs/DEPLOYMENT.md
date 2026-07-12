@@ -227,6 +227,27 @@ tables. Every step is idempotent, so it is safe to re-run.
 
 ### Configure External Identity Sign-in
 
+> **Why this section is manual — can't it be Bicep?** Mostly no. Everything below is a Microsoft Graph
+> directory object in the **external tenant** (`gatherstead.onmicrosoft.com`), not an ARM resource in the
+> subscription. The [Microsoft Graph Bicep extension](https://learn.microsoft.com/en-us/graph/templates/bicep/overview-bicep-templates-for-graph)
+> can declare *some* Graph objects (applications, service principals, delegated-permission grants,
+> app-role assignments), but it deploys into the tenant of the deploying identity — our deployment runs
+> in the workforce tenant that owns the subscription and cannot target the external tenant. Even
+> in-tenant, it cannot create **client secrets** (`passwordCredentials` is unsupported) or **user flows**
+> (the sign-up/sign-in flow, its identity providers, CAPTCHA, and attribute/claim selection have no Bicep
+> types at all). The one exception is the Graph app-role grant for
+> [directory-account deletion](#enable-directory-account-deletion): the API's managed identity lives in
+> the workforce tenant, so that grant *could* be declared with `Microsoft.Graph/appRoleAssignedTo` — it is
+> kept manual so infra deployers don't need Graph admin rights for routine deploys.
+>
+> The complete inventory of manual identity configuration is therefore captured below: creating the two
+> app registrations, the exposed API scope, redirect URIs, client secret, and admin consent (steps 2–3);
+> user-flow setup including CAPTCHA ([self-service sign-up](#enable-self-service-sign-up-registration));
+> token claims ([Display Name and Email](#return-the-display-name-and-email-claims)); and the Graph
+> app-role grant ([directory-account deletion](#enable-directory-account-deletion)). Creating the
+> external tenant itself is likewise portal-only. Bicep carries only the auth *parameters* the apps
+> consume (`externalIdentity*` / `webExternalIdentity*` app settings).
+
 Both apps authenticate users against **Microsoft Entra External ID** (`ciamlogin.com`). The API validates
 JWT bearer tokens (config injected as `ExternalIdentity__*` app settings); the Nuxt web app runs the
 server-side OIDC authorization-code + **PKCE** flow ([server/routes/auth/azure.get.ts](../src/Gatherstead.Web/server/routes/auth/azure.get.ts)),
