@@ -1,8 +1,8 @@
 ---
 name: project-bootstrap
 description: Start here before any task. Provides project orientation and routes agents to the right docs by task type, replacing broad codebase exploration.
-updated: 2026-06-25
-commit: 31a127e
+updated: 2026-07-12
+commit: 67c2cd7
 ---
 
 # Gatherstead — Project Bootstrap
@@ -52,8 +52,11 @@ docs/
   IMPLEMENTATION_STATUS.md  What exists today; schema detail; planned enhancements
   DEPLOYMENT.md             Bicep infrastructure, deployment runbook, SKU differences
   OBSERVABILITY.md          PII logging rules, OTel conventions, allowlist
-  agents/plans/             Detailed implementation plans for upcoming features
-.agents/skills/             Agent skill files (this directory)
+  WEB-UI-DESIGN.md          Frontend design system, page structure, UX conventions
+  SECURITY-DEPS.md          Dependency security & update policy (Dependabot, supply chain)
+.agents/
+  plans/                    Detailed design/implementation plans for upcoming features
+  skills/                   Agent skill files (this directory)
 ```
 
 ## Task-Type Routing
@@ -64,7 +67,7 @@ Read only what your task needs. Skip the rest.
 |-----------|-----------|-----------------|
 | **Backend (.NET)** | `docs/ARCHITECTURE.md` + `docs/IMPLEMENTATION_STATUS.md` | Controller patterns, EF conventions, FK layout, what's implemented |
 | **Frontend (Vue/Nuxt)** | `docs/ARCHITECTURE.md` (frontend section) + `docs/WEB-UI-DESIGN.md` | Composable patterns, repository injection, page structure, i18n |
-| **Planning / design** | `docs/ARCHITECTURE.md` + browse `docs/agents/plans/` for format precedent | Existing plan structure; scope conventions |
+| **Planning / design** | `docs/ARCHITECTURE.md` + browse `.agents/plans/` for format precedent | Existing plan structure; scope conventions |
 | **Security / observability** | `docs/DESIGN_PRINCIPLES.md` + `docs/OBSERVABILITY.md` | PII logging ban, tenant isolation rules, OTel allowlist |
 | **Deployment / infra** | `docs/DEPLOYMENT.md` | Bicep modules, SKU differences, migration runbook |
 
