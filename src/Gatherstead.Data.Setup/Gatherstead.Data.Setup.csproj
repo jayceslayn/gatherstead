@@ -18,7 +18,7 @@
          add-on package. Required for the "Authentication=Active Directory Default" connection string;
          it registers the providers automatically with no code changes. -->
     <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.0.2" />
-    <PackageReference Include="Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider" Version="7.0.2" />
   </ItemGroup>
 
 </Project>

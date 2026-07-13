@@ -31,14 +31,14 @@
       },
       "Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider": {
         "type": "Direct",
-        "requested": "[7.0.0, )",
-        "resolved": "7.0.0",
-        "contentHash": "vrtv8tfbQaHccl8LPNbc9RI/OT3Whz4pCJNjYVftborxFfLDH+MxD1aZLyfomG/k5/iUQvABJy7Yak5if+PrKQ==",
+        "requested": "[7.0.2, )",
+        "resolved": "7.0.2",
+        "contentHash": "yEccFtmCnhZqUOVoZ30lSrxwjFtCKhvbFv3dFoPA51KW8Ra7gF3xlBgvAQTzgrcG80FIdQAvyJcMG07gEdOI+g==",
         "dependencies": {
           "Azure.Core": "1.51.1",
           "Azure.Security.KeyVault.Keys": "4.9.0",
-          "Microsoft.Data.SqlClient": "7.0.0",
-          "Microsoft.Data.SqlClient.Internal.Logging": "1.0.0",
+          "Microsoft.Data.SqlClient": "[7.0.2, 8.0.0)",
+          "Microsoft.Data.SqlClient.Internal.Logging": "[7.0.2, 8.0.0)",
           "Microsoft.Extensions.Caching.Memory": "8.0.1"
         }
       },
