@@ -4442,6 +4442,61 @@
         }
       }
     },
+    "/api/tenants/{tenantId}/meal-intents": {
+      "get": {
+        "tags": [
+          "MealIntentsQuery"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "memberIds",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDay",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyMealDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyMealDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyMealDtoIReadOnlyCollectionBaseEntityResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tenants/{tenantId}/events/{eventId}/meal-templates/{templateId}/plans": {
       "get": {
         "tags": [
@@ -9572,6 +9627,18 @@
           "bringOwnFood": {
             "type": "boolean"
           },
+          "ageBand": {
+            "enum": [
+              "Age0To2",
+              "Age3To5",
+              "Age6To12",
+              "Age13To17",
+              "Age18To64",
+              "Age65Plus"
+            ],
+            "type": "string",
+            "nullable": true
+          },
           "dietary": {
             "type": "array",
             "items": {
@@ -9746,6 +9813,10 @@
           },
           "isException": {
             "type": "boolean"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
           },
           "going": {
             "type": "integer",
@@ -10744,6 +10815,84 @@
         "properties": {
           "entity": {
             "$ref": "#/components/schemas/MemberRelationshipDto"
+          },
+          "successful": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResponseMessage"
+            },
+            "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "MyMealDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mealPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "householdMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateName": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventName": {
+            "type": "string"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "mealType": {
+            "enum": [
+              "Breakfast",
+              "Lunch",
+              "Dinner"
+            ],
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "enum": [
+              "Volunteered",
+              "Assigned"
+            ],
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "MyMealDtoIReadOnlyCollectionBaseEntityResponse": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MyMealDto"
+            },
+            "nullable": true
           },
           "successful": {
             "type": "boolean"
@@ -12581,6 +12730,9 @@
     },
     {
       "name": "MealIntents"
+    },
+    {
+      "name": "MealIntentsQuery"
     },
     {
       "name": "MealPlans"

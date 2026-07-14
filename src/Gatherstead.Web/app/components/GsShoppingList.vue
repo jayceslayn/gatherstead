@@ -6,7 +6,12 @@ import { useTenantRole } from '~/composables/useTenantRole'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
 import { today } from '~/utils/dates'
 
-const props = defineProps<{ scope: ShoppingScope | null }>()
+const props = defineProps<{
+  scope: ShoppingScope | null
+  /** Single-plan mode: show only this meal plan's list; creates land on it and the scope-wide filters hide. */
+  mealPlanId?: string | null
+  initialMode?: 'shop' | 'edit'
+}>()
 const { t } = useI18n()
 const { formatDate } = useFormatDate()
 const { isCoordinatorOrAbove } = useTenantRole()
@@ -21,8 +26,11 @@ const {
 const { nameFor: memberName } = useAllMembers()
 
 // ── Mode (Shop = stripped-down in-store check-off; Edit = full CRUD for editors) ──
-const mode = ref<'shop' | 'edit'>('shop')
+const mode = ref<'shop' | 'edit'>(props.initialMode ?? 'shop')
 const canEditAny = computed(() => canAdd.value || sections.value.some(canEditSection))
+// Non-editors always get the shop view (the toggle is hidden for them), even when the
+// host page requests an edit-first list.
+const effectiveMode = computed(() => (canEditAny.value ? mode.value : 'shop'))
 
 // ── Filters ──────────────────────────────────────────────────────────────────
 const unfulfilledOnly = ref(false)
@@ -69,8 +77,19 @@ const showSourceFilter = computed(() => sourceOptions.value.length > 2)
 // them) so they can refer back during a shop run; cleared on manual refresh and on mode switch.
 const recentlyActed = ref<Set<string>>(new Set())
 
-const visibleSections = computed<ShoppingSection[]>(() =>
-  sections.value
+const visibleSections = computed<ShoppingSection[]>(() => {
+  // Single-plan mode: only the plan's own section, with date/source filtering (and expiry)
+  // irrelevant — every item on the list belongs to that one meal.
+  if (props.mealPlanId) {
+    return sections.value
+      .filter(s => s.planId === props.mealPlanId)
+      .map(s => ({
+        ...s,
+        items: s.items.filter(i =>
+          !unfulfilledOnly.value || i.status !== 'Covered' || recentlyActed.value.has(i.id)),
+      }))
+  }
+  return sections.value
     .filter(s => selectedSource.value === 'all' || s.origin === selectedSource.value)
     .map(s => ({
       ...s,
@@ -84,8 +103,8 @@ const visibleSections = computed<ShoppingSection[]>(() =>
     // When filtering, drop empty sections; otherwise keep the always-present scope sections.
     .filter(s => s.items.length > 0
       || (!unfulfilledOnly.value && selectedDate.value === 'all'
-        && selectedSource.value === 'all' && showPast.value)),
-)
+        && selectedSource.value === 'all' && showPast.value))
+})
 
 function doRefresh() {
   recentlyActed.value = new Set()
@@ -114,6 +133,11 @@ async function shopUndo(item: ShoppingItem) {
 const createScopes = computed<ShoppingScopeOption[]>(() => {
   const s = props.scope
   if (!s) return []
+  // Single-plan mode: creates land on that plan only (the one-option modal hides its selector).
+  if (props.mealPlanId) {
+    const planId = props.mealPlanId
+    return mealScopeOptions.value.filter(o => o.mealPlanId === planId && canEditMealPlan(planId))
+  }
   const opts: ShoppingScopeOption[] = []
   if (isCoordinatorOrAbove.value) {
     if (s.kind === 'event' && s.eventId) opts.push({ label: t('shopping.eventSupplies'), eventId: s.eventId })
@@ -199,6 +223,7 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
           </UButton>
         </UFieldGroup>
         <USelect
+          v-if="!mealPlanId"
           v-model="selectedDate"
           :items="dateOptions"
           size="sm"
@@ -206,7 +231,7 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
           class="min-w-40"
         />
         <USelect
-          v-if="showSourceFilter"
+          v-if="!mealPlanId && showSourceFilter"
           v-model="selectedSource"
           :items="sourceOptions"
           size="sm"
@@ -214,7 +239,7 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
           class="min-w-36"
         />
         <UCheckbox v-model="unfulfilledOnly" :label="t('shopping.unfulfilledOnly')" />
-        <UCheckbox v-model="showPast" :label="t('shopping.showPast')" />
+        <UCheckbox v-if="!mealPlanId" v-model="showPast" :label="t('shopping.showPast')" />
       </div>
       <div class="flex items-center gap-3">
         <span v-if="lastUpdatedAt" class="text-sm text-muted">{{ updatedLabel }}</span>
@@ -227,7 +252,7 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
         >
           {{ t('shopping.refresh') }}
         </UButton>
-        <UButton v-if="mode === 'edit' && canAdd" icon="i-heroicons-plus" size="sm" @click="openAdd">
+        <UButton v-if="effectiveMode === 'edit' && canAdd" icon="i-heroicons-plus" size="sm" @click="openAdd">
           {{ t('shopping.addItem') }}
         </UButton>
       </div>
@@ -270,7 +295,7 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
       </p>
 
       <!-- Shop mode: stripped-down, few-tap check-off rows. -->
-      <ul v-if="mode === 'shop'" class="space-y-2">
+      <ul v-if="effectiveMode === 'shop'" class="space-y-2">
         <GsShoppingShopItem
           v-for="item in section.items"
           :key="item.id"

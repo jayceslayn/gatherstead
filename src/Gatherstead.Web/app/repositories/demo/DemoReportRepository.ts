@@ -133,6 +133,8 @@ export class DemoReportRepository implements IReportRepository {
             name: memberById.get(a.householdMemberId)?.name ?? '',
             status: a.status,
             bringOwnFood: a.bringOwnFood,
+            // memberById already carries the effective band (derived from birth date, else manual).
+            ageBand: memberById.get(a.householdMemberId)?.ageBand ?? null,
             dietary: dietaryForMember(a.householdMemberId),
             dietaryNotes: memberById.get(a.householdMemberId)?.dietaryNotes ?? null,
           }))
@@ -159,6 +161,7 @@ export class DemoReportRepository implements IReportRepository {
           templateName: templateNameById.get(plan.mealTemplateId) ?? '',
           mealType: plan.mealType,
           isException: plan.isException ?? false,
+          notes: plan.notes ?? null,
           going: planAttendance.filter(a => a.status === 'Going').length,
           maybe: planAttendance.filter(a => a.status === 'Maybe').length,
           notGoing: planAttendance.filter(a => a.status === 'NotGoing').length,

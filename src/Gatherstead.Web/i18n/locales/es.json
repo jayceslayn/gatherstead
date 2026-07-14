@@ -115,6 +115,8 @@
     "noTasks": "No tienes tareas próximas.",
     "noStays": "No tienes estancias próximas.",
     "noShopping": "Aún no has reclamado ninguna compra.",
+    "myMeals": "Mis Próximas Comidas",
+    "noMeals": "No estás apuntado para cocinar ninguna comida próxima.",
     "findStay": "Buscar alojamiento",
     "tasksComingSoon": "Tu disponibilidad, intenciones de comida y tareas aparecerán aquí."
   },
@@ -424,6 +426,19 @@
       "prevDay": "Día anterior",
       "nextDay": "Día siguiente"
     }
+  },
+  "mealPlanner": {
+    "title": "Planificador de Comidas",
+    "open": "Planificador de comidas",
+    "byAgeGroup": "Por grupo de edad",
+    "unknownAge": "Edad desconocida",
+    "noRestrictions": "Sin restricciones",
+    "menuNotes": "Notas del menú",
+    "notesPlaceholder": "Describe el menú previsto: estilo, platos, qué traer…",
+    "noNotes": "Aún no hay notas del menú.",
+    "saveNotes": "Guardar notas",
+    "noMeals": "Aún no hay comidas planificadas para este evento.",
+    "needsMenuPlan": "Faltan notas del menú"
   },
   "accommodations": {
     "title": "Alojamientos",

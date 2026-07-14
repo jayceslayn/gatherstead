@@ -32,6 +32,7 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
       <div class="lg:col-span-1 space-y-6">
         <GsMyUpcomingStays />
         <GsMyUpcomingTasks />
+        <GsMyUpcomingMeals />
         <GsMyUpcomingShopping />
       </div>
 

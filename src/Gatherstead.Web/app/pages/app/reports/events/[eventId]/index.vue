@@ -88,6 +88,14 @@ const selectedDayIndex = ref(0)
         <UButton
           variant="outline"
           size="sm"
+          icon="i-heroicons-cake"
+          :to="`/app/events/${eventId}/meal-planner`"
+        >
+          {{ t('mealPlanner.open') }}
+        </UButton>
+        <UButton
+          variant="outline"
+          size="sm"
           icon="i-heroicons-calendar-days"
           :to="`/app/events/${eventId}`"
         >

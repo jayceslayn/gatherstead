@@ -82,6 +82,8 @@ public record EventReportMealDto(
     [property: Required] string TemplateName,
     [property: Required] MealType MealType,
     [property: Required] bool IsException,
+    /// <summary>Shared planned-menu notes from the meal plan (editable via the meal plan endpoints).</summary>
+    string? Notes,
     [property: Required] int Going,
     [property: Required] int Maybe,
     [property: Required] int NotGoing,
@@ -98,6 +100,8 @@ public record EventReportAttendeeDto(
     [property: Required] string Name,
     [property: Required] AttendanceStatus Status,
     [property: Required] bool BringOwnFood,
+    /// <summary>Effective age band — derived from birth date when present, else the stored band; null when unknown.</summary>
+    AgeBand? AgeBand,
     [property: Required] IReadOnlyList<string> Dietary,
     string? DietaryNotes);
 

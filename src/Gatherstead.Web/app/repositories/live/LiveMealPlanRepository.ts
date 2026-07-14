@@ -1,9 +1,17 @@
 import type { IMealPlanRepository } from '../interfaces'
-import type { MealTemplate, MealPlan, MealIntent, AttributeWriteEntry } from '../types'
+import type { MealTemplate, MealPlan, MealIntent, MyMeal, AttributeWriteEntry } from '../types'
 
 interface ApiResponse<T> { entity: T; successful: boolean }
 
 export class LiveMealPlanRepository implements IMealPlanRepository {
+  async listMyMeals(tenantId: string, memberId: string, fromDay: string): Promise<MyMeal[]> {
+    const params = new URLSearchParams({ memberIds: memberId, fromDay })
+    const r = await $fetch<ApiResponse<MyMeal[]>>(
+      `/api/proxy/tenants/${tenantId}/meal-intents?${params.toString()}`,
+    )
+    return r.entity ?? []
+  }
+
   async listMealTemplates(tenantId: string, eventId: string): Promise<MealTemplate[]> {
     const r = await $fetch<ApiResponse<MealTemplate[]>>(
       `/api/proxy/tenants/${tenantId}/events/${eventId}/meal-templates`,

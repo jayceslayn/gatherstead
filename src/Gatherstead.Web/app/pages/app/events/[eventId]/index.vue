@@ -125,6 +125,14 @@ onMounted(() => {
           >
             {{ t('report.event.viewReport') }}
           </UButton>
+          <UButton
+            :to="`/app/events/${event.id}/meal-planner`"
+            variant="link"
+            size="xs"
+            icon="i-heroicons-cake"
+          >
+            {{ t('mealPlanner.open') }}
+          </UButton>
         </GsRoleGate>
       </div>
 

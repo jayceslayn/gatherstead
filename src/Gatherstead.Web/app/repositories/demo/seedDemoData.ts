@@ -102,18 +102,18 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   )
   const dash = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Dash Parr', 'Age6To12', null,
-    'Eats at top speed. Food must be secured to the plate.', null, [],
+    'Eats at top speed. Food must be secured to the plate.', null, ['nut-free'],
   )
   const jackJack = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, parrFamily.id, 'Jack-Jack Parr', null, birthDateYearsAgo(1),
-    'Baby food only. Keep away from raccoons.', null, [],
+    'Baby food only. Keep away from raccoons.', null, ['dairy-free'],
   )
 
   const lucius = await repos.householdMembers.createMember(
     DEMO_TENANT_ID, frozoneHousehold.id, 'Lucius Best', 'Age18To64', null, null, null, [],
   )
   const honey = await repos.householdMembers.createMember(
-    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', null, birthDateYearsAgo(42), null, null, [],
+    DEMO_TENANT_ID, frozoneHousehold.id, 'Honey Best', null, birthDateYearsAgo(42), null, null, ['vegetarian'],
   )
 
   const edna = await repos.householdMembers.createMember(
@@ -314,6 +314,20 @@ export async function seedDemoData(repos: Repositories): Promise<void> {
   // Day 3 dinner exclusion — guests depart before evening; meal not provided on site.
   if (day3Dinner) {
     await repos.mealPlans.deletePlan(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day3Dinner.id)
+  }
+
+  // 9b. Cook sign-ups + a planned menu — feed the "My Upcoming Meals" dashboard widget and
+  // the meal planner (Bob is the linked demo member; day 2 is left without menu notes so the
+  // widget's "needs menu notes" hint shows).
+  if (day1Dinner) {
+    await repos.mealPlans.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id, parrFamily.id, bob.id)
+    await repos.mealPlans.updatePlan(
+      DEMO_TENANT_ID, event.id, dinnerTemplate.id, day1Dinner.id,
+      'Baked potato bar — chili, butter, chives. Gluten-free friendly.', false, null,
+    )
+  }
+  if (day2Dinner) {
+    await repos.mealPlans.upsertIntent(DEMO_TENANT_ID, event.id, dinnerTemplate.id, day2Dinner.id, parrFamily.id, bob.id)
   }
 
   // 10. Event attendance

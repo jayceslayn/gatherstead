@@ -1,5 +1,5 @@
 import type { IMealPlanRepository } from '../interfaces'
-import type { MealTemplate, MealPlan, MealIntent, AttributeWriteEntry, AttributeEntry } from '../types'
+import type { MealTemplate, MealPlan, MealIntent, MyMeal, AttributeWriteEntry, AttributeEntry } from '../types'
 import { mealTypesFromFlags, taskSlotsFromFlags, mealTypeFlagsToTaskSlotFlags } from '../types'
 import { getDemoStore, persistDemoStore, demoId, DEMO_LIMITS, DemoLimitError } from './DemoStore'
 import { enumDays } from './DemoHelpers'
@@ -10,6 +10,37 @@ function toAttributeEntries(writes: AttributeWriteEntry[] | null | undefined): A
 }
 
 export class DemoMealPlanRepository implements IMealPlanRepository {
+  async listMyMeals(tenantId: string, memberId: string, fromDay: string): Promise<MyMeal[]> {
+    const store = getDemoStore()
+    const plan = (id: string) => store.mealPlans.value.find(p => p.id === id)
+    const template = (id: string | undefined) => store.mealTemplates.value.find(t => t.id === id)
+    const eventName = (id: string | undefined) => store.events.value.find(e => e.id === id)?.name ?? ''
+
+    // Every stored intent is a cook sign-up (withdrawal deletes the row), so no source filter is applied.
+    return store.mealIntents.value
+      .filter(i => i.tenantId === tenantId && i.householdMemberId === memberId)
+      .map((i): MyMeal | null => {
+        const p = plan(i.mealPlanId)
+        if (!p || p.day < fromDay) return null
+        const t = template(p.mealTemplateId)
+        return {
+          id: i.id,
+          mealPlanId: i.mealPlanId,
+          householdMemberId: i.householdMemberId,
+          templateId: p.mealTemplateId,
+          templateName: t?.name ?? '',
+          eventId: t?.eventId ?? '',
+          eventName: eventName(t?.eventId),
+          day: p.day,
+          mealType: p.mealType,
+          notes: p.notes ?? null,
+          source: i.source,
+        }
+      })
+      .filter((m): m is MyMeal => m !== null)
+      .sort((x, y) => x.day.localeCompare(y.day))
+  }
+
   async listMealTemplates(_tenantId: string, eventId: string): Promise<MealTemplate[]> {
     return getDemoStore().mealTemplates.value.filter(t => t.eventId === eventId)
   }

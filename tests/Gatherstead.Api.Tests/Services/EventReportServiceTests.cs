@@ -169,6 +169,58 @@ public class EventReportServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetEventMealReportAsync_MealNotes_PassedThroughPerPlan()
+    {
+        await SeedMealPlanWithAttendanceAsync();
+        // Second plan on Day2 carries notes; the Day1 plan from the seed helper has none.
+        var day2PlanId = Guid.NewGuid();
+        _dbContext.MealPlans.Add(new MealPlan
+        {
+            Id = day2PlanId,
+            TenantId = _tenantId,
+            MealTemplateId = _templateId,
+            Day = Day2,
+            MealType = MealType.Dinner,
+            Notes = "Taco night — beef and bean fillings.",
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        Assert.Null(result.Entity!.Days.Single(d => d.Day == Day1).Meals.Single().Notes);
+        Assert.Equal("Taco night — beef and bean fillings.",
+            result.Entity.Days.Single(d => d.Day == Day2).Meals.Single().Notes);
+    }
+
+    [Fact]
+    public async Task GetEventMealReportAsync_MealAttendees_CarryEffectiveAgeBand()
+    {
+        // Derived band (from birth date) wins over a conflicting stored band; the stored band is
+        // used when no birth date exists; null when neither is recorded.
+        var senior = Guid.NewGuid();
+        var child = Guid.NewGuid();
+        _dbContext.HouseholdMembers.AddRange(
+            new HouseholdMember { Id = senior, TenantId = _tenantId, HouseholdId = _householdId, Name = "Zed", BirthDate = new DateOnly(1950, 1, 1), AgeBand = AgeBand.Age0To2 },
+            new HouseholdMember { Id = child, TenantId = _tenantId, HouseholdId = _householdId, Name = "Amy", AgeBand = AgeBand.Age6To12 });
+
+        _dbContext.MealTemplates.Add(new MealTemplate { Id = _templateId, TenantId = _tenantId, EventId = _eventId, Name = "Day 1 Dinner", MealTypes = MealTypeFlags.Dinner });
+        var planId = Guid.NewGuid();
+        _dbContext.MealPlans.Add(new MealPlan { Id = planId, TenantId = _tenantId, MealTemplateId = _templateId, Day = Day1, MealType = MealType.Dinner });
+        _dbContext.MealAttendances.AddRange(
+            new MealAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, MealPlanId = planId, HouseholdMemberId = senior, Status = AttendanceStatus.Going },
+            new MealAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, MealPlanId = planId, HouseholdMemberId = child, Status = AttendanceStatus.Going },
+            new MealAttendance { Id = Guid.NewGuid(), TenantId = _tenantId, MealPlanId = planId, HouseholdMemberId = _alice, Status = AttendanceStatus.Going });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);
+
+        var attendees = result.Entity!.Days.Single(d => d.Day == Day1).Meals.Single().Attendees;
+        Assert.Equal(AgeBand.Age65Plus, Assert.Single(attendees, a => a.Name == "Zed").AgeBand);
+        Assert.Equal(AgeBand.Age6To12, Assert.Single(attendees, a => a.Name == "Amy").AgeBand);
+        Assert.Null(Assert.Single(attendees, a => a.Name == "Alice").AgeBand);
+    }
+
+    [Fact]
     public async Task GetEventMealReportAsync_NoData_ReturnsDaysWithoutMeals()
     {
         var result = await CreateService().GetEventMealReportAsync(_tenantId, _eventId, TestContext.Current.CancellationToken);

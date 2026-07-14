@@ -4,6 +4,7 @@ import { useRepositories } from '~/composables/useRepositories'
 import type {
   AccommodationIntent,
   AccommodationIntentStatus,
+  MyMeal,
   MyStay,
   MyTask,
   ShoppingItem,
@@ -131,6 +132,26 @@ export function useMyTasks() {
   )
 
   return { tasks: computed(() => data.value ?? []), pending, error, refresh }
+}
+
+/** The current member's volunteered cook sign-ups scheduled today or later. */
+export function useMyMeals() {
+  const tenantStore = useTenantStore()
+  const memberStore = useCurrentMemberStore()
+  const { mealPlans: repo } = useRepositories()
+
+  const { data, pending, error, refresh } = useAsyncData<MyMeal[]>(
+    () => `my-meals-${tenantStore.currentTenantId}-${memberStore.linkedMemberId ?? 'none'}`,
+    () => {
+      const tenantId = tenantStore.currentTenantId
+      const memberId = memberStore.linkedMemberId
+      if (!tenantId || !memberId) return Promise.resolve([])
+      return repo.listMyMeals(tenantId, memberId, today())
+    },
+    { watch: [() => tenantStore.currentTenantId, () => memberStore.linkedMemberId] },
+  )
+
+  return { meals: computed(() => data.value ?? []), pending, error, refresh }
 }
 
 /** Shopping items the current member has claimed but not yet provided. */

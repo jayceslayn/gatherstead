@@ -90,6 +90,7 @@ export type MealTemplate = OmitAudit<S['MealTemplateDto']>
 export type MealPlan = OmitAudit<S['MealPlanDto']>
 export type MealAttendance = OmitAudit<S['MealAttendanceDto']>
 export type MealIntent = OmitAudit<S['MealIntentDto']>
+export type MyMeal = OmitAudit<S['MyMealDto']>
 
 // ── Tasks ─────────────────────────────────────────────────────────────────
 export type TaskTemplate = OmitAudit<S['TaskTemplateDto']>

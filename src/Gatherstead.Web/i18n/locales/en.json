@@ -115,6 +115,8 @@
     "noTasks": "You have no upcoming tasks.",
     "noStays": "You have no upcoming stays.",
     "noShopping": "You haven't claimed any shopping yet.",
+    "myMeals": "My Upcoming Meals",
+    "noMeals": "You're not signed up to cook any upcoming meals.",
     "findStay": "Find a stay",
     "tasksComingSoon": "Availability, meal intents, and task sign-ups will appear here."
   },
@@ -424,6 +426,19 @@
       "prevDay": "Previous day",
       "nextDay": "Next day"
     }
+  },
+  "mealPlanner": {
+    "title": "Meal Planner",
+    "open": "Meal planner",
+    "byAgeGroup": "By age group",
+    "unknownAge": "Age unknown",
+    "noRestrictions": "No restrictions",
+    "menuNotes": "Menu notes",
+    "notesPlaceholder": "Describe the planned menu — style, dishes, what to bring…",
+    "noNotes": "No menu notes yet.",
+    "saveNotes": "Save notes",
+    "noMeals": "No meals planned for this event yet.",
+    "needsMenuPlan": "Needs menu notes"
   },
   "accommodations": {
     "title": "Accommodations",

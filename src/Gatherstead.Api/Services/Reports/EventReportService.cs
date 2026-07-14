@@ -278,6 +278,7 @@ public class EventReportService : IEventReportService
                 memberById.GetValueOrDefault(a.HouseholdMemberId)?.Name ?? string.Empty,
                 a.Status,
                 a.BringOwnFood,
+                EffectiveAgeBand(memberById.GetValueOrDefault(a.HouseholdMemberId), today),
                 dietaryByMember.GetValueOrDefault(a.HouseholdMemberId, []),
                 memberById.GetValueOrDefault(a.HouseholdMemberId)?.DietaryNotes))
             .OrderBy(a => householdNameByMemberId.GetValueOrDefault(a.MemberId, string.Empty), StringComparer.OrdinalIgnoreCase)
@@ -301,7 +302,7 @@ public class EventReportService : IEventReportService
             .ToList();
 
         return new EventReportMealDto(
-            plan.Id, plan.MealTemplateId, templateName, plan.MealType, plan.IsException,
+            plan.Id, plan.MealTemplateId, templateName, plan.MealType, plan.IsException, plan.Notes,
             going, maybe, notGoing, bringOwnFood,
             dietary, attendees);
     }
@@ -328,11 +329,16 @@ public class EventReportService : IEventReportService
         Guid memberId, IReadOnlyDictionary<Guid, HouseholdMember> memberById, DateOnly today)
     {
         var m = memberById.GetValueOrDefault(memberId);
-        var band = m?.BirthDate is DateOnly bd ? DataAgeBands.DeriveFromBirthDate(bd, today) : m?.AgeBand;
+        var band = EffectiveAgeBand(m, today);
         var rank = band is AgeBand b ? -(int)b : int.MaxValue;
         var birthKey = m?.BirthDate is DateOnly bday ? -bday.DayNumber : int.MaxValue;
         return (rank, birthKey);
     }
+
+    // Effective age band: derived from birth date when present (self-updating as members age),
+    // else the manually stored band; null when neither is recorded.
+    private static AgeBand? EffectiveAgeBand(HouseholdMember? member, DateOnly today)
+        => member?.BirthDate is DateOnly bd ? DataAgeBands.DeriveFromBirthDate(bd, today) : member?.AgeBand;
 
     // Timed slots lead in their natural Morning → Midday → Evening order; "Anytime" (and
     // unslotted) tasks sort last so the day's scheduled work reads top-to-bottom.

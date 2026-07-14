@@ -2596,6 +2596,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tenants/{tenantId}/meal-intents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    memberIds?: string;
+                    fromDay?: string;
+                };
+                header?: never;
+                path: {
+                    tenantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MyMealDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "application/json": components["schemas"]["MyMealDtoIReadOnlyCollectionBaseEntityResponse"];
+                        "text/json": components["schemas"]["MyMealDtoIReadOnlyCollectionBaseEntityResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tenants/{tenantId}/events/{eventId}/meal-templates/{templateId}/plans": {
         parameters: {
             query?: never;
@@ -5020,6 +5062,8 @@ export interface components {
             /** @enum {string} */
             status: "Going" | "Maybe" | "NotGoing";
             bringOwnFood: boolean;
+            /** @enum {string|null} */
+            ageBand?: "Age0To2" | "Age3To5" | "Age6To12" | "Age13To17" | "Age18To64" | "Age65Plus" | null;
             dietary: string[];
             dietaryNotes?: string | null;
         };
@@ -5064,6 +5108,7 @@ export interface components {
             /** @enum {string} */
             mealType: "Breakfast" | "Lunch" | "Dinner";
             isException: boolean;
+            notes?: string | null;
             /** Format: int32 */
             going: number;
             /** Format: int32 */
@@ -5352,6 +5397,32 @@ export interface components {
         };
         MemberRelationshipResponse: {
             entity?: components["schemas"]["MemberRelationshipDto"];
+            successful?: boolean;
+            readonly messages?: components["schemas"]["ResponseMessage"][];
+        };
+        MyMealDto: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            mealPlanId?: string;
+            /** Format: uuid */
+            householdMemberId?: string;
+            /** Format: uuid */
+            templateId?: string;
+            templateName?: string;
+            /** Format: uuid */
+            eventId?: string;
+            eventName?: string;
+            /** Format: date */
+            day?: string;
+            /** @enum {string} */
+            mealType?: "Breakfast" | "Lunch" | "Dinner";
+            notes?: string | null;
+            /** @enum {string} */
+            source?: "Volunteered" | "Assigned";
+        };
+        MyMealDtoIReadOnlyCollectionBaseEntityResponse: {
+            entity?: components["schemas"]["MyMealDto"][] | null;
             successful?: boolean;
             readonly messages?: components["schemas"]["ResponseMessage"][];
         };

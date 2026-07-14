@@ -57,6 +57,52 @@ public class MealIntentService : IMealIntentService
         return BaseEntityResponse<IReadOnlyCollection<MealIntentDto>>.SuccessfulResponse(intents);
     }
 
+    public async Task<BaseEntityResponse<IReadOnlyCollection<MyMealDto>>> ListForMemberAsync(
+        Guid tenantId,
+        IEnumerable<Guid>? memberIds = null,
+        DateOnly? fromDay = null,
+        CancellationToken cancellationToken = default)
+    {
+        var response = new BaseEntityResponse<IReadOnlyCollection<MyMealDto>>();
+
+        if (!ServiceValidationHelper.ValidateTenantContext(tenantId, _currentTenantContext, response))
+            return response;
+
+        // Every intent row is a cook sign-up (withdrawal deletes the row), so no Source filter is applied.
+        var query = _dbContext.MealIntents
+            .AsNoTracking()
+            .Where(i => i.TenantId == tenantId);
+
+        if (memberIds is not null)
+        {
+            var memberIdList = memberIds.ToList();
+            if (memberIdList.Count > 0)
+                query = query.Where(i => memberIdList.Contains(i.HouseholdMemberId));
+        }
+
+        if (fromDay is DateOnly from)
+            query = query.Where(i => i.MealPlan!.Day >= from);
+
+        var meals = await query
+            .OrderBy(i => i.MealPlan!.Day)
+            .ThenBy(i => i.MealPlan!.MealType)
+            .Select(i => new MyMealDto(
+                i.Id,
+                i.MealPlanId,
+                i.HouseholdMemberId,
+                i.MealPlan!.MealTemplateId,
+                i.MealPlan.MealTemplate!.Name,
+                i.MealPlan.MealTemplate.EventId,
+                i.MealPlan.MealTemplate.Event!.Name,
+                i.MealPlan.Day,
+                i.MealPlan.MealType,
+                i.MealPlan.Notes,
+                i.Source))
+            .ToListAsync(cancellationToken);
+
+        return BaseEntityResponse<IReadOnlyCollection<MyMealDto>>.SuccessfulResponse(meals);
+    }
+
     public async Task<MealIntentResponse> GetAsync(
         Guid tenantId,
         Guid planId,

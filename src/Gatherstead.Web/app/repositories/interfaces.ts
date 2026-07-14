@@ -11,6 +11,7 @@ import type {
   MealPlan,
   MealIntent,
   MealAttendance,
+  MyMeal,
   TaskTemplate,
   TaskPlan,
   TaskIntent,
@@ -184,6 +185,8 @@ export interface IEventAttendanceRepository {
 }
 
 export interface IMealPlanRepository {
+  /** A member's volunteered cook sign-ups across all events, on or after `fromDay`. */
+  listMyMeals(tenantId: string, memberId: string, fromDay: string): Promise<MyMeal[]>
   listMealTemplates(tenantId: string, eventId: string): Promise<MealTemplate[]>
   listPlans(tenantId: string, eventId: string, templateId: string): Promise<MealPlan[]>
   listIntentsForMember(

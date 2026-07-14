@@ -2,7 +2,8 @@
 import type { EventReportMeal } from '~/repositories/types'
 
 // One meal plan on one day. Collapsed shows the headline attendance badges;
-// expanding the lane (or printing) reveals dietary needs and the attendee list.
+// expanding the lane (or printing) reveals dietary needs. The per-attendee list is
+// print-only — on screen that detail lives on the Meal Planner page.
 const props = defineProps<{
   meal: EventReportMeal
   expanded?: boolean
@@ -50,7 +51,7 @@ const detailClass = computed(() =>
         </div>
       </div>
 
-      <div v-if="meal.attendees.length">
+      <div v-if="meal.attendees.length" class="hidden print:block">
         <p class="text-muted text-xs uppercase tracking-wide mb-1.5">{{ t('report.event.attendees') }}</p>
         <ul class="space-y-0.5">
           <li v-for="att in meal.attendees" :key="att.memberId" class="flex flex-col gap-0.5">
