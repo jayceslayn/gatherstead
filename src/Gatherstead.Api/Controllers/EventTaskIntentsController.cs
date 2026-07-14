@@ -36,7 +36,7 @@ public class EventTaskIntentsController : ControllerBase
         var response = await _taskIntentService.ListForEventAsync(tenantId, eventId, parsedMemberIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -51,7 +51,7 @@ public class EventTaskIntentsController : ControllerBase
         var response = await _taskIntentService.BulkUpsertAsync(tenantId, eventId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }

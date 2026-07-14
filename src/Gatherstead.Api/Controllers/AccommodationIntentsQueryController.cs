@@ -36,7 +36,7 @@ public class AccommodationIntentsQueryController : ControllerBase
         var response = await _accommodationIntentService.ListForTenantAsync(tenantId, parsedMemberIds, fromNight, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }

@@ -43,7 +43,7 @@ public class EventsController : ControllerBase
         var response = await _eventService.ListAsync(tenantId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -54,7 +54,7 @@ public class EventsController : ControllerBase
         var response = await _eventService.GetAsync(tenantId, eventId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -68,7 +68,7 @@ public class EventsController : ControllerBase
         var response = await _eventService.CreateAsync(tenantId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetEvent),
@@ -82,7 +82,7 @@ public class EventsController : ControllerBase
         var response = await _eventService.UpdateAsync(tenantId, eventId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -96,7 +96,7 @@ public class EventsController : ControllerBase
         var response = await _eventService.DeleteAsync(tenantId, eventId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -110,7 +110,7 @@ public class EventsController : ControllerBase
         var response = await _eventService.SyncPlansAsync(tenantId, eventId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

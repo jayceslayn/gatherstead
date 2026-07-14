@@ -44,7 +44,7 @@ public class AccommodationsController : ControllerBase
         var response = await _accommodationService.ListAsync(tenantId, propertyId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -59,7 +59,7 @@ public class AccommodationsController : ControllerBase
         var response = await _accommodationService.GetAsync(tenantId, propertyId, accommodationId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -77,7 +77,7 @@ public class AccommodationsController : ControllerBase
         var response = await _accommodationService.CreateAsync(tenantId, propertyId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetAccommodation),
@@ -96,7 +96,7 @@ public class AccommodationsController : ControllerBase
         var response = await _accommodationService.UpdateAsync(tenantId, propertyId, accommodationId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -114,7 +114,7 @@ public class AccommodationsController : ControllerBase
         var response = await _accommodationService.DeleteAsync(tenantId, propertyId, accommodationId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

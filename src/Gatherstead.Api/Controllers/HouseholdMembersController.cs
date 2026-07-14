@@ -47,7 +47,7 @@ public class HouseholdMembersController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         return Ok(response);
@@ -60,7 +60,7 @@ public class HouseholdMembersController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)
@@ -78,7 +78,7 @@ public class HouseholdMembersController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         return CreatedAtAction(
@@ -94,7 +94,7 @@ public class HouseholdMembersController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)
@@ -112,7 +112,7 @@ public class HouseholdMembersController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)

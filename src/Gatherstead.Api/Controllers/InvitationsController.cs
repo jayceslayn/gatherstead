@@ -29,7 +29,7 @@ public class InvitationsController : ControllerBase
         var response = await _invitationService.ListAsync(tenantId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -43,7 +43,7 @@ public class InvitationsController : ControllerBase
         var response = await _invitationService.CreateAsync(tenantId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -57,7 +57,7 @@ public class InvitationsController : ControllerBase
         var response = await _invitationService.RevokeAsync(tenantId, invitationId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

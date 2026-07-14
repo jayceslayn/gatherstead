@@ -27,8 +27,10 @@ public class AuthCacheTests
         var jti = Guid.NewGuid().ToString();
         var calls = 0;
 
-        var first = await cache.GetIsRevokedAsync(jti, _ => { calls++; return Task.FromResult(false); });
-        var second = await cache.GetIsRevokedAsync(jti, _ => { calls++; return Task.FromResult(false); });
+        var first = await cache.GetIsRevokedAsync(
+            jti, _ => { calls++; return Task.FromResult(false); }, TestContext.Current.CancellationToken);
+        var second = await cache.GetIsRevokedAsync(
+            jti, _ => { calls++; return Task.FromResult(false); }, TestContext.Current.CancellationToken);
 
         Assert.False(first);
         Assert.False(second);
@@ -42,14 +44,16 @@ public class AuthCacheTests
         var jti = Guid.NewGuid().ToString();
         var revoked = false;
 
-        var before = await cache.GetIsRevokedAsync(jti, _ => Task.FromResult(revoked));
+        var before = await cache.GetIsRevokedAsync(
+            jti, _ => Task.FromResult(revoked), TestContext.Current.CancellationToken);
         Assert.False(before);
 
         // Token gets revoked; eviction must drop the cached "false".
         revoked = true;
-        await cache.InvalidateRevokedAsync(jti);
+        await cache.InvalidateRevokedAsync(jti, TestContext.Current.CancellationToken);
 
-        var after = await cache.GetIsRevokedAsync(jti, _ => Task.FromResult(revoked));
+        var after = await cache.GetIsRevokedAsync(
+            jti, _ => Task.FromResult(revoked), TestContext.Current.CancellationToken);
         Assert.True(after);
     }
 
@@ -61,8 +65,10 @@ public class AuthCacheTests
         var userId = Guid.NewGuid();
         var calls = 0;
 
-        var first = await cache.GetUserIdAsync(externalId, _ => { calls++; return Task.FromResult<Guid?>(userId); });
-        var second = await cache.GetUserIdAsync(externalId, _ => { calls++; return Task.FromResult<Guid?>(userId); });
+        var first = await cache.GetUserIdAsync(
+            externalId, _ => { calls++; return Task.FromResult<Guid?>(userId); }, TestContext.Current.CancellationToken);
+        var second = await cache.GetUserIdAsync(
+            externalId, _ => { calls++; return Task.FromResult<Guid?>(userId); }, TestContext.Current.CancellationToken);
 
         Assert.Equal(userId, first);
         Assert.Equal(userId, second);
@@ -78,12 +84,18 @@ public class AuthCacheTests
         var provisioned = false;
 
         // First lookup: user not provisioned yet → null, and must NOT stick.
-        var miss = await cache.GetUserIdAsync(externalId, _ => Task.FromResult<Guid?>(provisioned ? newUserId : null));
+        var miss = await cache.GetUserIdAsync(
+            externalId,
+            _ => Task.FromResult<Guid?>(provisioned ? newUserId : null),
+            TestContext.Current.CancellationToken);
         Assert.Null(miss);
 
         // User now exists; the next lookup must hit the DB factory again rather than a cached null.
         provisioned = true;
-        var hit = await cache.GetUserIdAsync(externalId, _ => Task.FromResult<Guid?>(provisioned ? newUserId : null));
+        var hit = await cache.GetUserIdAsync(
+            externalId,
+            _ => Task.FromResult<Guid?>(provisioned ? newUserId : null),
+            TestContext.Current.CancellationToken);
         Assert.Equal(newUserId, hit);
     }
 
@@ -94,9 +106,12 @@ public class AuthCacheTests
         var externalId = Guid.NewGuid().ToString();
         var userId = Guid.NewGuid();
 
-        await cache.SetUserIdAsync(externalId, userId);
+        await cache.SetUserIdAsync(externalId, userId, TestContext.Current.CancellationToken);
 
-        var resolved = await cache.GetUserIdAsync(externalId, _ => throw new InvalidOperationException("factory should not run"));
+        var resolved = await cache.GetUserIdAsync(
+            externalId,
+            _ => throw new InvalidOperationException("factory should not run"),
+            TestContext.Current.CancellationToken);
         Assert.Equal(userId, resolved);
     }
 
@@ -108,9 +123,11 @@ public class AuthCacheTests
         var userId = Guid.NewGuid();
         var calls = 0;
 
-        await cache.GetTenantUserAsync(tenantId, userId, _ => { calls++; return Task.FromResult("Member"); });
-        await cache.InvalidateTenantUserAsync(tenantId, userId);
-        await cache.GetTenantUserAsync(tenantId, userId, _ => { calls++; return Task.FromResult("Owner"); });
+        await cache.GetTenantUserAsync(
+            tenantId, userId, _ => { calls++; return Task.FromResult("Member"); }, TestContext.Current.CancellationToken);
+        await cache.InvalidateTenantUserAsync(tenantId, userId, TestContext.Current.CancellationToken);
+        await cache.GetTenantUserAsync(
+            tenantId, userId, _ => { calls++; return Task.FromResult("Owner"); }, TestContext.Current.CancellationToken);
 
         Assert.Equal(2, calls); // eviction forced the second factory run
     }

@@ -28,7 +28,7 @@ public class TenantUsersController : ControllerBase
         var response = await _tenantUserService.ListAsync(tenantId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -43,7 +43,7 @@ public class TenantUsersController : ControllerBase
         var response = await _tenantUserService.UpdateRoleAsync(tenantId, userId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -60,7 +60,7 @@ public class TenantUsersController : ControllerBase
         var response = await _tenantUserService.RemoveAsync(tenantId, userId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -77,7 +77,7 @@ public class TenantUsersController : ControllerBase
         var response = await _tenantUserService.ListUserHouseholdAccessAsync(tenantId, userId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -92,7 +92,7 @@ public class TenantUsersController : ControllerBase
         var response = await _tenantUserService.SetLinkedMemberAsync(tenantId, userId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -108,7 +108,7 @@ public class TenantUsersController : ControllerBase
         var response = await _tenantUserService.GetCurrentTenantUserAsync(tenantId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

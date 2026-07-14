@@ -44,7 +44,7 @@ public class AccommodationIntentsController : ControllerBase
         var response = await _accommodationIntentService.ListAsync(tenantId, accommodationId, parsedMemberIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -59,7 +59,7 @@ public class AccommodationIntentsController : ControllerBase
         var response = await _accommodationIntentService.GetAsync(tenantId, accommodationId, intentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -79,7 +79,7 @@ public class AccommodationIntentsController : ControllerBase
         var response = await _accommodationIntentService.CreateAsync(tenantId, accommodationId, householdId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         // The Get route requires a non-null {propertyId:guid}; passing null here previously threw
         // "No route matches the supplied values." *after* the row was saved, surfacing as a 500.
@@ -100,7 +100,7 @@ public class AccommodationIntentsController : ControllerBase
         var response = await _accommodationIntentService.UpdateAsync(tenantId, accommodationId, intentId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -118,7 +118,7 @@ public class AccommodationIntentsController : ControllerBase
         var response = await _accommodationIntentService.DeleteAsync(tenantId, accommodationId, intentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

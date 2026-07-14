@@ -44,7 +44,7 @@ public class TaskIntentsController : ControllerBase
         var response = await _taskIntentService.ListAsync(tenantId, planId, parsedMemberIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -59,7 +59,7 @@ public class TaskIntentsController : ControllerBase
         var response = await _taskIntentService.GetAsync(tenantId, planId, intentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -78,7 +78,7 @@ public class TaskIntentsController : ControllerBase
         var response = await _taskIntentService.UpsertAsync(tenantId, planId, householdId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -93,7 +93,7 @@ public class TaskIntentsController : ControllerBase
         var response = await _taskIntentService.DeleteAsync(tenantId, planId, intentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

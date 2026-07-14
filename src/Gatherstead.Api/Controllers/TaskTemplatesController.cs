@@ -44,7 +44,7 @@ public class TaskTemplatesController : ControllerBase
         var response = await _taskTemplateService.ListAsync(tenantId, eventId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -59,7 +59,7 @@ public class TaskTemplatesController : ControllerBase
         var response = await _taskTemplateService.GetAsync(tenantId, eventId, templateId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -77,7 +77,7 @@ public class TaskTemplatesController : ControllerBase
         var response = await _taskTemplateService.CreateAsync(tenantId, eventId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetTaskTemplate),
@@ -96,7 +96,7 @@ public class TaskTemplatesController : ControllerBase
         var response = await _taskTemplateService.UpdateAsync(tenantId, eventId, templateId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -114,7 +114,7 @@ public class TaskTemplatesController : ControllerBase
         var response = await _taskTemplateService.DeleteAsync(tenantId, eventId, templateId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

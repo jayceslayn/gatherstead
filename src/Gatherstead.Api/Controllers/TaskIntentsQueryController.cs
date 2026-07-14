@@ -36,7 +36,7 @@ public class TaskIntentsQueryController : ControllerBase
         var response = await _taskIntentService.ListForMemberAsync(tenantId, parsedMemberIds, fromDay, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }

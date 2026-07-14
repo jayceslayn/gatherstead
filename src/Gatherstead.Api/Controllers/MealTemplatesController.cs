@@ -44,7 +44,7 @@ public class MealTemplatesController : ControllerBase
         var response = await _mealTemplateService.ListAsync(tenantId, eventId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -59,7 +59,7 @@ public class MealTemplatesController : ControllerBase
         var response = await _mealTemplateService.GetAsync(tenantId, eventId, templateId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -77,7 +77,7 @@ public class MealTemplatesController : ControllerBase
         var response = await _mealTemplateService.CreateAsync(tenantId, eventId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetMealTemplate),
@@ -96,7 +96,7 @@ public class MealTemplatesController : ControllerBase
         var response = await _mealTemplateService.UpdateAsync(tenantId, eventId, templateId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -114,7 +114,7 @@ public class MealTemplatesController : ControllerBase
         var response = await _mealTemplateService.DeleteAsync(tenantId, eventId, templateId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

@@ -29,7 +29,7 @@ public class HouseholdUsersController : ControllerBase
         var response = await _householdUserService.ListAsync(tenantId, householdId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -45,7 +45,7 @@ public class HouseholdUsersController : ControllerBase
         var response = await _householdUserService.UpsertAsync(tenantId, householdId, userId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -63,7 +63,7 @@ public class HouseholdUsersController : ControllerBase
         var response = await _householdUserService.DeleteAsync(tenantId, householdId, userId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

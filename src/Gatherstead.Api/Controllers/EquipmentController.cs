@@ -43,7 +43,7 @@ public class EquipmentController : ControllerBase
         var response = await _equipmentService.ListAsync(tenantId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -54,7 +54,7 @@ public class EquipmentController : ControllerBase
         var response = await _equipmentService.GetAsync(tenantId, equipmentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -68,7 +68,7 @@ public class EquipmentController : ControllerBase
         var response = await _equipmentService.CreateAsync(tenantId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetEquipmentItem),
@@ -82,7 +82,7 @@ public class EquipmentController : ControllerBase
         var response = await _equipmentService.UpdateAsync(tenantId, equipmentId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -96,7 +96,7 @@ public class EquipmentController : ControllerBase
         var response = await _equipmentService.DeleteAsync(tenantId, equipmentId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

@@ -36,7 +36,7 @@ public class EventMealAttendanceController : ControllerBase
         var response = await _mealAttendanceService.ListForEventAsync(tenantId, eventId, parsedMemberIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -51,7 +51,7 @@ public class EventMealAttendanceController : ControllerBase
         var response = await _mealAttendanceService.BulkUpsertAsync(tenantId, eventId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }

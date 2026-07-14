@@ -48,7 +48,7 @@ public class MemberRelationshipsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         return Ok(response);
@@ -61,7 +61,7 @@ public class MemberRelationshipsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)
@@ -79,7 +79,7 @@ public class MemberRelationshipsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         return CreatedAtAction(
@@ -95,7 +95,7 @@ public class MemberRelationshipsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)
@@ -113,7 +113,7 @@ public class MemberRelationshipsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)

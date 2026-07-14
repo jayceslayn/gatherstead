@@ -1,4 +1,5 @@
 using Gatherstead.Data;
+using Gatherstead.Data.Entities;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -137,6 +138,46 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$externalId", externalId));
         cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$isAppAdmin", isAppAdmin));
         cmd.Parameters.Add(new Microsoft.Data.Sqlite.SqliteParameter("$now", DateTimeOffset.UtcNow.ToString("O")));
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Seeds a tenant directly via SQL, bypassing the auditing interceptor. Pair with
+    /// <see cref="SeedTenantUser"/> to give a user a real membership role, which is what lets a request
+    /// clear <c>RequireTenantAccessAttribute</c> and reach the service layer's own authorization.
+    /// </summary>
+    public void SeedTenant(Guid tenantId, string name, Guid actorUserId)
+    {
+        if (_connection == null)
+            _ = Services;
+
+        using var cmd = _connection!.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO Tenants (Id, Name, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
+            VALUES ($id, $name, $now, $actor, $now, $actor, 0)
+            """;
+        cmd.Parameters.Add(new SqliteParameter("$id", tenantId));
+        cmd.Parameters.Add(new SqliteParameter("$name", name));
+        cmd.Parameters.Add(new SqliteParameter("$actor", actorUserId));
+        cmd.Parameters.Add(new SqliteParameter("$now", DateTimeOffset.UtcNow.ToString("O")));
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Seeds a <c>TenantUser</c> membership row (composite PK, no Id column) via SQL.</summary>
+    public void SeedTenantUser(Guid tenantId, Guid userId, TenantRole role)
+    {
+        if (_connection == null)
+            _ = Services;
+
+        using var cmd = _connection!.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO TenantUsers (TenantId, UserId, Role, CreatedAt, CreatedByUserId, UpdatedAt, UpdatedByUserId, IsDeleted)
+            VALUES ($tenantId, $userId, $role, $now, $userId, $now, $userId, 0)
+            """;
+        cmd.Parameters.Add(new SqliteParameter("$tenantId", tenantId));
+        cmd.Parameters.Add(new SqliteParameter("$userId", userId));
+        cmd.Parameters.Add(new SqliteParameter("$role", (int)role));
+        cmd.Parameters.Add(new SqliteParameter("$now", DateTimeOffset.UtcNow.ToString("O")));
         cmd.ExecuteNonQuery();
     }
 

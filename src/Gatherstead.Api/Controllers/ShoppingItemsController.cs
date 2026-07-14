@@ -35,7 +35,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.ListAsync(tenantId, eventId, propertyId, mealPlanId, status, claimedByMemberId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -46,7 +46,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.GetAsync(tenantId, itemId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -60,7 +60,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.CreateAsync(tenantId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetShoppingItem),
@@ -74,7 +74,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.UpdateAsync(tenantId, itemId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -88,7 +88,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.UpsertIntentAsync(tenantId, itemId, memberId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -102,7 +102,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.RemoveIntentAsync(tenantId, itemId, memberId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -116,7 +116,7 @@ public class ShoppingItemsController : ControllerBase
         var response = await _shoppingItemService.DeleteAsync(tenantId, itemId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

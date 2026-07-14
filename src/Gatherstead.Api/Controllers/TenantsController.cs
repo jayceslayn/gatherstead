@@ -63,7 +63,7 @@ public class TenantsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         return Ok(response);
@@ -77,7 +77,7 @@ public class TenantsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)
@@ -96,7 +96,7 @@ public class TenantsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         return CreatedAtAction(
@@ -113,7 +113,7 @@ public class TenantsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)
@@ -132,7 +132,7 @@ public class TenantsController : ControllerBase
 
         if (ServiceValidationHelper.HasErrors(response))
         {
-            return BadRequest(response);
+            return this.ToErrorResult(response);
         }
 
         if (response.Entity is null)

@@ -33,7 +33,7 @@ public class ReportsController : ControllerBase
         var response = await _eventReportService.GetEventMealReportAsync(tenantId, eventId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

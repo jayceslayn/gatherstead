@@ -43,7 +43,7 @@ public class PropertiesController : ControllerBase
         var response = await _propertyService.ListAsync(tenantId, parsedIds, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -54,7 +54,7 @@ public class PropertiesController : ControllerBase
         var response = await _propertyService.GetAsync(tenantId, propertyId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -68,7 +68,7 @@ public class PropertiesController : ControllerBase
         var response = await _propertyService.CreateAsync(tenantId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return CreatedAtAction(
             nameof(GetProperty),
@@ -82,7 +82,7 @@ public class PropertiesController : ControllerBase
         var response = await _propertyService.UpdateAsync(tenantId, propertyId, request, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);
@@ -96,7 +96,7 @@ public class PropertiesController : ControllerBase
         var response = await _propertyService.DeleteAsync(tenantId, propertyId, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         if (response.Entity is null)
             return NotFound(response);

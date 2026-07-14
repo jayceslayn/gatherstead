@@ -38,7 +38,7 @@ public class AccommodationSearchController : ControllerBase
             tenantId, startNight, endNight, partyAdults, partyChildren, requireCapacity ?? true, propertyIds, types, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }

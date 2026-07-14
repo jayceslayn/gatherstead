@@ -38,7 +38,7 @@ public class MeController : ControllerBase
         var response = await _provisioningService.BootstrapAsync(cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -49,7 +49,7 @@ public class MeController : ControllerBase
         var response = await _provisioningService.GetMeAsync(cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
@@ -60,7 +60,7 @@ public class MeController : ControllerBase
         var response = await _provisioningService.UpdateDisplayNameAsync(request.DisplayName, cancellationToken);
 
         if (ServiceValidationHelper.HasErrors(response))
-            return BadRequest(response);
+            return this.ToErrorResult(response);
 
         return Ok(response);
     }
