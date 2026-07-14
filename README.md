@@ -40,5 +40,5 @@ For engineering and project detail, see the following documents:
 - **[Architecture](docs/ARCHITECTURE.md)**: An overview of the technology stack, domain-driven design, and technical conventions.
 - **[Design Principles](docs/DESIGN_PRINCIPLES.md)**: The guiding principles for security, privacy, and data safety.
 - **[Web UI Design](docs/WEB-UI-DESIGN.md)**: Frontend UX/UI conventions — components, status language, mobile-first, and interaction patterns.
-- **[Implementation Status](docs/IMPLEMENTATION_STATUS.md)**: The current implementation status, planned enhancements, and schema details.
+- **[Implementation Status](docs/IMPLEMENTATION_STATUS.md)**: Roadmap — planned enhancements and architecture direction.
 - **[Deployment Guide](docs/DEPLOYMENT.md)**: Detailed instructions for manual and automated deployment.
