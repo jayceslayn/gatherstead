@@ -25,7 +25,7 @@ const filteredProperties = computed(() => {
         <UButton
           icon="i-heroicons-plus"
           size="sm"
-          @click="showCreate = true"
+          @click="() => { showCreate = true }"
         >
           {{ t('property.createTitle') }}
         </UButton>
@@ -46,7 +46,7 @@ const filteredProperties = computed(() => {
       :title="t('property.noProperties')"
       :description="isManagerOrAbove ? t('property.noPropertiesHintManager') : t('property.noPropertiesHintMember')"
     >
-      <UButton v-if="isManagerOrAbove" icon="i-heroicons-plus" @click="showCreate = true">
+      <UButton v-if="isManagerOrAbove" icon="i-heroicons-plus" @click="() => { showCreate = true }">
         {{ t('property.createTitle') }}
       </UButton>
     </GsEmptyState>

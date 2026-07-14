@@ -59,7 +59,7 @@ function onModalDelete() {
               variant="outline"
               size="sm"
               icon="i-heroicons-pencil"
-              @click="showEdit = true"
+              @click="() => { showEdit = true }"
             >
               {{ t('common.edit') }}
             </UButton>

@@ -155,7 +155,7 @@ function onUndo() {
           size="xs"
           icon="i-heroicons-user-group"
           class="px-0"
-          @click="showWho = !showWho"
+          @click="() => { showWho = !showWho }"
         >
           {{ t('shopping.whoCovering') }}
         </UButton>

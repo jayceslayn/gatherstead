@@ -7,16 +7,21 @@ allowBuilds:
 
 overrides:
   "esbuild": ">=0.28.1"
-  serialize-javascript: ">=7.0.3"
+  # Overrides shadow the direct dependency too, so keep this floor in step with package.json.
+  serialize-javascript: ">=7.0.7 <8"
   node-forge: ">=1.4.0"
   "picomatch@2": "^2.3.2"
   "picomatch@4": "^4.0.4"
   lodash: ">=4.17.24"
   defu: ">=6.1.5"
-  vite: ">=7.3.2"
+  # Must stay on the 7.x line: nuxt pins vite 7.3.3, @nuxt/vite-builder wants ^7.3.3, and vitest
+  # caps at ^7. Unbounded, this override forced vite 8 on all three.
+  vite: ">=7.3.2 <8"
   h3: ">=1.15.9"
   srvx: ">=0.11.13"
-  unhead: ">=2.1.13"
+  # Must stay on the 2.x line: nuxt and @unhead/vue both depend on unhead ^2, and v3 removed the
+  # hooks.hookOnce API that @nuxt/ui calls. Unbounded, this override silently pulls in v3.
+  unhead: ">=2.1.13 <3"
   postcss: ">=8.5.10"
   simple-git: ">=3.36.0"
   nitropack: ">=2.13.4"

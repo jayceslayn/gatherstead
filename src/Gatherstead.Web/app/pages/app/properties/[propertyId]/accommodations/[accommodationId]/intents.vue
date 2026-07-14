@@ -144,7 +144,7 @@ async function submitRequest(payload: {
         v-if="memberStore.linkedMemberId && !isManagerOrAbove"
         size="sm"
         icon="i-heroicons-plus"
-        @click="showRequestModal = true"
+        @click="() => { showRequestModal = true }"
       >
         {{ t('accommodation.requestStay') }}
       </UButton>
@@ -162,7 +162,7 @@ async function submitRequest(payload: {
       <UButton
         v-if="memberStore.linkedMemberId && !isManagerOrAbove"
         icon="i-heroicons-plus"
-        @click="showRequestModal = true"
+        @click="() => { showRequestModal = true }"
       >
         {{ t('accommodation.requestStay') }}
       </UButton>

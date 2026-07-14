@@ -145,7 +145,7 @@ async function confirmDelete() {
                 icon="i-heroicons-trash"
                 :aria-label="t('common.delete')"
                 :loading="updating.includes(row.id)"
-                @click="toDelete = row.id"
+                @click="() => { toDelete = row.id }"
               />
             </div>
           </GsRoleGate>

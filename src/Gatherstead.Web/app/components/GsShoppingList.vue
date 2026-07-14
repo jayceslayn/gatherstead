@@ -191,10 +191,10 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-3 flex-wrap">
         <UFieldGroup v-if="canEditAny" size="sm">
-          <UButton :variant="mode === 'shop' ? 'solid' : 'outline'" icon="i-heroicons-shopping-cart" @click="mode = 'shop'">
+          <UButton :variant="mode === 'shop' ? 'solid' : 'outline'" icon="i-heroicons-shopping-cart" @click="() => { mode = 'shop' }">
             {{ t('shopping.shopMode') }}
           </UButton>
-          <UButton :variant="mode === 'edit' ? 'solid' : 'outline'" icon="i-heroicons-pencil-square" @click="mode = 'edit'">
+          <UButton :variant="mode === 'edit' ? 'solid' : 'outline'" icon="i-heroicons-pencil-square" @click="() => { mode = 'edit' }">
             {{ t('shopping.editMode') }}
           </UButton>
         </UFieldGroup>

@@ -222,7 +222,7 @@ async function apply() {
           color="neutral"
           variant="outline"
           :disabled="applying"
-          @click="stepIndex--"
+          @click="() => { stepIndex-- }"
         >
           {{ t('common.back') }}
         </UButton>
@@ -233,13 +233,13 @@ async function apply() {
             color="neutral"
             variant="ghost"
             :disabled="applying"
-            @click="open = false"
+            @click="() => { open = false }"
           >
             {{ t('common.cancel') }}
           </UButton>
           <UButton
             v-if="stepIndex < steps.length - 1"
-            @click="stepIndex++"
+            @click="() => { stepIndex++ }"
           >
             {{ t('common.next') }}
           </UButton>

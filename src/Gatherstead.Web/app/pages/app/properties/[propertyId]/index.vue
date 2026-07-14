@@ -95,7 +95,7 @@ async function confirmDeleteAccommodation() {
       <GsPageHeader :title="property.name">
         <GsRoleGate min-role="Manager">
           <div class="flex items-center gap-2">
-            <UButton variant="outline" size="sm" icon="i-heroicons-pencil" @click="showEdit = true">
+            <UButton variant="outline" size="sm" icon="i-heroicons-pencil" @click="() => { showEdit = true }">
               {{ t('common.edit') }}
             </UButton>
             <UButton size="sm" icon="i-heroicons-plus" @click="openCreateAccommodation('Bedroom')">

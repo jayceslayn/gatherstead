@@ -52,7 +52,7 @@ const grouped = computed(() =>
     <GsBreadcrumb :items="[{ label: t('settings.title'), to: '/app/settings' }, { label: t('settings.users') }]" />
     <GsPageHeader :title="t('settings.users')">
       <GsRoleGate min-role="Manager">
-        <UButton icon="i-heroicons-user-plus" size="sm" @click="showInvite = true">
+        <UButton icon="i-heroicons-user-plus" size="sm" @click="() => { showInvite = true }">
           {{ t('tenantUser.invite.title') }}
         </UButton>
       </GsRoleGate>

@@ -127,7 +127,7 @@ async function onSubmit() {
               variant="ghost"
               icon="i-heroicons-trash"
               :loading="deleting"
-              @click="showDeleteConfirm = true"
+              @click="() => { showDeleteConfirm = true }"
             >
               {{ t('member.deleteTitle') }}
             </UButton>

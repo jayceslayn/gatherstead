@@ -205,7 +205,7 @@ function confirmDelete() {
             variant="ghost"
             icon="i-heroicons-trash"
             :loading="deleteLoading"
-            @click="confirmDeleteOpen = true"
+            @click="() => { confirmDeleteOpen = true }"
           >
             {{ t('accommodation.deleteStay') }}
           </UButton>

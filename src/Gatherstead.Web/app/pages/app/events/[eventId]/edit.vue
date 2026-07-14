@@ -209,7 +209,7 @@ async function confirmDeleteTask() {
                     variant="ghost"
                     icon="i-heroicons-trash"
                     :disabled="saving"
-                    @click="showDeleteConfirm = true"
+                    @click="() => { showDeleteConfirm = true }"
                   >
                     {{ t('event.deleteTitle') }}
                   </UButton>

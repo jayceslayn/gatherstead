@@ -180,7 +180,7 @@ watch(wizardOpen, (isOpen) => {
         size="sm"
         variant="outline"
         icon="i-heroicons-calendar-days"
-        @click="wizardOpen = true"
+        @click="() => { wizardOpen = true }"
       >
         {{ t('event.attendanceGrid.bulkSetAttendance') }}
       </UButton>

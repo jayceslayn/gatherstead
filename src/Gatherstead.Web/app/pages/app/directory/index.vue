@@ -42,7 +42,7 @@ const filtered = computed(() => {
   <div>
     <GsPageHeader :title="t('household.title')">
       <GsRoleGate min-role="Manager">
-        <UButton icon="i-heroicons-plus" size="sm" @click="showCreate = true">
+        <UButton icon="i-heroicons-plus" size="sm" @click="() => { showCreate = true }">
           {{ t('household.createTitle') }}
         </UButton>
       </GsRoleGate>
@@ -67,7 +67,7 @@ const filtered = computed(() => {
       :title="t('household.noHouseholds')"
       :description="isManagerOrAbove ? t('household.noHouseholdsHintManager') : t('household.noHouseholdsHintMember')"
     >
-      <UButton v-if="isManagerOrAbove" icon="i-heroicons-plus" @click="showCreate = true">
+      <UButton v-if="isManagerOrAbove" icon="i-heroicons-plus" @click="() => { showCreate = true }">
         {{ t('household.createTitle') }}
       </UButton>
     </GsEmptyState>

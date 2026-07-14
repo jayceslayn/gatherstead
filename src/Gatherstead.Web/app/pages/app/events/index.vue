@@ -38,7 +38,7 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
             size="sm"
             :aria-label="t('event.calendarView')"
             class="rounded-none"
-            @click="viewMode = 'calendar'"
+            @click="() => { viewMode = 'calendar' }"
           />
           <UButton
             :color="viewMode === 'list' ? 'primary' : 'neutral'"
@@ -47,7 +47,7 @@ watch(viewMode, v => localStorage.setItem('gs-events-view', v))
             size="sm"
             :aria-label="t('event.listView')"
             class="rounded-none border-l border-(--ui-border)"
-            @click="viewMode = 'list'"
+            @click="() => { viewMode = 'list' }"
           />
         </div>
         <UButton v-if="isManagerOrAbove" to="/app/events/create" icon="i-heroicons-plus" size="sm">

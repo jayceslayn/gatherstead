@@ -72,7 +72,7 @@ async function clearDemoData() {
         <UIcon name="i-heroicons-beaker" class="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <span class="text-sm font-medium text-amber-900 dark:text-amber-100">{{ t('demo.banner.title') }}</span>
       </div>
-      <UButton size="xs" variant="ghost" color="warning" @click="open = true">
+      <UButton size="xs" variant="ghost" color="warning" @click="() => { open = true }">
         {{ t('demo.banner.learnMore') }}
       </UButton>
     </div>

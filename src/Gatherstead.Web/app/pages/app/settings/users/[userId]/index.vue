@@ -275,7 +275,7 @@ const memberPickerOptions = computed(() =>
               color="error"
               variant="soft"
               :disabled="userUpdating.includes(userId)"
-              @click="confirmRemoveOpen = true"
+              @click="() => { confirmRemoveOpen = true }"
             >
               {{ t('tenantUser.remove') }}
             </UButton>

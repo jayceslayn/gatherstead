@@ -156,7 +156,7 @@ async function onSubmit() {
         <div class="mb-6">
           <div class="flex justify-between items-center mb-3">
             <p class="text-sm font-medium">{{ t('event.meals') }}</p>
-            <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="showMealModal = true">
+            <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="() => { showMealModal = true }">
               {{ t('event.meal.addTemplate') }}
             </UButton>
           </div>
@@ -188,7 +188,7 @@ async function onSubmit() {
         <div>
           <div class="flex justify-between items-center mb-3">
             <p class="text-sm font-medium">{{ t('event.tasks') }}</p>
-            <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="showTaskModal = true">
+            <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="() => { showTaskModal = true }">
               {{ t('event.task.addTemplate') }}
             </UButton>
           </div>

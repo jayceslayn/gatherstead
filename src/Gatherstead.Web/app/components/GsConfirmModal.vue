@@ -34,7 +34,7 @@ function confirm() {
         <p v-if="props.description" class="text-sm text-muted mb-6">{{ props.description }}</p>
         <slot />
         <div class="flex justify-end gap-3">
-          <UButton variant="ghost" :disabled="props.loading" @click="open = false">{{ t('common.cancel') }}</UButton>
+          <UButton variant="ghost" :disabled="props.loading" @click="() => { open = false }">{{ t('common.cancel') }}</UButton>
           <UButton
             :color="props.danger ? 'error' : 'primary'"
             :loading="props.loading"

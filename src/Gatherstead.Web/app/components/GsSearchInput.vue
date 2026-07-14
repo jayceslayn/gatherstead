@@ -18,7 +18,7 @@ const { t } = useI18n()
         size="xs"
         icon="i-heroicons-x-mark-20-solid"
         :aria-label="t('common.clear')"
-        @click="model = ''"
+        @click="() => { model = '' }"
       />
     </template>
   </UInput>
