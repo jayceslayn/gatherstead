@@ -18,6 +18,9 @@ overrides:
   # caps at ^7. Unbounded, this override forced vite 8 on all three.
   vite: ">=7.3.2 <8"
   h3: ">=1.15.9"
+  # @redocly/openapi-core (via openapi-typescript) pins js-yaml to an exact 4.1.1; every other
+  # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
+  js-yaml: ">=4.2.0 <5"
   srvx: ">=0.11.13"
   # Must stay on the 2.x line: nuxt and @unhead/vue both depend on unhead ^2, and v3 removed the
   # hooks.hookOnce API that @nuxt/ui calls. Unbounded, this override silently pulls in v3.
