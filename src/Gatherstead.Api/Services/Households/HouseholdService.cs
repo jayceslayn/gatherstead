@@ -67,8 +67,11 @@ public class HouseholdService : IHouseholdService
             .ToList();
 
         return BaseEntityResponse<IReadOnlyCollection<HouseholdDto>>.SuccessfulResponse(
-            households.Select(h => MapToDto(h, AttributeVisibilityHelper.Visible(
-                h.Attributes, tenantRole, householdRoles.RoleFor(h.Id)))).ToList());
+            households.Select(h =>
+            {
+                var householdRole = householdRoles.RoleFor(h.Id);
+                return MapToDto(h, AttributeVisibilityHelper.Visible(h.Attributes, tenantRole, householdRole), householdRole);
+            }).ToList());
     }
 
     public async Task<HouseholdResponse> GetAsync(
@@ -96,7 +99,7 @@ public class HouseholdService : IHouseholdService
         var tenantRole = await _memberAuthorizationService.GetCallerTenantRoleAsync(tenantId, cancellationToken);
         var householdRole = await _memberAuthorizationService.GetCallerHouseholdRoleAsync(tenantId, householdId, cancellationToken);
 
-        response.SetSuccess(MapToDto(household, AttributeVisibilityHelper.Visible(household.Attributes, tenantRole, householdRole)));
+        response.SetSuccess(MapToDto(household, AttributeVisibilityHelper.Visible(household.Attributes, tenantRole, householdRole), householdRole));
         return response;
     }
 
@@ -155,7 +158,7 @@ public class HouseholdService : IHouseholdService
         }
 
         GathersteadMetrics.RecordHouseholdCreated(tenantId);
-        response.SetSuccess(MapToDto(household, attrs));
+        response.SetSuccess(MapToDto(household, attrs, householdRole));
         return response;
     }
 
@@ -220,7 +223,7 @@ public class HouseholdService : IHouseholdService
 
         var savedAttrs = await _dbContext.HouseholdAttributes.AsNoTracking()
             .Where(a => a.HouseholdId == householdId).ToListAsync(cancellationToken);
-        response.SetSuccess(MapToDto(household, AttributeVisibilityHelper.Visible(savedAttrs, tenantRole, householdRole)));
+        response.SetSuccess(MapToDto(household, AttributeVisibilityHelper.Visible(savedAttrs, tenantRole, householdRole), householdRole));
         return response;
     }
 
@@ -266,15 +269,16 @@ public class HouseholdService : IHouseholdService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         GathersteadMetrics.RecordSoftDelete("Household", tenantId);
-        response.SetSuccess(MapToDto(household, []));
+        response.SetSuccess(MapToDto(household, [], callerRole: null));
         return response;
     }
 
-    private HouseholdDto MapToDto(Household household, IReadOnlyList<AttributeDto> attributes) => new(
+    private HouseholdDto MapToDto(Household household, IReadOnlyList<AttributeDto> attributes, HouseholdRole? callerRole) => new(
         household.Id,
         household.TenantId,
         household.Name,
         household.Notes,
         attributes,
+        callerRole,
         household.ToAuditInfo(_auditVisibility.IncludeAudit));
 }

@@ -21,8 +21,9 @@ const { household } = useHousehold(householdId)
 const { member, pending } = useMember(householdId, memberId)
 
 const isSelf = computed(() => memberStore.linkedMemberId === memberId.value)
-const { isManagerOrAbove } = useTenantRole()
-const canEdit = computed(() => isSelf.value || isManagerOrAbove.value)
+const { canManageHousehold } = useTenantRole()
+const canManage = canManageHousehold(household)
+const canEdit = computed(() => isSelf.value || canManage.value)
 const { displayName: ageBandDisplayName } = useAgeBands()
 const { formatDate } = useFormatDate()
 </script>

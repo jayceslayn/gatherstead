@@ -1,15 +1,21 @@
 using System.ComponentModel.DataAnnotations;
 using Gatherstead.Api.Contracts.Attributes;
 using Gatherstead.Api.Contracts.Responses;
+using Gatherstead.Data.Entities;
 
 namespace Gatherstead.Api.Contracts.Households;
 
+// CallerRole is the requesting user's HouseholdRole for this household (null when they hold no
+// HouseholdUser row — e.g. an app admin or a tenant Manager acting via their tenant role). The UI
+// combines it with the caller's tenant role to decide whether to surface member-management controls;
+// the API still enforces authorization on both axes regardless.
 public record HouseholdDto(
     Guid Id,
     Guid TenantId,
     string Name,
     string? Notes,
     IReadOnlyList<AttributeDto> Attributes,
+    HouseholdRole? CallerRole,
     AuditInfo? Audit);
 
 public class HouseholdResponse : BaseEntityResponse<HouseholdDto> { }

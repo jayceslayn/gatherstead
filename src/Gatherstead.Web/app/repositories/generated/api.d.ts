@@ -5121,6 +5121,8 @@ export interface components {
             name?: string;
             notes?: string | null;
             attributes?: components["schemas"]["AttributeDto"][];
+            /** @enum {string|null} */
+            callerRole?: "Manager" | "Member" | null;
             audit?: components["schemas"]["AuditInfo"];
         };
         HouseholdDtoIReadOnlyCollectionBaseEntityResponse: {

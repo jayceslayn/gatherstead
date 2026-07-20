@@ -113,4 +113,29 @@ public class HouseholdServiceTests : IAsyncLifetime
         Assert.Equal("gateCode", Assert.Single(member.Attributes).Key);
         Assert.Empty(other.Attributes);
     }
+
+    [Fact]
+    public async Task ListAsync_PopulatesCallerRole_PerHousehold()
+    {
+        // CallerRole surfaces the caller's HouseholdRole so the UI can show member-management controls
+        // to a household Manager. It must reflect the per-household map: the Manager household reports
+        // Manager, and a household the caller does not belong to reports null (not the default enum
+        // value, HouseholdRole.Manager).
+        var managerHouseholdId = Guid.NewGuid();
+        var otherHouseholdId = Guid.NewGuid();
+        _dbContext.Households.Add(new Household { Id = managerHouseholdId, TenantId = _tenantId, Name = "Aaa Manager Household" });
+        _dbContext.Households.Add(new Household { Id = otherHouseholdId, TenantId = _tenantId, Name = "Bbb Other Household" });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var service = CreateService(householdRoles: new CallerHouseholdRoles(new Dictionary<Guid, HouseholdRole>
+        {
+            [managerHouseholdId] = HouseholdRole.Manager,
+        }));
+
+        var result = await service.ListAsync(_tenantId, null, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Successful);
+        Assert.Equal(HouseholdRole.Manager, result.Entity!.Single(h => h.Id == managerHouseholdId).CallerRole);
+        Assert.Null(result.Entity!.Single(h => h.Id == otherHouseholdId).CallerRole);
+    }
 }

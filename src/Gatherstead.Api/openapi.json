@@ -9940,6 +9940,14 @@
               "$ref": "#/components/schemas/AttributeDto"
             }
           },
+          "callerRole": {
+            "enum": [
+              "Manager",
+              "Member"
+            ],
+            "type": "string",
+            "nullable": true
+          },
           "audit": {
             "$ref": "#/components/schemas/AuditInfo"
           }

@@ -23,7 +23,9 @@ export class DemoHouseholdRepository implements IHouseholdRepository {
     if (store.households.value.filter(h => h.tenantId === tenantId).length >= DEMO_LIMITS.householdsPerTenant) {
       throw new DemoLimitError('householdsPerTenant')
     }
-    const h: HouseholdSummary = { id: demoId(), tenantId, name, notes: notes ?? null, attributes: toAttributeEntries(attributes) }
+    // The demo persona is a tenant Owner with no per-household grant, so callerRole is null —
+    // mirrors the API, which returns null when the caller has no HouseholdUser row.
+    const h: HouseholdSummary = { id: demoId(), tenantId, name, notes: notes ?? null, attributes: toAttributeEntries(attributes), callerRole: null }
     store.households.value.push(h)
     persistDemoStore()
     return h

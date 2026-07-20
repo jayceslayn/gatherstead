@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { HouseholdMember, AttributeWriteEntry } from '~/repositories/types'
+import { useTenantRole } from '~/composables/useTenantRole'
 import { useHousehold } from '~/composables/useHouseholds'
 import { useMember, useHouseholdMembers, useHouseholdMemberActions } from '~/composables/useHouseholdMembers'
 import { toAttributeWriteEntries, cleanAttributeWriteEntries, hasIncompleteAttributeRows } from '~/composables/useAttributeRoles'
@@ -18,6 +19,8 @@ const { household } = useHousehold(householdId)
 const { member, pending } = useMember(householdId, memberId)
 const { refresh } = useHouseholdMembers(householdId)
 const { updating, updateMember, deleteMember } = useHouseholdMemberActions(householdId, refresh)
+const { canManageHousehold } = useTenantRole()
+const canManage = canManageHousehold(household)
 
 const saving = computed(() => updating.value.includes(memberId.value))
 const deleting = computed(() => updating.value.includes(memberId.value))
@@ -121,17 +124,16 @@ async function onSubmit() {
         @clear-name-error="nameError = ''"
       >
         <template #delete>
-          <GsRoleGate min-role="Manager">
-            <UButton
-              color="error"
-              variant="ghost"
-              icon="i-heroicons-trash"
-              :loading="deleting"
-              @click="() => { showDeleteConfirm = true }"
-            >
-              {{ t('member.deleteTitle') }}
-            </UButton>
-          </GsRoleGate>
+          <UButton
+            v-if="canManage"
+            color="error"
+            variant="ghost"
+            icon="i-heroicons-trash"
+            :loading="deleting"
+            @click="() => { showDeleteConfirm = true }"
+          >
+            {{ t('member.deleteTitle') }}
+          </UButton>
         </template>
       </GsMemberForm>
     </template>

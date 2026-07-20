@@ -11,7 +11,7 @@ definePageMeta({
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const { isManagerOrAbove } = useTenantRole()
+const { canManageHousehold } = useTenantRole()
 
 const householdId = computed(() => route.params.householdId as string)
 const { household, pending: householdPending, refresh: refreshHousehold } = useHousehold(householdId)
@@ -19,6 +19,8 @@ const { members, pending: membersPending } = useHouseholdMembers(householdId)
 const { displayName: ageBandDisplayName } = useAgeBands()
 
 const pending = computed(() => householdPending.value || membersPending.value)
+
+const canManage = canManageHousehold(household)
 
 const showDeleteConfirm = ref(false)
 const { deleteHousehold } = useHouseholdActions(refreshHousehold)
@@ -53,25 +55,23 @@ function onModalDelete() {
       />
 
       <GsPageHeader :title="household.name">
-        <GsRoleGate min-role="Manager">
-          <div class="flex items-center gap-2">
-            <UButton
-              variant="outline"
-              size="sm"
-              icon="i-heroicons-pencil"
-              @click="() => { showEdit = true }"
-            >
-              {{ t('common.edit') }}
-            </UButton>
-            <UButton
-              :to="`/app/directory/${household.id}/create-member`"
-              size="sm"
-              icon="i-heroicons-plus"
-            >
-              {{ t('member.createMember') }}
-            </UButton>
-          </div>
-        </GsRoleGate>
+        <div v-if="canManage" class="flex items-center gap-2">
+          <UButton
+            variant="outline"
+            size="sm"
+            icon="i-heroicons-pencil"
+            @click="() => { showEdit = true }"
+          >
+            {{ t('common.edit') }}
+          </UButton>
+          <UButton
+            :to="`/app/directory/${household.id}/create-member`"
+            size="sm"
+            icon="i-heroicons-plus"
+          >
+            {{ t('member.createMember') }}
+          </UButton>
+        </div>
       </GsPageHeader>
 
       <GsNotesSection :notes="household.notes" class="mb-6 max-w-lg" />
@@ -82,9 +82,9 @@ function onModalDelete() {
         v-if="!members.length"
         icon="i-heroicons-user-group"
         :title="t('member.noMembers')"
-        :description="isManagerOrAbove ? t('member.noMembersHintManager') : t('member.noMembersHintMember')"
+        :description="canManage ? t('member.noMembersHintManager') : t('member.noMembersHintMember')"
       >
-        <UButton v-if="isManagerOrAbove" :to="`/app/directory/${household.id}/create-member`" icon="i-heroicons-plus">
+        <UButton v-if="canManage" :to="`/app/directory/${household.id}/create-member`" icon="i-heroicons-plus">
           {{ t('member.createMember') }}
         </UButton>
       </GsEmptyState>

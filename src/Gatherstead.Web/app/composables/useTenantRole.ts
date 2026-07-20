@@ -1,5 +1,6 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useSessionStore } from '~/stores/session'
+import type { HouseholdSummary } from '~/repositories/types'
 
 export function useTenantRole() {
   const tenantStore = useTenantStore()
@@ -15,5 +16,12 @@ export function useTenantRole() {
   const isCoordinatorOrAbove = computed(() => isAppAdmin.value || role.value === 'Owner' || role.value === 'Manager' || role.value === 'Coordinator')
   const isMemberOrAbove = computed(() => isAppAdmin.value || (role.value !== null && role.value !== 'Guest'))
 
-  return { role, isAppAdmin, isOwner, isManagerOrAbove, isCoordinatorOrAbove, isMemberOrAbove }
+  // "Household manager" for UI gating: a tenant Manager/above, or a Manager of *this* specific
+  // household via a per-household grant (which can outrank the caller's tenant role). Mirrors the
+  // API's CanManageHousehold / CanEditMember checks, which honour both axes. Compose with an
+  // isSelf check where the API also permits self-edit.
+  const canManageHousehold = (household: Ref<HouseholdSummary | null>) =>
+    computed(() => isManagerOrAbove.value || household.value?.callerRole === 'Manager')
+
+  return { role, isAppAdmin, isOwner, isManagerOrAbove, isCoordinatorOrAbove, isMemberOrAbove, canManageHousehold }
 }
