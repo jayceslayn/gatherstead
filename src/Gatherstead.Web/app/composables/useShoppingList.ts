@@ -336,14 +336,16 @@ export function useShoppingList(scope: Ref<ShoppingScope | null>) {
     }
   }
 
-  async function deleteItem(itemId: string): Promise<void> {
+  async function deleteItem(itemId: string): Promise<boolean> {
     updating.value.push(itemId)
     try {
       await repo.deleteItem(tenantStore.currentTenantId!, itemId)
       await load()
+      return true
     }
     catch (e) {
       toast.add({ title: translateError(e), color: 'error' })
+      return false
     }
     finally {
       updating.value = updating.value.filter(k => k !== itemId)

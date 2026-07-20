@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ShoppingItem, ShoppingItemOrigin } from '~/repositories/types'
+import type { CreateShoppingItemInput, UpdateShoppingItemInput } from '~/repositories/interfaces'
 import type { ShoppingScope, ShoppingScopeOption, ShoppingSection } from '~/composables/useShoppingList'
 import { REFRESH_INTERVAL_S, useShoppingList } from '~/composables/useShoppingList'
 import { useTenantRole } from '~/composables/useTenantRole'
@@ -165,6 +166,15 @@ function openEdit(item: ShoppingItem) {
   modalOpen.value = true
 }
 
+// Close the add/edit modal only once the action succeeds — a failed create/update keeps it open
+// (with the entered values) so the error can be corrected rather than silently discarding input.
+async function onCreate(input: CreateShoppingItemInput) {
+  if (await createItem(input)) modalOpen.value = false
+}
+async function onUpdate(payload: { itemId: string, input: UpdateShoppingItemInput }) {
+  if (await updateItem(payload.itemId, payload.input)) modalOpen.value = false
+}
+
 // ── Delete confirmation ──────────────────────────────────────────────────────
 const deleteModalOpen = ref(false)
 const pendingDelete = ref<ShoppingItem | null>(null)
@@ -177,8 +187,14 @@ const deleteWarning = computed(() =>
     ? t('shopping.deleteItemClaimedWarning')
     : t('shopping.deleteItemConfirm'),
 )
-function confirmDelete() {
-  if (pendingDelete.value) void deleteItem(pendingDelete.value.id)
+const deleting = computed(() =>
+  pendingDelete.value ? updating.value.includes(pendingDelete.value.id) : false,
+)
+// Keep the dialog open (spinner on Delete) until the delete succeeds, then close it; on failure it
+// stays open so the surfaced error is actionable rather than flashing past a dismissed modal.
+async function confirmDelete() {
+  const item = pendingDelete.value
+  if (item && await deleteItem(item.id)) deleteModalOpen.value = false
 }
 
 const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
@@ -326,8 +342,8 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
       :item="editing"
       :scope-options="editing ? undefined : createScopes"
       :busy="updating.includes('new') || (editing ? updating.includes(editing.id) : false)"
-      @create="input => createItem(input)"
-      @update="payload => updateItem(payload.itemId, payload.input)"
+      @create="onCreate"
+      @update="onUpdate"
     />
 
     <GsConfirmModal
@@ -336,6 +352,8 @@ const statusColor: Record<string, 'neutral' | 'warning' | 'success'> = {
       :description="deleteWarning"
       :confirm-label="t('common.delete')"
       danger
+      :loading="deleting"
+      :close-on-confirm="false"
       @confirm="confirmDelete"
     />
   </div>

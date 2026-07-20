@@ -92,7 +92,8 @@ function submit() {
       mealPlanId: scope?.mealPlanId ?? null,
     })
   }
-  open.value = false
+  // The parent closes the modal only after the action succeeds (see WEB-UI-DESIGN); a failed
+  // create/update keeps it open with the entered values intact so the error can be corrected.
 }
 </script>
 
