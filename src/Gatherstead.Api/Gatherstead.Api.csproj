@@ -8,15 +8,21 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.10" />
     <!-- Always Encrypted: lets the SQL driver unwrap the CEK via Azure Key Vault to decrypt/encrypt
-         PII columns at runtime. v6.x matches the Microsoft.Data.SqlClient 6.x that EF Core 10.0.9
-         resolves, so MDS is not upgraded (the Entra auth providers used by
-         "Authentication=Active Directory Managed Identity" stay built into MDS 6.x — no
-         Extensions.Azure add-on needed, unlike MDS 7.x). -->
-    <PackageReference Include="Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider" Version="6.1.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+         PII columns at runtime. v7.x requires Microsoft.Data.SqlClient 7.x, which is newer than the
+         6.x EF Core 10.0.10 resolves — so MDS is pinned explicitly here at the matching version
+         (core and add-ons must share it: their Extensions.Abstractions/Internal.Logging ranges are
+         version-locked, and a mismatch makes SqlAuthenticationProviderManager's static initializer
+         throw). -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.0.2" />
+    <!-- MDS 7.0 extracted the Entra ID auth providers (Active Directory Managed Identity, etc.) into
+         this add-on package. Required for the App Service connection string; it registers the
+         providers automatically with no code changes. -->
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.0.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider" Version="7.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.15.1-beta.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
