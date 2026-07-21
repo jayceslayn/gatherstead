@@ -20,7 +20,8 @@ overrides:
   h3: ">=1.15.9"
   # @redocly/openapi-core (via openapi-typescript) pins js-yaml to an exact 4.1.1; every other
   # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
-  js-yaml: ">=4.2.0 <5"
+  # 4.3.0 patches GHSA-52cp-r559-cp3m (quadratic CPU via merge-key chains).
+  js-yaml: ">=4.3.0 <5"
   srvx: ">=0.11.13"
   # Must stay on the 2.x line: nuxt and @unhead/vue both depend on unhead ^2, and v3 removed the
   # hooks.hookOnce API that @nuxt/ui calls. Unbounded, this override silently pulls in v3.
@@ -29,9 +30,19 @@ overrides:
   simple-git: ">=3.36.0"
   nitropack: ">=2.13.4"
   devalue: ">=5.8.1"
-  "brace-expansion@5": ">=5.0.6"
+  # GHSA-3jxr-9vmj-r5cp: DoS via exponential expansion of consecutive non-expanding {} groups.
+  # Patched separately on each major line, so pin all three that appear in the tree. Each must stay
+  # bounded to its own major: unbounded, the 1.x/2.x floors let minimatch 3/5/9 jump the whole way
+  # to brace-expansion 5.0.6, which is itself still vulnerable.
+  "brace-expansion@1": ">=1.1.16 <2"
+  "brace-expansion@2": ">=2.1.2 <3"
+  "brace-expansion@5": ">=5.0.7 <6"
   ws: ">=8.20.1"
-  shell-quote: ">=1.8.4"
+  # 1.8.5 patches GHSA-395f-4hp3-45gv (quadratic-complexity DoS in parse()).
+  shell-quote: ">=1.8.5"
+  # node-tar < 7.5.19: GHSA-23hp-3jrh-7fpw (critical, decompression/parse DoS) plus
+  # GHSA-8x88-c5mf-7j5w (infinite loop on negative entry size).
+  tar: ">=7.5.19"
   # happy-dom < 20.8.9 has critical VM-escape RCE + related advisories. It is only an optional peer
   # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
   # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
