@@ -43,6 +43,13 @@ overrides:
   # node-tar < 7.5.19: GHSA-23hp-3jrh-7fpw (critical, decompression/parse DoS) plus
   # GHSA-8x88-c5mf-7j5w (infinite loop on negative entry size).
   tar: ">=7.5.19"
+  # GHSA-2p49-hgcm-8545: svgo's removeScripts plugin leaves some executable scripts intact (XSS).
+  # Both consumers (ipx, postcss-svgo) are on the 4.x line, so keep the override bounded there.
+  svgo: ">=4.0.2 <5"
+  # GHSA-f88m-g3jw-g9cj: sharp < 0.35.0 bundles a libvips with four CVEs. Patched only on the 0.35
+  # line, which is a major bump for ipx (declares ^0.34); bounded to 0.35.x. Requires node >=20.9,
+  # satisfied by the node 24 used in CI.
+  sharp: ">=0.35.0 <0.36"
   # happy-dom < 20.8.9 has critical VM-escape RCE + related advisories. It is only an optional peer
   # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
   # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
