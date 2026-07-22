@@ -103,7 +103,7 @@ public class InvitationService : IInvitationService
         {
             if (!await ServiceGuards.ValidateMemberLinkAsync(
                     response, _memberAuthorizationService, _dbContext, tenantId, linkedMemberId,
-                    excludeUserId: existingUser?.Id, excludeInvitationId: existingPending?.Id, cancellationToken))
+                    cancellationToken))
                 return response;
 
             // An invitee who already holds a different link would otherwise have this one silently

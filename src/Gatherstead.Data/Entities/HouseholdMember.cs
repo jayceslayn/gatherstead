@@ -17,7 +17,7 @@ public class HouseholdMember : AuditableEntity
     [ForeignKey(nameof(HouseholdId))]
     public Household? Household { get; set; }
 
-    public TenantUser? LinkedTenantUser { get; set; }
+    public ICollection<TenantUser> LinkedTenantUsers { get; set; } = new List<TenantUser>();
 
     public AgeBand? AgeBand { get; set; }
 

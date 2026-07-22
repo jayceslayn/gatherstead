@@ -183,7 +183,7 @@ public class InvitationServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CreateAsync_PendingInviteAlreadyClaimsMember_Rejected()
+    public async Task CreateAsync_PendingInviteAlreadyClaimsMember_Succeeds()
     {
         var ct = TestContext.Current.CancellationToken;
         var memberId = AddMember();
@@ -196,15 +196,15 @@ public class InvitationServiceTests : IAsyncLifetime
         }, ct);
         Assert.True(first.Successful);
 
-        // A second pending invite promising the same member would be silently dropped at accept
-        // time for whoever signs in second — reject it at invite time instead.
+        // Both invites may promise the same member — one person inviting their second email address
+        // to the same self-profile. Neither claim is dropped at accept time.
         var second = await service.CreateAsync(_tenantId, new CreateInvitationRequest
         {
             Email = "second@test.com", Role = TenantRole.Member, LinkedMemberId = memberId,
         }, ct);
 
-        Assert.False(second.Successful);
-        Assert.Equal(1, await _dbContext.Invitations.CountAsync(ct));
+        Assert.True(second.Successful);
+        Assert.Equal(2, await _dbContext.Invitations.CountAsync(ct));
     }
 
     [Fact]
@@ -231,6 +231,34 @@ public class InvitationServiceTests : IAsyncLifetime
         Assert.False(result.Successful);
         var tenantUser = await _dbContext.TenantUsers.SingleAsync(ct);
         Assert.Equal(memberA, tenantUser.LinkedMemberId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RemovedUserReinvitedWithDifferentMember_ReplacesStaleLink()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var existingUserId = Guid.NewGuid();
+        var memberA = AddMember();
+        var memberB = AddMember();
+        _dbContext.Users.Add(new User { Id = existingUserId, ExternalId = "removed@idp", Email = "removed@test.com" });
+        _dbContext.TenantUsers.Add(new TenantUser
+        {
+            TenantId = _tenantId, UserId = existingUserId, Role = TenantRole.Member, LinkedMemberId = memberA, IsDeleted = true,
+        });
+        await _dbContext.SaveChangesAsync(ct);
+
+        // A removed membership keeps its link, but that link is stale, not established — re-inviting
+        // with a different member must reactivate the membership linked to the member promised here.
+        var result = await CreateService().CreateAsync(_tenantId, new CreateInvitationRequest
+        {
+            Email = "removed@test.com", Role = TenantRole.Member, LinkedMemberId = memberB,
+        }, ct);
+
+        Assert.True(result.Successful);
+        Assert.Equal(InvitationStatus.Accepted, result.Entity!.Status);
+        var tenantUser = await _dbContext.TenantUsers.SingleAsync(ct);
+        Assert.False(tenantUser.IsDeleted);
+        Assert.Equal(memberB, tenantUser.LinkedMemberId);
     }
 
     [Fact]
@@ -441,7 +469,7 @@ public class InvitationServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CreateAsync_PreLinkMember_AlreadyLinkedToAnother_Rejected()
+    public async Task CreateAsync_PreLinkMember_AlreadyLinkedToAnother_Succeeds()
     {
         var ct = TestContext.Current.CancellationToken;
         var memberId = AddMember();
@@ -450,12 +478,15 @@ public class InvitationServiceTests : IAsyncLifetime
         _dbContext.TenantUsers.Add(new TenantUser { TenantId = _tenantId, UserId = otherUserId, Role = TenantRole.Member, LinkedMemberId = memberId });
         await _dbContext.SaveChangesAsync(ct);
 
+        // Another user already links the member; inviting a second login for the same person is the
+        // multi-email case the link was relaxed for.
         var request = new CreateInvitationRequest { Email = "taken@test.com", Role = TenantRole.Member, LinkedMemberId = memberId };
 
         var result = await CreateService().CreateAsync(_tenantId, request, ct);
 
-        Assert.False(result.Successful);
-        Assert.False(await _dbContext.Invitations.AnyAsync(ct));
+        Assert.True(result.Successful);
+        var invitation = await _dbContext.Invitations.SingleAsync(ct);
+        Assert.Equal(memberId, invitation.LinkedMemberId);
     }
 
     [Fact]

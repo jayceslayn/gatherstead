@@ -313,6 +313,28 @@ public class MemberAuthorizationServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CanEditMemberAsync_SecondUserLinkedToSameMember_ReturnsTrue()
+    {
+        var memberId = Guid.NewGuid();
+        var secondUserId = Guid.NewGuid();
+        await SeedTenantUserAsync(TenantRole.Member);
+        await SeedHouseholdMemberAsync(memberId, _householdId);
+        await SeedLinkedMemberAsync(memberId);
+
+        // The same person's second login (e.g. another email address) links to the same member and
+        // must resolve Self exactly as the first does.
+        _dbContext.Users.Add(new User { Id = secondUserId, ExternalId = secondUserId.ToString() });
+        _dbContext.TenantUsers.Add(new TenantUser
+        {
+            TenantId = _tenantId, UserId = secondUserId, Role = TenantRole.Member, LinkedMemberId = memberId,
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(await CreateService(_userId).CanEditMemberAsync(_tenantId, _householdId, memberId, TestContext.Current.CancellationToken));
+        Assert.True(await CreateService(secondUserId).CanEditMemberAsync(_tenantId, _householdId, memberId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task CanEditMemberAsync_HouseholdManager_CanEditMemberInSameHousehold()
     {
         await SeedTenantUserAsync(TenantRole.Member);

@@ -19,7 +19,7 @@ Gatherstead is organized around bounded contexts that align with the two core go
 ### Family Directory Context
 - **Household**: A family grouping. Can evolve as families split or merge.【F:src/Gatherstead.Data/Entities/Household.cs】
 - **HouseholdUser**: Join entity that ties a **User** to a **Household** with a `HouseholdRole` (`Manager` or `Member`), mirroring `TenantUser`. Household management authority (edit members, manage household) derives from this record, not from any `HouseholdMember` field. PK `(HouseholdId, UserId)`; carries `TenantId` for global-filter isolation.【F:src/Gatherstead.Data/Entities/HouseholdUser.cs】
-- **HouseholdMember**: Person-centric record storing name, birth date, dietary notes/tags, and adult/child markers, with Always Encrypted columns for sensitive data. A member may be linked to a login via `TenantUser.LinkedMemberId` (the FK lives on `TenantUser`, not here), enabling "Self" edit permissions and profile-name access. The link is per-tenant, so a user in multiple tenants has a distinct self-profile in each. Household-level management authority is held by `HouseholdUser`, not by this record.【F:src/Gatherstead.Data/Entities/HouseholdMember.cs】
+- **HouseholdMember**: Person-centric record storing name, birth date, dietary notes/tags, and adult/child markers, with Always Encrypted columns for sensitive data. A member may be linked to a login via `TenantUser.LinkedMemberId` (the FK lives on `TenantUser`, not here), enabling "Self" edit permissions and profile-name access. The link is per-tenant, so a user in multiple tenants has a distinct self-profile in each. It is many-to-one: several logins may link to the same member (one person with more than one email address), and each of them gets the Self scope — but a given user still has at most one linked member per tenant. Household-level management authority is held by `HouseholdUser`, not by this record.【F:src/Gatherstead.Data/Entities/HouseholdMember.cs】
 - **MemberRelationship**: Parent/child/sibling/spouse/guardian links with type and notes, flexible enough to span households for split-family scenarios. Relationship types are informational; edit permissions derive from `HouseholdRole` and the `TenantUser.LinkedMemberId` Self link, not from relationship entries. *Backend-complete but has no frontend UI yet — a known gap.*【F:src/Gatherstead.Data/Entities/MemberRelationship.cs】
 - **Address**: Mailing addresses per member. At most one can be designated primary, enforced by a filtered unique index.【F:src/Gatherstead.Data/Entities/Address.cs】
 - **ContactMethod**: Email, phone, or other contact entries per member, with a primary-contact designation mirroring the address pattern.【F:src/Gatherstead.Data/Entities/ContactMethod.cs】
@@ -107,7 +107,7 @@ flowchart TD
 erDiagram
     Tenant    ||--o{ TenantUser    : "role"
     User      ||--o{ TenantUser    : ""
-    TenantUser |o--o| HouseholdMember : "LinkedMemberId (self)"
+    TenantUser }o--o| HouseholdMember : "LinkedMemberId (self)"
     Tenant    ||--o{ Invitation    : "pending invites"
     Tenant    ||--o{ Household     : ""
     Household ||--o{ HouseholdUser : "role"

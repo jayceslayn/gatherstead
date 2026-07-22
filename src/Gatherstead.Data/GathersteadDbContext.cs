@@ -160,13 +160,16 @@ public class GathersteadDbContext : DbContext
 
         modelBuilder.Entity<TenantUser>(b =>
         {
+            // Many-to-one: one person may hold several logins (e.g. a second email address) and
+            // each links to the same member, so the same LinkedMemberId can repeat across users.
             b.HasOne(tu => tu.LinkedMember)
-                .WithOne(hm => hm.LinkedTenantUser)
-                .HasForeignKey<TenantUser>(tu => tu.LinkedMemberId)
-                .IsRequired(false);
+                .WithMany(hm => hm.LinkedTenantUsers)
+                .HasForeignKey(tu => tu.LinkedMemberId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
 
+            // Non-unique: a lookup index for the "who links to this member" queries only.
             b.HasIndex(tu => tu.LinkedMemberId)
-                .IsUnique()
                 .HasFilter("[LinkedMemberId] IS NOT NULL")
                 .HasDatabaseName("IX_TenantUser_LinkedMemberId");
         });

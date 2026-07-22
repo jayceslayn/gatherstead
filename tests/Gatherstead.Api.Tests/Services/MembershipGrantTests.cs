@@ -175,7 +175,7 @@ public class MembershipGrantTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GrantAsync_SkipsLink_WhenMemberAlreadyLinkedToAnotherUser()
+    public async Task GrantAsync_AppliesLink_WhenMemberAlreadyLinkedToAnotherUser()
     {
         var ct = TestContext.Current.CancellationToken;
         var memberId = Guid.NewGuid();
@@ -191,13 +191,17 @@ public class MembershipGrantTests : IAsyncLifetime
         });
         await _dbContext.SaveChangesAsync(ct);
 
-        // The member is already linked; the grant must skip the link rather than throw on the unique index.
+        // Another user already links the member — not a conflict; both links stand.
         await MembershipGrant.GrantAsync(_dbContext, _tenantId, _userId, TenantRole.Member, null, null, ct, memberId);
         await _dbContext.SaveChangesAsync(ct);
 
-        var tu = await _dbContext.TenantUsers.IgnoreQueryFilters()
-            .SingleAsync(x => x.TenantId == _tenantId && x.UserId == _userId, ct);
-        Assert.Null(tu.LinkedMemberId);
+        var linked = await _dbContext.TenantUsers.IgnoreQueryFilters()
+            .Where(x => x.TenantId == _tenantId && x.LinkedMemberId == memberId)
+            .Select(x => x.UserId)
+            .ToListAsync(ct);
+        Assert.Equal(2, linked.Count);
+        Assert.Contains(_userId, linked);
+        Assert.Contains(otherUserId, linked);
     }
 
     [Fact]
@@ -228,6 +232,62 @@ public class MembershipGrantTests : IAsyncLifetime
         var tu = await _dbContext.TenantUsers.IgnoreQueryFilters()
             .SingleAsync(x => x.TenantId == _tenantId && x.UserId == _userId, ct);
         Assert.Equal(memberA, tu.LinkedMemberId);
+    }
+
+    [Fact]
+    public async Task GrantAsync_Reactivation_ReplacesStaleLink_WhenMemberInvited()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var memberA = Guid.NewGuid();
+        var memberB = Guid.NewGuid();
+        _dbContext.HouseholdMembers.Add(new HouseholdMember
+        {
+            Id = memberA, TenantId = _tenantId, HouseholdId = _householdId, Name = "Alice",
+        });
+        _dbContext.HouseholdMembers.Add(new HouseholdMember
+        {
+            Id = memberB, TenantId = _tenantId, HouseholdId = _householdId, Name = "Bob",
+        });
+        _dbContext.TenantUsers.Add(new TenantUser
+        {
+            TenantId = _tenantId, UserId = _userId, Role = TenantRole.Member, LinkedMemberId = memberA, IsDeleted = true,
+        });
+        await _dbContext.SaveChangesAsync(ct);
+
+        // A removed membership keeps its link, but that link is stale, not established — a re-invite
+        // naming a different member must deliver the member it promised, not silently keep the old one.
+        await MembershipGrant.GrantAsync(_dbContext, _tenantId, _userId, TenantRole.Member, null, null, ct, memberB);
+        await _dbContext.SaveChangesAsync(ct);
+
+        var tu = await _dbContext.TenantUsers.IgnoreQueryFilters()
+            .SingleAsync(x => x.TenantId == _tenantId && x.UserId == _userId, ct);
+        Assert.False(tu.IsDeleted);
+        Assert.Equal(memberB, tu.LinkedMemberId);
+    }
+
+    [Fact]
+    public async Task GrantAsync_Reactivation_KeepsPriorLink_WhenNoMemberInvited()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var memberId = Guid.NewGuid();
+        _dbContext.HouseholdMembers.Add(new HouseholdMember
+        {
+            Id = memberId, TenantId = _tenantId, HouseholdId = _householdId, Name = "Alice",
+        });
+        _dbContext.TenantUsers.Add(new TenantUser
+        {
+            TenantId = _tenantId, UserId = _userId, Role = TenantRole.Member, LinkedMemberId = memberId, IsDeleted = true,
+        });
+        await _dbContext.SaveChangesAsync(ct);
+
+        // Re-inviting without a link restores the self-profile the user had before removal.
+        await MembershipGrant.GrantAsync(_dbContext, _tenantId, _userId, TenantRole.Member, null, null, ct);
+        await _dbContext.SaveChangesAsync(ct);
+
+        var tu = await _dbContext.TenantUsers.IgnoreQueryFilters()
+            .SingleAsync(x => x.TenantId == _tenantId && x.UserId == _userId, ct);
+        Assert.False(tu.IsDeleted);
+        Assert.Equal(memberId, tu.LinkedMemberId);
     }
 
     [Fact]

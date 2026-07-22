@@ -128,6 +128,8 @@ public sealed class AccountDeletionService : IAccountDeletionService
                 {
                     // Any linked member row (from an active or a soft-deleted membership) is the
                     // user's own PII inside a surviving group; it must be purged individually.
+                    // Erasure wins over sharing: other logins still linked to the member (several
+                    // logins may share one self-profile) keep their membership but lose the link.
                     memberPurgeIds.AddRange(mine
                         .Where(m => m.LinkedMemberId.HasValue)
                         .Select(m => m.LinkedMemberId!.Value));

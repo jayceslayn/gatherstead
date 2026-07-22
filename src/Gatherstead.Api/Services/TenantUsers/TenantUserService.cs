@@ -163,7 +163,7 @@ public class TenantUserService : ITenantUserService
 
             if (!await ServiceGuards.ValidateMemberLinkAsync(
                     response, _memberAuthorizationService, _dbContext, tenantId, request.MemberId.Value,
-                    excludeUserId: userId, excludeInvitationId: null, cancellationToken))
+                    cancellationToken))
                 return response;
 
             tenantUser.LinkedMemberId = request.MemberId;
@@ -250,10 +250,8 @@ public class TenantUserService : ITenantUserService
             }
         }
 
-        // Clear the member link so the soft-deleted row does not hold the unique filtered index
-        // (IX_TenantUser_LinkedMemberId is filtered on LinkedMemberId only, not on IsDeleted),
-        // which would otherwise permanently block re-linking that member to anyone.
-        tenantUser.LinkedMemberId = null;
+        // The member link is left intact: it no longer blocks anyone (the index is not unique), and
+        // keeping it restores the user's self-profile if they are re-added later.
         tenantUser.IsDeleted = true;
 
         // Removing tenant membership also removes household-level access — no orphaned access remains.

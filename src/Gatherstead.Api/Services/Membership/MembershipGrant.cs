@@ -18,8 +18,10 @@ public static class MembershipGrant
     /// re-running is safe and a user's role is never silently changed; a soft-deleted membership
     /// (e.g. a previously-removed user being re-invited) is reactivated in place and set to the
     /// granted role. When <paramref name="linkedMemberId"/> is supplied it links the tenant user to
-    /// that member, but only if the user has no existing link (an established link is never
-    /// silently overwritten) and the member is not already linked to someone else. Does not call
+    /// that member, but only if the user has no existing link or is being reactivated (an active
+    /// membership's established link is never silently overwritten; a reactivated one is a fresh
+    /// grant, so the invited link replaces the stale one and, when none is invited, the prior link
+    /// survives to restore the returning user's self-profile). Does not call
     /// <c>SaveChanges</c> — the caller controls persistence so this can compose with other writes.
     /// </summary>
     /// <remarks>
@@ -49,6 +51,7 @@ public static class MembershipGrant
                 .IgnoreQueryFilters([GathersteadDbContext.TenantFilter, GathersteadDbContext.SoftDeleteFilter])
                 .SingleOrDefaultAsync(tu => tu.TenantId == tenantId && tu.UserId == userId, cancellationToken);
 
+        var reactivated = false;
         if (tenantUser is null)
         {
             tenantUser = new TenantUser
@@ -66,22 +69,17 @@ public static class MembershipGrant
             tenantUser.DeletedAt = null;
             tenantUser.DeletedByUserId = null;
             tenantUser.Role = role;
+            reactivated = true;
         }
         // else: active membership left untouched (never silently downgraded).
 
-        // Only a user with no existing link may receive one — an established link is never silently
-        // overwritten (re-inviting a linked user with a different member must not orphan the old link).
-        if (linkedMemberId is Guid memberId && tenantUser.LinkedMemberId is null)
-        {
-            // Re-validate at grant time: a deferred claim can land days after the invite, by which
-            // point the member may already be linked to another user. Skip silently rather than
-            // throwing on the unique filtered index — membership/household access still apply.
-            var alreadyLinked = await dbContext.TenantUsers
-                .IgnoreQueryFilters([GathersteadDbContext.TenantFilter])
-                .AnyAsync(tu => tu.TenantId == tenantId && tu.LinkedMemberId == memberId && tu.UserId != userId, cancellationToken);
-            if (!alreadyLinked)
-                tenantUser.LinkedMemberId = memberId;
-        }
+        // An active membership's established link is never silently overwritten (re-inviting a linked
+        // user with a different member must not orphan the old link). A reactivated membership is a
+        // fresh grant: the invited link replaces the stale one kept through removal, while inviting
+        // without a link leaves that stale link in place to restore the returning user's self-profile.
+        // Another user already linking the same member is fine: a member may be linked by several users.
+        if (linkedMemberId is Guid memberId && (tenantUser.LinkedMemberId is null || reactivated))
+            tenantUser.LinkedMemberId = memberId;
 
         if (householdId is Guid hid)
         {

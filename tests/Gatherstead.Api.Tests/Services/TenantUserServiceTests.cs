@@ -232,7 +232,7 @@ public class TenantUserServiceTests : IAsyncLifetime
     // ── RemoveAsync ────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task RemoveAsync_SoftDeletesMembership_ClearsLink_AndCascadesHouseholdAccess()
+    public async Task RemoveAsync_SoftDeletesMembership_KeepsLink_AndCascadesHouseholdAccess()
     {
         var ct = TestContext.Current.CancellationToken;
         await SeedTenantUserAsync(_actorUserId, TenantRole.Owner);
@@ -253,7 +253,8 @@ public class TenantUserServiceTests : IAsyncLifetime
         var removed = await _dbContext.TenantUsers.IgnoreQueryFilters()
             .SingleAsync(tu => tu.TenantId == _tenantId && tu.UserId == _targetUserId, ct);
         Assert.True(removed.IsDeleted);
-        Assert.Null(removed.LinkedMemberId);
+        // The link survives removal — it blocks nobody, and it restores the self-profile on re-add.
+        Assert.Equal(memberId, removed.LinkedMemberId);
         var hu = await _dbContext.HouseholdUsers.IgnoreQueryFilters()
             .SingleAsync(x => x.HouseholdId == householdId && x.UserId == _targetUserId, ct);
         Assert.True(hu.IsDeleted);
@@ -373,7 +374,7 @@ public class TenantUserServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task SetLinkedMemberAsync_MemberPromisedToPendingInvitation_Rejected()
+    public async Task SetLinkedMemberAsync_MemberPromisedToPendingInvitation_Succeeds()
     {
         var ct = TestContext.Current.CancellationToken;
         await SeedTenantUserAsync(_actorUserId, TenantRole.Manager);
@@ -386,14 +387,41 @@ public class TenantUserServiceTests : IAsyncLifetime
         });
         await _dbContext.SaveChangesAsync(ct);
 
-        // A pending invitation is an outstanding promise of the link; linking the member directly
-        // would silently strand the invitee's link at accept time.
+        // A pending invitation no longer reserves the member: the invitee's link and this one can
+        // both land, which is the point — one person's several logins all link to the same member.
         var result = await CreateService(TenantRole.Manager).SetLinkedMemberAsync(
             _tenantId, _targetUserId, new SetLinkedMemberRequest { MemberId = memberId }, ct);
 
-        Assert.False(result.Successful);
+        Assert.True(result.Successful);
         var target = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _targetUserId, ct);
-        Assert.Null(target.LinkedMemberId);
+        Assert.Equal(memberId, target.LinkedMemberId);
+    }
+
+    [Fact]
+    public async Task SetLinkedMemberAsync_MemberAlreadyLinkedToAnotherUser_Succeeds()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await SeedTenantUserAsync(_actorUserId, TenantRole.Manager);
+        await SeedTenantUserAsync(_targetUserId, TenantRole.Member);
+        var memberId = await SeedMemberAsync();
+
+        // The actor's own login already represents this member; linking a second login to it is the
+        // multi-email case and must be allowed.
+        var actor = await _dbContext.TenantUsers.SingleAsync(tu => tu.UserId == _actorUserId, ct);
+        actor.LinkedMemberId = memberId;
+        await _dbContext.SaveChangesAsync(ct);
+
+        var result = await CreateService(TenantRole.Manager).SetLinkedMemberAsync(
+            _tenantId, _targetUserId, new SetLinkedMemberRequest { MemberId = memberId }, ct);
+
+        Assert.True(result.Successful);
+        var linked = await _dbContext.TenantUsers
+            .Where(tu => tu.TenantId == _tenantId && tu.LinkedMemberId == memberId)
+            .Select(tu => tu.UserId)
+            .ToListAsync(ct);
+        Assert.Equal(2, linked.Count);
+        Assert.Contains(_actorUserId, linked);
+        Assert.Contains(_targetUserId, linked);
     }
 
     private async Task<Guid> SeedMemberAsync()
