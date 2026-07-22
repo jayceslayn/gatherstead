@@ -168,19 +168,15 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore --locked-mode
 
-      - name: Generate idempotent migration script
+      - name: Build migration bundle
         run: |
-          dotnet tool install --global dotnet-ef --version 10.0.9
-          export PATH="$PATH:$HOME/.dotnet/tools"
-          # Offline (no DB connection): produces SQL safe to run against any schema version —
-          # creates every table on a clean DB and no-ops when already present.
-          dotnet ef migrations script --idempotent --project src/Gatherstead.Data -o migrate.sql
-
-      - name: Install sqlcmd
-        run: |
-          curl -fsSL https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.2/sqlcmd-linux-amd64.tar.bz2 -o /tmp/sqlcmd.tar.bz2
-          tar -xjf /tmp/sqlcmd.tar.bz2 -C /tmp
-          sudo mv /tmp/sqlcmd /usr/local/bin/sqlcmd
+          # dotnet-ef is pinned in .config/dotnet-tools.json alongside the EF Core packages.
+          dotnet tool restore
+          # Built offline (no DB connection). Unlike an --idempotent script, the bundle reads
+          # __EFMigrationsHistory at run time and sends ONLY pending migrations, so SQL from
+          # already-applied migrations is never re-parsed against a schema it no longer matches.
+          dotnet ef migrations bundle --project src/Gatherstead.Data --configuration Release --force -o efbundle
+          chmod +x efbundle
 
       - name: Open SQL firewall for runner
         run: |
@@ -193,13 +189,11 @@ jobs:
 
       - name: Apply migrations
         run: |
-          # ActiveDirectoryDefault → DefaultAzureCredential picks up the azure/login (Azure CLI) session.
+          # Active Directory Default → DefaultAzureCredential picks up the azure/login (Azure CLI) session.
           # Serverless DB may be auto-paused; the first connect wakes it, so allow a generous timeout.
-          sqlcmd -S "${{ vars.SQL_SERVER_NAME }}.database.windows.net" \
-            -d "${{ vars.SQL_DATABASE_NAME }}" \
-            --authentication-method ActiveDirectoryDefault \
-            --exit-on-error -l 60 \
-            -i migrate.sql
+          # --verbose lists which migrations were pending, which is the record of what prod actually ran.
+          ./efbundle --verbose \
+            --connection "Server=tcp:${{ vars.SQL_SERVER_NAME }}.database.windows.net,1433;Database=${{ vars.SQL_DATABASE_NAME }};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
 
       - name: Remove SQL firewall rule
         if: always()

@@ -82,12 +82,18 @@ namespace Gatherstead.Data.Migrations
             // A NULL HouseholdRole was valid under the old schema and granted Member on accept
             // (`householdRole ?? HouseholdRole.Member`), so coalesce to Member (1) rather than
             // dropping those rows and losing the grant.
+            // Wrapped in EXEC so it becomes a nested batch: an --idempotent script emits this inside
+            // IF NOT EXISTS(... __EFMigrationsHistory ...), and SQL Server binds column names when it
+            // compiles the batch even when the guard is false — so once [Invitations].[HouseholdId] is
+            // dropped the unwrapped form makes the whole script unparseable. Any single quote added
+            // inside the EXEC literal must be doubled.
             migrationBuilder.Sql(@"
-                INSERT INTO [InvitationHouseholdAccess]
-                    ([InvitationId], [HouseholdId], [TenantId], [Role], [CreatedByUserId], [CreatedAt], [UpdatedByUserId], [UpdatedAt], [IsDeleted])
-                SELECT [Id], [HouseholdId], [TenantId], COALESCE([HouseholdRole], 1), [CreatedByUserId], [CreatedAt], [UpdatedByUserId], [UpdatedAt], 0
-                FROM [Invitations]
-                WHERE [HouseholdId] IS NOT NULL;");
+                EXEC(N'
+                    INSERT INTO [InvitationHouseholdAccess]
+                        ([InvitationId], [HouseholdId], [TenantId], [Role], [CreatedByUserId], [CreatedAt], [UpdatedByUserId], [UpdatedAt], [IsDeleted])
+                    SELECT [Id], [HouseholdId], [TenantId], COALESCE([HouseholdRole], 1), [CreatedByUserId], [CreatedAt], [UpdatedByUserId], [UpdatedAt], 0
+                    FROM [Invitations]
+                    WHERE [HouseholdId] IS NOT NULL;');");
 
             // Remove the old single-grant columns now that their data is preserved.
             migrationBuilder.DropForeignKey(
@@ -124,16 +130,18 @@ namespace Gatherstead.Data.Migrations
 
             // Best-effort restore of the single-grant columns from the first grant per invitation
             // before the multi-grant table is dropped. Additional grants cannot be represented.
+            // EXEC-wrapped for the same reason as the Up() copy above — see the comment there.
             migrationBuilder.Sql(@"
-                UPDATE inv
-                SET inv.[HouseholdId] = g.[HouseholdId], inv.[HouseholdRole] = g.[Role]
-                FROM [Invitations] inv
-                CROSS APPLY (
-                    SELECT TOP 1 [HouseholdId], [Role]
-                    FROM [InvitationHouseholdAccess] x
-                    WHERE x.[InvitationId] = inv.[Id] AND x.[IsDeleted] = 0
-                    ORDER BY [HouseholdId]
-                ) g;");
+                EXEC(N'
+                    UPDATE inv
+                    SET inv.[HouseholdId] = g.[HouseholdId], inv.[HouseholdRole] = g.[Role]
+                    FROM [Invitations] inv
+                    CROSS APPLY (
+                        SELECT TOP 1 [HouseholdId], [Role]
+                        FROM [InvitationHouseholdAccess] x
+                        WHERE x.[InvitationId] = inv.[Id] AND x.[IsDeleted] = 0
+                        ORDER BY [HouseholdId]
+                    ) g;');");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Invitations_HouseholdId",

@@ -25,7 +25,7 @@ This project uses Always Encrypted with Secure Enclaves to protect sensitive dat
 
 **Deploy jobs** (push to `main` only; run in sequence: migrations → api → web/demo in parallel):
 
-- **`deploy-migrations`** — applies an idempotent EF Core script (opens a temporary SQL firewall rule for the runner, then removes it). On a clean database this creates every table; on an existing one it no-ops.
+- **`deploy-migrations`** — builds an EF Core migration bundle and runs it (opens a temporary SQL firewall rule for the runner, then removes it). The bundle reads `__EFMigrationsHistory` and applies only *pending* migrations, so SQL from already-applied migrations is never re-sent to the server. On a clean database this creates every table; on an up-to-date one it no-ops.
 - **`deploy-api`** — zip-deploys the API to App Service; `deploy-web` and `deploy-demo` gate on this job.
 
 > **Always Encrypted setup is not a CI job.** Creating the CMK/CEK and encrypting columns requires
@@ -163,7 +163,7 @@ Prerequisites:
 
 - `az login` as a member of the **`Gatherstead SQL Admins`** group (or any identity already granted access
   via `infrastructure/ci-grant.sql`).
-- `dotnet tool install --global dotnet-ef --version 10.0.9`
+- `dotnet tool restore` (installs `dotnet-ef` at the version pinned in `.config/dotnet-tools.json`, kept in step with the EF Core packages)
 - An Azure SQL firewall rule allowing your current IP (the DB has no public access by default):
 
   ```bash
@@ -179,8 +179,19 @@ dotnet ef database update --project src/Gatherstead.Data \
   --connection "Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
 ```
 
-**Option B — mirror CI (recommended)** — generate an idempotent script offline (no DB connection needed),
-then apply it with sqlcmd. This is exactly what the pipeline does in `.github/workflows/ci-cd.yml`:
+**Option B — mirror CI (recommended)** — build a migration bundle offline (no DB connection needed), then
+run it. This is exactly what the pipeline does in `.github/workflows/ci-cd.yml`:
+
+```bash
+dotnet ef migrations bundle --project src/Gatherstead.Data --configuration Release --force -o efbundle
+./efbundle --verbose \
+  --connection "Server=tcp:<sql-server-fqdn>,1433;Database=gatherstead;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=60;"
+```
+
+**Option C — idempotent script** — still supported for reviewing the exact SQL before it runs, but prefer
+A or B for applying it. Unlike a bundle, the script re-sends *every* migration's SQL on every run, so raw
+`migrationBuilder.Sql` in a migration must be `EXEC(N'…')`-wrapped or the script stops parsing once that
+migration is applied (see the migrations convention in [ARCHITECTURE.md](ARCHITECTURE.md)):
 
 ```bash
 dotnet ef migrations script --idempotent --project src/Gatherstead.Data -o migrate.sql
