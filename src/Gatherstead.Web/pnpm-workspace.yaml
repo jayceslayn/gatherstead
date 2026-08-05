@@ -26,23 +26,32 @@ overrides:
   # Must stay on the 2.x line: nuxt and @unhead/vue both depend on unhead ^2, and v3 removed the
   # hooks.hookOnce API that @nuxt/ui calls. Unbounded, this override silently pulls in v3.
   unhead: ">=2.1.13 <3"
-  postcss: ">=8.5.10"
+  # GHSA-r28c-9q8g-f849 (high): path traversal in previous-source-map auto-loading, patched 8.5.18.
+  # GHSA-fxqj-rqcc-2cmp: incomplete fix of GHSA-6g55-p6wh-862q, patched 8.5.23 — so the floor is 8.5.23.
+  # Bounded to 8.x; 9.x would be a breaking API change for every consumer in the tree.
+  postcss: ">=8.5.23 <9"
   simple-git: ">=3.36.0"
   nitropack: ">=2.13.4"
   devalue: ">=5.8.1"
-  # GHSA-3jxr-9vmj-r5cp: DoS via exponential expansion of consecutive non-expanding {} groups.
-  # Patched separately on each major line, so pin all three that appear in the tree. Each must stay
-  # bounded to its own major: unbounded, the 1.x/2.x floors let minimatch 3/5/9 jump the whole way
-  # to brace-expansion 5.0.6, which is itself still vulnerable.
-  "brace-expansion@1": ">=1.1.16 <2"
-  "brace-expansion@2": ">=2.1.2 <3"
-  "brace-expansion@5": ">=5.0.7 <6"
-  ws: ">=8.20.1"
+  # Three DoS advisories, each patched separately on every major line, so pin all three lines that
+  # appear in the tree (minimatch 3 -> 1.x, minimatch 5/9 -> 2.x, minimatch 10 -> 5.x). Each must
+  # stay bounded to its own major: unbounded, the 1.x/2.x floors let minimatch jump the whole way to
+  # a 5.x that is itself still vulnerable.
+  #   GHSA-3jxr-9vmj-r5cp — exponential expansion of consecutive non-expanding {} groups.
+  #   GHSA-mh99-v99m-4gvg — unbounded expansion length.
+  #   GHSA-rgw5-rvv9-x895 — unbounded intermediate arrays, bypassing the above fix. Sets the floors:
+  #                         1.1.18 / 2.1.4 / 5.0.9.
+  "brace-expansion@1": ">=1.1.18 <2"
+  "brace-expansion@2": ">=2.1.4 <3"
+  "brace-expansion@5": ">=5.0.9 <6"
+  # GHSA-96hv-2xvq-fx4p (high): memory-exhaustion DoS from tiny fragments/data chunks, patched 8.21.0.
+  ws: ">=8.21.0"
   # 1.8.5 patches GHSA-395f-4hp3-45gv (quadratic-complexity DoS in parse()).
   shell-quote: ">=1.8.5"
   # node-tar < 7.5.19: GHSA-23hp-3jrh-7fpw (critical, decompression/parse DoS) plus
   # GHSA-8x88-c5mf-7j5w (infinite loop on negative entry size).
-  tar: ">=7.5.19"
+  # GHSA-r292-9mhp-454m: uncontrolled recursion in mapHas/filesFilter, patched 7.5.21.
+  tar: ">=7.5.21"
   # GHSA-2p49-hgcm-8545: svgo's removeScripts plugin leaves some executable scripts intact (XSS).
   # Both consumers (ipx, postcss-svgo) are on the 4.x line, so keep the override bounded there.
   svgo: ">=4.0.2 <5"
@@ -54,3 +63,6 @@ overrides:
   # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
   # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
   happy-dom: ">=20.8.9"
+  # GHSA-5qjj-4xww-7phc: record() issue paths make flatten() throw for invalid keys. Reached via
+  # @nuxt/ui's optional validation-library peers; bounded to 1.x since 2.x is a breaking API change.
+  valibot: ">=1.4.2 <2"

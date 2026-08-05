@@ -61,6 +61,32 @@ jobs:
       - name: Audit pnpm dependencies
         run: pnpm audit --audit-level=high
 
+  audit-pnpm-docs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs-site
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: '11.10.0'
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+          cache-dependency-path: docs-site/pnpm-lock.yaml
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit pnpm dependencies
+        run: pnpm audit --audit-level=high
+
   dependency-review:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
