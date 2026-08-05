@@ -40,7 +40,7 @@ jobs:
 
       - name: Generate coverage report
         run: |
-          dotnet tool install --global dotnet-reportgenerator-globaltool
+          dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.5.11
           reportgenerator \
             -reports:"coverage/**/coverage.cobertura.xml" \
             -targetdir:"coverage/report" \
@@ -69,15 +69,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # pnpm version comes from the project's "packageManager" field — the single source of
+      # truth. Do not hardcode `version:` here; that is how three different pnpm versions ended
+      # up acting on one lockfile.
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: '10.33.0'
+          package_json_file: src/Gatherstead.Web/package.json
 
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: '.node-version'
           cache: pnpm
           cache-dependency-path: src/Gatherstead.Web/pnpm-lock.yaml
 
@@ -263,11 +266,11 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: '10.33.0'
+          package_json_file: src/Gatherstead.Web/package.json
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: '.node-version'
           cache: pnpm
           cache-dependency-path: src/Gatherstead.Web/pnpm-lock.yaml
 
@@ -314,7 +317,7 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: '11.5.0'
+          package_json_file: src/Gatherstead.Web/package.json
 
       - uses: actions/setup-node@v7
         with:

@@ -1,3 +1,7 @@
+# TODO(deps): enable `minimumReleaseAge: 4320` here at the same time as in
+# ../src/Gatherstead.Web/pnpm-workspace.yaml — see the explanation there. Blocked on the same
+# nanoid@3.3.17 lockfile entry; safe from 2026-08-06.
+
 # Native/build-script dependencies this project trusts to run install scripts (pnpm 11+).
 # Mirrors the allowlist convention in ../src/Gatherstead.Web/pnpm-workspace.yaml.
 allowBuilds:

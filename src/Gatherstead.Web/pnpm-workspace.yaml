@@ -1,3 +1,10 @@
+# TODO(deps): enable `minimumReleaseAge: 4320` (3 days — the Tier-1 patch window in
+# docs/SECURITY-DEPS.md) to mechanically enforce the stand-off, which caret ranges cannot do on
+# their own. NOT enabled yet: pnpm validates the policy against the committed lockfile on
+# `pnpm install --frozen-lockfile`, and this lockfile currently pins nanoid@3.3.17 (published
+# 2026-08-03), which the 3-day cutoff rejects — turning every CI install red. Safe to enable from
+# 2026-08-06, once that entry has aged past the window; verify with `pnpm install --frozen-lockfile`
+# in BOTH this project and docs-site before committing.
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
