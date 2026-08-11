@@ -1,3 +1,10 @@
+# TODO(deps): enable `minimumReleaseAge: 4320` (3 days — the Tier-1 patch window in
+# docs/SECURITY-DEPS.md) to mechanically enforce the stand-off, which caret ranges cannot do on
+# their own. NOT enabled yet: pnpm validates the policy against the committed lockfile on
+# `pnpm install --frozen-lockfile`, and this lockfile currently pins nanoid@3.3.17 (published
+# 2026-08-03), which the 3-day cutoff rejects — turning every CI install red. Safe to enable from
+# 2026-08-06, once that entry has aged past the window; verify with `pnpm install --frozen-lockfile`
+# in BOTH this project and docs-site before committing.
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
@@ -14,35 +21,51 @@ overrides:
   "picomatch@4": "^4.0.4"
   lodash: ">=4.17.24"
   defu: ">=6.1.5"
-  # Must stay on the 7.x line: nuxt pins vite 7.3.3, @nuxt/vite-builder wants ^7.3.3, and vitest
-  # caps at ^7. Unbounded, this override forced vite 8 on all three.
-  vite: ">=7.3.2 <8"
+  # Bounded to the 8.x line: @nuxt/vite-builder 4.5.2 depends on vite ^8.2.0. Moving to vite 8 is
+  # what forces vitest 4 (vitest 3 caps at vite ^7) and therefore @nuxt/test-utils 4.
+  vite: ">=8.2.0 <9"
   h3: ">=1.15.9"
   # @redocly/openapi-core (via openapi-typescript) pins js-yaml to an exact 4.1.1; every other
   # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
   # 4.3.0 patches GHSA-52cp-r559-cp3m (quadratic CPU via merge-key chains).
-  js-yaml: ">=4.3.0 <5"
+  # 4.3.1 patches GHSA-8cp3-6hjf-hh8h (high, quadratic CPU in !!omap) — 4.3.0 is still vulnerable.
+  js-yaml: ">=4.3.1 <5"
   srvx: ">=0.11.13"
-  # Must stay on the 2.x line: nuxt and @unhead/vue both depend on unhead ^2, and v3 removed the
-  # hooks.hookOnce API that @nuxt/ui calls. Unbounded, this override silently pulls in v3.
-  unhead: ">=2.1.13 <3"
-  postcss: ">=8.5.10"
+  # Now bounded to the 3.x line. nuxt >= 4.5.0 depends on unhead ^3, which is required to patch five
+  # HIGH nuxt advisories (see the security notes in docs/SECURITY-DEPS.md). The old 2.x bound existed
+  # because unhead 3 removed hooks.hookOnce, which @nuxt/ui 4.9.0 called — @nuxt/ui 4.10.0 no longer
+  # calls it and uses only injectHead/useHead/createHead, all stable in v3.
+  # @unhead/vue is overridden alongside it: @nuxt/ui 4.10.0 still *declares* ^2.1.15, and without
+  # this it would resolve a second, nested v2 copy whose injection key differs from Nuxt's v3 head,
+  # silently breaking head management rather than failing the build.
+  unhead: ">=3.3.1 <4"
+  "@unhead/vue": ">=3.3.1 <4"
+  # GHSA-r28c-9q8g-f849 (high): path traversal in previous-source-map auto-loading, patched 8.5.18.
+  # GHSA-fxqj-rqcc-2cmp: incomplete fix of GHSA-6g55-p6wh-862q, patched 8.5.23 — so the floor is 8.5.23.
+  # Bounded to 8.x; 9.x would be a breaking API change for every consumer in the tree.
+  postcss: ">=8.5.23 <9"
   simple-git: ">=3.36.0"
   nitropack: ">=2.13.4"
   devalue: ">=5.8.1"
-  # GHSA-3jxr-9vmj-r5cp: DoS via exponential expansion of consecutive non-expanding {} groups.
-  # Patched separately on each major line, so pin all three that appear in the tree. Each must stay
-  # bounded to its own major: unbounded, the 1.x/2.x floors let minimatch 3/5/9 jump the whole way
-  # to brace-expansion 5.0.6, which is itself still vulnerable.
-  "brace-expansion@1": ">=1.1.16 <2"
-  "brace-expansion@2": ">=2.1.2 <3"
-  "brace-expansion@5": ">=5.0.7 <6"
-  ws: ">=8.20.1"
+  # Three DoS advisories, each patched separately on every major line, so pin all three lines that
+  # appear in the tree (minimatch 3 -> 1.x, minimatch 5/9 -> 2.x, minimatch 10 -> 5.x). Each must
+  # stay bounded to its own major: unbounded, the 1.x/2.x floors let minimatch jump the whole way to
+  # a 5.x that is itself still vulnerable.
+  #   GHSA-3jxr-9vmj-r5cp — exponential expansion of consecutive non-expanding {} groups.
+  #   GHSA-mh99-v99m-4gvg — unbounded expansion length.
+  #   GHSA-rgw5-rvv9-x895 — unbounded intermediate arrays, bypassing the above fix. Sets the floors:
+  #                         1.1.18 / 2.1.4 / 5.0.9.
+  "brace-expansion@1": ">=1.1.18 <2"
+  "brace-expansion@2": ">=2.1.4 <3"
+  "brace-expansion@5": ">=5.0.9 <6"
+  # GHSA-96hv-2xvq-fx4p (high): memory-exhaustion DoS from tiny fragments/data chunks, patched 8.21.0.
+  ws: ">=8.21.0"
   # 1.8.5 patches GHSA-395f-4hp3-45gv (quadratic-complexity DoS in parse()).
   shell-quote: ">=1.8.5"
   # node-tar < 7.5.19: GHSA-23hp-3jrh-7fpw (critical, decompression/parse DoS) plus
   # GHSA-8x88-c5mf-7j5w (infinite loop on negative entry size).
-  tar: ">=7.5.19"
+  # GHSA-r292-9mhp-454m: uncontrolled recursion in mapHas/filesFilter, patched 7.5.21.
+  tar: ">=7.5.21"
   # GHSA-2p49-hgcm-8545: svgo's removeScripts plugin leaves some executable scripts intact (XSS).
   # Both consumers (ipx, postcss-svgo) are on the 4.x line, so keep the override bounded there.
   svgo: ">=4.0.2 <5"
@@ -54,3 +77,6 @@ overrides:
   # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
   # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
   happy-dom: ">=20.8.9"
+  # GHSA-5qjj-4xww-7phc: record() issue paths make flatten() throw for invalid keys. Reached via
+  # @nuxt/ui's optional validation-library peers; bounded to 1.x since 2.x is a breaking API change.
+  valibot: ">=1.4.2 <2"

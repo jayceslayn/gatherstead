@@ -14,8 +14,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Pin to 3.50.3 which bundles SQLite >= 3.50.2, fixing GHSA-2m69-gcr7-jv3q (CVE-2025-6965). -->
-    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.50.3" />
+    <!-- Floor of 3.50.3: bundles SQLite >= 3.50.2, fixing GHSA-2m69-gcr7-jv3q (CVE-2025-6965).
+         Kept explicit so the bundled SQLite never silently regresses below that floor. -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
   </ItemGroup>
 
   <ItemGroup>

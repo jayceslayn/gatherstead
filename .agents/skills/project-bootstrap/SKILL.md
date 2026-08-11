@@ -70,6 +70,7 @@ Read only what your task needs. Skip the rest.
 | **Planning / design** | `docs/ARCHITECTURE.md` + `docs/IMPLEMENTATION_STATUS.md` + browse `.agents/plans/` for format precedent | Roadmap and direction; existing plan structure; scope conventions |
 | **Security / observability** | `docs/DESIGN_PRINCIPLES.md` + `docs/OBSERVABILITY.md` | PII logging ban, tenant isolation rules, OTel allowlist |
 | **Deployment / infra** | `docs/DEPLOYMENT.md` | Bicep modules, SKU differences, migration runbook |
+| **Dependency audit / upgrade** | `.agents/skills/dependency-audit/SKILL.md` + `docs/SECURITY-DEPS.md` | Known upgrade blockers, registry/advisory query recipes, lockfile mechanics, stand-off policy |
 
 ## Non-Negotiable Conventions
 
