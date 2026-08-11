@@ -95,39 +95,74 @@ PR — which then goes red for reasons unrelated to its own diff. Always sweep f
 
 Verified from registry metadata and the installed tree, 2026-08-04.
 
-### The frontend chokepoint: `@nuxt/ui` → unhead 3
+### RESOLVED 2026-08-10 — the `@nuxt/ui` → unhead 3 chokepoint
 
-`nuxt` ≥ 4.5.0 depends on `unhead ^3` / `@unhead/vue ^3`. `@nuxt/ui` 4.10.0 (latest)
-still depends on `@unhead/vue ^2.1.15`, and calls `hookOnce`
-(`@nuxt/ui/dist/runtime/plugins/colors.js`), which unhead 3 removed.
+This was the dominant blocker on 2026-08-05 and it is **gone**. Kept because the
+reasoning is reusable, not because it still blocks anything.
 
-Consequences:
-- **`nuxt` is pinned at 4.4.8** — already the newest 4.4.x.
-- The `unhead: ">=2.1.13 <3"` override in `src/Gatherstead.Web/pnpm-workspace.yaml`
-  must stay bounded below 3.
-- **Watch item:** the `@nuxt/ui` release that adopts unhead 3 unblocks this entire
-  cluster. Treat it as the trigger for a dedicated frontend-upgrade PR.
+The claim was: `nuxt` ≥ 4.5.0 needs `unhead ^3`, but `@nuxt/ui` calls `hookOnce`, which
+unhead 3 removed, so nuxt is stuck at 4.4.8.
 
-### `@nuxt/kit` must be a singleton — 3 modules transitively blocked
+What was actually true: **`@nuxt/ui` 4.10.0 no longer calls `hookOnce`.** Grep its
+`dist/` — zero hits, where 4.9.0 had one in `runtime/plugins/colors.js`. It imports
+only `injectHead`, `useHead` and `createHead`, all stable in unhead 3. Its
+`package.json` still *declares* `@unhead/vue ^2.1.15`, which is simply stale.
 
-| Module | Next release | Requires |
-|---|---|---|
-| `@nuxt/icon` | 2.4.1 | `@nuxt/kit ^4.5.0` |
-| `@nuxt/image` | 2.1.0 | `@nuxt/kit ^4.5.1` |
-| `@nuxtjs/i18n` | 10.5.0+ | `@nuxt/kit ^4.5.x` **and** `unhead ^3.2.x` |
+**Lesson: a declared range is not proof of incompatibility.** Check what the code
+imports before accepting a version wall. The stale range did still matter in one way —
+without an explicit `@unhead/vue` override pnpm resolves a second nested v2 copy, whose
+Vue injection key differs from Nuxt's v3 head, breaking head management *silently*
+rather than failing the build. Override both keys together:
 
-There is **no intermediate version** — each module's very next release jumps straight
-to kit 4.5.x. A nested second `@nuxt/kit` duplicates the schema/hook registry and
-fails subtly rather than loudly, so a green build does not clear it. Always verify:
-
-```bash
-pnpm why @nuxt/kit    # exactly one 4.x entry, and it must be 4.4.x
-pnpm why unhead       # must show no 3.x
+```yaml
+unhead: ">=3.3.1 <4"
+"@unhead/vue": ">=3.3.1 <4"
 ```
 
-A `@nuxt/kit@3.21.8` entry alongside `4.4.8` is **pre-existing and expected** — an
+That also unblocked `@nuxt/icon`, `@nuxt/image` and `@nuxtjs/i18n`, which had all moved
+to `@nuxt/kit ^4.5.x` with no intermediate version — they went from casualties to part
+of the fix. Their `dependabot.yml` minor-ignore entries were removed with the upgrade.
+
+### `@nuxt/kit` must be a singleton on its 4.x line
+
+Still true, and the thing to check after any nuxt bump. A nested second `@nuxt/kit`
+duplicates the schema/hook registry and fails subtly rather than loudly, so a green
+build does not clear it.
+
+```bash
+pnpm why @nuxt/kit    # exactly one 4.x entry, matching the installed nuxt
+pnpm why unhead       # exactly one major
+```
+
+A `@nuxt/kit@3.21.x` entry alongside the 4.x one is **pre-existing and expected** — an
 unrelated legacy module pulls the 3.x line. The invariant is one entry on the *4.x*
-line, not one entry overall.
+line, not one overall.
+
+**A nuxt bump strands every module's kit resolution.** Moving nuxt 4.4.8 → 4.5.2 left
+nine modules (`@nuxt/ui`, `@nuxt/eslint`, `@nuxt/fonts`, `@nuxtjs/color-mode`,
+`@pinia/nuxt`, `nuxt-auth-utils`, `nuxt-security`, `unplugin-auto-import`,
+`unplugin-vue-components`) still on `@nuxt/kit@4.4.8` even though all declare carets
+that accept 4.5.2 — pnpm does not re-resolve an already-satisfied transitive. Always
+follow a nuxt bump with:
+
+```bash
+pnpm update @nuxt/kit @nuxt/schema @nuxt/devtools-kit
+```
+
+`@nuxt/devtools-kit` legitimately splits across majors: `@nuxt/test-utils` 4.1.0
+declares `^2.7.0` while nuxt pulls 3.4.1. Dev-only — leave it.
+
+### nuxt 4.5.x drags vite 8, and with it the whole test stack
+
+`@nuxt/vite-builder` 4.5.0 already requires `vite ^8.1.4` (4.5.2: `^8.2.0`). **No**
+nuxt 4.5.x runs on vite 7. Since vitest 3 caps at `vite ^7`, moving nuxt forces:
+
+```
+nuxt 4.5.x -> vite 8 -> vitest 4 -> @nuxt/test-utils 4 (peers vitest ^4.0.2)
+```
+
+Budget for all four together; none moves alone. The migration itself was clean —
+vitest 4 needed no `vitest.config.ts` changes and all 40 tests passed unmodified.
 
 These are *minor* bumps, so Dependabot files them in the `npm-minor` group where
 policy says merge-once-green. `.github/dependabot.yml` carries `ignore` entries for
@@ -272,19 +307,34 @@ disabled the build-script allowlist; it did not.
 
 ## 8. Deferred queue
 
-Carried forward from the 2026-08-04 pass. Dates are when the stand-off window opens.
+Current as of the 2026-08-10 pass. Dates are when the stand-off window opens.
 
 | Item | Blocked by | Revisit |
 |---|---|---|
-| `nuxt` 4.5.x | unhead 3 vs `@nuxt/ui` (§3) | when @nuxt/ui adopts unhead 3 |
-| `@nuxt/icon`, `@nuxt/image`, `@nuxtjs/i18n` | `@nuxt/kit ^4.5.x` (§3) | with nuxt 4.5 |
 | `typescript` 7 | `@nuxt/ui` + `@astrojs/check` peers (§3) | ecosystem |
 | `@fullcalendar/*` 7 | tilde peer + exact dep (§3) | when daygrid/list ship 7.x |
 | `@types/node` 26 | runtime is Node 24 | with the runtime |
 | `pinia` 4 + `@pinia/nuxt` 1 | 30-day major window | 2026-08-15 |
-| `vitest` 4 + `@nuxt/test-utils` 4 | 30-day window; `@nuxt/test-utils` is the binding constraint | 2026-08-26 |
-| pnpm 11.20.0 | published 2026-08-03 | 2026-08-10 |
+| pnpm 11.20.0+ | keep `packageManager` seasoned ≥7d | rolling |
 | `OpenTelemetry.Instrumentation.EntityFrameworkCore` | only prerelease in the tree; no stable exists at all | no functional need |
+
+**Cleared on 2026-08-10, all forced by the nuxt advisory wave:** `nuxt` 4.5.2,
+`@nuxt/icon` 2.4.1, `@nuxt/image` 2.1.0, `@nuxtjs/i18n` 10.6.0, `unhead` 3.3.1,
+`vite` 8.2.1, `vitest` 4.1.10, `@nuxt/test-utils` 4.1.0.
+
+`@nuxt/test-utils` 4.1.0 was taken at 13 days against a 30-day major window. That is a
+deliberate, documented exception: it is a transitive consequence of patching five HIGH
+nuxt advisories, and it is dev-only. The security track in
+[docs/SECURITY-DEPS.md](../../../docs/SECURITY-DEPS.md) supersedes the routine window.
+
+### Cadence lesson from this pass
+
+Five days elapsed between the 2026-08-05 audit and 2026-08-10, and in that window a
+nuxt advisory wave (5 HIGH incl. an 8.1 RCE, plus a 9.6 CRITICAL in `@nuxt/devtools`)
+turned a green PR red without a single line of its diff changing. **Re-run the advisory
+sweep immediately before merging, not only when opening the PR** — a dependency PR that
+sat for a few days is stale by definition, and `pnpm audit` gates on the *current*
+database, not the one that existed when the branch was cut.
 
 ### Known-good structural work, not yet done
 

@@ -25,3 +25,6 @@ overrides:
   # GHSA-r28c-9q8g-f849 (high, path traversal) + GHSA-fxqj-rqcc-2cmp (incomplete fix of
   # GHSA-6g55-p6wh-862q, patched 8.5.23). Reached via expressive-code and postcss-nested.
   postcss: ">=8.5.23 <9"
+  # GHSA-8cp3-6hjf-hh8h (high): quadratic CPU consumption in !!omap. Bounded to the 4.x line;
+  # 5.x is a breaking API change for every consumer in the tree.
+  js-yaml: ">=4.3.1 <5"

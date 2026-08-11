@@ -33,22 +33,6 @@ updates:
         update-types:
           - version-update:semver-minor
           - version-update:semver-major
-      # Blocked on the @nuxt/ui -> unhead 3 chokepoint, not on version quality. These modules'
-      # next releases require @nuxt/kit ^4.5.x, but nuxt is held at 4.4.8 because @nuxt/ui 4.x
-      # still needs @unhead/vue ^2. Taking them nests a second @nuxt/kit, which duplicates the
-      # schema/hook registry and fails subtly — CI can go green while the app is broken.
-      # Because these are minors they would otherwise land in the merge-once-green npm-minor
-      # group. Remove all three together with the nuxt 4.5 upgrade.
-      # See .agents/skills/dependency-audit/SKILL.md section 3.
-      - dependency-name: "@nuxt/icon"
-        update-types:
-          - version-update:semver-minor
-      - dependency-name: "@nuxt/image"
-        update-types:
-          - version-update:semver-minor
-      - dependency-name: "@nuxtjs/i18n"
-        update-types:
-          - version-update:semver-minor
 
   - package-ecosystem: npm
     directory: /docs-site

@@ -21,18 +21,25 @@ overrides:
   "picomatch@4": "^4.0.4"
   lodash: ">=4.17.24"
   defu: ">=6.1.5"
-  # Must stay on the 7.x line: nuxt pins vite 7.3.3, @nuxt/vite-builder wants ^7.3.3, and vitest
-  # caps at ^7. Unbounded, this override forced vite 8 on all three.
-  vite: ">=7.3.2 <8"
+  # Bounded to the 8.x line: @nuxt/vite-builder 4.5.2 depends on vite ^8.2.0. Moving to vite 8 is
+  # what forces vitest 4 (vitest 3 caps at vite ^7) and therefore @nuxt/test-utils 4.
+  vite: ">=8.2.0 <9"
   h3: ">=1.15.9"
   # @redocly/openapi-core (via openapi-typescript) pins js-yaml to an exact 4.1.1; every other
   # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
   # 4.3.0 patches GHSA-52cp-r559-cp3m (quadratic CPU via merge-key chains).
-  js-yaml: ">=4.3.0 <5"
+  # 4.3.1 patches GHSA-8cp3-6hjf-hh8h (high, quadratic CPU in !!omap) — 4.3.0 is still vulnerable.
+  js-yaml: ">=4.3.1 <5"
   srvx: ">=0.11.13"
-  # Must stay on the 2.x line: nuxt and @unhead/vue both depend on unhead ^2, and v3 removed the
-  # hooks.hookOnce API that @nuxt/ui calls. Unbounded, this override silently pulls in v3.
-  unhead: ">=2.1.13 <3"
+  # Now bounded to the 3.x line. nuxt >= 4.5.0 depends on unhead ^3, which is required to patch five
+  # HIGH nuxt advisories (see the security notes in docs/SECURITY-DEPS.md). The old 2.x bound existed
+  # because unhead 3 removed hooks.hookOnce, which @nuxt/ui 4.9.0 called — @nuxt/ui 4.10.0 no longer
+  # calls it and uses only injectHead/useHead/createHead, all stable in v3.
+  # @unhead/vue is overridden alongside it: @nuxt/ui 4.10.0 still *declares* ^2.1.15, and without
+  # this it would resolve a second, nested v2 copy whose injection key differs from Nuxt's v3 head,
+  # silently breaking head management rather than failing the build.
+  unhead: ">=3.3.1 <4"
+  "@unhead/vue": ">=3.3.1 <4"
   # GHSA-r28c-9q8g-f849 (high): path traversal in previous-source-map auto-loading, patched 8.5.18.
   # GHSA-fxqj-rqcc-2cmp: incomplete fix of GHSA-6g55-p6wh-862q, patched 8.5.23 — so the floor is 8.5.23.
   # Bounded to 8.x; 9.x would be a breaking API change for every consumer in the tree.

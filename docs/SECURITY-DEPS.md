@@ -132,6 +132,44 @@ If only criterion 1 holds (CVE published, no exploitation signal) but CVSS
   make the `xunit.v3 4.0.0-pre` prereleases unreachable by accident. The floats are
   inert in CI while a `packages.lock.json` exists; they only bite at regeneration time.
 
+## Retro — 2026-08 nuxt advisory wave
+
+On 2026-08-05 a wave of advisories landed against the Nuxt stack, five days after this
+repo's dependency audit had gone green. `pnpm audit` turned the open PR red without any
+change to its own diff:
+
+| Package | Severity | Advisory |
+|---|---|---|
+| `@nuxt/devtools` | **CRITICAL 9.6** | GHSA-279x-mwfv-vcqv — unauthenticated DevTools RPC allows arbitrary commands |
+| `nuxt` | **HIGH 8.2** | GHSA-hxvh-4h3w-prp9 — route rules silently dropped for mixed-case paths, bypassing rules |
+| `nuxt` | **HIGH 8.1** | GHSA-9473-5f9j-94wq — server-side RCE via runtime template |
+| `nuxt` | **HIGH 7.5** | GHSA-wm8w-6qjm-cv43 — runtime payload cache discloses another user's SSR data |
+| `nuxt` | **HIGH 7.5** | GHSA-9pgf-384g-p7mv — unauthenticated CPU exhaustion |
+| `nuxt` | **HIGH 7.5** | GHSA-hxcr-hm88-mpq6 — unauthenticated out-of-memory crash |
+| `js-yaml` | **HIGH** | GHSA-8cp3-6hjf-hh8h — quadratic CPU in `!!omap` (4.3.0 still vulnerable) |
+
+Every `nuxt` fix required ≥ 4.5.1, which this repo had previously recorded as blocked.
+GHSA-wm8w-6qjm-cv43 is the one that made the decision straightforward: cross-request SSR
+payload disclosure is a tenant-isolation failure, which
+[DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md) treats as non-negotiable.
+
+Two lessons, both now in the audit skill:
+
+1. **Re-sweep advisories immediately before merge, not only at PR-open.** `pnpm audit`
+   gates on the current database; a dependency PR that sits for days is stale by
+   definition.
+2. **A declared dependency range is not proof of incompatibility.** The nuxt block
+   rested on `@nuxt/ui` needing unhead 2. Its *declared* range still said `^2.1.15`, but
+   the code had stopped calling the removed API an entire release earlier. Reading the
+   shipped code, not the manifest, unblocked the whole upgrade.
+
+### Accepted exception
+
+`@nuxt/test-utils` 4.1.0 was adopted at 13 days against the 30-day major window. It is a
+forced transitive consequence of the fix chain (`nuxt 4.5.x → vite 8 → vitest 4 →
+@nuxt/test-utils 4`; no nuxt 4.5.x runs on vite 7), and it is dev-only. The security
+track above supersedes the routine stand-off.
+
 ## Deferred upgrades
 
 Blockers and dates are maintained in
