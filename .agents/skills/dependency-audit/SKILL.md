@@ -1,8 +1,8 @@
 ---
 name: dependency-audit
 description: Run a solution-wide dependency audit or upgrade across the .NET solution, the Nuxt web app, and the Astro docs site. Caches known blockers, registry-query recipes, and lockfile mechanics so each pass starts from evidence instead of re-deriving it.
-updated: 2026-08-04
-commit: 97b5ac7
+updated: 2026-08-10
+commit: d13541c
 ---
 
 # Gatherstead — Dependency Audit & Upgrade
@@ -300,7 +300,9 @@ disabled the build-script allowlist; it did not.
   override isn't reaching the consumer; re-check the *resolved* version.
 - `pnpm install --frozen-lockfile` fails after an override edit → regenerate the lock;
   never hand-patch one.
-- `pnpm why @nuxt/kit` shows more than one version, or `pnpm why unhead` shows 3.x.
+- `pnpm why @nuxt/kit` shows more than one **4.x** version (a single 3.21.x entry
+  alongside the 4.x singleton is expected — see §3), or `pnpm why unhead` shows more
+  than one major, or any major other than the expected 3.x.
 - A new advisory publishes mid-pass → finish the batch, then re-sweep.
 
 ---
