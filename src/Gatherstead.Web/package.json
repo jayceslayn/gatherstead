@@ -27,17 +27,17 @@
     "@nuxtjs/i18n": "^10.6.0",
     "@pinia/nuxt": "^0.11.3",
     "nuxt": "^4.5.1",
-    "nuxt-auth-utils": "^0.5.29",
+    "nuxt-auth-utils": "^0.5.30",
     "nuxt-security": "^2.6.0",
     "pinia": "^3.0.4",
     "serialize-javascript": "^7.0.7",
     "tailwindcss": "^4.3.3",
-    "vue": "^3.5.40",
+    "vue": "^3.5.42",
     "vue-router": "^5.2.0"
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
-    "@iconify-json/lucide": "^1.2.121",
+    "@iconify-json/lucide": "^1.2.126",
     "@intlify/eslint-plugin-vue-i18n": "^4.5.1",
     "@nuxt/eslint": "^1.16.0",
     "@nuxt/test-utils": "^4.1.0",
@@ -46,8 +46,8 @@
     "eslint": "^10.8.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.10",
-    "vue-tsc": "^3.3.9"
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.11"
   },
   "packageManager": "pnpm@11.15.1+sha512.81350b07e53c9538a02f1f2303b4290fa2d7be04e56e2a970c4cc4b417dc761de196edabd49d55c7dc9580db81007c44143e4e3d7e462b3000d23c255122d065"
 }
