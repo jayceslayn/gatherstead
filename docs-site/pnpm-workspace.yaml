@@ -12,6 +12,9 @@ allowBuilds:
 # astro 7.1.x requires vite ^8, so web's `vite: ">=7.3.2 <8"` bound would break this build.
 # Only add keys here that a resolved version in pnpm-lock.yaml actually needs.
 overrides:
+  # GHSA-2v37-7h3g-55p8 (high): custom generators loop indefinitely when size is 0. Reached
+  # transitively via postcss (pulled in by vite); patched 3.3.18.
+  nanoid: ">=3.3.18"
   # GHSA-f88m-g3jw-g9cj (high): sharp < 0.35.0 bundles a libvips with four CVEs. astro declares
   # `sharp ^0.34.0 || ^0.35.0` and resolved 0.34.5, so bumping astro alone does not fix it.
   # Bounded to the 0.35 line; requires node >=20.9, satisfied by the node 24 used in CI.
