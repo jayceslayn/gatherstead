@@ -12,19 +12,36 @@ allowBuilds:
 # astro 7.1.x requires vite ^8, so web's `vite: ">=7.3.2 <8"` bound would break this build.
 # Only add keys here that a resolved version in pnpm-lock.yaml actually needs.
 overrides:
+  # GHSA-2v37-7h3g-55p8 (high): custom generators loop indefinitely when size is 0. Reached
+  # transitively via postcss (pulled in by vite); patched 3.3.18.
+  nanoid: ">=3.3.18"
   # GHSA-f88m-g3jw-g9cj (high): sharp < 0.35.0 bundles a libvips with four CVEs. astro declares
   # `sharp ^0.34.0 || ^0.35.0` and resolved 0.34.5, so bumping astro alone does not fix it.
   # Bounded to the 0.35 line; requires node >=20.9, satisfied by the node 24 used in CI.
-  sharp: ">=0.35.0 <0.36"
+  # GHSA-rgj7-g3m4-5g8c (high): two more libheif CVEs (GHSA-g89c-p67h-r497, GHSA-2jg2-4ch7-h545),
+  # patched 0.35.4.
+  sharp: ">=0.35.4 <0.36"
   # GHSA-2p49-hgcm-8545 (high): svgo's removeScripts plugin leaves some executable scripts intact
   # (XSS). astro still declares `svgo ^4.0.1`, so this floor is required independently of the bump.
-  svgo: ">=4.0.2 <5"
+  # GHSA-w27v-7q3p-w38r (high) + GHSA-4vpr-x523-8j87 (moderate): two more removeScripts bypasses
+  # (namespace/control-char links, and foreignObject HTML), patched 4.1.0.
+  svgo: ">=4.1.0 <5"
   # GHSA-7p8r-x3mc-p8w7 / GHSA-v2hh-gcrm-f6hx (high): host confusion via backslash authority.
   # Reached through ajv; bounded to 3.x since 4.x is a breaking API change.
-  fast-uri: ">=3.1.5 <4"
+  # GHSA-5jgf-p345-68v8 / GHSA-f65p-4m7j-42xc / GHSA-fph4-wmhf-6fwf / GHSA-jqff-g426-hqxp (all
+  # high): IDN, IPv6, and percent-decoding host-confusion/SSRF variants, patched 3.1.6.
+  fast-uri: ">=3.1.6 <4"
   # GHSA-r28c-9q8g-f849 (high, path traversal) + GHSA-fxqj-rqcc-2cmp (incomplete fix of
   # GHSA-6g55-p6wh-862q, patched 8.5.23). Reached via expressive-code and postcss-nested.
   postcss: ">=8.5.23 <9"
   # GHSA-8cp3-6hjf-hh8h (high): quadratic CPU consumption in !!omap. Bounded to the 4.x line;
   # 5.x is a breaking API change for every consumer in the tree.
-  js-yaml: ">=4.3.1 <5"
+  # GHSA-2883-xcg3-v3hh (high): maxTotalMergeKeys doesn't limit CPU for empty merge sources,
+  # patched 4.3.2 — 4.3.1 is still vulnerable.
+  js-yaml: ">=4.3.2 <5"
+  # GHSA-9rgm-9g3h-6x36 (moderate): DoS via malformed input, patched 5.9.1. Reached via astro,
+  # which declares ^5.8.1; bounded to the 5.x line.
+  devalue: ">=5.9.1 <6"
+  # GHSA-7w5x-hrqm-74c2 (high): DoS via malformed TOML documents, patched 1.7.1. Reached via astro,
+  # which declares ^1.6.0; bounded to the 1.x line.
+  smol-toml: ">=1.7.1 <2"
