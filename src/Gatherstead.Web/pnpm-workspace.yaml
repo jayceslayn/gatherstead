@@ -36,7 +36,9 @@ overrides:
   # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
   # 4.3.0 patches GHSA-52cp-r559-cp3m (quadratic CPU via merge-key chains).
   # 4.3.1 patches GHSA-8cp3-6hjf-hh8h (high, quadratic CPU in !!omap) — 4.3.0 is still vulnerable.
-  js-yaml: ">=4.3.1 <5"
+  # 4.3.2 patches GHSA-2883-xcg3-v3hh (high, maxTotalMergeKeys doesn't limit CPU for empty merge
+  # sources) — 4.3.1 is still vulnerable.
+  js-yaml: ">=4.3.2 <5"
   srvx: ">=0.11.13"
   # Now bounded to the 3.x line. nuxt >= 4.5.0 depends on unhead ^3, which is required to patch five
   # HIGH nuxt advisories (see the security notes in docs/SECURITY-DEPS.md). The old 2.x bound existed
@@ -53,7 +55,6 @@ overrides:
   postcss: ">=8.5.23 <9"
   simple-git: ">=3.36.0"
   nitropack: ">=2.13.4"
-  devalue: ">=5.8.1"
   # Three DoS advisories, each patched separately on every major line, so pin all three lines that
   # appear in the tree (minimatch 3 -> 1.x, minimatch 5/9 -> 2.x, minimatch 10 -> 5.x). Each must
   # stay bounded to its own major: unbounded, the 1.x/2.x floors let minimatch jump the whole way to
@@ -75,11 +76,15 @@ overrides:
   tar: ">=7.5.21"
   # GHSA-2p49-hgcm-8545: svgo's removeScripts plugin leaves some executable scripts intact (XSS).
   # Both consumers (ipx, postcss-svgo) are on the 4.x line, so keep the override bounded there.
-  svgo: ">=4.0.2 <5"
+  # GHSA-w27v-7q3p-w38r (high) + GHSA-4vpr-x523-8j87 (moderate): two more removeScripts bypasses
+  # (namespace/control-char links, and foreignObject HTML), patched 4.1.0.
+  svgo: ">=4.1.0 <5"
   # GHSA-f88m-g3jw-g9cj: sharp < 0.35.0 bundles a libvips with four CVEs. Patched only on the 0.35
   # line, which is a major bump for ipx (declares ^0.34); bounded to 0.35.x. Requires node >=20.9,
   # satisfied by the node 24 used in CI.
-  sharp: ">=0.35.0 <0.36"
+  # GHSA-rgj7-g3m4-5g8c (high): two more libheif CVEs (GHSA-g89c-p67h-r497, GHSA-2jg2-4ch7-h545),
+  # patched 0.35.4.
+  sharp: ">=0.35.4 <0.36"
   # happy-dom < 20.8.9 has critical VM-escape RCE + related advisories. It is only an optional peer
   # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
   # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
@@ -87,3 +92,11 @@ overrides:
   # GHSA-5qjj-4xww-7phc: record() issue paths make flatten() throw for invalid keys. Reached via
   # @nuxt/ui's optional validation-library peers; bounded to 1.x since 2.x is a breaking API change.
   valibot: ">=1.4.2 <2"
+  # GHSA-9rgm-9g3h-6x36 (moderate): DoS via malformed input, patched 5.9.1. Reached via nuxt/
+  # @nuxtjs/i18n, which declare ^5.9.0; bounded to the 5.x line.
+  devalue: ">=5.9.1 <6"
+  # GHSA-cp6q-959q-f8rh (moderate): mergeAttributes() turns an own __proto__ key into inherited
+  # executable DOM attributes, patched 3.30.4.
+  # GHSA-j95f-988m-3j2f (high): quadratic ReDoS in block/inline Markdown attribute parsing, patched
+  # 3.30.5. Reached via @nuxt/ui's rich-text editor, which declares ^3; bounded to the 3.x line.
+  "@tiptap/core": ">=3.30.5 <4"
