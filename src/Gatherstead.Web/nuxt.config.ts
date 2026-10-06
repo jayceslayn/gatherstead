@@ -40,6 +40,12 @@ export default defineNuxtConfig({
     'nuxt-security',
   ],
 
+  // The landing page is prerendered without a session cookie, and authenticated areas are client-only.
+  // Fetch the session in the browser so prerender never calls /api/_auth/session without the runtime key.
+  auth: {
+    loadStrategy: 'client-only',
+  },
+
   typescript: {
     strict: true,
     typeCheck: 'build',
