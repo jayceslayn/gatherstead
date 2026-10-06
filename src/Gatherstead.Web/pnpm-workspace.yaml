@@ -1,10 +1,8 @@
 # TODO(deps): enable `minimumReleaseAge: 4320` (3 days — the Tier-1 patch window in
 # docs/SECURITY-DEPS.md) to mechanically enforce the stand-off, which caret ranges cannot do on
-# their own. NOT enabled yet: pnpm validates the policy against the committed lockfile on
-# `pnpm install --frozen-lockfile`, and this lockfile currently pins nanoid@3.3.17 (published
-# 2026-08-03), which the 3-day cutoff rejects — turning every CI install red. Safe to enable from
-# 2026-08-06, once that entry has aged past the window; verify with `pnpm install --frozen-lockfile`
-# in BOTH this project and docs-site before committing.
+# their own. NOT enabled yet: pnpm validates the policy against every committed lockfile entry on
+# `pnpm install --frozen-lockfile`. Recheck the youngest resolved packages in BOTH installs before
+# enabling it; the previously noted nanoid@3.3.17 blocker has aged out, but that alone is not enough.
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
@@ -22,8 +20,10 @@ overrides:
   browserslist: ">=4.28.7"
   "esbuild": ">=0.28.1"
   # Overrides shadow the direct dependency too, so keep this floor in step with package.json.
-  serialize-javascript: ">=7.0.7 <8"
-  node-forge: ">=1.4.0"
+  serialize-javascript: ">=7.1.2 <8"
+  # GHSA-86w9-cpqp-85rv lists 1.4.1 as fixed, but that release is not on npm yet (1.4.0 remains
+  # latest). Keep the current API line bounded until upstream publishes the fix.
+  node-forge: ">=1.4.0 <2"
   "picomatch@2": "^2.3.2"
   "picomatch@4": "^4.0.4"
   lodash: ">=4.17.24"
@@ -53,7 +53,9 @@ overrides:
   # GHSA-fxqj-rqcc-2cmp: incomplete fix of GHSA-6g55-p6wh-862q, patched 8.5.23 — so the floor is 8.5.23.
   # Bounded to 8.x; 9.x would be a breaking API change for every consumer in the tree.
   postcss: ">=8.5.23 <9"
-  simple-git: ">=3.36.0"
+  # GHSA-x6jw-m9v5-85vh (critical) also requires @simple-git/argv-parser 2.x; simple-git 4.0.1+
+  # is the first compatible release. DevTools 3.4.1's removed default import is patched in patches/.
+  simple-git: ">=4.0.1 <5"
   nitropack: ">=2.13.4"
   # Three DoS advisories, each patched separately on every major line, so pin all three lines that
   # appear in the tree (minimatch 3 -> 1.x, minimatch 5/9 -> 2.x, minimatch 10 -> 5.x). Each must
@@ -62,10 +64,11 @@ overrides:
   #   GHSA-3jxr-9vmj-r5cp — exponential expansion of consecutive non-expanding {} groups.
   #   GHSA-mh99-v99m-4gvg — unbounded expansion length.
   #   GHSA-rgw5-rvv9-x895 — unbounded intermediate arrays, bypassing the above fix. Sets the floors:
-  #                         1.1.18 / 2.1.4 / 5.0.9.
-  "brace-expansion@1": ">=1.1.18 <2"
-  "brace-expansion@2": ">=2.1.4 <3"
-  "brace-expansion@5": ">=5.0.9 <6"
+  #                         1.1.21 / 2.1.7 / 5.0.10. The floors also include the 2026-10
+  #                         GHSA-q2hr-2g5m-vwhr and GHSA-qhr7-859c-m2p7 advisories.
+  "brace-expansion@1": ">=1.1.21 <2"
+  "brace-expansion@2": ">=2.1.7 <3"
+  "brace-expansion@5": ">=5.0.10 <6"
   # GHSA-96hv-2xvq-fx4p (high): memory-exhaustion DoS from tiny fragments/data chunks, patched 8.21.0.
   ws: ">=8.21.0"
   # 1.8.5 patches GHSA-395f-4hp3-45gv (quadratic-complexity DoS in parse()).
@@ -100,3 +103,18 @@ overrides:
   # GHSA-j95f-988m-3j2f (high): quadratic ReDoS in block/inline Markdown attribute parsing, patched
   # 3.30.5. Reached via @nuxt/ui's rich-text editor, which declares ^3; bounded to the 3.x line.
   "@tiptap/core": ">=3.30.5 <4"
+  # GHSA-rj75-hqrm-r3gf: selector parser nesting DoS; patched on the maintained 7.x line at 7.1.6.
+  "postcss-selector-parser": ">=7.1.6 <8"
+  # GHSA-c8x8-7fp4-3x9w: XSS in paste handling, patched in ProseMirror 1.42.3.
+  "prosemirror-view": ">=1.42.3 <2"
+  # GHSA-jp82-f5mq-hwhp: malformed-value DoS, patched in seroval 1.6.3.
+  seroval: ">=1.6.3 <2"
+  # GHSA-68fv-2mgg-jv7q: patched in source-map-js 1.2.2.
+  "source-map-js": ">=1.2.2 <2"
+  # Nuxt resolves Undici 8.x; 8.10.2 fixes the published request/response DoS advisories.
+  undici: ">=8.10.2 <9"
+  # Keep Vue's renderer on the same patched 3.5 line when a test utility resolves an older Vue.
+  "@vue/server-renderer": ">=3.5.42 <3.6"
+
+patchedDependencies:
+  '@nuxt/devtools@3.4.1': patches/@nuxt__devtools@3.4.1.patch
