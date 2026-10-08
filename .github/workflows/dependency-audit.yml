@@ -98,3 +98,5 @@ jobs:
       - uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
+          # Temporary upstream-fix exceptions; keep the advisory gate active for everything else.
+          allow-ghsas: GHSA-vfj7-8cjw-p6xm, GHSA-86w9-cpqp-85rv

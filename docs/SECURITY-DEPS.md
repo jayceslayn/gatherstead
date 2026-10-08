@@ -1,5 +1,5 @@
 ---
-updated: 2026-10-05
+updated: 2026-10-08
 ---
 
 # Dependency Security & Update Policy
@@ -94,10 +94,18 @@ as proof of exploitation.
 
 ## Open web advisories
 
-The current web lockfile resolves braces 3.0.3 and node-forge 1.4.0. Their advisories
-list fixes at braces 3.0.4 or later and node-forge 1.4.1 or later, but those versions
-are not available from npm. Recheck the live registry and audit before relying on
-this status. Do not force an unpublished version into the lockfile.
+As of 2026-10-08, the current web lockfile resolves braces 3.0.3 and node-forge 1.4.0.
+Their GitHub advisories list no patched versions, and npm still lists those same versions
+as latest. Recheck the advisories, registry, and audit before relying on this status. Do
+not force an unpublished version into the lockfile. ([braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
+[node-forge advisory](https://github.com/advisories/GHSA-86w9-cpqp-85rv),
+[braces on npm](https://www.npmjs.com/package/braces),
+[node-forge on npm](https://www.npmjs.com/package/node-forge))
+
+The web workspace's pnpm audit and the PR dependency-review check temporarily ignore
+only these two GHSA IDs so other dependency fixes can pass CI. Remove each exception
+as soon as its patched release is published and resolved; the exceptions do not change
+the installed versions or indicate that these advisories are fixed.
 
 - [braces GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
 - [node-forge GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv)
