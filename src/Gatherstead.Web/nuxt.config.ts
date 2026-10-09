@@ -146,7 +146,6 @@ export default defineNuxtConfig({
       fallbackLocale: 'en',
       redirectOn: 'all',
     },
-    vueI18n: './i18n.config.ts',
   },
 
   runtimeConfig: {
