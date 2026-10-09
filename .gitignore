@@ -55,6 +55,7 @@ nunit-*.xml
 
 # Node.js / Nuxt
 node_modules/
+.pnpm-store/
 .nuxt/
 .output/
 .data/
