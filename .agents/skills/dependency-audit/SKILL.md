@@ -1,7 +1,7 @@
 ---
 name: dependency-audit
 description: Audit and update dependencies across Gatherstead .NET, Nuxt, and Astro projects using current registry data, compatible lockfile changes, and repository verification gates.
-updated: 2026-10-05
+updated: 2026-10-08
 ---
 
 # Gatherstead Dependency Audit
@@ -37,6 +37,7 @@ Resolve peer and runtime constraints before editing manifests:
 - Nuxt upgrades can change the required Vite and test-tool majors. Check Nuxt, @nuxt/vite-builder, Vite, Vitest, and @nuxt/test-utils together against their current peer ranges.
 - Check that Nuxt's active @nuxt/kit line is resolved consistently, and that unhead does not resolve incompatible duplicate majors. Use pnpm why before and after Nuxt upgrades.
 - Treat FullCalendar core, Vue integration, and plugins as a peer-coupled set. Check every package's current peer and dependency ranges before changing a major.
+- Keep Vue and its internal runtime/SSR renderer packages on the same exact release. Do not independently override `@vue/server-renderer`; Vue declares matching internal versions and a separate range can resolve a mismatched renderer.
 - Keep @types/node aligned with the Node runtime used by local development and deployment.
 - Microsoft.Data.SqlClient, Microsoft.Data.SqlClient.Extensions.Azure, and Microsoft.Data.SqlClient.AlwaysEncrypted.AzureKeyVaultProvider must use the same version. Keep that trio on a mutually supported major.
 - Keep dotnet-ef on the EF Core tool-compatible release line. Keep the Swashbuckle CLI and ASP.NET Core package compatible.

@@ -77,6 +77,9 @@ as proof of exploitation.
 - The web app declares serialize-javascript directly and also overrides its
   transitive resolution. Keep those ranges synchronized and bounded below the next
   major version.
+- Keep Vue and its internal runtime/SSR renderer packages on the same exact release.
+  Do not independently override `@vue/server-renderer`; Vue declares matching
+  internal versions, and a separate range can resolve an incompatible renderer.
 - The current simple-git 4 package exposes the named simpleGit export. Nuxt DevTools
   3.4.1 still imports the removed default export, so
   [a tracked pnpm patch](../src/Gatherstead.Web/patches/@nuxt__devtools@3.4.1.patch)

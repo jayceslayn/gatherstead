@@ -10,6 +10,13 @@ allowBuilds:
   unrs-resolver: true
   vue-demi: true
 
+# Temporary exceptions for web advisories with no patched release listed or published yet.
+# Remove each entry once the corresponding patched release is available and resolved.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm # braces
+    - GHSA-86w9-cpqp-85rv # node-forge
+
 overrides:
   # GHSA-2v37-7h3g-55p8 (high): custom generators loop indefinitely when size is 0. Reached
   # transitively via postcss (itself pulled in by vite and @vue/compiler-sfc); patched 3.3.18.
@@ -21,8 +28,8 @@ overrides:
   "esbuild": ">=0.28.1"
   # Overrides shadow the direct dependency too, so keep this floor in step with package.json.
   serialize-javascript: ">=7.1.2 <8"
-  # GHSA-86w9-cpqp-85rv lists 1.4.1 as fixed, but that release is not on npm yet (1.4.0 remains
-  # latest). Keep the current API line bounded until upstream publishes the fix.
+  # GHSA-86w9-cpqp-85rv currently has no patched release; npm's latest is 1.4.0. Keep the override
+  # bounded to the compatible v1 API line until upstream publishes and we resolve a fix.
   node-forge: ">=1.4.0 <2"
   "picomatch@2": "^2.3.2"
   "picomatch@4": "^4.0.4"
@@ -71,8 +78,9 @@ overrides:
   "brace-expansion@5": ">=5.0.10 <6"
   # GHSA-96hv-2xvq-fx4p (high): memory-exhaustion DoS from tiny fragments/data chunks, patched 8.21.0.
   ws: ">=8.21.0"
-  # 1.8.5 patches GHSA-395f-4hp3-45gv (quadratic-complexity DoS in parse()).
-  shell-quote: ">=1.8.5"
+  # 1.8.5 patches GHSA-395f-4hp3-45gv (quadratic-complexity DoS in parse()); 1.11.0 patches
+  # GHSA-pqg4-j6r4-53mv (critical command injection via comment tokens). Bounded to the 1.x line.
+  shell-quote: ">=1.11.0 <2"
   # node-tar < 7.5.19: GHSA-23hp-3jrh-7fpw (critical, decompression/parse DoS) plus
   # GHSA-8x88-c5mf-7j5w (infinite loop on negative entry size).
   # GHSA-r292-9mhp-454m: uncontrolled recursion in mapHas/filesFilter, patched 7.5.21.
@@ -86,8 +94,8 @@ overrides:
   # line, which is a major bump for ipx (declares ^0.34); bounded to 0.35.x. Requires node >=20.9,
   # satisfied by the node 24 used in CI.
   # GHSA-rgj7-g3m4-5g8c (high): two more libheif CVEs (GHSA-g89c-p67h-r497, GHSA-2jg2-4ch7-h545),
-  # patched 0.35.4.
-  sharp: ">=0.35.4 <0.36"
+  # patched 0.35.4. GHSA-wq5f-xc86-pv6w (high, librsvg) is patched in 0.35.5.
+  sharp: ">=0.35.5 <0.36"
   # happy-dom < 20.8.9 has critical VM-escape RCE + related advisories. It is only an optional peer
   # of vitest/@nuxt/test-utils (our tests run in the node environment and never load it); pin the
   # patched line. Consumers' peer range is '*', so this satisfies them. Drop once a consumer pins past it.
@@ -113,8 +121,6 @@ overrides:
   "source-map-js": ">=1.2.2 <2"
   # Nuxt resolves Undici 8.x; 8.10.2 fixes the published request/response DoS advisories.
   undici: ">=8.10.2 <9"
-  # Keep Vue's renderer on the same patched 3.5 line when a test utility resolves an older Vue.
-  "@vue/server-renderer": ">=3.5.42 <3.6"
 
 patchedDependencies:
   '@nuxt/devtools@3.4.1': patches/@nuxt__devtools@3.4.1.patch
