@@ -1,8 +1,6 @@
-# TODO(deps): enable `minimumReleaseAge: 4320` (3 days — the Tier-1 patch window in
-# docs/SECURITY-DEPS.md) to mechanically enforce the stand-off, which caret ranges cannot do on
-# their own. NOT enabled yet: pnpm validates the policy against every committed lockfile entry on
-# `pnpm install --frozen-lockfile`. Recheck the youngest resolved packages in BOTH installs before
-# enabling it; the previously noted nanoid@3.3.17 blocker has aged out, but that alone is not enough.
+# Require each newly resolved npm release to age for three days, as specified in
+# docs/SECURITY-DEPS.md. Both web and docs lockfiles were checked against this window before enabling.
+minimumReleaseAge: 4320
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
@@ -35,9 +33,19 @@ overrides:
   "picomatch@4": "^4.0.4"
   lodash: ">=4.17.24"
   defu: ">=6.1.5"
-  # Bounded to the 8.x line: @nuxt/vite-builder 4.5.2 depends on vite ^8.2.0. Moving to vite 8 is
-  # what forces vitest 4 (vitest 3 caps at vite ^7) and therefore @nuxt/test-utils 4.
-  vite: ">=8.2.0 <9"
+  # GHSA-587h-7wmj-h5pm and related launch-editor advisories are fixed in Vite 8.2.4.
+  # Nuxt 4.6.2 requires Vite ^8.3.4. Pin compatible transitive releases below to meet the
+  # three-day release-age stand-off while retaining this patched Vite version.
+  # Vitest 4 is required because Vitest 3 caps at Vite 7.
+  vite: "8.3.4"
+  # Mature releases compatible with Vite/Nuxt's ranges, avoiding packages published inside the
+  # three-day stand-off window while preserving Nuxt 4.6.2 and Nuxt UI editor compatibility.
+  rolldown: "1.2.14"
+  impound: "1.2.0"
+  caniuse-lite: "1.0.30001809"
+  "@tanstack/vue-virtual": "3.13.47"
+  "@tanstack/virtual-core": "3.19.6"
+  prosemirror-transform: "1.12.2"
   h3: ">=1.15.9"
   # @redocly/openapi-core (via openapi-typescript) pins js-yaml to an exact 4.1.1; every other
   # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
@@ -46,16 +54,13 @@ overrides:
   # 4.3.2 patches GHSA-2883-xcg3-v3hh (high, maxTotalMergeKeys doesn't limit CPU for empty merge
   # sources) — 4.3.1 is still vulnerable.
   js-yaml: ">=4.3.2 <5"
+  # Keep packages on Nuxt 4's active kit release in sync while leaving legacy kit 3 consumers intact.
+  "@nuxt/kit@4": ">=4.6.2 <5"
   srvx: ">=0.11.13"
-  # Now bounded to the 3.x line. nuxt >= 4.5.0 depends on unhead ^3, which is required to patch five
-  # HIGH nuxt advisories (see the security notes in docs/SECURITY-DEPS.md). The old 2.x bound existed
-  # because unhead 3 removed hooks.hookOnce, which @nuxt/ui 4.9.0 called — @nuxt/ui 4.10.0 no longer
-  # calls it and uses only injectHead/useHead/createHead, all stable in v3.
-  # @unhead/vue is overridden alongside it: @nuxt/ui 4.10.0 still *declares* ^2.1.15, and without
-  # this it would resolve a second, nested v2 copy whose injection key differs from Nuxt's v3 head,
-  # silently breaking head management rather than failing the build.
-  unhead: ">=3.3.1 <4"
-  "@unhead/vue": ">=3.3.1 <4"
+  # Nuxt 4.6.2 requires unhead/@unhead/vue ^3.4.3. Nuxt UI still declares an older v2 peer range,
+  # but its head APIs used by this project are compatible with Nuxt's shared v3 instance.
+  unhead: ">=3.4.3 <4"
+  "@unhead/vue": ">=3.4.3 <4"
   # GHSA-r28c-9q8g-f849 (high): path traversal in previous-source-map auto-loading, patched 8.5.18.
   # GHSA-fxqj-rqcc-2cmp: incomplete fix of GHSA-6g55-p6wh-862q, patched 8.5.23 — so the floor is 8.5.23.
   # Bounded to 8.x; 9.x would be a breaking API change for every consumer in the tree.
@@ -111,6 +116,8 @@ overrides:
   # GHSA-j95f-988m-3j2f (high): quadratic ReDoS in block/inline Markdown attribute parsing, patched
   # 3.30.5. Reached via @nuxt/ui's rich-text editor, which declares ^3; bounded to the 3.x line.
   "@tiptap/core": ">=3.30.5 <4"
+  # @tiptap/pm is the peer for core; keep it on the same release line to satisfy editor consumers.
+  "@tiptap/pm": ">=3.31.3 <4"
   # GHSA-rj75-hqrm-r3gf: selector parser nesting DoS; patched on the maintained 7.x line at 7.1.6.
   "postcss-selector-parser": ">=7.1.6 <8"
   # GHSA-c8x8-7fp4-3x9w: XSS in paste handling, patched in ProseMirror 1.42.3.
@@ -121,6 +128,5 @@ overrides:
   "source-map-js": ">=1.2.2 <2"
   # Nuxt resolves Undici 8.x; 8.10.2 fixes the published request/response DoS advisories.
   undici: ">=8.10.2 <9"
-
-patchedDependencies:
-  '@nuxt/devtools@3.4.1': patches/@nuxt__devtools@3.4.1.patch
+  # unctx 3 requires unplugin 3.3 or newer; keep the shared v3 line within that peer range.
+  unplugin: ">=3.3.0 <4"
