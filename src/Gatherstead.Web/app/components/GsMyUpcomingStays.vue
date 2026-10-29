@@ -2,6 +2,8 @@
 import { useMyStays, useMyStayActions } from '~/composables/useMyUpcoming'
 import { useAllMembers } from '~/composables/useHouseholdMembers'
 import { rangesOverlap } from '~/utils/dates'
+import { canEditAccommodationIntent } from '~/utils/accommodationIntentPolicy'
+import { useTenantRole } from '~/composables/useTenantRole'
 import type { AccommodationIntent, AccommodationIntentStatus, MyStay } from '~/repositories/types'
 
 const props = withDefaults(defineProps<{
@@ -21,6 +23,7 @@ const props = withDefaults(defineProps<{
 })
 
 const { t } = useI18n()
+const { isCoordinatorOrAbove } = useTenantRole()
 const toast = useToast()
 const { formatDateRange } = useFormatDate()
 const { stays, pending, refresh } = useMyStays()
@@ -36,6 +39,10 @@ const filtered = computed(() => {
 
 // A non-positive limit means "show all" (e.g. the event tab lists every overlapping stay).
 const visible = computed(() => props.limit > 0 ? filtered.value.slice(0, props.limit) : filtered.value)
+
+function canEditStay(stay: MyStay): boolean {
+  return canEditAccommodationIntent(stay.status, isCoordinatorOrAbove.value)
+}
 
 // ── Edit modal ──────────────────────────────────────────────────────────────
 const modalOpen = ref(false)
@@ -122,13 +129,16 @@ async function onDelete() {
       <li
         v-for="stay in visible"
         :key="stay.id"
-        role="button"
-        tabindex="0"
-        :aria-label="t('accommodation.editStay')"
-        class="rounded-lg border border-(--ui-border) bg-elevated p-3 flex items-center gap-3 cursor-pointer transition-all hover:ring-1 hover:ring-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-        @click="openEditor(stay)"
-        @keydown.enter.prevent="openEditor(stay)"
-        @keydown.space.prevent="openEditor(stay)"
+        :role="canEditStay(stay) ? 'button' : undefined"
+        :tabindex="canEditStay(stay) ? 0 : undefined"
+        :aria-label="canEditStay(stay) ? t('accommodation.editStay') : undefined"
+        :class="[
+          'rounded-lg border border-(--ui-border) bg-elevated p-3 flex items-center gap-3 transition-all',
+          canEditStay(stay) ? 'cursor-pointer hover:ring-1 hover:ring-primary focus:outline-none focus-visible:ring-1 focus-visible:ring-primary' : 'cursor-default',
+        ]"
+        @click="canEditStay(stay) && openEditor(stay)"
+        @keydown.enter.prevent="canEditStay(stay) && openEditor(stay)"
+        @keydown.space.prevent="canEditStay(stay) && openEditor(stay)"
       >
         <UIcon
           :name="loadingStayId === stay.id ? 'i-heroicons-arrow-path' : 'i-heroicons-home-modern'"
