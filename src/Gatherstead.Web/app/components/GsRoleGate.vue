@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useTenantRole } from '~/composables/useTenantRole'
 import type { TenantRole } from '~/repositories/types'
+import { hasMinimumTenantRole } from '~/utils/tenantRoles'
 
 const props = defineProps<{
   minRole: TenantRole
@@ -8,20 +9,7 @@ const props = defineProps<{
 
 const { role, isAppAdmin } = useTenantRole()
 
-const roleOrder: Record<TenantRole, number> = {
-  Guest: 0,
-  Member: 1,
-  Coordinator: 2,
-  Manager: 3,
-  Owner: 4,
-}
-
-const hasAccess = computed(() => {
-  // App admins clear every threshold (authority axis); role stays null so PII remains masked.
-  if (isAppAdmin.value) return true
-  if (!role.value) return false
-  return roleOrder[role.value] >= roleOrder[props.minRole]
-})
+const hasAccess = computed(() => hasMinimumTenantRole(role.value, props.minRole, isAppAdmin.value))
 </script>
 
 <template>

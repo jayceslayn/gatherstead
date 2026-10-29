@@ -139,10 +139,19 @@ public class AccommodationIntentService : IAccommodationIntentService
             return response;
         if (!ServiceGuards.RequireRequest(request, "create accommodation intent", response))
             return response;
+        if (!Enum.IsDefined(request.Status))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Invalid accommodation intent status.");
+            return response;
+        }
         // Resolve + authorize the member by its own id; the client-supplied householdId is
         // advisory only (a member has exactly one household), so a stale/mismatched value no
         // longer produces a spurious "Household member not found."
         if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
+            return response;
+
+        if (request.Status != AccommodationIntentStatus.Requested
+            && !await AuthorizeCoordinatorAsync(response, tenantId, "You do not have permission to set this accommodation intent status.", cancellationToken))
             return response;
 
         var accommodationExists = await _dbContext.Accommodations
@@ -171,6 +180,13 @@ public class AccommodationIntentService : IAccommodationIntentService
                 && i.StartNight == request.StartNight
                 && i.EndNight == request.EndNight)
             .SingleOrDefaultAsync(cancellationToken);
+
+        // Create is an upsert. A non-Coordinator may re-request an existing Requested stay,
+        // but must not use this route to revive or modify a stay that has a managed status.
+        if (intent is not null
+            && intent.Status != AccommodationIntentStatus.Requested
+            && !await AuthorizeCoordinatorAsync(response, tenantId, "You do not have permission to update this accommodation intent.", cancellationToken))
+            return response;
 
         if (intent is null)
         {
@@ -225,8 +241,31 @@ public class AccommodationIntentService : IAccommodationIntentService
 
         if (intent is null) return response;
 
-        // Authorize against the (possibly new) member the stay is being assigned to.
-        if (!await ServiceGuards.AuthorizeIntentAssignAsync(response, _memberAuthorizationService, tenantId, Guid.Empty, request.HouseholdMemberId, cancellationToken))
+        if (!Enum.IsDefined(request.Status))
+        {
+            response.AddResponseMessage(MessageType.ERROR, "Invalid accommodation intent status.");
+            return response;
+        }
+
+        // Resolve and authorize the member already attached to this stay before considering
+        // caller-supplied values. ResolveMemberForIntentAsync derives the member's real household
+        // from the tenant-scoped database row instead of trusting a supplied household ID.
+        if (await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, intent.HouseholdMemberId, cancellationToken) is null)
+            return response;
+
+        var isMemberReassignment = request.HouseholdMemberId != intent.HouseholdMemberId;
+        if (isMemberReassignment
+            && await ServiceGuards.ResolveMemberForIntentAsync(response, _memberAuthorizationService, _dbContext, tenantId, request.HouseholdMemberId, cancellationToken) is null)
+            return response;
+
+        // Only Coordinators and above may reassign a stay or operate on a managed status.
+        // Lower roles can edit an existing Requested stay for the same member, including
+        // household managers acting within that member's actual household.
+        var coordinatorRequired = isMemberReassignment
+            || intent.Status != AccommodationIntentStatus.Requested
+            || request.Status != AccommodationIntentStatus.Requested;
+        if (coordinatorRequired
+            && !await AuthorizeCoordinatorAsync(response, tenantId, "You do not have permission to update this accommodation intent.", cancellationToken))
             return response;
 
         if (!ValidateSpan(request.StartNight, request.EndNight, response))
@@ -245,9 +284,11 @@ public class AccommodationIntentService : IAccommodationIntentService
                 return response;
             }
 
-            intent.AccommodationId = request.AccommodationId;
         }
 
+        // Apply the requested values only after authorization and all target/span checks pass.
+        if (request.AccommodationId != accommodationId)
+            intent.AccommodationId = request.AccommodationId;
         intent.HouseholdMemberId = request.HouseholdMemberId;
         intent.StartNight = request.StartNight;
         intent.EndNight = request.EndNight;
@@ -260,6 +301,19 @@ public class AccommodationIntentService : IAccommodationIntentService
 
         response.SetSuccess(MapToDto(intent));
         return response;
+    }
+
+    private async Task<bool> AuthorizeCoordinatorAsync<T>(
+        BaseEntityResponse<T> response,
+        Guid tenantId,
+        string deniedMessage,
+        CancellationToken cancellationToken)
+    {
+        if (await _memberAuthorizationService.CanManageEventAsync(tenantId, cancellationToken))
+            return true;
+
+        response.AddResponseMessage(MessageType.ERROR, ErrorCode.PERMISSION_INTENT_ASSIGN, deniedMessage);
+        return false;
     }
 
     public async Task<AccommodationIntentResponse> DeleteAsync(

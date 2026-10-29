@@ -13,7 +13,7 @@ definePageMeta({ layout: 'default' })
 const { t } = useI18n()
 const route = useRoute()
 const memberStore = useCurrentMemberStore()
-const { isManagerOrAbove } = useTenantRole()
+const { isManagerOrAbove, isCoordinatorOrAbove } = useTenantRole()
 
 const propertyId = computed(() => route.params.propertyId as string)
 const accommodationId = computed(() => route.params.accommodationId as string)
@@ -26,7 +26,7 @@ const accommodation = computed(() =>
 )
 
 const memberId = computed<string | null>(() =>
-  isManagerOrAbove.value ? null : (memberStore.linkedMemberId ?? null),
+  isCoordinatorOrAbove.value ? null : (memberStore.linkedMemberId ?? null),
 )
 
 const { intents, pending, refresh } = useAccommodationIntents(propertyId, accommodationId, memberId)
@@ -191,7 +191,7 @@ async function submitRequest(payload: {
           </div>
 
           <!-- Manager promotion controls -->
-          <GsRoleGate min-role="Manager">
+          <GsRoleGate min-role="Coordinator">
             <div class="flex items-center gap-1 shrink-0">
               <UButton
                 v-if="nextStatus(intent.status)"

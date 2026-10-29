@@ -1,7 +1,7 @@
 ---
 updated: 2026-10-28
 commit: d1f8b0b
-status: proposed
+status: in-progress
 ---
 
 # Security Findings Remediation Plan
@@ -33,17 +33,18 @@ This plan is limited to the findings below. The feature model remains in [guest-
 
 ## Work packages
 
-### WP1 — Fix accommodation intent authorization and status transitions
+### WP1 — Fix accommodation intent authorization and status transitions (complete)
 
-In `AccommodationIntentService.UpdateAsync`:
+In `AccommodationIntentService.UpdateAsync` and `CreateAsync`:
 
-- Authorize the existing `HouseholdMemberId` before changing any part of the loaded stay.
-- Resolve and authorize the requested member using that member's actual household; do not authorize against `Guid.Empty` or trust a caller-supplied household ID.
-- Require permission for both the current and target member when a stay is reassigned. Keep tenant and target-accommodation existence checks.
-- Restrict self/Guest updates to their own stay in `Requested` state. Require Coordinator+ for `Hold`, `Confirmed`, or `Declined` transitions and for changing another member's stay. Align exact permitted transitions with the matrix in [guest-access.md](guest-access.md).
+- Authorize the member currently attached to a stay before changing it. Resolve and authorize members using their actual tenant-scoped household; never use `Guid.Empty` or trust a caller-supplied household ID.
+- Require authorization for both current and target members on reassignment, and Coordinator+ for reassignment. Keep tenant and target-accommodation existence checks.
+- Allow non-Coordinator users to create only `Requested` stays and edit only existing `Requested` stays for the same member, keeping status `Requested`. Household managers may edit a member's `Requested` stay within the household they manage. Require Coordinator+ for managed statuses (`Hold`, `Confirmed`, `Declined`) on create, update, and create-upsert paths, in line with [guest-access.md](guest-access.md).
+- Reject undefined status enum values. Complete authorization and validation before changing tracked entities.
 - Preserve current date-span validation and availability behavior.
+- Align the member-facing request/edit UI to the same `Requested` boundary and expose all-stay/status controls to Coordinator+.
 
-Add API tests proving that a linked user cannot take over another member's stay by setting the request member to their own ID; cannot change status to a coordinator-only value; can update their own allowed fields; and that Coordinator+ can perform the intended reassignment/status changes. Include a household-manager case using the actual household IDs.
+Add API and frontend tests proving that a linked user cannot take over another member's stay or set a managed status, can edit their own `Requested` stay, and that Coordinator+ can perform intended reassignment/status changes. Include a household-manager case using actual household IDs and preserve state on denied or invalid requests.
 
 ### WP2 — Close the TenantUser no-op disclosure
 

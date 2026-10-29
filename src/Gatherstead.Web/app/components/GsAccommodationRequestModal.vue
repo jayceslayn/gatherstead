@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AccommodationIntent, HouseholdMember, AccommodationIntentStatus } from '~/repositories/types'
+import { canEditAccommodationIntent, memberRequestStatuses } from '~/utils/accommodationIntentPolicy'
 
 // The picker only needs id + name, so this accepts both AccommodationSummary and availability results.
 interface AccommodationOption { id: string, name: string }
@@ -51,10 +52,10 @@ const endNight = ref('')
 
 const isEditing = computed(() => !!props.editIntent)
 
-// Confirmed/Declined are manager-set states absent from the Requested/Hold select. Show them read-only
-// so a member editing dates/party/notes can't blank the picker or silently downgrade the status.
+// Managed states are read-only here. Coordinator+ status transitions use the explicit controls on
+// the accommodation intent list, while this modal handles member requests and stay details.
 const statusLocked = computed(() =>
-  isEditing.value && !['Requested', 'Hold'].includes(props.editIntent?.status ?? 'Requested'))
+  isEditing.value && !canEditAccommodationIntent(props.editIntent?.status ?? 'Requested', false))
 
 // No event context (e.g. the property accommodation page) → pick nights with free date inputs
 // instead of selecting from a fixed event-day list.
@@ -96,10 +97,10 @@ const memberItems = computed(() => props.members.map(m => ({ label: m.name, valu
 const dateMin = computed(() => props.eventDays[0] ?? '')
 const dateMax = computed(() => props.eventDays.at(-1) ?? '')
 
-const statusItems = computed(() => [
-  { label: t('status.requested'), value: 'Requested' as AccommodationIntentStatus },
-  { label: t('status.hold'), value: 'Hold' as AccommodationIntentStatus },
-])
+const statusItems = computed(() => memberRequestStatuses.map(value => ({
+  label: t(`status.${value.toLowerCase()}`),
+  value: value as AccommodationIntentStatus,
+})))
 
 // Keep the span non-inverted: clamp the end night up to the start when the user picks an earlier one.
 const orderedNights = computed(() => {

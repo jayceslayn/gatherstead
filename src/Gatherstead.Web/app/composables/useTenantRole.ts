@@ -1,6 +1,7 @@
 import { useTenantStore } from '~/stores/tenant'
 import { useSessionStore } from '~/stores/session'
 import type { HouseholdSummary } from '~/repositories/types'
+import { hasMinimumTenantRole } from '~/utils/tenantRoles'
 
 export function useTenantRole() {
   const tenantStore = useTenantStore()
@@ -13,7 +14,7 @@ export function useTenantRole() {
   // the API enforces both axes regardless of these UI hints.
   const isOwner = computed(() => isAppAdmin.value || role.value === 'Owner')
   const isManagerOrAbove = computed(() => isAppAdmin.value || role.value === 'Owner' || role.value === 'Manager')
-  const isCoordinatorOrAbove = computed(() => isAppAdmin.value || role.value === 'Owner' || role.value === 'Manager' || role.value === 'Coordinator')
+  const isCoordinatorOrAbove = computed(() => hasMinimumTenantRole(role.value, 'Coordinator', isAppAdmin.value))
   const isMemberOrAbove = computed(() => isAppAdmin.value || (role.value !== null && role.value !== 'Guest'))
 
   // "Household manager" for UI gating: a tenant Manager/above, or a Manager of *this* specific
