@@ -94,24 +94,17 @@ as proof of exploitation.
   with the Swashbuckle ASP.NET Core package.
 - Keep each workspace's advisory overrides bounded to compatible major versions;
   their comments describe the affected package and required floor.
+- The web workspace pins node-forge to the fixed 1.4.1 security release. Its
+  version-scoped `minimumReleaseAgeExclude` is temporary; remove it once that
+  release has passed the three-day age window.
 
 ## Open web advisories
 
-As of 2026-10-08, the current web lockfile resolves braces 3.0.3 and node-forge 1.4.0.
-Their GitHub advisories list no patched versions, and npm still lists those same versions
-as latest. Recheck the advisories, registry, and audit before relying on this status. Do
-not force an unpublished version into the lockfile. ([braces advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm),
-[node-forge advisory](https://github.com/advisories/GHSA-86w9-cpqp-85rv),
-[braces on npm](https://www.npmjs.com/package/braces),
-[node-forge on npm](https://www.npmjs.com/package/node-forge))
-
-The web workspace's pnpm audit and the PR dependency-review check temporarily ignore
-only these two GHSA IDs so other dependency fixes can pass CI. Remove each exception
-as soon as its patched release is published and resolved; the exceptions do not change
-the installed versions or indicate that these advisories are fixed.
-
-- [braces GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
-- [node-forge GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv)
+The web lockfile resolves `deepmerge` 4.3.1 through Nuxt's Nitro build chain.
+[Its advisory](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) lists no patched
+version, and npm has not published 4.3.2. Keep the low-severity finding visible in audit
+output; the web audit and dependency-review CI gates fail at high severity. Do not force
+an unpublished version. Recheck the advisory and registry during dependency audits.
 
 ## Automation and ownership
 

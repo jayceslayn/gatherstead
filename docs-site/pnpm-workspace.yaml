@@ -36,8 +36,10 @@ overrides:
   # GHSA-7p8r-x3mc-p8w7 / GHSA-v2hh-gcrm-f6hx (high): host confusion via backslash authority.
   # Reached through ajv; bounded to 3.x since 4.x is a breaking API change.
   # GHSA-5jgf-p345-68v8 / GHSA-f65p-4m7j-42xc / GHSA-fph4-wmhf-6fwf / GHSA-jqff-g426-hqxp (all
-  # high): IDN, IPv6, and percent-decoding host-confusion/SSRF variants, patched 3.1.6.
-  fast-uri: ">=3.1.6 <4"
+  # high): IDN, IPv6, and percent-decoding host-confusion/SSRF variants.
+  # GHSA-w74x-v6f9-j3xg / GHSA-xhq7-xmqj-769h / GHSA-wjr9-j795-jxcr / GHSA-333x-w4r6-6crp
+  # (low to moderate): URI normalization and scheme injection, fixed in 3.1.9.
+  fast-uri: ">=3.1.9 <4"
   # GHSA-r28c-9q8g-f849 (high, path traversal) + GHSA-fxqj-rqcc-2cmp (incomplete fix of
   # GHSA-6g55-p6wh-862q, patched 8.5.23). Reached via expressive-code and postcss-nested.
   postcss: ">=8.5.23 <9"
@@ -49,13 +51,15 @@ overrides:
   # GHSA-9rgm-9g3h-6x36 (moderate): DoS via malformed input, patched 5.9.1. Reached via astro,
   # which declares ^5.8.1; bounded to the 5.x line.
   devalue: ">=5.9.1 <6"
+  # GHSA-mrhx-c7xc-m3w5 (high): oversized unconstrained arrays can exhaust memory; patched 4.6.6.
+  zod: ">=4.6.6 <5"
   # GHSA-7w5x-hrqm-74c2 (high): DoS via malformed TOML documents, patched 1.7.1. Reached via astro,
   # which declares ^1.6.0; bounded to the 1.x line.
   smol-toml: ">=1.8.1 <2"
   # GHSA-68fv-2mgg-jv7q: source-map-js 1.2.2 contains the fix.
   "source-map-js": ">=1.2.2 <2"
-  # Astro currently resolves Undici 8.x; keep it on the fixed line.
-  undici: ">=8.10.2 <9"
+  # Astro currently resolves Undici 8.x; keep it on the fixed line for the Oct 2026 advisories.
+  undici: ">=8.12.2 <9"
   # GHSA-587h-7wmj-h5pm and related launch-editor advisories are fixed in Vite 8.1.6.
   # Astro 7 accepts the patched Vite 8.1.6 release, avoiding newer Vite/Rolldown packages that
   # have not cleared the three-day stand-off.
