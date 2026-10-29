@@ -1,6 +1,6 @@
 ---
-updated: 2026-06-25
-commit: 31a127e
+updated: 2026-10-28
+commit: d1f8b0b
 ---
 
 # Gatherstead Architecture
@@ -178,8 +178,8 @@ erDiagram
 ### Frontend
 - Use Nuxt 4 conventions (pages, server routes, composables) with the Vue 3 composition API and TypeScript. Keep shared state in composables or Pinia when appropriate.
 - Production uses **hybrid rendering** via Nuxt `routeRules`: public/marketing pages are server-rendered for SEO, while authenticated dashboard pages are client-only SPA for faster navigation.
-- **Localization**: All UI text must go through `@nuxtjs/i18n` (`$t()` / `useI18n()`). Never hardcode user-visible strings. See [LOCALIZATION.md](agents/plans/LOCALIZATION.md) for the full i18n strategy, locale file conventions, and API error translation approach.
-- **Demo site**: A zero-friction demo deployment uses the same codebase built as a static SPA (`NUXT_PUBLIC_DEMO_MODE=true pnpm generate`). A build-time `__DEMO_MODE__` constant (injected via `vite.define`) lets Rollup eliminate the inactive branch entirely — live builds carry no demo repository code and demo builds carry no live API client code. Repository classes are grouped in per-mode barrel files (`repositories/live/index.ts`, `repositories/demo/index.ts`); the plugin performs a single dynamic import per mode. See [DEMO_SITE.md](agents/plans/DEMO_SITE.md) for the repository abstraction, entity limits, seed data, infrastructure, and CI/CD details.
+- **Localization**: All UI text must go through `@nuxtjs/i18n` (`$t()` / `useI18n()`). Never hardcode user-visible strings. See [WEB-UI-DESIGN.md](WEB-UI-DESIGN.md#data-i18n-and-ssr) for locale file and API error translation conventions.
+- **Demo site**: A zero-friction demo deployment uses the same codebase built as a static SPA (`NUXT_PUBLIC_DEMO_MODE=true pnpm generate`). A build-time `__DEMO_MODE__` constant (injected via `vite.define`) lets Rollup eliminate the inactive branch entirely — live builds carry no demo repository code and demo builds carry no live API client code. Repository classes are grouped in per-mode barrel files (`repositories/live/index.ts`, `repositories/demo/index.ts`); the plugin performs a single dynamic import per mode. See [DEPLOYMENT.md](DEPLOYMENT.md#demo-site) for infrastructure and CI/CD details.
 - Prefer **Nuxt UI** components (`UButton`, `UInput`, `UCard`, etc.) over native HTML elements wherever feasible to maintain design consistency. Fall back to native elements only when Nuxt UI has no suitable equivalent.
 - Follow accessibility best practices and align UI copy with the family-planning domain.
 - Manage secrets via runtime config/environment variables, not hardcoded constants. Respect multi-tenant boundaries in any client-side routing or data fetching.

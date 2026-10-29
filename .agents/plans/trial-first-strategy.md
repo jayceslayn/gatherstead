@@ -1,10 +1,18 @@
+---
+updated: 2026-10-28
+commit: d1f8b0b
+status: design
+---
+
 # Trial-First Strategy for Gatherstead
 
 ## Context
 
 Gatherstead needs a public evaluation surface that converts to paid use. This plan replaces the previous "restricted, free-forever" quota model with an **unrestricted, time-limited trial**: authenticated users can self-serve-create one 90-day trial tenant with full feature access. At the end of the trial the tenant becomes read-only until the owner upgrades to a paid subscription.
 
-The companion static demo site (see `DEMO_SITE.md` / `DEMO_SITE_IMPROVEMENTS.md`) remains for zero-friction marketing evaluation; this plan handles actual product-led growth and conversion.
+The companion static demo site remains for zero-friction marketing evaluation; this plan handles actual product-led growth and conversion. Its deployment is documented in [DEPLOYMENT.md](../../docs/DEPLOYMENT.md#demo-site).
+
+**Settled direction:** self-service tenant creation is approved. Implement the [Billing Architecture](billing-architecture.md) and its paid-upgrade path before launching trial tenants. This plan's billing wiring remains out of scope, but it is a prerequisite for trial launch. Keep the App Admin tenant-creation endpoint for internal provisioning.
 
 ## Why Trial-First?
 
@@ -36,8 +44,7 @@ EF Core migration for all of the above.
 
 ### 2. Self-Serve Signup & Tenant Creation
 
-**New `src/Gatherstead.Api/Services/Users/UserProvisioningService.cs`**
-On the first authenticated request from a new Entra subject, auto-create the internal `User` row from Entra claims (sub, email, name). Populate `EmailDomain`. This replaces the admin-provisioned user flow.
+Reuse the existing `UserProvisioningService` at `src/Gatherstead.Api/Services/Provisioning/UserProvisioningService.cs`, which creates the internal `User` during the authenticated bootstrap flow (`POST /api/me/bootstrap`) and claims matching invitations. Do not add a second provisioning service or replace invitation claiming. Add self-serve tenant creation after bootstrap. Persist `EmailDomain` only if the disposable-domain check needs it; otherwise derive it from the trusted, normalized `User.Email` value.
 
 **`src/Gatherstead.Api/Services/Tenants/TenantService.cs`**
 Remove the `[RequireAppAdmin]` gate from self-serve tenant creation. Replace with:
@@ -107,7 +114,7 @@ Emails the owner before deletion (wiring to an email provider is a follow-up; lo
 | EF Core migration | **Create** |
 | `TenantService.cs` | Remove admin gate; add Turnstile check, disposable-email check, one-trial cap; set trial dates |
 | `TenantsController.cs` | Public `[Authorize]` endpoint, drop `OwnerUserId` from request |
-| `UserProvisioningService.cs` | **Create** — auto-provision on first request |
+| `UserProvisioningService.cs` | Reuse the existing bootstrap flow; derive or persist `EmailDomain` for blocklist checks |
 | `TurnstileVerifier.cs` | **Create** — Cloudflare Turnstile siteverify |
 | `DisposableEmailCheck.cs` | **Create** — DB-backed blocklist lookup |
 | `WritableTenantRequirement.cs` | **Create** — trial-expiry authorization policy |
@@ -115,7 +122,7 @@ Emails the owner before deletion (wiring to an email provider is a follow-up; lo
 | `app/pages/signup.vue` | **Create** |
 | `app/components/TurnstileWidget.vue` | **Create** |
 | `app/components/TrialBanner.vue` | **Create** |
-| `app/locales/en.json` | Add `trial.*` i18n keys |
+| `src/Gatherstead.Web/i18n/locales/en.json` | Add `trial.*` i18n keys (and matching Spanish keys) |
 | `infrastructure/main.bicep` | Add Turnstile KV secret wiring |
 
 ## Verification
@@ -129,7 +136,7 @@ Emails the owner before deletion (wiring to an email provider is a follow-up; lo
 
 ## Out of Scope (Future Work)
 
-- Billing integration (Stripe / Azure Marketplace) for the paid-tier upgrade flow — `WritableTenantRequirement` already checks for an active paid subscription; the billing wiring is a follow-up.
+- Billing domain and payment-provider integration — owned by [Billing Architecture](billing-architecture.md) and sequenced before this plan. It is out of scope for this implementation plan, but it must exist before trial launch so owners can upgrade before or after expiry.
 - Email reminders before trial expiry — `IdleTenantReaper` logs only for now.
 - Quota enforcement per tier — revisit if storage or compute costs become significant at scale.
 

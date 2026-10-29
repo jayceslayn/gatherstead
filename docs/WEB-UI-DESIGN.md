@@ -1,11 +1,11 @@
 ---
-updated: 2026-06-25
-commit: 31a127e
+updated: 2026-10-28
+commit: d1f8b0b
 ---
 
 # Web UI Design Guidelines
 
-Durable frontend UX/UI conventions for the Gatherstead web app (Nuxt 4 + Vue 3 + Nuxt UI v4 + Tailwind). These are the patterns every page and component must follow — distilled from the original design plan in [agents/plans/WEB-UI-DESIGN.md](agents/plans/WEB-UI-DESIGN.md), which retains the phased implementation history and route map.
+Durable frontend UX/UI conventions for the Gatherstead web app (Nuxt 4 + Vue 3 + Nuxt UI v4 + Tailwind). These are the patterns every page and component must follow, distilled from the original design plan and subsequent implementation decisions.
 
 For data-access, tenancy, and authorization rules see [ARCHITECTURE.md](ARCHITECTURE.md) (Frontend conventions) and [DESIGN_PRINCIPLES.md](DESIGN_PRINCIPLES.md). This document covers presentation and interaction.
 

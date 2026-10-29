@@ -1,12 +1,14 @@
 ---
-updated: 2026-07-10
-commit: dcf7863
-status: design — not yet implemented
+updated: 2026-10-28
+commit: d1f8b0b
+status: design
 ---
 
-# Guest Access — Design
+# Guest Access
 
 ## Summary
+
+The feature model and user experience live here. For rollout ordering and data-safety requirements during backend lockdown, follow [Security Findings Remediation](security-remediation.md), which is the authority for Guest authorization rollout.
 
 A **Guest** is an authenticated user with `TenantRole.Guest` whose person-record lives in a hidden per-tenant system household and whose visibility is positively scoped to events they hold an `EventInvitee` row for. Guests are true outsiders — friends, partners, occasional visitors — who participate in specific gatherings without joining the family directory.
 
@@ -231,7 +233,7 @@ Each phase is independently shippable.
 Tests (`tests/Gatherstead.Data.Tests`, `tests/Gatherstead.Api.Tests`): index/filter behavior, grant-links-member idempotency (existing link never overwritten), one-system-household race.
 
 **Phase 2 — Backend lockdown + scope (closes today's read gap; safe alone — guests see nothing until invited)**
-`EventParticipationScope` + `GetEventScopeAsync`; `SensitiveReadScope` simplification (retire `ForHouseholds`, add `Self`; audit/clean pre-existing Guest `HouseholdUser` rows); new `ServiceGuards` + `ErrorCode`s; gates per the matrix across Event/EventAttendance/Meal*/Task*/Accommodation*/ShoppingItem/Property/Equipment/Household/HouseholdMember services; `MealIntent` guest deny; Guest-invitation `HouseholdId` rejection; participants endpoint + DTO.
+`EventParticipationScope` + `GetEventScopeAsync`; `SensitiveReadScope` simplification (retire `ForHouseholds`, add `Self`; inventory pre-existing Guest `HouseholdUser` rows and preserve them until an explicit migration decision); new `ServiceGuards` + `ErrorCode`s; gates per the matrix across Event/EventAttendance/Meal*/Task*/Accommodation*/ShoppingItem/Property/Equipment/Household/HouseholdMember services; `MealIntent` guest deny; Guest-invitation `HouseholdId` rejection; participants endpoint + DTO.
 Centerpiece test asset: an authorization-matrix integration suite (guest with/without invitee rows against every gated endpoint).
 
 **Phase 3 — One-step guest invitation flow**

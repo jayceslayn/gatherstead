@@ -1,4 +1,10 @@
-# Plan: Add database-side default values for audit columns
+---
+updated: 2026-10-28
+commit: d1f8b0b
+status: proposed
+---
+
+# Database-Side Defaults for Audit Columns
 
 ## Context
 

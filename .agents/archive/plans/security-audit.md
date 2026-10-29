@@ -1,3 +1,10 @@
+---
+status: historical
+archived: 2026-10-28
+---
+
+> Archived after the plans audit. Revalidate findings before relying on them; this review contains superseded encryption and email-claim assumptions. See [current design principles](../../../docs/DESIGN_PRINCIPLES.md) and [security remediation](../../plans/security-remediation.md).
+
 # Red-Team White-Box Security Audit
 
 Reviewed: 2026-06-04  

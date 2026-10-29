@@ -1,3 +1,9 @@
+---
+updated: 2026-10-28
+commit: d1f8b0b
+status: design
+---
+
 # Billing Architecture
 
 ## Purpose and Scope
@@ -83,23 +89,23 @@ Materialized view used by backend authorization and frontend feature checks.
 All endpoints are tenant-scoped and protected with role-based access.
 
 ### Subscriptions
-- `GET /api/billing/subscription`
-- `POST /api/billing/subscription`
-- `POST /api/billing/subscription/cancel`
-- `POST /api/billing/subscription/reactivate`
+- `GET /api/tenants/{tenantId}/billing/subscription`
+- `POST /api/tenants/{tenantId}/billing/subscription`
+- `POST /api/tenants/{tenantId}/billing/subscription/cancel`
+- `POST /api/tenants/{tenantId}/billing/subscription/reactivate`
 
 ### Invoices
-- `GET /api/billing/invoices`
-- `GET /api/billing/invoices/{invoiceId}`
-- `POST /api/billing/invoices/{invoiceId}/finalize`
+- `GET /api/tenants/{tenantId}/billing/invoices`
+- `GET /api/tenants/{tenantId}/billing/invoices/{invoiceId}`
+- `POST /api/tenants/{tenantId}/billing/invoices/{invoiceId}/finalize`
 
 ### Payments
-- `POST /api/billing/invoices/{invoiceId}/payments`
-- `GET /api/billing/payments?invoiceId=...`
-- `POST /api/billing/payments/{paymentId}/reconcile`
+- `POST /api/tenants/{tenantId}/billing/invoices/{invoiceId}/payments`
+- `GET /api/tenants/{tenantId}/billing/payments?invoiceId=...`
+- `POST /api/tenants/{tenantId}/billing/payments/{paymentId}/reconcile`
 
 ### Entitlements
-- `GET /api/billing/entitlements`
+- `GET /api/tenants/{tenantId}/billing/entitlements`
 - `POST /api/internal/billing/entitlements/rebuild` (internal only)
 
 ## Azure Alignment
@@ -107,35 +113,9 @@ All endpoints are tenant-scoped and protected with role-based access.
 - Prefer durable, replayable event processing through Azure messaging.
 - Emit OTel metrics/traces for subscription transitions, invoice aging, payment retry rates.
 
-## Canonical Event Catalog (Shared with Notifications)
-This catalog is **canonical** and shared across Billing and Notifications contexts. Event names and payload schemas are versioned contracts.
+## Shared Event Contracts
 
-### Event envelope (required for all events)
-```json
-{
-  "EventName": "string",
-  "Version": 1,
-  "TenantId": "guid",
-  "EventId": "guid",
-  "OccurredUtc": "2026-04-25T00:00:00Z",
-  "CorrelationId": "guid or trace id",
-  "Producer": "BoundedContext.Service",
-  "Payload": {}
-}
-```
-
-### Catalog
-| Event Name | Version | Producer | Primary Consumers | Payload schema (minimum) |
-|---|---:|---|---|---|
-| `UserInvited` | 1 | Identity/Tenant Membership | Notifications, Billing | `InvitationId: guid`, `InvitedUserId: guid`, `InviterUserId: guid`, `TenantRole: string`, `ExpiresUtc: datetime` |
-| `RoleAssigned` | 1 | Identity/Tenant Membership | Notifications | `AssignmentId: guid`, `UserId: guid`, `Role: string`, `AssignedByUserId: guid`, `Scope: string` |
-| `EventReminderDue` | 1 | Event Scheduling | Notifications | `EventId: guid`, `ReminderType: string`, `TargetDateUtc: datetime`, `Audience: string`, `TemplateKey: string` |
-| `TaskAssignmentDue` | 1 | Task Planning | Notifications | `TaskPlanId: guid`, `EventId: guid`, `DueUtc: datetime`, `AssignedMemberId: guid`, `TemplateKey: string` |
-| `SubscriptionCreated` | 1 | Billing | Billing, Notifications | `SubscriptionId: guid`, `PlanCode: string`, `BillingPeriod: string`, `StartsUtc: datetime`, `CustomerRefId: guid` |
-| `InvoiceDue` | 1 | Billing | Billing, Notifications | `InvoiceId: guid`, `SubscriptionId: guid`, `DueUtc: datetime`, `AmountMinor: long`, `Currency: string` |
-| `PaymentSucceeded` | 1 | Billing/Payments | Billing, Notifications, Entitlements | `PaymentId: guid`, `InvoiceId: guid`, `SubscriptionId: guid`, `AmountMinor: long`, `Currency: string`, `ProcessedUtc: datetime` |
-| `PaymentFailed` | 1 | Billing/Payments | Billing, Notifications, Entitlements | `PaymentId: guid`, `InvoiceId: guid`, `SubscriptionId: guid`, `FailureCode: string`, `Retryable: bool`, `ProcessedUtc: datetime` |
-| `SubscriptionCanceled` | 1 | Billing | Billing, Notifications, Entitlements | `SubscriptionId: guid`, `CanceledUtc: datetime`, `EffectiveEndUtc: datetime`, `ReasonCode: string` |
+The shared envelope and versioned event catalog live in [Shared Event Contracts](event-contracts.md). Billing publishes `SubscriptionCreated`, `InvoiceDue`, `PaymentSucceeded`, `PaymentFailed`, and `SubscriptionCanceled`; the shared document defines their payloads and consumers.
 
 ## Tenant Scoping Rules
 - `TenantId` is mandatory in event envelope, aggregate storage, API DTOs, and queue partition/routing keys.

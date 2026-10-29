@@ -1,3 +1,10 @@
+---
+status: historical
+archived: 2026-10-28
+---
+
+> Archived after the plans audit. This is a June 2026 point-in-time assessment; refresh all metrics and recommendations before reuse.
+
 # Gatherstead Repository Quality Assessment
 
 **Date:** 2026-06-17

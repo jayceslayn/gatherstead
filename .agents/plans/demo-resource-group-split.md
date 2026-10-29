@@ -1,4 +1,10 @@
-# Plan: Split demo resources into their own Resource Group (`rg-gat-demo-wus2`)
+---
+updated: 2026-10-28
+commit: d1f8b0b
+status: proposed
+---
+
+# Demo Resource Group Split
 
 ## Context
 

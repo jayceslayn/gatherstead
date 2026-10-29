@@ -1,3 +1,9 @@
+---
+updated: 2026-10-28
+commit: d1f8b0b
+status: design
+---
+
 # Notifications Architecture
 
 ## Purpose and Scope
@@ -15,7 +21,7 @@ The Notifications context coordinates tenant-scoped reminders and role/user life
 ## Bounded Context Responsibilities
 
 ### Notifications context owns
-- Notification schedule derivation for time-based reminders (`EventReminderDue`, `TaskAssignmentDue`).
+- Notification preference evaluation and dispatch for due events emitted by domain contexts.
 - Notification dispatch lifecycle (queued, sent, failed, retried).
 - User preference policies (opt-in/out by channel and category) where implemented.
 - Notification delivery logs using safe IDs/metadata only.
@@ -23,6 +29,7 @@ The Notifications context coordinates tenant-scoped reminders and role/user life
 ### Notifications context consumes
 - Identity and access events from shared foundation (`UserInvited`, `RoleAssigned`).
 - Billing state changes affecting eligibility to send certain categories (`SubscriptionCanceled`, failed payment grace logic).
+- Event reminder and task-assignment due events from Event Scheduling and Task Planning, respectively.
 
 ### Notifications context publishes
 - Optional delivery/audit domain events (`NotificationQueued`, `NotificationSent`, `NotificationDeliveryFailed`) for downstream analytics/ops.
@@ -54,65 +61,40 @@ Execution unit for sending a concrete notification.
 - **Identity**: `NotificationDispatchId`, `TenantId` (mandatory)
 - **Core fields**: `EventName`, `RecipientRef`, `Channel`, `Status`, `AttemptCount`, `NextAttemptUtc`, `CorrelationId`
 - **Invariants**:
-  - Exactly-once semantics per idempotency key `(TenantId, EventName, RecipientRef, CorrelationId)`.
+  - Create at most one dispatch record per idempotency key `(TenantId, EventName, RecipientRef, CorrelationId)`.
   - Retry policy bounded with dead-letter transition.
 
 ## API Surface (.NET Web API)
 All endpoints require tenant context and enforce tenant access authorization.
 
 ### Rules
-- `GET /api/notifications/rules`
-- `POST /api/notifications/rules`
-- `PUT /api/notifications/rules/{ruleId}`
-- `DELETE /api/notifications/rules/{ruleId}` (soft delete)
+- `GET /api/tenants/{tenantId}/notifications/rules`
+- `POST /api/tenants/{tenantId}/notifications/rules`
+- `PUT /api/tenants/{tenantId}/notifications/rules/{ruleId}`
+- `DELETE /api/tenants/{tenantId}/notifications/rules/{ruleId}` (soft delete)
 
 ### Preferences
-- `GET /api/notifications/preferences/me`
-- `PUT /api/notifications/preferences/me`
-- `GET /api/notifications/preferences/{memberId}` (Manager+)
+- `GET /api/tenants/{tenantId}/notifications/preferences/me`
+- `PUT /api/tenants/{tenantId}/notifications/preferences/me`
+- `GET /api/tenants/{tenantId}/notifications/preferences/{memberId}` (Manager+)
 
 ### Dispatch / operations
-- `GET /api/notifications/dispatches?status=...&eventName=...`
-- `POST /api/notifications/dispatches/{dispatchId}/retry` (Manager+)
+- `GET /api/tenants/{tenantId}/notifications/dispatches?status=...&eventName=...`
+- `POST /api/tenants/{tenantId}/notifications/dispatches/{dispatchId}/retry` (Manager+)
 
 ### Internal ingress
 - `POST /api/internal/notifications/events` (internal service principal only)
   - Accepts canonical event envelope and enqueues dispatch generation.
 
 ## Processing and Azure Alignment
+- Use at-least-once processing with idempotent dispatch creation. Pass provider idempotency keys where supported; do not promise exactly-once user-visible delivery because a provider may accept a send before a timeout or lost response triggers a retry.
 - Prefer Azure messaging primitives (Service Bus topics/queues or Event Grid) for durable at-least-once delivery.
 - Use App Insights + OpenTelemetry for traces/metrics with PII guardrails.
 - Persist scheduling and dispatch state in tenant-scoped SQL tables with global query filters.
 
-## Canonical Event Catalog (Shared with Billing)
-This catalog is **canonical** and shared across Notifications and Billing contexts. Event names and payload schemas are versioned contracts.
+## Shared Event Contracts
 
-### Event envelope (required for all events)
-```json
-{
-  "EventName": "string",
-  "Version": 1,
-  "TenantId": "guid",
-  "EventId": "guid",
-  "OccurredUtc": "2026-04-25T00:00:00Z",
-  "CorrelationId": "guid or trace id",
-  "Producer": "BoundedContext.Service",
-  "Payload": {}
-}
-```
-
-### Catalog
-| Event Name | Version | Producer | Primary Consumers | Payload schema (minimum) |
-|---|---:|---|---|---|
-| `UserInvited` | 1 | Identity/Tenant Membership | Notifications, Billing | `InvitationId: guid`, `InvitedUserId: guid`, `InviterUserId: guid`, `TenantRole: string`, `ExpiresUtc: datetime` |
-| `RoleAssigned` | 1 | Identity/Tenant Membership | Notifications | `AssignmentId: guid`, `UserId: guid`, `Role: string`, `AssignedByUserId: guid`, `Scope: string` |
-| `EventReminderDue` | 1 | Event Scheduling | Notifications | `EventId: guid`, `ReminderType: string`, `TargetDateUtc: datetime`, `Audience: string`, `TemplateKey: string` |
-| `TaskAssignmentDue` | 1 | Task Planning | Notifications | `TaskPlanId: guid`, `EventId: guid`, `DueUtc: datetime`, `AssignedMemberId: guid`, `TemplateKey: string` |
-| `SubscriptionCreated` | 1 | Billing | Billing, Notifications | `SubscriptionId: guid`, `PlanCode: string`, `BillingPeriod: string`, `StartsUtc: datetime`, `CustomerRefId: guid` |
-| `InvoiceDue` | 1 | Billing | Billing, Notifications | `InvoiceId: guid`, `SubscriptionId: guid`, `DueUtc: datetime`, `AmountMinor: long`, `Currency: string` |
-| `PaymentSucceeded` | 1 | Billing/Payments | Billing, Notifications, Entitlements | `PaymentId: guid`, `InvoiceId: guid`, `SubscriptionId: guid`, `AmountMinor: long`, `Currency: string`, `ProcessedUtc: datetime` |
-| `PaymentFailed` | 1 | Billing/Payments | Billing, Notifications, Entitlements | `PaymentId: guid`, `InvoiceId: guid`, `SubscriptionId: guid`, `FailureCode: string`, `Retryable: bool`, `ProcessedUtc: datetime` |
-| `SubscriptionCanceled` | 1 | Billing | Billing, Notifications, Entitlements | `SubscriptionId: guid`, `CanceledUtc: datetime`, `EffectiveEndUtc: datetime`, `ReasonCode: string` |
+The shared envelope and versioned event catalog live in [Shared Event Contracts](event-contracts.md). Notifications consumes the identity, billing, and scheduling events listed there and owns preference evaluation, dispatch creation, and delivery.
 
 ## Tenant Scoping Rules
 - `TenantId` is mandatory in event envelope, aggregate storage, API DTOs, and queue partition/routing keys.

@@ -1,6 +1,6 @@
 ---
-updated: 2026-06-25
-commit: 31a127e
+updated: 2026-10-28
+commit: d1f8b0b
 ---
 
 # Design and Security Principles
@@ -19,7 +19,7 @@ commit: 31a127e
 - **Soft-delete by default**: All auditable entities use soft-delete rather than hard-delete. Global query filters exclude deleted records from all queries unless explicitly overridden by an authorized request. This preserves data integrity, supports undo workflows, and maintains referential consistency across the entity graph.
 - **Secure defaults and hardening**: Apply input validation, rate limiting, CSRF protections, and strong authentication. Disable risky defaults (e.g., open CORS, overly broad tokens) and maintain secret rotation and key management practices.
 - **Data lifecycle and consent**: Track consent for sharing details, support export/delete workflows per tenant requests, and document retention policies for logs and backups. Deletion is implemented: self-service and app-admin account erasure (`IAccountDeletionService`) hard-delete a user's data across the tenant graph and, where enabled, their Entra directory account — the one place true hard-delete is intentional, overriding the soft-delete-by-default rule below. Export (subject-access) remains a future workflow.
-- **Localization-ready UI**: All user-visible text in the web app must go through the i18n system (`@nuxtjs/i18n`). Never hardcode strings in templates or components. This ensures the app can be translated to additional languages without code changes, and keeps date/number/currency formatting locale-aware. See [LOCALIZATION.md](agents/plans/LOCALIZATION.md) for conventions and implementation details.
+- **Localization-ready UI**: All user-visible text in the web app must go through the i18n system (`@nuxtjs/i18n`). Never hardcode strings in templates or components. This ensures the app can be translated to additional languages without code changes, and keeps date/number/currency formatting locale-aware. See [WEB-UI-DESIGN.md](WEB-UI-DESIGN.md#data-i18n-and-ssr) for conventions and implementation details.
 - **Consistent, accessible UI**: The web UI follows a shared set of presentation and interaction conventions — mobile-first layouts, a centralized status icon/color language (color never the sole differentiator), reusable `Gs*` components, confirm-before-delete, and modals that close only on success. These are mandatory for every page and component. See [WEB-UI-DESIGN.md](WEB-UI-DESIGN.md).
 - **Operational readiness**: Establish monitoring for anomalous access patterns, failed logins, and data exfiltration signals. Include security reviews in change management and keep dependencies updated with vulnerability scanning.
 - **Supply-chain hygiene**: Dependencies follow a tiered stand-off policy — routine updates wait long enough for the community to flag malicious publishes, but actively-exploited CVEs (e.g. CISA KEV listings) are patched immediately. Every PR runs `audit-nuget`, `audit-pnpm`, and `dependency-review` gates. NuGet and pnpm lockfiles are committed and enforced via `--locked-mode` / `--frozen-lockfile`, and pnpm's `onlyBuiltDependencies` allowlist limits postinstall-script blast radius. See [SECURITY-DEPS.md](SECURITY-DEPS.md) for the full policy, tiers, and emergency-patch runbook.

@@ -1,6 +1,6 @@
 ---
-updated: 2026-07-14
-commit: 4e3603e
+updated: 2026-10-28
+commit: d1f8b0b
 ---
 
 # Implementation Status and Direction
@@ -28,19 +28,19 @@ at-a-glance table exists only to orient; follow it to those docs for detail.
 
 ## Planned Enhancements
 
-Larger items have a dedicated design doc under [`.agents/plans/`](../.agents/plans/); where one
+Larger items have a dedicated design doc under [`.agents/plans/`](../.agents/plans/README.md); where one
 exists, it is the source of truth for scope and approach.
 
-- **Guest access (event-scoped guests)**: True-guest participation scoped to invited events — hidden per-tenant system household, `EventInvitee` entity, positive read scoping for the Guest role, one-step guest invitations, and guest-tailored frontend. Replaces the latent household-linked guest flavor. → [GUEST-ACCESS.md](../.agents/plans/GUEST-ACCESS.md)
-- **Billing & subscriptions**: Subscription / invoice / payment-attempt model and payment-provider integration. → [BILLING-ARCHITECTURE.md](../.agents/plans/BILLING-ARCHITECTURE.md)
-- **Notifications**: Event-driven notification dispatch with per-channel/category preferences and retry. → [NOTIFICATIONS-ARCHITECTURE.md](../.agents/plans/NOTIFICATIONS-ARCHITECTURE.md)
-- **Offline mode**: Local-first reads plus an outbox that replays queued writes on reconnect. → [OFFLINE-MODE.md](../.agents/plans/OFFLINE-MODE.md)
-- **Trial-first / free tier**: Self-serve 90-day trial tenant with full feature access, going read-only at expiry pending upgrade. Depends on billing. → [FREE_TIER.md](../.agents/plans/FREE_TIER.md)
+- **Guest access (event-scoped guests)**: True-guest participation scoped to invited events — hidden per-tenant system household, `EventInvitee` entity, positive read scoping for the Guest role, one-step guest invitations, and guest-tailored frontend. Replaces the latent household-linked guest flavor. → [Guest Access](../.agents/plans/guest-access.md)
+- **Billing & subscriptions**: Subscription / invoice / payment-attempt model and payment-provider integration. → [Billing Architecture](../.agents/plans/billing-architecture.md)
+- **Notifications**: Event-driven notification dispatch with per-channel/category preferences and retry. → [Notifications Architecture](../.agents/plans/notifications-architecture.md)
+- **Offline mode**: Local-first reads plus an outbox that replays queued writes on reconnect. → [Offline Mode](../.agents/plans/offline-mode.md)
+- **Trial-first / free tier**: Approved direction for self-serve 90-day trial tenants with full feature access, going read-only at expiry pending upgrade. Billing and the paid-upgrade path precede launch. → [Trial-First Strategy](../.agents/plans/trial-first-strategy.md)
 - **Email/Graph invitation delivery**: Layer out-of-band invite delivery (Entra Graph invite or email) on top of the existing app-managed `Invitation` model — the data model and JIT claim flow are designed so this slots in without rework.
 - **Task sign-up flows**: Capacity enforcement using `TaskTemplate.MinimumAssignees` — surface unfilled slots and prevent overbooking when members volunteer via `TaskIntent`.
 - **Accommodation arbitration**: Surface arbitration metadata through dedicated admin endpoints so accommodation conflicts can be resolved with transparent priority rules and audit trails. (The previous unused `AccommodationIntent.Priority` placeholder column was removed; re-introduce a priority signal when this feature is designed against real requirements.)
 - **Household migration workflow**: When members age out of a parent household, allow Tenant Owner/Manager to create a new household and migrate the member, transferring or creating their `HouseholdUser` entry in the new household.
-- **Audit-column DB defaults**: Database-side default values for `Id`/`CreatedAt`/`UpdatedAt`/`IsDeleted` as a backstop for inserts that bypass EF (seeding, raw SQL, manual fixes). → [audit-column-db-defaults.md](../.agents/plans/audit-column-db-defaults.md)
+- **Audit-column DB defaults**: Database-side default values for `Id`/`CreatedAt`/`UpdatedAt`/`IsDeleted` as a backstop for inserts that bypass EF (seeding, raw SQL, manual fixes). → [Audit-Column Defaults](../.agents/plans/audit-column-db-defaults.md)
 - **Row-Level Security**: Evaluate SQL Server Row-Level Security (RLS) as a defense-in-depth backstop to the existing application-layer tenancy scoping.
 
 ## Architecture Direction

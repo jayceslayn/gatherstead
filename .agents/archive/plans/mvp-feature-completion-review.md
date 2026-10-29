@@ -1,3 +1,10 @@
+---
+status: historical
+archived: 2026-10-28
+---
+
+> Archived after the plans audit. This review records completed MVP work; its remaining fix-order table is not current.
+
 # MVP Feature Completion — Code Review Findings
 
 Branch: `claude/mvp-feature-completion-n2oqj`  

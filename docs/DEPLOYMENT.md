@@ -1,6 +1,6 @@
 ---
-updated: 2026-07-12
-commit: 31a127e
+updated: 2026-10-28
+commit: d1f8b0b
 ---
 
 # Database Encryption and Deployment
@@ -437,4 +437,4 @@ Browser telemetry uses the App Insights JS SDK (see [OBSERVABILITY.md](OBSERVABI
 - **Prod** — set automatically as a web-app app setting in `appservice.bicep` (points at the shared `appi-gat-*`, enabling frontend↔backend trace correlation).
 - **Demo** — copy the `demoAppInsightsConnectionString` deployment output into the `DEMO_APPINSIGHTS_CONNECTION_STRING` GitHub Actions secret; the `deploy-demo` job in `ci-cd.yml` bakes it into the static build at `pnpm generate` time. It is an ingestion-only key and safe to expose.
 
-See [DEMO_SITE.md](agents/plans/DEMO_SITE.md) for full architecture and implementation details.
+The planned demo resource-group separation is tracked in [demo-resource-group-split.md](../.agents/plans/demo-resource-group-split.md).

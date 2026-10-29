@@ -1,16 +1,16 @@
 ---
-updated: 2026-07-12
-commit: 67c2cd7
-status: design — not yet implemented
+updated: 2026-10-28
+commit: d1f8b0b
+status: design
 ---
 
-# Offline Mode — Design
+# Offline Mode
 
 ## Summary
 
 Gatherstead gets a PWA offline mode targeted at the core use case: a family gathered at a remote property with unreliable or no internet. **V1 scope (settled):**
 
-- **Offline reads**: a per-tenant snapshot of everything the user can see, stored in IndexedDB, served through the existing repository seam.
+- **Offline reads**: a bounded, role-filtered snapshot of active-event participation and related property data needed for V1, stored in IndexedDB and served through the existing repository seam. It does not mirror everything the user can see in the tenant.
 - **Offline intent-style writes**: the per-user upsert/withdraw records — event attendance, meal attendance, meal intents (cook sign-up), task intents, accommodation intents, shopping-item intents (claim/provide/check-off) — queued in an IndexedDB outbox and replayed on reconnect. These are natural upserts keyed by (member, target), so replay is idempotent and safe.
 - **Everything else stays online-only in V1**: creating/editing events, households, members, templates, plans, properties, accommodations, equipment, shopping items, users, settings. Offline attempts get a friendly "you're offline" toast; UI affordances disable while offline.
 - Platform: PWA via `@vite-pwa/nuxt` (app-shell service worker + IndexedDB data). No native app.
@@ -21,12 +21,12 @@ Why this shape works here: all authenticated routes are already `ssr: false` cli
 ## Settled Decisions
 
 1. **IndexedDB via Dexie**. Rationale over raw `idb`: versioned schema migrations (the demo store already needed one storage-key bump to `gs-demo-store-v2` — Dexie formalizes this), typed tables, transactions, bulk ops. Data volume is trivial either way; developer ergonomics and the migration story decide it.
-2. **Snapshot storage = collection blobs, not per-row tables.** One `collections` table keyed `[tenantId+name]` holding the full repo-layer array (same shapes `DemoStore` persists). The API already returns full tenant collections and pages consume full lists, so blob-replace is atomic, trivially consistent, and matches the read pattern. Phase 2 delta sync migrates to per-row tables via a Dexie version bump — a contained migration, not a corner.
+2. **Snapshot storage = collection blobs, not per-row tables.** One `collections` table keyed `[tenantId+name]` holds the bounded repo-layer arrays selected for offline use (same shapes `DemoStore` persists). Blob-replace is atomic and matches the read pattern. Phase 2 delta sync migrates to per-row tables via a Dexie version bump — a contained migration, not a corner.
 3. **Offline repos are decorators over the live repos** — a third *partial* implementation, not a third full set. Each decorator: reads are network-first (delegating to the wrapped live repo) with **write-through** of successful responses into the snapshot store, falling back to snapshot + outbox overlay when offline; intent writes enqueue to the outbox when offline; all other writes throw `OfflineWriteError` when offline. Live repos stay untouched.
-4. **Snapshot triggers**: automatic background refresh on app load / tenant switch when online (throttled), continuous freshness via read write-through, plus an explicit **"Prepare for offline"** action that does the full fan-out with progress UI and requests persistent storage.
+4. **Snapshot triggers**: automatic background refresh of the bounded offline scope on app load / tenant switch when online (throttled), continuous freshness via read write-through, plus an explicit **"Prepare for offline"** action that fetches that same bounded scope with progress UI and requests persistent storage.
 5. **Service worker precaches the app shell only. `/api/proxy/**` is NetworkOnly — never cached by the SW.** IndexedDB is the sole data cache: it is structured, per-tenant, role-stamped, and clearable on logout. Authenticated PII in opaque Cache Storage entries would duplicate that data with none of those properties.
-6. **No backend changes required for V1.** The existing intent PUT-upsert / DELETE-withdraw endpoints replay as-is. `UpdatedAt`-stamped-at-replay is accepted for V1 (audit columns record server receipt, which is what they mean; attendance semantics live in the domain fields, not the audit stamp). A `ClientRecordedAt` column is a Phase 2 option, deliberately separate from audit columns.
-7. **No encryption-at-rest of the snapshot in V1.** Rely on server-side role masking (the snapshot contains only what this user may see), OS/device encryption, browser profile isolation, and aggressive lifecycle clearing (logout, user switch, role change). Documented in the privacy page. See §7 for the threat-model reasoning and the Phase 2 field-encryption option.
+6. **No intent-write API changes are required for V1.** Existing intent PUT-upsert / DELETE-withdraw endpoints replay as-is. A bounded read endpoint may be needed if existing reads cannot return only the event participants and related data selected for caching. A lightweight connectivity endpoint may be added if existing health endpoints do not provide a suitable probe. `UpdatedAt`-stamped-at-replay is accepted for V1 (audit columns record server receipt; attendance semantics live in domain fields, not the audit stamp). A `ClientRecordedAt` column is a Phase 2 option, deliberately separate from audit columns.
+7. **No application-level encryption at rest in V1.** This is accepted only for the bounded snapshot scope: role-filtered active-event data and related property records needed for offline participation. Do not cache the general directory, addresses, contact methods, invitations, tenant administration, or unrelated member data. Rely on OS/device encryption, browser-profile isolation, visible snapshot age, and lifecycle clearing; document the posture in the privacy page. See §7 for the threat model and Phase 2 field-encryption option.
 
 ## 1. Client Storage Layer
 
@@ -91,7 +91,7 @@ export class OfflineEventAttendanceRepository implements IEventAttendanceReposit
 }
 ```
 
-`OfflineContext.read` centralizes the strategy: **online → live call, then write-through into `collections` (full-tenant lists replace the blob; event-scoped lists replace matching rows within the blob); offline (or `FetchError` with no response) → snapshot slice + overlay.** Getter methods (`getEvent`, `getHousehold`, …) filter the blob. Computed endpoints (event meal report, `searchAvailability`, `listMyTasks`, `listMyStays`, per-member intent lists) use the `queries` cache-by-key table in V1; where the demo repos already implement the derivation over local collections (availability search, myTasks), extract that logic into shared pure functions under `app/repositories/shared/` and reuse it so offline results stay live against the overlay — do this opportunistically, not as a gate.
+`OfflineContext.read` centralizes the strategy: **online → live call; write-through only the bounded offline allowlist into `collections`; offline (or `FetchError` with no response) → snapshot slice + overlay.** Never persist a full tenant list returned for an online directory/admin screen. Event-scoped lists replace only their matching bounded slice. Getter methods (`getEvent`, `getHousehold`, …) filter the cached slice. Computed endpoints (event meal report, `searchAvailability`, `listMyTasks`, `listMyStays`, per-member intent lists) use the `queries` cache-by-key table in V1; where the demo repos already implement the derivation over local collections (availability search, myTasks), extract that logic into shared pure functions under `app/repositories/shared/` and reuse it so offline results stay live against the overlay — do this opportunistically, not as a gate.
 
 Non-intent writes offline throw `OfflineWriteError` (exported from `interfaces.ts` beside `DemoLimitError`); `useTrackedAction` and `useApiError.translateError` gain a branch that renders it as a "You're offline — this needs a connection" toast. Pages additionally disable create/edit buttons via `useConnectivity().isOnline`.
 
@@ -110,14 +110,14 @@ repos = withOffline({ tenants: new liveRepos.LiveTenantRepository(), ... }, ctx)
 
 ## 2. Snapshot / Refresh Protocol (V1)
 
-**Full-collection refetch is acceptable** — tenant datasets are small, relational, no blobs — but the naive fan-out (members per household, plans per template, intents per accommodation, shopping per event+property) is 50–150 requests for a busy tenant. The `SnapshotService` (`app/offline/snapshot.ts`):
+The snapshot contains only data required by V1 offline participation workflows. It must not become a local mirror of the tenant. The `SnapshotService` (`app/offline/snapshot.ts`):
 
 - Fetches through the **repo layer** (so write-through does the storing) with a concurrency cap of 4 and the existing `retryOn429` helper from the live repo layer.
-- Scopes event-derived data to an **active window**: events whose `endDate >= today − 14d`, plus lookups, directory (households + members), properties, accommodations + intents, equipment, property shopping lists. Uses the aggregate endpoints where they exist (per-event attendance/intent lists, bulk reads).
-- Tolerates per-collection 403s (e.g. `tenantUsers`/invitations are Manager+; Guest-role users see little by design — see `GUEST-ACCESS.md` positive filtering): record the collection as empty-with-fetchedAt, never fail the snapshot.
+- Scopes event-derived data to an **active window**: events whose `endDate >= today − 14d`, their meal/task plans, attendance and intents, event shopping items, event participants, and household members the caller may act for in those workflows. Include related property/accommodation data and property shopping items only where needed for an active event or the user's prepared stay. Use narrow event/participant endpoints and minimum required member fields: names, age bands, and authorized dietary details needed for active meal planning. Do not cache tenant-wide directory lists, contacts, addresses, invitations, settings, or unrelated members.
+- Includes lookups only when an offline screen needs them. Tolerates per-collection 403s (e.g. tenant administration; see [guest-access.md](guest-access.md) for Guest filtering): record the collection as empty-with-fetchedAt, never fail the snapshot.
 - Sets `meta.snapshotAt` only on full success; partial success updates individual `fetchedAt`s.
 
-**Triggers**: (a) on app load / tenant switch when online, skipped if `snapshotAt` is under 15 minutes old; (b) manual **Prepare for offline** (dashboard card + settings entry): full fan-out with a progress bar, then `navigator.storage.persist()` request and, on iOS-not-installed, an install-to-home-screen hint (see Risks); (c) opportunistic freshness from read write-through on every page visit (the `useShoppingList` poll/visibilitychange pattern is *not* extended app-wide in V1 — write-through covers it).
+**Triggers**: (a) on app load / tenant switch when online, refresh the bounded scope if `snapshotAt` is over 15 minutes old; (b) manual **Prepare for offline** (dashboard card + settings entry): fetch the bounded scope with a progress bar, then request `navigator.storage.persist()` and, on iOS-not-installed, show an install-to-home-screen hint (see Risks); (c) opportunistic freshness from read write-through on every page visit (the `useShoppingList` poll/visibilitychange pattern is *not* extended app-wide in V1 — write-through covers it).
 
 **Staleness display**: a global `GsOfflineBanner` in `layouts/default.vue` driven by `useConnectivity()`: offline ⇒ "Offline — showing data from {relative snapshotAt}" (+ pending-change count from the outbox); online-with-queued ⇒ "Syncing N changes…". All strings via i18n (`offline.*` in `en.json`/`es.json`).
 
@@ -200,9 +200,12 @@ Not designed in depth; listed to show V1 choices compose forward.
 
 Alignment with `docs/DESIGN_PRINCIPLES.md` (privacy by design, minimization, data protection at rest):
 
-- **Minimization is structural**: the snapshot is fetched through the authenticated API, so `SensitiveReadScope` masking and role/household filtering have already been applied server-side. The device stores only what this user could see anyway; a Guest's snapshot contains almost nothing.
-- **Lifecycle clearing** (the real control): wipe all Dexie data for the user's tenants on explicit logout; wipe a tenant's rows when `meta.userId` doesn't match the logged-in user (shared-device user switch); wipe + resnapshot when `meta.role` changes (masking differs); wipe on `schemaVersion` bump. A "Remove offline data" button lives beside "Prepare for offline". **Deliberate exception**: the outbox is preserved across the *401 re-auth* round-trip (same user) but destroyed on explicit logout — leftover pending writes from user A must never replay as user B.
-- **Encryption at rest: not in V1, documented.** Honest threat model: a WebCrypto AES-GCM key must live somewhere the offline app can reach after a cold start — i.e., IndexedDB itself (non-extractable `CryptoKey`). That defeats same-origin script exfiltration of the raw key but only raises the bar for disk-forensics attackers (browser profiles already hold session material). A server-held key would break the core use case (cold start with no network). Recommendation: rely on OS full-disk encryption + profile isolation, state it in `/privacy`, and offer Phase 2 field-level encryption (dietary notes, birth dates, contact methods — mirroring the Always-Encrypted column set) with a non-extractable IndexedDB-resident key if we want the forensics bar raised.
+- **Minimization is structural**: fetch through authenticated APIs so server-side role and event-scope filters apply, then cache only the bounded records and fields listed in §2. The offline event-participant view must not be implemented by caching a tenant-wide directory. Guests follow the same snapshot rule as every other role; their data stays limited to what the event-scope API returns.
+- **Dietary details are a narrow exception**: cache them only for active-event participants, only for users already authorized to see them, and only when needed for offline meal planning. Never cache member contacts, addresses, or unrelated profile notes.
+- **Stale authorization affects every role**: while disconnected, the server cannot apply a tenant removal, role demotion, household-access change, or revoked `EventInvitee` row to a snapshot already on the device. Treat this as a bounded extension of the authenticated session, not as a Guest-only issue. Show snapshot age, minimize cached data, and clear or refresh it at the next successful authorization check. This residual risk is accepted for V1.
+- **Exposure scales with role**: a Coordinator or Manager may be authorized to cache more event-participant and dietary data than a Guest or Member. Keep the same event-window and field allowlist for every role, and never expand the cache to all data merely because the role can read it online.
+- **Lifecycle clearing**: wipe all Dexie data for the user's tenants on explicit logout; wipe a tenant's rows when `meta.userId` doesn't match the logged-in user (shared-device user switch); wipe + resnapshot when `meta.role` changes or authorization no longer includes the tenant; wipe on `schemaVersion` bump. A "Remove offline data" button lives beside "Prepare for offline". **Deliberate exception**: the outbox is preserved across the *401 re-auth* round-trip (same user) but destroyed on explicit logout — leftover pending writes from user A must never replay as user B.
+- **Encryption at rest: no application-level encryption in V1.** This is accepted only with the scope limits in §2 and OS full-disk encryption plus browser-profile isolation. Document the posture in `/privacy`. Phase 2 may add field-level encryption for sensitive dietary/profile fields with a non-extractable IndexedDB-resident key; a server-held key would break cold-start offline use.
 - SW caches contain no API data (decision 5), so purge-on-logout reduces to Dexie deletes; the precache holds only non-sensitive build assets.
 
 ## 8. Implementation Phasing
@@ -216,7 +219,7 @@ Each WP independently shippable; sizes S/M/L ≈ ½ day / 1–2 days / 3–5 day
 *Verify*: unit tests for wipe rules and write-through (Vitest, `fake-indexeddb`); browse pages online then inspect IndexedDB contents in DevTools.
 
 **WP3 — Offline reads + snapshot + staleness UI (L)**: the 18 decorator classes (reads + `OfflineWriteError` on non-intent writes), `withOffline` wiring + escape hatch, `SnapshotService` with active-window fan-out + `retryOn429` + concurrency cap, "Prepare for offline" UX with progress + `storage.persist()`, `GsOfflineBanner`, `translateError`/`useTrackedAction` branch, i18n `offline.*` en/es.
-*Verify*: prepare-for-offline → DevTools offline → navigate every major page (dashboard, event detail, meals, tasks, shopping, directory, accommodations) and confirm rendered data + banner + disabled create buttons; 403-tolerance as a Guest-role user.
+*Verify*: prepare-for-offline → DevTools offline → navigate the dashboard, active event detail, meals, tasks, event shopping, and related accommodations; confirm rendered data, snapshot-age banner, and disabled create buttons. Confirm general directory, contacts, invitations, settings, and unrelated tenant records were not cached. Repeat with a Guest and verify only event-scoped records from [Guest Access](guest-access.md) were stored.
 
 **WP4 — Outbox + replay + overlay (L)**: enqueue with coalescing, overlay functions per intent type, replay engine (Web Locks, backoff, id-resolution for withdraws, 401 pause via `useReauth`, post-replay refresh), failed-op review list, banner sync states.
 *Verify*: offline → RSVP + claim shopping items + volunteer for a task → confirm optimistic UI → go online → confirm server rows and queue drain; kill the session server-side mid-offline, reconnect, confirm redirect → return → replay completes; two-tab replay exercises the lock; Playwright e2e using `context.setOffline(true/false)` for the happy path + auth round-trip.
@@ -228,7 +231,7 @@ Each WP independently shippable; sizes S/M/L ≈ ½ day / 1–2 days / 3–5 day
 ## 9. Risks & Open Questions
 
 - **iOS Safari eviction**: non-installed PWAs get IndexedDB + SW wiped after ~7 days of disuse; `storage.persist()` is not honored pre-install. Mitigation: the prepare-for-offline flow detects iOS-not-installed and pushes add-to-home-screen. Residual risk: a user who prepares, doesn't install, and arrives at the property 8+ days later has nothing. **Open: how hard to push installation?**
-- **Role changes invalidate snapshots** (masking): handled by wipe-on-role-change, but a *demotion happening while the user is offline* means the device briefly holds data above the new role until reconnect. Accepted for V1 — same exposure as a stale open browser tab today.
+- **Authorization changes invalidate snapshots**: wipe on tenant removal, role change, household-access change, or Guest invitation revocation when next online. A change while offline leaves the bounded snapshot readable until reconnection; this applies to every role and is accepted for V1 with the data limits in §2.
 - **Multi-tab**: Dexie is multi-tab-safe; replay and snapshot are Web-Locks-guarded. Overlay reactivity across tabs is best-effort in V1 (no `liveQuery` wiring) — a second tab may need a refresh to see the first tab's pending ops.
 - **SW update flow**: `prompt` mode means a user who never accepts updates runs an old shell against a new API. The proxy insulates most drift; a shell/API contract break needs a "minimum app version" check — deferred.
 - **Accommodation-intent replay conflicts**: two family members can both request the last bed offline; replay accepts both `Requested` rows (status transitions are Coordinator+ anyway), so the coordinator resolves it — socially fine, but the requester must see their stay as "requested (pending sync)", never "confirmed". UI copy matters.
