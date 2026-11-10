@@ -1,19 +1,17 @@
 # Require each newly resolved npm release to age for three days, as specified in
 # docs/SECURITY-DEPS.md. Both web and docs lockfiles were checked against this window before enabling.
 minimumReleaseAge: 4320
+# GHSA-86w9-cpqp-85rv (high): node-forge 1.4.1 contains the upstream signature-verification fix.
+# The exact release cleared the policy's 24-hour high-severity response window; remove this
+# version-scoped exclusion after 2026-10-30 04:44 UTC, when it clears the three-day age window.
+minimumReleaseAgeExclude:
+  - node-forge@1.4.1
 allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   sharp: true
   unrs-resolver: true
   vue-demi: true
-
-# Temporary exceptions for web advisories with no patched release listed or published yet.
-# Remove each entry once the corresponding patched release is available and resolved.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-vfj7-8cjw-p6xm # braces
-    - GHSA-86w9-cpqp-85rv # node-forge
 
 overrides:
   # GHSA-2v37-7h3g-55p8 (high): custom generators loop indefinitely when size is 0. Reached
@@ -110,6 +108,14 @@ overrides:
   # GHSA-9rgm-9g3h-6x36 (moderate): DoS via malformed input, patched 5.9.1. Reached via nuxt/
   # @nuxtjs/i18n, which declare ^5.9.0; bounded to the 5.x line.
   devalue: ">=5.9.1 <6"
+  # GHSA-83rm-6c8r-g728 (high) / GHSA-8rc2-428q-7ww3 (low): Vue I18n escaping issues, patched
+  # in 11.4.14. Keep the exact-release @intlify runtime/compiler family aligned on its fixed 11.x line.
+  "@intlify/core": ">=11.4.14 <12"
+  "@intlify/core-base": ">=11.4.14 <12"
+  "@intlify/devtools-types": ">=11.4.14 <12"
+  "@intlify/message-compiler": ">=11.4.14 <12"
+  "@intlify/shared": ">=11.4.14 <12"
+  "vue-i18n": ">=11.4.14 <12"
   # GHSA-cp6q-959q-f8rh (moderate): mergeAttributes() turns an own __proto__ key into inherited
   # executable DOM attributes, patched 3.30.4.
   # GHSA-j95f-988m-3j2f (high): quadratic ReDoS in block/inline Markdown attribute parsing, patched
