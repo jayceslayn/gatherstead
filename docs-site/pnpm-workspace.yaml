@@ -12,6 +12,8 @@ allowBuilds:
 # astro 7.1.x requires vite ^8, so web's `vite: ">=7.3.2 <8"` bound would break this build.
 # Only add keys here that a resolved version in pnpm-lock.yaml actually needs.
 overrides:
+  # GHSA-mrhx-c7xc-m3w5 (high): oversized constrained collections can exhaust memory; fixed in Zod 4.6.6.
+  zod: ">=4.6.6 <5"
   # GHSA-2v37-7h3g-55p8 (high): custom generators loop indefinitely when size is 0. Reached
   # transitively via postcss (pulled in by vite); patched 3.3.18.
   nanoid: ">=3.3.18"
@@ -37,7 +39,7 @@ overrides:
   # Reached through ajv; bounded to 3.x since 4.x is a breaking API change.
   # GHSA-5jgf-p345-68v8 / GHSA-f65p-4m7j-42xc / GHSA-fph4-wmhf-6fwf / GHSA-jqff-g426-hqxp (all
   # high): IDN, IPv6, and percent-decoding host-confusion/SSRF variants, patched 3.1.6.
-  fast-uri: ">=3.1.6 <4"
+  fast-uri: ">=3.1.9 <4"
   # GHSA-r28c-9q8g-f849 (high, path traversal) + GHSA-fxqj-rqcc-2cmp (incomplete fix of
   # GHSA-6g55-p6wh-862q, patched 8.5.23). Reached via expressive-code and postcss-nested.
   postcss: ">=8.5.23 <9"
@@ -54,8 +56,8 @@ overrides:
   smol-toml: ">=1.8.1 <2"
   # GHSA-68fv-2mgg-jv7q: source-map-js 1.2.2 contains the fix.
   "source-map-js": ">=1.2.2 <2"
-  # Astro currently resolves Undici 8.x; keep it on the fixed line.
-  undici: ">=8.10.2 <9"
+  # Astro currently resolves Undici 8.x; 8.12.2 fixes the current security advisories.
+  undici: ">=8.12.2 <9"
   # GHSA-587h-7wmj-h5pm and related launch-editor advisories are fixed in Vite 8.1.6.
   # Astro 7 accepts the patched Vite 8.1.6 release, avoiding newer Vite/Rolldown packages that
   # have not cleared the three-day stand-off.

@@ -25,10 +25,9 @@ overrides:
   browserslist: ">=4.28.7"
   "esbuild": ">=0.28.1"
   # Overrides shadow the direct dependency too, so keep this floor in step with package.json.
-  serialize-javascript: ">=7.1.2 <8"
-  # GHSA-86w9-cpqp-85rv currently has no patched release; npm's latest is 1.4.0. Keep the override
-  # bounded to the compatible v1 API line until upstream publishes and we resolve a fix.
-  node-forge: ">=1.4.0 <2"
+  serialize-javascript: ">=7.1.4 <8"
+  # GHSA-86w9-cpqp-85rv and related node-forge advisories are fixed in 1.4.1.
+  node-forge: ">=1.4.1 <2"
   "picomatch@2": "^2.3.2"
   "picomatch@4": "^4.0.4"
   lodash: ">=4.17.24"
@@ -46,7 +45,7 @@ overrides:
   "@tanstack/vue-virtual": "3.13.47"
   "@tanstack/virtual-core": "3.19.6"
   prosemirror-transform: "1.12.2"
-  h3: ">=1.15.9"
+  h3: ">=1.15.9 <2"
   # @redocly/openapi-core (via openapi-typescript) pins js-yaml to an exact 4.1.1; every other
   # consumer already floats to 4.2.0. Must stay on the 4.x line: 5.x is a breaking API change.
   # 4.3.0 patches GHSA-52cp-r559-cp3m (quadratic CPU via merge-key chains).
@@ -122,11 +121,16 @@ overrides:
   "postcss-selector-parser": ">=7.1.6 <8"
   # GHSA-c8x8-7fp4-3x9w: XSS in paste handling, patched in ProseMirror 1.42.3.
   "prosemirror-view": ">=1.42.3 <2"
-  # GHSA-jp82-f5mq-hwhp: malformed-value DoS, patched in seroval 1.6.3.
-  seroval: ">=1.6.3 <2"
+  # GHSA-f86p-h4j2-7qgj and GHSA-9wx9-5pv9-3349: serialization injection, patched in 1.6.11.
+  seroval: ">=1.6.11 <1.7"
   # GHSA-68fv-2mgg-jv7q: patched in source-map-js 1.2.2.
   "source-map-js": ">=1.2.2 <2"
-  # Nuxt resolves Undici 8.x; 8.10.2 fixes the published request/response DoS advisories.
-  undici: ">=8.10.2 <9"
+  # Nuxt resolves Undici 8.x; 8.12.2 fixes the current security advisories.
+  undici: ">=8.12.2 <9"
+  # Vue I18n and @intlify advisories are fixed in 11.4.14.
+  "@intlify/core": ">=11.4.14 <12"
+  "@intlify/core-base": ">=11.4.14 <12"
+  "@intlify/shared": ">=11.4.14 <12"
+  "vue-i18n": ">=11.4.14 <12"
   # unctx 3 requires unplugin 3.3 or newer; keep the shared v3 line within that peer range.
   unplugin: ">=3.3.0 <4"

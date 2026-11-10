@@ -157,6 +157,7 @@ export default defineNuxtConfig({
     // NUXT_SESSION_PASSWORD at runtime.
     session: {
       name: process.env.NODE_ENV === 'production' ? '__Host-session' : 'nuxt-session',
+      password: process.env.NUXT_SESSION_PASSWORD || '',
       cookie: {
         httpOnly: true,
         secure: true,
