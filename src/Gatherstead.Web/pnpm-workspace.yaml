@@ -133,10 +133,5 @@ overrides:
   "source-map-js": ">=1.2.2 <2"
   # Nuxt resolves Undici 8.x; 8.12.2 fixes the current security advisories.
   undici: ">=8.12.2 <9"
-  # Vue I18n and @intlify advisories are fixed in 11.4.14.
-  "@intlify/core": ">=11.4.14 <12"
-  "@intlify/core-base": ">=11.4.14 <12"
-  "@intlify/shared": ">=11.4.14 <12"
-  "vue-i18n": ">=11.4.14 <12"
   # unctx 3 requires unplugin 3.3 or newer; keep the shared v3 line within that peer range.
   unplugin: ">=3.3.0 <4"
